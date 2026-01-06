@@ -96,13 +96,13 @@ export const k8sCluster = pgTable("k8sCluster", {
 	// ownerId: text("owner_id")
 	// 	.notNull()
 	// 	.references(() => user.id, { onDelete: "cascade" }),
-	// url: text("url").notNull(),
+	clusterDomain: text("cluster_domain").notNull(),
 	status: clusterStatus().notNull().default("inactive"),
 	agentId: serial("agent_id")
 		.notNull()
 		.references(() => clusterAgent.id, { onDelete: "cascade" }),
 	enableS3Service: boolean("enable_s3_service").default(false).notNull(),
-	enableDbService: boolean("enable_db_service").default(false).notNull(),
+	s3AdminSecretKey: text("s3_admin_secret_key"),
 	createdAt: timestamp("created_at").defaultNow().notNull(),
 	updatedAt: timestamp("updated_at")
 		.$onUpdate(() => /* @__PURE__ */ new Date())

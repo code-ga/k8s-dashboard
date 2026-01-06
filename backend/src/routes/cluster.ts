@@ -31,6 +31,7 @@ export const clusterRoute = new Elysia({ prefix: "/cluster" })
 								name,
 								description,
 								tags,
+								clusterDomain: ctx.body.clusterDomain,
 							})
 							.returning();
 						if (cluster.length === 0 || !cluster[0]) {
@@ -59,7 +60,7 @@ export const clusterRoute = new Elysia({ prefix: "/cluster" })
 							name: dbSchemaTypes.k8sCluster.name,
 							description: dbSchemaTypes.k8sCluster.description,
 							tags: dbSchemaTypes.k8sCluster.tags,
-							// kubeconfig: Type.String(),
+							clusterDomain: dbSchemaTypes.k8sCluster.clusterDomain,
 						}),
 					},
 				)
@@ -95,6 +96,8 @@ export const clusterRoute = new Elysia({ prefix: "/cluster" })
 								name,
 								description,
 								tags,
+								clusterDomain: ctx.body.clusterDomain,
+								enableS3Service: ctx.body.enableS3Service,
 							})
 							.where(eq(schema.k8sCluster.id, Number(ctx.params.id)))
 							.returning();
@@ -107,7 +110,7 @@ export const clusterRoute = new Elysia({ prefix: "/cluster" })
 						}
 						return ctx.status(200, {
 							success: true,
-							message: "Cluster updated successfully",
+							message: `Cluster updated successfully. Please redeploy the agent to apply changes.`,
 							data: cluster[0],
 							timestamp: Date.now(),
 						});
@@ -126,7 +129,7 @@ export const clusterRoute = new Elysia({ prefix: "/cluster" })
 								description: dbSchemaTypes.k8sCluster.description,
 								tags: dbSchemaTypes.k8sCluster.tags,
 								enableS3Service: dbSchemaTypes.k8sCluster.enableS3Service,
-								enableDbService: dbSchemaTypes.k8sCluster.enableDbService,
+								clusterDomain: dbSchemaTypes.k8sCluster.clusterDomain,
 							}),
 						),
 					},

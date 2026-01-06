@@ -1,0 +1,17 @@
+{
+	"folders": [
+		{
+			"path": "agent"
+		},
+		{
+			"path": "backend"
+		},
+		{
+			"path": "frontend"
+		},
+		{
+			"path": "protobuf"
+		}
+	],
+	"settings": {}
+}

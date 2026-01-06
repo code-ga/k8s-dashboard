@@ -17,7 +17,7 @@ import (
 
 	// Import all auth plugins for broad compatibility
 
-	"k8s-dashboard/agents/service"
+	"k8s-dashboard/agents/service/k8s"
 
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 )
@@ -46,7 +46,7 @@ func main() {
 	// if err != nil {
 	// 	panic(err.Error())
 	// }
-	kubeClient, err := service.NewK8sClient()
+	kubeClient, err := k8s.NewK8sClient()
 	if err != nil {
 		log.Fatalf("Failed to create Kubernetes client: %v", err)
 	}
@@ -56,9 +56,11 @@ func main() {
 		log.Fatalf("Failed to get cluster config: %v", err)
 	}
 	log.Printf("Cluster Config: %+v", clusterConfig)
-	kubeClient.BootstrapSystem(service.BootstrapConfig{
-		EnableGarageHQ: clusterConfig.EnableS3Service,
-		EnableCNPG:     clusterConfig.EnableDbService,
+	kubeClient.BootstrapSystem(k8s.BootstrapConfig{
+		EnableGarageHQ:   clusterConfig.EnableS3Service,
+		ClusterDomain:    "cluster.local", // Add default domain if needed or fetch from config
+		S3AdminSecretKey: clusterConfig.S3AdminSecretKey,
+		UpdateS3Key:      updateClusterS3Key,
 	})
 
 	interrupt := make(chan os.Signal, 1)
@@ -123,9 +125,9 @@ func main() {
 }
 
 type ClusterConfig struct {
-	EnableS3Service bool   `json:"enableS3Service"`
-	EnableDbService bool   `json:"enableDbService"`
-	Name            string `json:"name"`
+	EnableS3Service  bool   `json:"enableS3Service"`
+	Name             string `json:"name"`
+	S3AdminSecretKey string `json:"s3AdminSecretKey"`
 }
 
 func getClusterConfig() (*ClusterConfig, error) {
@@ -177,4 +179,41 @@ func getClusterConfig() (*ClusterConfig, error) {
 	}
 
 	return &responseData, nil
+}
+
+func updateClusterS3Key(key string) error {
+	// Prepare payload
+	data := map[string]string{"s3AdminSecretKey": key}
+	jsonPayload, err := json.Marshal(data)
+	if err != nil {
+		return fmt.Errorf("marshalling error: %w", err)
+	}
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	u := url.URL{
+		Scheme: "https",
+		Host:   *addr,
+		Path:   "/api/agents/cluster-config", // Use consistent endpoint
+	}
+
+	req, err := http.NewRequest("POST", u.String(), bytes.NewBuffer(jsonPayload))
+	if err != nil {
+		return fmt.Errorf("request creation error: %w", err)
+	}
+
+	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("Authorization", "Bot "+*token)
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("request error: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("api returned status %d: %s", resp.StatusCode, string(body))
+	}
+
+	return nil
 }
