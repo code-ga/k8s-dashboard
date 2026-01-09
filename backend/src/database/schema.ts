@@ -1,6 +1,7 @@
 import { relations } from "drizzle-orm";
 import {
 	boolean,
+	integer,
 	pgEnum,
 	pgTable,
 	serial,
@@ -67,12 +68,13 @@ export const verification = pgTable("verification", {
 		.$onUpdate(() => /* @__PURE__ */ new Date())
 		.notNull(),
 });
-
+const roleEnum = pgEnum("role", ["admin", "user"]);
 export const userRole = pgTable("userRole", {
-	id: text("id").primaryKey(),
+	id: serial("id").primaryKey(),
 	userId: text("userId")
 		.notNull()
 		.references(() => user.id),
+	role: roleEnum("role").notNull().default("user"),
 });
 
 const clusterAgent = pgTable("clusterAgent", {
@@ -103,11 +105,124 @@ export const k8sCluster = pgTable("k8sCluster", {
 		.references(() => clusterAgent.id, { onDelete: "cascade" }),
 	enableS3Service: boolean("enable_s3_service").default(false).notNull(),
 	s3AdminSecretKey: text("s3_admin_secret_key"),
+	ramCapacity: integer("ram_capacity").notNull(),
+	cpuCapacity: integer("cpu_capacity").notNull(),
+	cpuUsage: integer("cpu_usage").notNull(),
+	ramUsage: integer("ram_usage").notNull(),
 	createdAt: timestamp("created_at").defaultNow().notNull(),
 	updatedAt: timestamp("updated_at")
 		.$onUpdate(() => /* @__PURE__ */ new Date())
 		.notNull(),
 });
+
+export const k8sClusterNode = pgTable("k8sClusterNode", {
+	id: serial("id").primaryKey(),
+	clusterId: serial("cluster_id")
+		.notNull()
+		.references(() => k8sCluster.id, { onDelete: "cascade" }),
+	name: text("name").notNull(),
+	cpuUsage: integer("cpu_usage").notNull(),
+	ramUsage: integer("ram_usage").notNull(),
+	cpuCapacity: integer("cpu_capacity").notNull(),
+	ramCapacity: integer("ram_capacity").notNull(),
+	lable:text("lable").notNull(),
+	createdAt: timestamp("created_at").defaultNow().notNull(),
+	updatedAt: timestamp("updated_at")
+		.$onUpdate(() => /* @__PURE__ */ new Date())
+		.notNull(),
+});
+
+
+export const k8sPods = pgTable("k8sPods", {
+	id: serial("id").primaryKey(),
+	clusterId: serial("cluster_id")
+		.notNull()
+		.references(() => k8sCluster.id, { onDelete: "cascade" }),
+	nodeId: serial("node_id")
+		.notNull()
+		.references(() => k8sClusterNode.id, { onDelete: "cascade" }),
+	name: text("name").notNull(),
+	
+	dockerImage:text("docker_image").notNull(),
+	replicas:integer("replicas").notNull(),
+	cpuRequest:integer("cpu_request").notNull(),
+	cpuLimit:integer("cpu_limit").notNull(),
+	memoryRequest:integer("memory_request").notNull(),
+	memoryLimit:integer("memory_limit").notNull(),
+	command:text("command").notNull(),
+	envVariables:text("env_variables").notNull(),
+
+	
+	inernalPort:integer("inernal_port").notNull(),
+	
+
+	createdAt: timestamp("created_at").defaultNow().notNull(),
+	updatedAt: timestamp("updated_at")
+		.$onUpdate(() => /* @__PURE__ */ new Date())
+		.notNull(),
+});
+
+export const k8sPodsNodeRelation = relations(k8sPods, ({ one }) => ({
+	node: one(k8sClusterNode, {
+		fields: [k8sPods.nodeId],
+		references: [k8sClusterNode.id],
+	}),
+}));
+export const k8sPodsClusterRelation = relations(k8sPods, ({ one }) => ({
+	cluster: one(k8sCluster, {
+		fields: [k8sPods.clusterId],
+		references: [k8sCluster.id],
+	}),
+}));
+export const k8sServices = pgTable("k8sServices", {
+	id: serial("id").primaryKey(),
+	clusterId: serial("cluster_id")
+		.notNull()
+		.references(() => k8sCluster.id, { onDelete: "cascade" }),
+	nodeId: serial("node_id")
+		.notNull()
+		.references(() => k8sClusterNode.id, { onDelete: "cascade" }),
+	podId: serial("pod_id")
+		.notNull()
+		.references(() => k8sPods.id, { onDelete: "cascade" }),
+
+	internalPort:integer("internal_port").notNull(),
+	externalPort:integer("external_port").notNull(),
+	domain:text("domain").notNull(),
+	lable:text("lable").notNull(),
+
+	name: text("name").notNull(),
+	createdAt: timestamp("created_at").defaultNow().notNull(),
+	updatedAt: timestamp("updated_at")
+		.$onUpdate(() => /* @__PURE__ */ new Date())
+		.notNull(),
+});
+export const k8sServicesNodeRelation = relations(k8sServices, ({ one }) => ({
+	node: one(k8sClusterNode, {
+		fields: [k8sServices.nodeId],
+		references: [k8sClusterNode.id],
+	}),
+}));
+export const k8sServicesClusterRelation = relations(k8sServices, ({ one }) => ({
+	cluster: one(k8sCluster, {
+		fields: [k8sServices.clusterId],
+		references: [k8sCluster.id],
+	}),
+}));
+
+export const k8sServicesPodRelation = relations(k8sServices, ({ one }) => ({
+	pod: one(k8sPods, {
+		fields: [k8sServices.podId],
+		references: [k8sPods.id],
+	}),
+}));
+
+export const clusterK8sClusterRelation = relations(k8sCluster, ({ one }) => ({
+	agent: one(clusterAgent, {
+		fields: [k8sCluster.agentId],
+		references: [clusterAgent.id],
+	}),
+}));
 
 export const agentClusterRelation = relations(clusterAgent, ({ one }) => ({
 	cluster: one(k8sCluster, {
@@ -124,4 +239,5 @@ export const schema = {
 	userRole,
 	k8sCluster,
 	clusterAgent,
+	k8sPods,
 } as const;

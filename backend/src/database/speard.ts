@@ -2,6 +2,7 @@
  * @lastModified 2025-02-04
  * @see https://elysiajs.com/recipe/drizzle.html#utility
  */
+/** biome-ignore-all lint/complexity/noBannedTypes: <explanation> */
 
 import { Kind, type TObject } from '@sinclair/typebox'
 import {
@@ -47,7 +48,7 @@ export const spread = <
     mode?: Mode,
 ): Spread<T, Mode> => {
     const newSchema: Record<string, unknown> = {}
-    let table
+    let table: TObject | Table
 
     switch (mode) {
         case 'insert':
@@ -72,7 +73,7 @@ export const spread = <
     for (const key of Object.keys(table.properties))
         newSchema[key] = table.properties[key]
 
-    return newSchema as any
+    return newSchema as Spread<T, Mode>
 }
 
 /**
@@ -96,5 +97,7 @@ export const spreads = <
 
     for (const key of keys) newSchema[key] = spread(models[key], mode)
 
-    return newSchema as any
+    return newSchema as {
+        [K in keyof T]: Spread<T[K], Mode>
+    }
 }

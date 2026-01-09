@@ -50,4 +50,27 @@ export const authenticationMiddleware = new Elysia({
 			};
 		},
 	},
+	adminAuth: (role: string) => ({
+		async resolve({ status, request: { headers } }) {
+			const session = await auth.api.getSession({
+				headers,
+			});
+
+			if (!session) return status(401);
+			const userRole = await db
+				.select()
+				.from(schema.userRole)
+				.where(eq(schema.userRole.userId, session.user.id))
+				.limit(1);
+			if (userRole.length === 0 || !userRole[0]) {
+				return status(401);
+			}
+			if (userRole[0].role !== role) {
+				return status(401);
+			}
+			return {
+				userRole: userRole[0],
+			};
+		},
+	}),
 });

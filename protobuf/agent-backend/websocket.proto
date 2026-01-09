@@ -1,11 +1,110 @@
 syntax = "proto3";
 package api;
 
-// This is important for Go generation
 option go_package = "./pb";
 
-message K8sStatus {
-    bool enabled = 1;
-    repeated string namespace = 2;
-    string cluster_name = 3;
+// Wrapper for all messages sent from Agent to Server
+message AgentPayload {
+  oneof payload {
+    Heartbeat heartbeat = 1;
+  }
+}
+
+// Wrapper for messages sent from Server to Agent
+message ServerPayload {
+  oneof payload {
+    Command command = 1;
+  }
+}
+
+message Heartbeat {
+  // Information about the cluster itself
+  ClusterResource cluster_resource = 1;
+  
+  // List of nodes in the cluster
+  repeated Node nodes = 2;
+  
+  // List of pods (can be extensive)
+  repeated Pod pods = 3;
+  
+  // List of services
+  repeated Service services = 4;
+
+  // Timestamp of the heartbeat
+  int64 timestamp = 5;
+}
+
+message ClusterResource {
+  // Total CPU capacity (millicores)
+  int64 cpu_capacity = 1;
+  // Total Memory capacity (MiB)
+  int64 ram_capacity = 2;
+  // Current CPU usage (millicores)
+  int64 cpu_usage = 3;
+  // Current Memory usage (MiB)
+  int64 ram_usage = 4;
+}
+
+message Node {
+  string name = 1;
+  int64 cpu_usage = 2;
+  int64 ram_usage = 3;
+  int64 cpu_capacity = 4;
+  int64 ram_capacity = 5;
+  // JSON string or key=value pairs for labels
+  map<string, string> labels = 6;
+}
+
+message Pod {
+  string name = 1;
+  string namespace = 2;
+  string node_name = 3;
+  // Main image (or list if multiple containers)
+  string docker_image = 4;
+  int32 replicas = 5;
+  // Status (Running, Pending, etc.)
+  string status = 6;
+  
+  // Resource requirements
+  int64 cpu_request = 7;
+  int64 cpu_limit = 8;
+  int64 memory_request = 9;
+  int64 memory_limit = 10;
+  
+  string command = 11;
+  // JSON string or sensitive data masked
+  string env_variables = 12;
+  
+  int32 internal_port = 13;
+}
+
+message Service {
+  string name = 1;
+  string namespace = 2;
+  string type = 3; // ClusterIP, NodePort, LoadBalancer
+  int32 internal_port = 4;
+  int32 external_port = 5;
+  string cluster_ip = 6;
+  // Selector labels
+  map<string, string> selector = 7;
+  string domain = 8;
+}
+
+message Command {
+  string id = 1;
+  enum CommandType {
+    UNKNOWN = 0;
+    EDIT_RESOURCE = 1;
+    CREATE_POD = 2;
+    SCALE_POD = 3;
+    DELETE_POD = 4;
+  }
+  CommandType type = 2;
+  
+  // Payload depends on the command type (e.g., serialized JSON or YAML)
+  string payload = 3;
+  
+  // Target resource details if applicable
+  string target_namespace = 4;
+  string target_name = 5;
 }

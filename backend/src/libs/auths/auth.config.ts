@@ -1,7 +1,7 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { db } from "../../database";
-import { user, session, account, verification } from "../../database/schema";
+import { user, session, account, verification, userRole } from "../../database/schema";
 import { openAPI } from "better-auth/plugins";
 import { FRONTEND_URLs } from "../../constants";
 
@@ -28,14 +28,34 @@ export const auth = betterAuth({
     },
   },
   baseURL: process.env.BASE_URL || "http://localhost:3001/api/auth",
-  trustedOrigins(request) {
+  trustedOrigins() {
     return [
       ...(process.env.BASE_URL ? [process.env.BASE_URL] : []),
       "http://localhost:3001",
       ...FRONTEND_URLs,
-      // request?.headers.get("origin") || "",
     ];
   },
   secret: process.env.BETTER_AUTH_SECRET!,
   plugins: [openAPI()],
+  // on user account creation, create the role for the user
+  databaseHooks: {
+    user: {
+      create: {
+        after: async (user) => {
+          // if this is the first user, create the admin role for the user
+          if (user.id === "1") {
+            await db.insert(userRole).values({
+              userId: user.id,
+              role: "admin",
+            });
+          } else {
+            await db.insert(userRole).values({
+              userId: user.id,
+              role: "user",
+            });
+          }
+        },
+      },
+    },
+  },
 });
