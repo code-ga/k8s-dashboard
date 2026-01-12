@@ -18,6 +18,7 @@ export const clusterRoute = new Elysia({ prefix: "/cluster" })
 	.guard(
 		{
 			userAuth: true,
+			adminAuth:"admin",
 		},
 		(app) =>
 			app
@@ -32,6 +33,7 @@ export const clusterRoute = new Elysia({ prefix: "/cluster" })
 								description,
 								tags,
 								clusterDomain: ctx.body.clusterDomain,
+								
 							})
 							.returning();
 						if (cluster.length === 0 || !cluster[0]) {

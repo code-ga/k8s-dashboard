@@ -12,6 +12,9 @@ import (
 	"strings"
 	"time"
 
+	pb "k8s-dashboard/agents/pb/agent-backend"
+
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -123,6 +126,14 @@ func (kc *K8sClient) GetPods(namespace string) (*corev1.PodList, error) {
 	return pods, nil
 }
 
+func (kc *K8sClient) GetServices(namespace string) (*corev1.ServiceList, error) {
+	services, err := kc.Clientset.CoreV1().Services(namespace).List(kc.Context, metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+	return services, nil
+}
+
 func (kc *K8sClient) GetNamespaces() (*corev1.NamespaceList, error) {
 	namespaces, err := kc.Clientset.CoreV1().Namespaces().List(kc.Context, metav1.ListOptions{})
 	if err != nil {
@@ -183,6 +194,184 @@ func (kc *K8sClient) GetUsedResources() (int64, int64, error) {
 		}
 	}
 	return usedCPU, usedMemory, nil
+}
+
+func (kc *K8sClient) GetFullClusterState() (*pb.Heartbeat, error) {
+	// 1. Cluster Resource
+	nodes, err := kc.GetNodes()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get nodes: %w", err)
+	}
+
+	var totalCPUCap, totalMemCap int64
+	var pbNodes []*pb.Node
+
+	for _, node := range nodes.Items {
+		cpu := node.Status.Capacity[corev1.ResourceCPU]
+		memory := node.Status.Capacity[corev1.ResourceMemory]
+		cpuCap := cpu.MilliValue()
+		memCap := memory.Value() / (1024 * 1024)
+
+		totalCPUCap += cpuCap
+		totalMemCap += memCap
+
+		// Node usage calculation could be more complex (e.g. metrics server),
+		// but here we can try to estimate from pods on the node or just leave 0 if not available easily without metrics API
+		// For now, let's leave per-node usage as 0 or implement aggregation later.
+
+		labels := make(map[string]string)
+		for k, v := range node.Labels {
+			labels[k] = v
+		}
+
+		pbNodes = append(pbNodes, &pb.Node{
+			Name:        node.Name,
+			CpuCapacity: cpuCap,
+			RamCapacity: memCap,
+			Labels:      labels,
+			// CpuUsage: ... (requires metrics server or manual aggregation)
+			// RamUsage: ...
+		})
+	}
+
+	pods, err := kc.GetPods("") // All namespaces
+	if err != nil {
+		return nil, fmt.Errorf("failed to get pods: %w", err)
+	}
+
+	var pbPods []*pb.Pod
+	var totalCPUUsage, totalMemUsage int64
+
+	for _, pod := range pods.Items {
+		var cpuReq, memReq, cpuLim, memLim int64
+		// Aggregate container resources
+		for _, container := range pod.Spec.Containers {
+			if q, ok := container.Resources.Requests[corev1.ResourceCPU]; ok {
+				cpuReq += q.MilliValue()
+			}
+			if q, ok := container.Resources.Requests[corev1.ResourceMemory]; ok {
+				memReq += q.Value() / (1024 * 1024)
+			}
+			if q, ok := container.Resources.Limits[corev1.ResourceCPU]; ok {
+				cpuLim += q.MilliValue()
+			}
+			if q, ok := container.Resources.Limits[corev1.ResourceMemory]; ok {
+				memLim += q.Value() / (1024 * 1024)
+			}
+		}
+
+		totalCPUUsage += cpuReq
+		totalMemUsage += memReq
+
+		// Get main image
+		image := ""
+		if len(pod.Spec.Containers) > 0 {
+			image = pod.Spec.Containers[0].Image
+		}
+
+		var replicas int32 = 1
+		// If controlled by a ReplicaSet/Deployment, we might want to know desired replicas.
+		// However, for a single Pod, it is just 1. The server can aggregate.
+
+		// Commands
+		cmdStr := ""
+		if len(pod.Spec.Containers) > 0 && len(pod.Spec.Containers[0].Command) > 0 {
+			cmdStr = strings.Join(pod.Spec.Containers[0].Command, " ")
+		}
+
+		pbPods = append(pbPods, &pb.Pod{
+			Name:          pod.Name,
+			Namespace:     pod.Namespace,
+			NodeName:      pod.Spec.NodeName,
+			DockerImage:   image,
+			Replicas:      replicas,
+			Status:        string(pod.Status.Phase),
+			CpuRequest:    cpuReq,
+			CpuLimit:      cpuLim,
+			MemoryRequest: memReq,
+			MemoryLimit:   memLim,
+			Command:       cmdStr,
+			// EnvVariables: ... (might be sensitive, skipping for now or format as needed)
+		})
+	}
+
+	services, err := kc.GetServices("")
+	if err != nil {
+		return nil, fmt.Errorf("failed to get services: %w", err)
+	}
+	var pbServices []*pb.Service
+	for _, scv := range services.Items {
+		var iPort, ePort int32
+		if len(scv.Spec.Ports) > 0 {
+			iPort = scv.Spec.Ports[0].Port
+			ePort = scv.Spec.Ports[0].NodePort
+		}
+		pbServices = append(pbServices, &pb.Service{
+			Name:         scv.Name,
+			Namespace:    scv.Namespace,
+			Type:         string(scv.Spec.Type),
+			InternalPort: iPort,
+			ExternalPort: ePort,
+			ClusterIp:    scv.Spec.ClusterIP,
+			Selector:     scv.Spec.Selector,
+		})
+	}
+
+	deployments, err := kc.GetDeployments("")
+	if err != nil {
+		return nil, fmt.Errorf("failed to get deployments: %w", err)
+	}
+	var pbDeployments []*pb.Deployment
+	for _, dep := range deployments.Items {
+		var replicas int32
+		if dep.Spec.Replicas != nil {
+			replicas = *dep.Spec.Replicas
+		}
+
+		image := ""
+		if len(dep.Spec.Template.Spec.Containers) > 0 {
+			image = dep.Spec.Template.Spec.Containers[0].Image
+		}
+
+		pbDeployments = append(pbDeployments, &pb.Deployment{
+			Name:                dep.Name,
+			Namespace:           dep.Namespace,
+			Replicas:            replicas,
+			AvailableReplicas:   dep.Status.AvailableReplicas,
+			UnavailableReplicas: dep.Status.UnavailableReplicas,
+			Labels:              dep.Labels,
+			Selector:            dep.Spec.Selector.MatchLabels,
+			DockerImage:         image,
+		})
+	}
+
+	heartbeat := &pb.Heartbeat{
+		ClusterResource: &pb.ClusterResource{
+			CpuCapacity: totalCPUCap,
+			RamCapacity: totalMemCap,
+			CpuUsage:    totalCPUUsage,
+			RamUsage:    totalMemUsage,
+		},
+		Nodes:       pbNodes,
+		Pods:        pbPods,
+		Services:    pbServices,
+		Deployments: pbDeployments,
+		Timestamp:   time.Now().Unix(),
+	}
+
+	return heartbeat, nil
+}
+
+func (kc *K8sClient) GetDeployments(namespace string) (*appsv1.DeploymentList, error) {
+	deployments, err := kc.Clientset.AppsV1().Deployments(namespace).List(kc.Context, metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+	return deployments, nil
+}
+
+func (k *K8sClient) DeleteDeployment(namespace, deploymentName string) error {
+	return k.Clientset.AppsV1().Deployments(namespace).Delete(k.Context, deploymentName, metav1.DeleteOptions{})
 }
 
 // ApplyManifest accepts a raw YAML string (containing one or multiple documents)
@@ -358,7 +547,7 @@ func (k *K8sClient) BootstrapSystem(config BootstrapConfig) error {
 		}
 
 		// Check if GarageHQ is already deployed
-		garageStatefulSet, err := k.Clientset.AppsV1().StatefulSets(garageNamespace).Get(k.Context, "garage", metav1.GetOptions{})
+		_, err = k.Clientset.AppsV1().StatefulSets(garageNamespace).Get(k.Context, "garage", metav1.GetOptions{})
 		garageDeployed := err == nil
 
 		// Logic:
@@ -561,4 +750,22 @@ func (k *K8sClient) CreateGarageKey(namespace string) (string, error) {
 		return secret, nil
 	}
 	return "", fmt.Errorf("could not parse secret from output: %s", stdout)
+}
+
+func (k *K8sClient) DeletePod(namespace, podName string) error {
+	return k.Clientset.CoreV1().Pods(namespace).Delete(k.Context, podName, metav1.DeleteOptions{})
+}
+
+func (k *K8sClient) ScaleDeployment(namespace, deploymentName string, replicas int32) error {
+	scale, err := k.Clientset.AppsV1().Deployments(namespace).GetScale(k.Context, deploymentName, metav1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to get scale for deployment %s: %w", deploymentName, err)
+	}
+
+	scale.Spec.Replicas = replicas
+	_, err = k.Clientset.AppsV1().Deployments(namespace).UpdateScale(k.Context, deploymentName, scale, metav1.UpdateOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to update scale for deployment %s: %w", deploymentName, err)
+	}
+	return nil
 }

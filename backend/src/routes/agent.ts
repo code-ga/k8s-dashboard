@@ -7,6 +7,9 @@ import { Type } from "@sinclair/typebox";
 import { dbSchemaTypes } from "../database/type";
 import { eq } from "drizzle-orm";
 import { agentManagerService } from "../services/agentManager";
+import { agentService } from "../services/agent.service";
+import { AgentPayload, ServerPayload } from "../../pb-generated/agent-backend/websocket";
+
 export const agentRoute = new Elysia({ prefix: "/agents" })
 	.use(authenticationMiddleware)
 	.use(agentManagerService)
@@ -130,8 +133,7 @@ export const agentRoute = new Elysia({ prefix: "/agents" })
 						401:errorResponseSchema,
 						404:errorResponseSchema,
 						500:errorResponseSchema,
-					},
-					body:Type.Partial(
+						body:Type.Partial(
 							Type.Object({
 								name: dbSchemaTypes.k8sCluster.name,
 								description: dbSchemaTypes.k8sCluster.description,
@@ -140,35 +142,69 @@ export const agentRoute = new Elysia({ prefix: "/agents" })
 								clusterDomain: dbSchemaTypes.k8sCluster.clusterDomain,
 							}),
 						)
+					},
 				})
 				.ws("/ws", {
 					detail: {
 						tags: ["Agent"],
 					},
+					body: Type.Any(),
 					open: async (ctx) => {
 						const cluster = ctx.data.cluster;
+						const agent = ctx.data.agent;
 						console.log(
-							`Agent connected for cluster ${cluster.name} (${cluster.id})`,
+							`Agent ${agent.id} connected for cluster ${cluster.name} (${cluster.id})`,
 						);
 						ctx.data.agentManager.emit("agent/connected", {
-							agentId: `${ctx.data.agent.id}`,
+							agentId: `${agent.id}`,
 						});
+						// Register connection
+                        ctx.data.agentManager.registerConnection(agent.id, ctx);
 						// Here you can store the WebSocket connection for later use
 					},
-					message: async (ctx, msg) => {
-						const cluster = ctx.data.cluster;
-						console.log(
-							`Received message from cluster ${cluster.name} (${cluster.id}):`,
-							msg,
-						);
-						// Handle incoming messages from the agent here
+					message: async (ws, message) => {
+						const cluster = ws.data.cluster;
+						const agent = ws.data.agent;
+
+						// Message is expected to be Uint8Array (binary)
+						if (!(message instanceof Uint8Array) && !Buffer.isBuffer(message)) {
+							console.log("Received non-binary message");
+							return;
+						}
+
+						try {
+							// Decode Protobuf
+							const payload = AgentPayload.decode(new Uint8Array(message as any));
+
+							if (payload.heartbeat) {
+								const response = await agentService.handleHeartbeat(agent.id, payload.heartbeat);
+								if (response) {
+									// Send Command back
+									const responseBytes = ServerPayload.encode(response).finish();
+									ws.send(responseBytes);
+								}
+							}
+						} catch (error) {
+							console.error(
+								`Failed to decode or process message from cluster ${cluster.name} (${cluster.id}):`,
+								error,
+							);
+						}
 					},
 					close: async (ctx) => {
 						const cluster = ctx.data.cluster;
+						const agent = ctx.data.agent;
 						console.log(
-							`Agent disconnected for cluster ${cluster.name} (${cluster.id})`,
+							`Agent ${agent.id} disconnected for cluster ${cluster.name} (${cluster.id})`,
 						);
+						ctx.data.agentManager.emit("agent/disconnected", {
+							agentId: `${agent.id}`,
+						});
+                        // Remove connection
+                        ctx.data.agentManager.removeConnection(agent.id);
 						// Clean up any resources related to the disconnected agent here
+						await agentService.agentDisconnect(agent.id);
 					},
 				}),
 	);
+

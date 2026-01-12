@@ -5,6 +5,7 @@ import { clusterRoute } from "./cluster";
 import { agentRoute } from "./agent";
 import { agentManagerService } from "../services/agentManager";
 import { userRouter } from "./user";
+import { nodesRoute } from "./nodes";
 
 const apiRouter = new Elysia({ prefix: "/api" })
 	.use(agentManagerService)
@@ -12,6 +13,7 @@ const apiRouter = new Elysia({ prefix: "/api" })
 	.use(healthRoutes)
 	.use(clusterRoute)
 	.use(agentRoute)
+    .use(nodesRoute)
 	.use(userRouter);
 
 export { apiRouter };

@@ -11,65 +11,47 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
+	"strconv"
 	"time"
 
 	"github.com/gorilla/websocket"
+	"google.golang.org/protobuf/proto"
 
 	// Import all auth plugins for broad compatibility
 
+	pb "k8s-dashboard/agents/pb/agent-backend"
 	"k8s-dashboard/agents/service/k8s"
 
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 )
 
-var addr = flag.String("addr", "localhost:8080", "http service address")
+var addr = flag.String("addr", "localhost:3001", "server address") // Default to 3001 for backend
 var token = flag.String("token", "iamveryhandsome", "server token")
 
 func main() {
 	flag.Parse()
 	log.SetFlags(0)
-	// // Discover the user's home directory
-	// homeDir, err := os.UserHomeDir()
-	// if err != nil {
-	// 	panic(err.Error())
-	// }
-	// kubeconfigPath := filepath.Join(homeDir, ".kube", "config")
 
-	// // Load the kubeconfig file
-	// config, err := clientcmd.BuildConfigFromFlags("", kubeconfigPath)
-	// if err != nil {
-	// 	panic(err.Error())
-	// }
-
-	// // Create the clientset
-	// clientset, err := kubernetes.NewForConfig(config)
-	// if err != nil {
-	// 	panic(err.Error())
-	// }
 	kubeClient, err := k8s.NewK8sClient()
 	if err != nil {
 		log.Fatalf("Failed to create Kubernetes client: %v", err)
 	}
-	log.Printf("Kubernetes client created: %+v", kubeClient)
-	clusterConfig, err := getClusterConfig()
-	if err != nil {
-		log.Fatalf("Failed to get cluster config: %v", err)
-	}
-	log.Printf("Cluster Config: %+v", clusterConfig)
-	kubeClient.BootstrapSystem(k8s.BootstrapConfig{
-		EnableGarageHQ:   clusterConfig.EnableS3Service,
-		ClusterDomain:    "cluster.local", // Add default domain if needed or fetch from config
-		S3AdminSecretKey: clusterConfig.S3AdminSecretKey,
-		UpdateS3Key:      updateClusterS3Key,
-	})
+	log.Printf("Kubernetes client created")
+
+	// Initial cluster config fetch (optional or part of handshake)
+	// clusterConfig, err := getClusterConfig() ...
+
+	// Initial Bootstrap if needed
+	// kubeClient.BootstrapSystem(...)
 
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt)
-	u := url.URL{Scheme: "ws", Host: *addr, Path: "/api/agents/ws"}
+
+	u := url.URL{Scheme: "ws", Host: *addr, Path: "/api/agent/ws"}
 	log.Printf("connecting to %s", u.String())
 
 	header := make(http.Header)
-	header.Add("Authorization", "Bot "+*token) // Example: Adding an auth token
+	header.Add("Authorization", "Bot "+*token)
 
 	c, _, err := websocket.DefaultDialer.Dial(u.String(), header)
 	if err != nil {
@@ -79,36 +61,72 @@ func main() {
 
 	done := make(chan struct{})
 
+	// 1. Read Loop (Receive Commands)
 	go func() {
 		defer close(done)
 		for {
-			_, message, err := c.ReadMessage()
+			mt, message, err := c.ReadMessage()
 			if err != nil {
 				log.Println("read:", err)
 				return
 			}
-			log.Printf("recv: %s", message)
+			if mt == websocket.BinaryMessage {
+				var serverPayload pb.ServerPayload
+				if err := proto.Unmarshal(message, &serverPayload); err != nil {
+					log.Printf("Failed to unmarshal server payload: %v", err)
+					continue
+				}
+
+				if cmd := serverPayload.GetCommand(); cmd != nil {
+					log.Printf("Received Command: %s (Type: %v)", cmd.Id, cmd.Type)
+					handleCommand(kubeClient, cmd)
+				}
+			} else {
+				log.Printf("recv non-binary message: %s", message)
+			}
 		}
 	}()
 
-	ticker := time.NewTicker(time.Second)
+	// 2. Heartbeat Loop (Send Stats)
+	ticker := time.NewTicker(5 * time.Second) // Send heartbeat every 5 seconds
 	defer ticker.Stop()
 
 	for {
 		select {
 		case <-done:
 			return
-		case t := <-ticker.C:
-			err := c.WriteMessage(websocket.TextMessage, []byte(t.String()))
+		case <-ticker.C:
+			// Collect Stats
+			heartbeat, err := kubeClient.GetFullClusterState()
+			if err != nil {
+				log.Printf("Failed to get cluster state: %v", err)
+				continue // Don't crash, just skip this beat
+			}
+
+			// Wrap in AgentPayload
+			payload := &pb.AgentPayload{
+				Payload: &pb.AgentPayload_Heartbeat{
+					Heartbeat: heartbeat,
+				},
+			}
+
+			// Marshal to bytes
+			data, err := proto.Marshal(payload)
+			if err != nil {
+				log.Printf("Failed to marshal heartbeat: %v", err)
+				continue
+			}
+
+			// Send
+			err = c.WriteMessage(websocket.BinaryMessage, data)
 			if err != nil {
 				log.Println("write:", err)
 				return
 			}
+			log.Println("Sent Heartbeat")
+
 		case <-interrupt:
 			log.Println("interrupt")
-
-			// Cleanly close the connection by sending a close message and then
-			// waiting (with timeout) for the server to close the connection.
 			err := c.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, "Client shutting down"))
 			if err != nil {
 				log.Println("write close:", err)
@@ -121,7 +139,56 @@ func main() {
 			return
 		}
 	}
+}
 
+func handleCommand(kc *k8s.K8sClient, cmd *pb.Command) {
+	var err error
+	switch cmd.Type {
+	case pb.Command_EDIT_RESOURCE, pb.Command_CREATE_DEPLOYMENT:
+		// Expects YAML/JSON payload
+		if cmd.Payload != "" {
+			err = kc.ApplyManifest(cmd.Payload)
+		} else {
+			err = fmt.Errorf("payload empty for EDIT/CREATE command")
+		}
+	case pb.Command_SCALE_DEPLOYMENT:
+		// Payload could be replicas int string or we use a structured field if we added one
+		// Assuming payload is "replicas" as string for simplicity, or we parse from YAML if provided.
+		// For robustness, let's assume Payload is just the number of replicas as a string for this specific command type.
+		if cmd.TargetNamespace != "" && cmd.TargetName != "" && cmd.Payload != "" {
+			replicas, convErr := strconv.Atoi(cmd.Payload)
+			if convErr != nil {
+				err = fmt.Errorf("invalid replicas payload: %v", convErr)
+			} else {
+				err = kc.ScaleDeployment(cmd.TargetNamespace, cmd.TargetName, int32(replicas))
+			}
+		} else {
+			err = fmt.Errorf("missing target or payload for SCALE command")
+		}
+	case pb.Command_DELETE_DEPLOYMENT:
+		if cmd.TargetNamespace != "" && cmd.TargetName != "" {
+			// Note: We need DeleteDeployment in k8s.go, assuming DeletePod was existing but we want deployments now.
+			// But usually DELETE_DEPLOYMENT means deleting the deployment resource.
+			// If existing k8s client has DeleteDeployment use it, otherwise fallback or implement it.
+			// Checking k8s.go I don't see DeleteDeployment, only DeletePod.
+			// I will use a generic DeleteResource if available or fallback to DeletePod for now to avoid breaking build,
+			// BUT since this is a "Deployment" command, we should strictly delete the deployment.
+			// Let's assume we will add DeleteDeployment to k8s.go or use generic dynamic client delete.
+			// For now, mapping to DeleteDeployment which I will implement next.
+			err = kc.DeleteDeployment(cmd.TargetNamespace, cmd.TargetName)
+		} else {
+			err = fmt.Errorf("missing target for DELETE command")
+		}
+	default:
+		log.Printf("Unknown command type: %v", cmd.Type)
+		return
+	}
+
+	if err != nil {
+		log.Printf("Error executing command %s: %v", cmd.Id, err)
+	} else {
+		log.Printf("Successfully executed command %s", cmd.Id)
+	}
 }
 
 type ClusterConfig struct {

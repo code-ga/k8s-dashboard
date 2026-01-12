@@ -27,8 +27,12 @@ message Heartbeat {
   // List of pods (can be extensive)
   repeated Pod pods = 3;
   
+
   // List of services
   repeated Service services = 4;
+  
+  // List of deployments
+  repeated Deployment deployments = 6;
 
   // Timestamp of the heartbeat
   int64 timestamp = 5;
@@ -53,6 +57,20 @@ message Node {
   int64 ram_capacity = 5;
   // JSON string or key=value pairs for labels
   map<string, string> labels = 6;
+}
+
+message Deployment {
+  string name = 1;
+  string namespace = 2;
+  int32 replicas = 3;
+  int32 available_replicas = 4;
+  int32 unavailable_replicas = 5;
+  // JSON string or key=value pairs for labels
+  map<string, string> labels = 6;
+  // JSON string or key=value pairs for selector
+  map<string, string> selector = 7;
+  // Image used in the first container of the template (simplified)
+  string docker_image = 8;
 }
 
 message Pod {
@@ -95,9 +113,9 @@ message Command {
   enum CommandType {
     UNKNOWN = 0;
     EDIT_RESOURCE = 1;
-    CREATE_POD = 2;
-    SCALE_POD = 3;
-    DELETE_POD = 4;
+    CREATE_DEPLOYMENT = 2;
+    SCALE_DEPLOYMENT = 3;
+    DELETE_DEPLOYMENT = 4;
   }
   CommandType type = 2;
   

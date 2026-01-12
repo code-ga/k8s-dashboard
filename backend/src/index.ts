@@ -30,3 +30,4 @@ export const app = new Elysia()
 console.log(`Listening on ${app.server?.url}`);
 
 export type App = typeof app;
+

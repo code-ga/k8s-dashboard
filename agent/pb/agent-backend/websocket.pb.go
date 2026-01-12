@@ -24,11 +24,11 @@ const (
 type Command_CommandType int32
 
 const (
-	Command_UNKNOWN       Command_CommandType = 0
-	Command_EDIT_RESOURCE Command_CommandType = 1
-	Command_CREATE_POD    Command_CommandType = 2
-	Command_SCALE_POD     Command_CommandType = 3
-	Command_DELETE_POD    Command_CommandType = 4
+	Command_UNKNOWN           Command_CommandType = 0
+	Command_EDIT_RESOURCE     Command_CommandType = 1
+	Command_CREATE_DEPLOYMENT Command_CommandType = 2
+	Command_SCALE_DEPLOYMENT  Command_CommandType = 3
+	Command_DELETE_DEPLOYMENT Command_CommandType = 4
 )
 
 // Enum value maps for Command_CommandType.
@@ -36,16 +36,16 @@ var (
 	Command_CommandType_name = map[int32]string{
 		0: "UNKNOWN",
 		1: "EDIT_RESOURCE",
-		2: "CREATE_POD",
-		3: "SCALE_POD",
-		4: "DELETE_POD",
+		2: "CREATE_DEPLOYMENT",
+		3: "SCALE_DEPLOYMENT",
+		4: "DELETE_DEPLOYMENT",
 	}
 	Command_CommandType_value = map[string]int32{
-		"UNKNOWN":       0,
-		"EDIT_RESOURCE": 1,
-		"CREATE_POD":    2,
-		"SCALE_POD":     3,
-		"DELETE_POD":    4,
+		"UNKNOWN":           0,
+		"EDIT_RESOURCE":     1,
+		"CREATE_DEPLOYMENT": 2,
+		"SCALE_DEPLOYMENT":  3,
+		"DELETE_DEPLOYMENT": 4,
 	}
 )
 
@@ -73,7 +73,7 @@ func (x Command_CommandType) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use Command_CommandType.Descriptor instead.
 func (Command_CommandType) EnumDescriptor() ([]byte, []int) {
-	return file_agent_backend_websocket_proto_rawDescGZIP(), []int{7, 0}
+	return file_agent_backend_websocket_proto_rawDescGZIP(), []int{8, 0}
 }
 
 // Wrapper for all messages sent from Agent to Server
@@ -220,6 +220,8 @@ type Heartbeat struct {
 	Pods []*Pod `protobuf:"bytes,3,rep,name=pods,proto3" json:"pods,omitempty"`
 	// List of services
 	Services []*Service `protobuf:"bytes,4,rep,name=services,proto3" json:"services,omitempty"`
+	// List of deployments
+	Deployments []*Deployment `protobuf:"bytes,6,rep,name=deployments,proto3" json:"deployments,omitempty"`
 	// Timestamp of the heartbeat
 	Timestamp     int64 `protobuf:"varint,5,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -280,6 +282,13 @@ func (x *Heartbeat) GetPods() []*Pod {
 func (x *Heartbeat) GetServices() []*Service {
 	if x != nil {
 		return x.Services
+	}
+	return nil
+}
+
+func (x *Heartbeat) GetDeployments() []*Deployment {
+	if x != nil {
+		return x.Deployments
 	}
 	return nil
 }
@@ -448,6 +457,109 @@ func (x *Node) GetLabels() map[string]string {
 	return nil
 }
 
+type Deployment struct {
+	state               protoimpl.MessageState `protogen:"open.v1"`
+	Name                string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Namespace           string                 `protobuf:"bytes,2,opt,name=namespace,proto3" json:"namespace,omitempty"`
+	Replicas            int32                  `protobuf:"varint,3,opt,name=replicas,proto3" json:"replicas,omitempty"`
+	AvailableReplicas   int32                  `protobuf:"varint,4,opt,name=available_replicas,json=availableReplicas,proto3" json:"available_replicas,omitempty"`
+	UnavailableReplicas int32                  `protobuf:"varint,5,opt,name=unavailable_replicas,json=unavailableReplicas,proto3" json:"unavailable_replicas,omitempty"`
+	// JSON string or key=value pairs for labels
+	Labels map[string]string `protobuf:"bytes,6,rep,name=labels,proto3" json:"labels,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	// JSON string or key=value pairs for selector
+	Selector map[string]string `protobuf:"bytes,7,rep,name=selector,proto3" json:"selector,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	// Image used in the first container of the template (simplified)
+	DockerImage   string `protobuf:"bytes,8,opt,name=docker_image,json=dockerImage,proto3" json:"docker_image,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Deployment) Reset() {
+	*x = Deployment{}
+	mi := &file_agent_backend_websocket_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Deployment) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Deployment) ProtoMessage() {}
+
+func (x *Deployment) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_backend_websocket_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Deployment.ProtoReflect.Descriptor instead.
+func (*Deployment) Descriptor() ([]byte, []int) {
+	return file_agent_backend_websocket_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *Deployment) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *Deployment) GetNamespace() string {
+	if x != nil {
+		return x.Namespace
+	}
+	return ""
+}
+
+func (x *Deployment) GetReplicas() int32 {
+	if x != nil {
+		return x.Replicas
+	}
+	return 0
+}
+
+func (x *Deployment) GetAvailableReplicas() int32 {
+	if x != nil {
+		return x.AvailableReplicas
+	}
+	return 0
+}
+
+func (x *Deployment) GetUnavailableReplicas() int32 {
+	if x != nil {
+		return x.UnavailableReplicas
+	}
+	return 0
+}
+
+func (x *Deployment) GetLabels() map[string]string {
+	if x != nil {
+		return x.Labels
+	}
+	return nil
+}
+
+func (x *Deployment) GetSelector() map[string]string {
+	if x != nil {
+		return x.Selector
+	}
+	return nil
+}
+
+func (x *Deployment) GetDockerImage() string {
+	if x != nil {
+		return x.DockerImage
+	}
+	return ""
+}
+
 type Pod struct {
 	state     protoimpl.MessageState `protogen:"open.v1"`
 	Name      string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
@@ -473,7 +585,7 @@ type Pod struct {
 
 func (x *Pod) Reset() {
 	*x = Pod{}
-	mi := &file_agent_backend_websocket_proto_msgTypes[5]
+	mi := &file_agent_backend_websocket_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -485,7 +597,7 @@ func (x *Pod) String() string {
 func (*Pod) ProtoMessage() {}
 
 func (x *Pod) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_backend_websocket_proto_msgTypes[5]
+	mi := &file_agent_backend_websocket_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -498,7 +610,7 @@ func (x *Pod) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Pod.ProtoReflect.Descriptor instead.
 func (*Pod) Descriptor() ([]byte, []int) {
-	return file_agent_backend_websocket_proto_rawDescGZIP(), []int{5}
+	return file_agent_backend_websocket_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *Pod) GetName() string {
@@ -609,7 +721,7 @@ type Service struct {
 
 func (x *Service) Reset() {
 	*x = Service{}
-	mi := &file_agent_backend_websocket_proto_msgTypes[6]
+	mi := &file_agent_backend_websocket_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -621,7 +733,7 @@ func (x *Service) String() string {
 func (*Service) ProtoMessage() {}
 
 func (x *Service) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_backend_websocket_proto_msgTypes[6]
+	mi := &file_agent_backend_websocket_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -634,7 +746,7 @@ func (x *Service) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Service.ProtoReflect.Descriptor instead.
 func (*Service) Descriptor() ([]byte, []int) {
-	return file_agent_backend_websocket_proto_rawDescGZIP(), []int{6}
+	return file_agent_backend_websocket_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *Service) GetName() string {
@@ -708,7 +820,7 @@ type Command struct {
 
 func (x *Command) Reset() {
 	*x = Command{}
-	mi := &file_agent_backend_websocket_proto_msgTypes[7]
+	mi := &file_agent_backend_websocket_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -720,7 +832,7 @@ func (x *Command) String() string {
 func (*Command) ProtoMessage() {}
 
 func (x *Command) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_backend_websocket_proto_msgTypes[7]
+	mi := &file_agent_backend_websocket_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -733,7 +845,7 @@ func (x *Command) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Command.ProtoReflect.Descriptor instead.
 func (*Command) Descriptor() ([]byte, []int) {
-	return file_agent_backend_websocket_proto_rawDescGZIP(), []int{7}
+	return file_agent_backend_websocket_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *Command) GetId() string {
@@ -781,12 +893,13 @@ const file_agent_backend_websocket_proto_rawDesc = "" +
 	"\apayload\"D\n" +
 	"\rServerPayload\x12(\n" +
 	"\acommand\x18\x01 \x01(\v2\f.api.CommandH\x00R\acommandB\t\n" +
-	"\apayload\"\xd3\x01\n" +
+	"\apayload\"\x86\x02\n" +
 	"\tHeartbeat\x12?\n" +
 	"\x10cluster_resource\x18\x01 \x01(\v2\x14.api.ClusterResourceR\x0fclusterResource\x12\x1f\n" +
 	"\x05nodes\x18\x02 \x03(\v2\t.api.NodeR\x05nodes\x12\x1c\n" +
 	"\x04pods\x18\x03 \x03(\v2\b.api.PodR\x04pods\x12(\n" +
-	"\bservices\x18\x04 \x03(\v2\f.api.ServiceR\bservices\x12\x1c\n" +
+	"\bservices\x18\x04 \x03(\v2\f.api.ServiceR\bservices\x121\n" +
+	"\vdeployments\x18\x06 \x03(\v2\x0f.api.DeploymentR\vdeployments\x12\x1c\n" +
 	"\ttimestamp\x18\x05 \x01(\x03R\ttimestamp\"\x91\x01\n" +
 	"\x0fClusterResource\x12!\n" +
 	"\fcpu_capacity\x18\x01 \x01(\x03R\vcpuCapacity\x12!\n" +
@@ -801,6 +914,22 @@ const file_agent_backend_websocket_proto_rawDesc = "" +
 	"\fram_capacity\x18\x05 \x01(\x03R\vramCapacity\x12-\n" +
 	"\x06labels\x18\x06 \x03(\v2\x15.api.Node.LabelsEntryR\x06labels\x1a9\n" +
 	"\vLabelsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xc7\x03\n" +
+	"\n" +
+	"Deployment\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1c\n" +
+	"\tnamespace\x18\x02 \x01(\tR\tnamespace\x12\x1a\n" +
+	"\breplicas\x18\x03 \x01(\x05R\breplicas\x12-\n" +
+	"\x12available_replicas\x18\x04 \x01(\x05R\x11availableReplicas\x121\n" +
+	"\x14unavailable_replicas\x18\x05 \x01(\x05R\x13unavailableReplicas\x123\n" +
+	"\x06labels\x18\x06 \x03(\v2\x1b.api.Deployment.LabelsEntryR\x06labels\x129\n" +
+	"\bselector\x18\a \x03(\v2\x1d.api.Deployment.SelectorEntryR\bselector\x12!\n" +
+	"\fdocker_image\x18\b \x01(\tR\vdockerImage\x1a9\n" +
+	"\vLabelsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1a;\n" +
+	"\rSelectorEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x97\x03\n" +
 	"\x03Pod\x12\x12\n" +
@@ -831,22 +960,20 @@ const file_agent_backend_websocket_proto_rawDesc = "" +
 	"\x06domain\x18\b \x01(\tR\x06domain\x1a;\n" +
 	"\rSelectorEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x8b\x02\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xa0\x02\n" +
 	"\aCommand\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12,\n" +
 	"\x04type\x18\x02 \x01(\x0e2\x18.api.Command.CommandTypeR\x04type\x12\x18\n" +
 	"\apayload\x18\x03 \x01(\tR\apayload\x12)\n" +
 	"\x10target_namespace\x18\x04 \x01(\tR\x0ftargetNamespace\x12\x1f\n" +
 	"\vtarget_name\x18\x05 \x01(\tR\n" +
-	"targetName\"\\\n" +
+	"targetName\"q\n" +
 	"\vCommandType\x12\v\n" +
 	"\aUNKNOWN\x10\x00\x12\x11\n" +
-	"\rEDIT_RESOURCE\x10\x01\x12\x0e\n" +
-	"\n" +
-	"CREATE_POD\x10\x02\x12\r\n" +
-	"\tSCALE_POD\x10\x03\x12\x0e\n" +
-	"\n" +
-	"DELETE_POD\x10\x04B\x06Z\x04./pbb\x06proto3"
+	"\rEDIT_RESOURCE\x10\x01\x12\x15\n" +
+	"\x11CREATE_DEPLOYMENT\x10\x02\x12\x14\n" +
+	"\x10SCALE_DEPLOYMENT\x10\x03\x12\x15\n" +
+	"\x11DELETE_DEPLOYMENT\x10\x04B\x06Z\x04./pbb\x06proto3"
 
 var (
 	file_agent_backend_websocket_proto_rawDescOnce sync.Once
@@ -861,7 +988,7 @@ func file_agent_backend_websocket_proto_rawDescGZIP() []byte {
 }
 
 var file_agent_backend_websocket_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_agent_backend_websocket_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
+var file_agent_backend_websocket_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
 var file_agent_backend_websocket_proto_goTypes = []any{
 	(Command_CommandType)(0), // 0: api.Command.CommandType
 	(*AgentPayload)(nil),     // 1: api.AgentPayload
@@ -869,27 +996,33 @@ var file_agent_backend_websocket_proto_goTypes = []any{
 	(*Heartbeat)(nil),        // 3: api.Heartbeat
 	(*ClusterResource)(nil),  // 4: api.ClusterResource
 	(*Node)(nil),             // 5: api.Node
-	(*Pod)(nil),              // 6: api.Pod
-	(*Service)(nil),          // 7: api.Service
-	(*Command)(nil),          // 8: api.Command
-	nil,                      // 9: api.Node.LabelsEntry
-	nil,                      // 10: api.Service.SelectorEntry
+	(*Deployment)(nil),       // 6: api.Deployment
+	(*Pod)(nil),              // 7: api.Pod
+	(*Service)(nil),          // 8: api.Service
+	(*Command)(nil),          // 9: api.Command
+	nil,                      // 10: api.Node.LabelsEntry
+	nil,                      // 11: api.Deployment.LabelsEntry
+	nil,                      // 12: api.Deployment.SelectorEntry
+	nil,                      // 13: api.Service.SelectorEntry
 }
 var file_agent_backend_websocket_proto_depIdxs = []int32{
 	3,  // 0: api.AgentPayload.heartbeat:type_name -> api.Heartbeat
-	8,  // 1: api.ServerPayload.command:type_name -> api.Command
+	9,  // 1: api.ServerPayload.command:type_name -> api.Command
 	4,  // 2: api.Heartbeat.cluster_resource:type_name -> api.ClusterResource
 	5,  // 3: api.Heartbeat.nodes:type_name -> api.Node
-	6,  // 4: api.Heartbeat.pods:type_name -> api.Pod
-	7,  // 5: api.Heartbeat.services:type_name -> api.Service
-	9,  // 6: api.Node.labels:type_name -> api.Node.LabelsEntry
-	10, // 7: api.Service.selector:type_name -> api.Service.SelectorEntry
-	0,  // 8: api.Command.type:type_name -> api.Command.CommandType
-	9,  // [9:9] is the sub-list for method output_type
-	9,  // [9:9] is the sub-list for method input_type
-	9,  // [9:9] is the sub-list for extension type_name
-	9,  // [9:9] is the sub-list for extension extendee
-	0,  // [0:9] is the sub-list for field type_name
+	7,  // 4: api.Heartbeat.pods:type_name -> api.Pod
+	8,  // 5: api.Heartbeat.services:type_name -> api.Service
+	6,  // 6: api.Heartbeat.deployments:type_name -> api.Deployment
+	10, // 7: api.Node.labels:type_name -> api.Node.LabelsEntry
+	11, // 8: api.Deployment.labels:type_name -> api.Deployment.LabelsEntry
+	12, // 9: api.Deployment.selector:type_name -> api.Deployment.SelectorEntry
+	13, // 10: api.Service.selector:type_name -> api.Service.SelectorEntry
+	0,  // 11: api.Command.type:type_name -> api.Command.CommandType
+	12, // [12:12] is the sub-list for method output_type
+	12, // [12:12] is the sub-list for method input_type
+	12, // [12:12] is the sub-list for extension type_name
+	12, // [12:12] is the sub-list for extension extendee
+	0,  // [0:12] is the sub-list for field type_name
 }
 
 func init() { file_agent_backend_websocket_proto_init() }
@@ -909,7 +1042,7 @@ func file_agent_backend_websocket_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agent_backend_websocket_proto_rawDesc), len(file_agent_backend_websocket_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   10,
+			NumMessages:   13,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

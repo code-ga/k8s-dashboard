@@ -30,6 +30,8 @@ export interface Heartbeat {
   pods: Pod[];
   /** List of services */
   services: Service[];
+  /** List of deployments */
+  deployments: Deployment[];
   /** Timestamp of the heartbeat */
   timestamp: number;
 }
@@ -56,6 +58,30 @@ export interface Node {
 }
 
 export interface Node_LabelsEntry {
+  key: string;
+  value: string;
+}
+
+export interface Deployment {
+  name: string;
+  namespace: string;
+  replicas: number;
+  availableReplicas: number;
+  unavailableReplicas: number;
+  /** JSON string or key=value pairs for labels */
+  labels: { [key: string]: string };
+  /** JSON string or key=value pairs for selector */
+  selector: { [key: string]: string };
+  /** Image used in the first container of the template (simplified) */
+  dockerImage: string;
+}
+
+export interface Deployment_LabelsEntry {
+  key: string;
+  value: string;
+}
+
+export interface Deployment_SelectorEntry {
   key: string;
   value: string;
 }
@@ -111,9 +137,9 @@ export interface Command {
 export enum Command_CommandType {
   UNKNOWN = 0,
   EDIT_RESOURCE = 1,
-  CREATE_POD = 2,
-  SCALE_POD = 3,
-  DELETE_POD = 4,
+  CREATE_DEPLOYMENT = 2,
+  SCALE_DEPLOYMENT = 3,
+  DELETE_DEPLOYMENT = 4,
   UNRECOGNIZED = -1,
 }
 
@@ -126,14 +152,14 @@ export function command_CommandTypeFromJSON(object: any): Command_CommandType {
     case "EDIT_RESOURCE":
       return Command_CommandType.EDIT_RESOURCE;
     case 2:
-    case "CREATE_POD":
-      return Command_CommandType.CREATE_POD;
+    case "CREATE_DEPLOYMENT":
+      return Command_CommandType.CREATE_DEPLOYMENT;
     case 3:
-    case "SCALE_POD":
-      return Command_CommandType.SCALE_POD;
+    case "SCALE_DEPLOYMENT":
+      return Command_CommandType.SCALE_DEPLOYMENT;
     case 4:
-    case "DELETE_POD":
-      return Command_CommandType.DELETE_POD;
+    case "DELETE_DEPLOYMENT":
+      return Command_CommandType.DELETE_DEPLOYMENT;
     case -1:
     case "UNRECOGNIZED":
     default:
@@ -147,12 +173,12 @@ export function command_CommandTypeToJSON(object: Command_CommandType): string {
       return "UNKNOWN";
     case Command_CommandType.EDIT_RESOURCE:
       return "EDIT_RESOURCE";
-    case Command_CommandType.CREATE_POD:
-      return "CREATE_POD";
-    case Command_CommandType.SCALE_POD:
-      return "SCALE_POD";
-    case Command_CommandType.DELETE_POD:
-      return "DELETE_POD";
+    case Command_CommandType.CREATE_DEPLOYMENT:
+      return "CREATE_DEPLOYMENT";
+    case Command_CommandType.SCALE_DEPLOYMENT:
+      return "SCALE_DEPLOYMENT";
+    case Command_CommandType.DELETE_DEPLOYMENT:
+      return "DELETE_DEPLOYMENT";
     case Command_CommandType.UNRECOGNIZED:
     default:
       return "UNRECOGNIZED";
@@ -280,7 +306,7 @@ export const ServerPayload: MessageFns<ServerPayload> = {
 };
 
 function createBaseHeartbeat(): Heartbeat {
-  return { clusterResource: undefined, nodes: [], pods: [], services: [], timestamp: 0 };
+  return { clusterResource: undefined, nodes: [], pods: [], services: [], deployments: [], timestamp: 0 };
 }
 
 export const Heartbeat: MessageFns<Heartbeat> = {
@@ -296,6 +322,9 @@ export const Heartbeat: MessageFns<Heartbeat> = {
     }
     for (const v of message.services) {
       Service.encode(v!, writer.uint32(34).fork()).join();
+    }
+    for (const v of message.deployments) {
+      Deployment.encode(v!, writer.uint32(50).fork()).join();
     }
     if (message.timestamp !== 0) {
       writer.uint32(40).int64(message.timestamp);
@@ -342,6 +371,14 @@ export const Heartbeat: MessageFns<Heartbeat> = {
           message.services.push(Service.decode(reader, reader.uint32()));
           continue;
         }
+        case 6: {
+          if (tag !== 50) {
+            break;
+          }
+
+          message.deployments.push(Deployment.decode(reader, reader.uint32()));
+          continue;
+        }
         case 5: {
           if (tag !== 40) {
             break;
@@ -365,6 +402,9 @@ export const Heartbeat: MessageFns<Heartbeat> = {
       nodes: globalThis.Array.isArray(object?.nodes) ? object.nodes.map((e: any) => Node.fromJSON(e)) : [],
       pods: globalThis.Array.isArray(object?.pods) ? object.pods.map((e: any) => Pod.fromJSON(e)) : [],
       services: globalThis.Array.isArray(object?.services) ? object.services.map((e: any) => Service.fromJSON(e)) : [],
+      deployments: globalThis.Array.isArray(object?.deployments)
+        ? object.deployments.map((e: any) => Deployment.fromJSON(e))
+        : [],
       timestamp: isSet(object.timestamp) ? globalThis.Number(object.timestamp) : 0,
     };
   },
@@ -383,6 +423,9 @@ export const Heartbeat: MessageFns<Heartbeat> = {
     if (message.services?.length) {
       obj.services = message.services.map((e) => Service.toJSON(e));
     }
+    if (message.deployments?.length) {
+      obj.deployments = message.deployments.map((e) => Deployment.toJSON(e));
+    }
     if (message.timestamp !== 0) {
       obj.timestamp = Math.round(message.timestamp);
     }
@@ -400,6 +443,7 @@ export const Heartbeat: MessageFns<Heartbeat> = {
     message.nodes = object.nodes?.map((e) => Node.fromPartial(e)) || [];
     message.pods = object.pods?.map((e) => Pod.fromPartial(e)) || [];
     message.services = object.services?.map((e) => Service.fromPartial(e)) || [];
+    message.deployments = object.deployments?.map((e) => Deployment.fromPartial(e)) || [];
     message.timestamp = object.timestamp ?? 0;
     return message;
   },
@@ -748,6 +792,389 @@ export const Node_LabelsEntry: MessageFns<Node_LabelsEntry> = {
   },
   fromPartial<I extends Exact<DeepPartial<Node_LabelsEntry>, I>>(object: I): Node_LabelsEntry {
     const message = createBaseNode_LabelsEntry();
+    message.key = object.key ?? "";
+    message.value = object.value ?? "";
+    return message;
+  },
+};
+
+function createBaseDeployment(): Deployment {
+  return {
+    name: "",
+    namespace: "",
+    replicas: 0,
+    availableReplicas: 0,
+    unavailableReplicas: 0,
+    labels: {},
+    selector: {},
+    dockerImage: "",
+  };
+}
+
+export const Deployment: MessageFns<Deployment> = {
+  encode(message: Deployment, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.name !== "") {
+      writer.uint32(10).string(message.name);
+    }
+    if (message.namespace !== "") {
+      writer.uint32(18).string(message.namespace);
+    }
+    if (message.replicas !== 0) {
+      writer.uint32(24).int32(message.replicas);
+    }
+    if (message.availableReplicas !== 0) {
+      writer.uint32(32).int32(message.availableReplicas);
+    }
+    if (message.unavailableReplicas !== 0) {
+      writer.uint32(40).int32(message.unavailableReplicas);
+    }
+    globalThis.Object.entries(message.labels).forEach(([key, value]: [string, string]) => {
+      Deployment_LabelsEntry.encode({ key: key as any, value }, writer.uint32(50).fork()).join();
+    });
+    globalThis.Object.entries(message.selector).forEach(([key, value]: [string, string]) => {
+      Deployment_SelectorEntry.encode({ key: key as any, value }, writer.uint32(58).fork()).join();
+    });
+    if (message.dockerImage !== "") {
+      writer.uint32(66).string(message.dockerImage);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): Deployment {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseDeployment();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.name = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.namespace = reader.string();
+          continue;
+        }
+        case 3: {
+          if (tag !== 24) {
+            break;
+          }
+
+          message.replicas = reader.int32();
+          continue;
+        }
+        case 4: {
+          if (tag !== 32) {
+            break;
+          }
+
+          message.availableReplicas = reader.int32();
+          continue;
+        }
+        case 5: {
+          if (tag !== 40) {
+            break;
+          }
+
+          message.unavailableReplicas = reader.int32();
+          continue;
+        }
+        case 6: {
+          if (tag !== 50) {
+            break;
+          }
+
+          const entry6 = Deployment_LabelsEntry.decode(reader, reader.uint32());
+          if (entry6.value !== undefined) {
+            message.labels[entry6.key] = entry6.value;
+          }
+          continue;
+        }
+        case 7: {
+          if (tag !== 58) {
+            break;
+          }
+
+          const entry7 = Deployment_SelectorEntry.decode(reader, reader.uint32());
+          if (entry7.value !== undefined) {
+            message.selector[entry7.key] = entry7.value;
+          }
+          continue;
+        }
+        case 8: {
+          if (tag !== 66) {
+            break;
+          }
+
+          message.dockerImage = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): Deployment {
+    return {
+      name: isSet(object.name) ? globalThis.String(object.name) : "",
+      namespace: isSet(object.namespace) ? globalThis.String(object.namespace) : "",
+      replicas: isSet(object.replicas) ? globalThis.Number(object.replicas) : 0,
+      availableReplicas: isSet(object.availableReplicas) ? globalThis.Number(object.availableReplicas) : 0,
+      unavailableReplicas: isSet(object.unavailableReplicas) ? globalThis.Number(object.unavailableReplicas) : 0,
+      labels: isObject(object.labels)
+        ? (globalThis.Object.entries(object.labels) as [string, any][]).reduce(
+          (acc: { [key: string]: string }, [key, value]: [string, any]) => {
+            acc[key] = globalThis.String(value);
+            return acc;
+          },
+          {},
+        )
+        : {},
+      selector: isObject(object.selector)
+        ? (globalThis.Object.entries(object.selector) as [string, any][]).reduce(
+          (acc: { [key: string]: string }, [key, value]: [string, any]) => {
+            acc[key] = globalThis.String(value);
+            return acc;
+          },
+          {},
+        )
+        : {},
+      dockerImage: isSet(object.dockerImage) ? globalThis.String(object.dockerImage) : "",
+    };
+  },
+
+  toJSON(message: Deployment): unknown {
+    const obj: any = {};
+    if (message.name !== "") {
+      obj.name = message.name;
+    }
+    if (message.namespace !== "") {
+      obj.namespace = message.namespace;
+    }
+    if (message.replicas !== 0) {
+      obj.replicas = Math.round(message.replicas);
+    }
+    if (message.availableReplicas !== 0) {
+      obj.availableReplicas = Math.round(message.availableReplicas);
+    }
+    if (message.unavailableReplicas !== 0) {
+      obj.unavailableReplicas = Math.round(message.unavailableReplicas);
+    }
+    if (message.labels) {
+      const entries = globalThis.Object.entries(message.labels) as [string, string][];
+      if (entries.length > 0) {
+        obj.labels = {};
+        entries.forEach(([k, v]) => {
+          obj.labels[k] = v;
+        });
+      }
+    }
+    if (message.selector) {
+      const entries = globalThis.Object.entries(message.selector) as [string, string][];
+      if (entries.length > 0) {
+        obj.selector = {};
+        entries.forEach(([k, v]) => {
+          obj.selector[k] = v;
+        });
+      }
+    }
+    if (message.dockerImage !== "") {
+      obj.dockerImage = message.dockerImage;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<Deployment>, I>>(base?: I): Deployment {
+    return Deployment.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<Deployment>, I>>(object: I): Deployment {
+    const message = createBaseDeployment();
+    message.name = object.name ?? "";
+    message.namespace = object.namespace ?? "";
+    message.replicas = object.replicas ?? 0;
+    message.availableReplicas = object.availableReplicas ?? 0;
+    message.unavailableReplicas = object.unavailableReplicas ?? 0;
+    message.labels = (globalThis.Object.entries(object.labels ?? {}) as [string, string][]).reduce(
+      (acc: { [key: string]: string }, [key, value]: [string, string]) => {
+        if (value !== undefined) {
+          acc[key] = globalThis.String(value);
+        }
+        return acc;
+      },
+      {},
+    );
+    message.selector = (globalThis.Object.entries(object.selector ?? {}) as [string, string][]).reduce(
+      (acc: { [key: string]: string }, [key, value]: [string, string]) => {
+        if (value !== undefined) {
+          acc[key] = globalThis.String(value);
+        }
+        return acc;
+      },
+      {},
+    );
+    message.dockerImage = object.dockerImage ?? "";
+    return message;
+  },
+};
+
+function createBaseDeployment_LabelsEntry(): Deployment_LabelsEntry {
+  return { key: "", value: "" };
+}
+
+export const Deployment_LabelsEntry: MessageFns<Deployment_LabelsEntry> = {
+  encode(message: Deployment_LabelsEntry, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.key !== "") {
+      writer.uint32(10).string(message.key);
+    }
+    if (message.value !== "") {
+      writer.uint32(18).string(message.value);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): Deployment_LabelsEntry {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseDeployment_LabelsEntry();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.key = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.value = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): Deployment_LabelsEntry {
+    return {
+      key: isSet(object.key) ? globalThis.String(object.key) : "",
+      value: isSet(object.value) ? globalThis.String(object.value) : "",
+    };
+  },
+
+  toJSON(message: Deployment_LabelsEntry): unknown {
+    const obj: any = {};
+    if (message.key !== "") {
+      obj.key = message.key;
+    }
+    if (message.value !== "") {
+      obj.value = message.value;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<Deployment_LabelsEntry>, I>>(base?: I): Deployment_LabelsEntry {
+    return Deployment_LabelsEntry.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<Deployment_LabelsEntry>, I>>(object: I): Deployment_LabelsEntry {
+    const message = createBaseDeployment_LabelsEntry();
+    message.key = object.key ?? "";
+    message.value = object.value ?? "";
+    return message;
+  },
+};
+
+function createBaseDeployment_SelectorEntry(): Deployment_SelectorEntry {
+  return { key: "", value: "" };
+}
+
+export const Deployment_SelectorEntry: MessageFns<Deployment_SelectorEntry> = {
+  encode(message: Deployment_SelectorEntry, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.key !== "") {
+      writer.uint32(10).string(message.key);
+    }
+    if (message.value !== "") {
+      writer.uint32(18).string(message.value);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): Deployment_SelectorEntry {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseDeployment_SelectorEntry();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.key = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.value = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): Deployment_SelectorEntry {
+    return {
+      key: isSet(object.key) ? globalThis.String(object.key) : "",
+      value: isSet(object.value) ? globalThis.String(object.value) : "",
+    };
+  },
+
+  toJSON(message: Deployment_SelectorEntry): unknown {
+    const obj: any = {};
+    if (message.key !== "") {
+      obj.key = message.key;
+    }
+    if (message.value !== "") {
+      obj.value = message.value;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<Deployment_SelectorEntry>, I>>(base?: I): Deployment_SelectorEntry {
+    return Deployment_SelectorEntry.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<Deployment_SelectorEntry>, I>>(object: I): Deployment_SelectorEntry {
+    const message = createBaseDeployment_SelectorEntry();
     message.key = object.key ?? "";
     message.value = object.value ?? "";
     return message;
