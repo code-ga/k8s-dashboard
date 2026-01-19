@@ -79,7 +79,36 @@ func main() {
 
 				if cmd := serverPayload.GetCommand(); cmd != nil {
 					log.Printf("Received Command: %s (Type: %v)", cmd.Id, cmd.Type)
-					handleCommand(kubeClient, cmd)
+					data, cmdErr := handleCommand(kubeClient, cmd)
+
+					// Construct response
+					response := &pb.CommandResponse{
+						Id:      cmd.Id,
+						Success: cmdErr == nil,
+						Data:    data,
+					}
+					if cmdErr != nil {
+						response.Error = cmdErr.Error()
+					}
+
+					// Wrap in AgentPayload
+					payload := &pb.AgentPayload{
+						Payload: &pb.AgentPayload_CommandResponse{
+							CommandResponse: response,
+						},
+					}
+
+					// Marshal and send response
+					respData, respErr := proto.Marshal(payload)
+					if respErr != nil {
+						log.Printf("Failed to marshal command response: %v", respErr)
+					} else {
+						if err := c.WriteMessage(websocket.BinaryMessage, respData); err != nil {
+							log.Printf("Failed to send command response: %v", err)
+						} else {
+							log.Printf("Sent response for command %s", cmd.Id)
+						}
+					}
 				}
 			} else {
 				log.Printf("recv non-binary message: %s", message)
@@ -141,53 +170,65 @@ func main() {
 	}
 }
 
-func handleCommand(kc *k8s.K8sClient, cmd *pb.Command) {
+func handleCommand(kc *k8s.K8sClient, cmd *pb.Command) (string, error) {
 	var err error
+	var resultData string
+
 	switch cmd.Type {
-	case pb.Command_EDIT_RESOURCE, pb.Command_CREATE_DEPLOYMENT:
+	case pb.Command_EDIT_RESOURCE, pb.Command_CREATE_DEPLOYMENT, pb.Command_CREATE_POD:
 		// Expects YAML/JSON payload
 		if cmd.Payload != "" {
 			err = kc.ApplyManifest(cmd.Payload)
+			if err == nil {
+				resultData = "Resource applied successfully"
+			}
 		} else {
 			err = fmt.Errorf("payload empty for EDIT/CREATE command")
 		}
 	case pb.Command_SCALE_DEPLOYMENT:
-		// Payload could be replicas int string or we use a structured field if we added one
-		// Assuming payload is "replicas" as string for simplicity, or we parse from YAML if provided.
-		// For robustness, let's assume Payload is just the number of replicas as a string for this specific command type.
+		// ...
 		if cmd.TargetNamespace != "" && cmd.TargetName != "" && cmd.Payload != "" {
 			replicas, convErr := strconv.Atoi(cmd.Payload)
 			if convErr != nil {
 				err = fmt.Errorf("invalid replicas payload: %v", convErr)
 			} else {
 				err = kc.ScaleDeployment(cmd.TargetNamespace, cmd.TargetName, int32(replicas))
+				if err == nil {
+					resultData = fmt.Sprintf("Deployment scaled to %d replicas", replicas)
+				}
 			}
 		} else {
 			err = fmt.Errorf("missing target or payload for SCALE command")
 		}
 	case pb.Command_DELETE_DEPLOYMENT:
 		if cmd.TargetNamespace != "" && cmd.TargetName != "" {
-			// Note: We need DeleteDeployment in k8s.go, assuming DeletePod was existing but we want deployments now.
-			// But usually DELETE_DEPLOYMENT means deleting the deployment resource.
-			// If existing k8s client has DeleteDeployment use it, otherwise fallback or implement it.
-			// Checking k8s.go I don't see DeleteDeployment, only DeletePod.
-			// I will use a generic DeleteResource if available or fallback to DeletePod for now to avoid breaking build,
-			// BUT since this is a "Deployment" command, we should strictly delete the deployment.
-			// Let's assume we will add DeleteDeployment to k8s.go or use generic dynamic client delete.
-			// For now, mapping to DeleteDeployment which I will implement next.
 			err = kc.DeleteDeployment(cmd.TargetNamespace, cmd.TargetName)
+			if err == nil {
+				resultData = "Deployment deleted successfully"
+			}
 		} else {
 			err = fmt.Errorf("missing target for DELETE command")
 		}
+	case pb.Command_DELETE_POD:
+		if cmd.TargetNamespace != "" && cmd.TargetName != "" {
+			err = kc.DeletePod(cmd.TargetNamespace, cmd.TargetName)
+			if err == nil {
+				resultData = "Pod deleted successfully"
+			}
+		} else {
+			err = fmt.Errorf("missing target for DELETE_POD command")
+		}
 	default:
 		log.Printf("Unknown command type: %v", cmd.Type)
-		return
+		return "", fmt.Errorf("unknown command type: %v", cmd.Type)
 	}
 
 	if err != nil {
 		log.Printf("Error executing command %s: %v", cmd.Id, err)
+		return "", err
 	} else {
 		log.Printf("Successfully executed command %s", cmd.Id)
+		return resultData, nil
 	}
 }
 

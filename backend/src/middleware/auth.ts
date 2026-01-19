@@ -1,8 +1,10 @@
-import Elysia from "elysia";
+import Elysia, { type Static } from "elysia";
 import { auth } from "../libs/auths/auth.config";
 import { eq } from "drizzle-orm";
 import { db } from "../database";
 import { schema } from "../database/schema";
+import type { dbSchemaTypes } from "../database/type";
+import { isAllElementsPresent } from "../utils/array";
 
 export const authenticationMiddleware = new Elysia({
 	name: "authentication",
@@ -50,27 +52,38 @@ export const authenticationMiddleware = new Elysia({
 			};
 		},
 	},
-	adminAuth: (role: string) => ({
+	roleAuth: (permissions: Static<typeof dbSchemaTypes.profile.permission>) => ({
 		async resolve({ status, request: { headers } }) {
 			const session = await auth.api.getSession({
 				headers,
 			});
 
 			if (!session) return status(401);
-			const userRole = await db
+
+			const userProfile = await db
 				.select()
-				.from(schema.userRole)
-				.where(eq(schema.userRole.userId, session.user.id))
-				.limit(1);
-			if (userRole.length === 0 || !userRole[0]) {
-				return status(401);
-			}
-			if (userRole[0].role !== role) {
-				return status(401);
-			}
-			return {
-				userRole: userRole[0],
-			};
+				.from(schema.profile)
+				.where(eq(schema.profile.userId, session.user.id));
+			if (!userProfile || !userProfile[0]) return status(401);
+
+			const userPermissions = userProfile[0].permission;
+			if (!userPermissions) return status(401);
+			if (userPermissions.includes("admin"))
+				return {
+					user: session.user,
+					session: session.session,
+					permission: userPermissions,
+					profile: userProfile[0],
+				};
+			// if all permissions are in userPermissions return true
+			if (isAllElementsPresent(permissions, userPermissions))
+				return {
+					user: session.user,
+					session: session.session,
+					permission: userPermissions,
+					profile: userProfile[0],
+				};
+			return status(403);
 		},
 	}),
 });

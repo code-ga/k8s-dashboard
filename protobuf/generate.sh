@@ -26,4 +26,4 @@ protoc --plugin=protoc-gen-ts_proto="$PROTOC_GEN_TS_PROTO_PATH" \
        --ts_proto_out=$TS_OUT_DIR \
        $PROTO_FILE
 
-echo "Done! Code generated in $GO_OUT_DIR and $TS_OUT_DIR"
+# echo "Done! Code generated in $GO_OUT_DIR and $TS_OUT_DIR"

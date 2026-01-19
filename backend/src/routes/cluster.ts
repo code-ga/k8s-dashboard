@@ -15,10 +15,21 @@ export const clusterRoute = new Elysia({ prefix: "/cluster" })
 		console.log(app.decorator.agentManager.instanceId);
 		// You can initialize connections or other resources here
 	})
+	.guard({ userAuth: true }, (app) =>
+		app.get("/", async (ctx) => {
+			const clusters = await db.select().from(schema.k8sCluster);
+			return ctx.status(200, {
+				success: true,
+				message: "Cluster fetched successfully",
+				data: clusters,
+				timestamp: Date.now(),
+			});
+		}),
+	)
 	.guard(
 		{
 			userAuth: true,
-			adminAuth:"admin",
+			roleAuth: ["manager"],
 		},
 		(app) =>
 			app
@@ -33,7 +44,7 @@ export const clusterRoute = new Elysia({ prefix: "/cluster" })
 								description,
 								tags,
 								clusterDomain: ctx.body.clusterDomain,
-								
+								enableS3Service: ctx.body.enableS3Service || false,
 							})
 							.returning();
 						if (cluster.length === 0 || !cluster[0]) {
@@ -63,6 +74,9 @@ export const clusterRoute = new Elysia({ prefix: "/cluster" })
 							description: dbSchemaTypes.k8sCluster.description,
 							tags: dbSchemaTypes.k8sCluster.tags,
 							clusterDomain: dbSchemaTypes.k8sCluster.clusterDomain,
+							enableS3Service: Type.Optional(
+								dbSchemaTypes.k8sCluster.enableS3Service,
+							),
 						}),
 					},
 				)

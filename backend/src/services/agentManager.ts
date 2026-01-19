@@ -1,5 +1,12 @@
-import Elysia from "elysia";
+import Elysia, { type Context } from "elysia";
 import { EventEmitter } from "events";
+import {
+	type Command,
+	type CommandResponse,
+	ServerPayload,
+} from "../../pb-generated/agent-backend/websocket";
+import type { ElysiaWS } from "elysia/ws";
+import type { Prettify, RouteSchema } from "elysia/types";
 
 interface EventMap extends Record<string, any[]> {
 	"agent/connected": [{ agentId: string }];
@@ -8,10 +15,17 @@ interface EventMap extends Record<string, any[]> {
 
 export class AgentManager extends EventEmitter<EventMap> {
 	instanceId: string;
-	private connections: Map<number, any> = new Map();
+	private connections: Map<
+		number,
+		Prettify<ElysiaWS<Omit<Context, "body">, RouteSchema>>
+	> = new Map();
 	private pendingCommands: Map<
 		string,
-		{ resolve: (value: any) => void; reject: (reason?: any) => void }
+		{
+			resolve: (value: CommandResponse) => void;
+			reject: (reason?: any) => void;
+			timeout: Timer;
+		}
 	> = new Map();
 
 	constructor() {
@@ -20,7 +34,10 @@ export class AgentManager extends EventEmitter<EventMap> {
 		console.log(`AgentManager initialized with instanceId: ${this.instanceId}`);
 	}
 
-	registerConnection(agentId: number, ws: any) {
+	registerConnection(
+		agentId: number,
+		ws: Prettify<ElysiaWS<Omit<Context, "body">, RouteSchema>>,
+	) {
 		this.connections.set(agentId, ws);
 		console.log(`Agent ${agentId} registered`);
 	}
@@ -30,56 +47,58 @@ export class AgentManager extends EventEmitter<EventMap> {
 		console.log(`Agent ${agentId} disconnected`);
 	}
 
-	async sendCommand(agentId: number, commandType: string, payload: any) {
+	async sendCommand(
+		agentId: number,
+		command: Command,
+	): Promise<CommandResponse> {
 		const ws = this.connections.get(agentId);
 		if (!ws) {
 			throw new Error(`Agent ${agentId} not connected`);
 		}
 
 		const commandId = crypto.randomUUID();
-		const command = {
-			id: commandId,
-			type: commandType,
-			payload: JSON.stringify(payload),
-		};
+		command.id = commandId;
 
-		// In a real implementation, we would encode this using Protobuf
-		// For now, we'll assume the handleMessage in agent.ts will do the encoding
-		// OR we expose a method on the 'ws' object to send encoded data?
-		// Better: return the command object and let the route handler send it?
-		// No, we want to await the response here.
+		const payload = ServerPayload.encode({ command }).finish();
 
-		// We need to hook into the message handler to resolve this promise using commandId.
-		// For now, let's just implement the 'send' part and simple Ack.
-		// Detailed request/response matching requires more logic in agent.ts
-        
-        // Let's rely on agent.ts to use this manager to send stuff.
-        // Actually, if we want `nodes.ts` to call `agentManager.getNodeToken()`,
-        // `agentManager` needs to hold the WS and SEND.
-        
-        // NOTE: We will implement a simplified version where we just return the command to be sent 
-        // if this was synchronous, but since it's async/event-based, we need a way to send.
+		return new Promise((resolve, reject) => {
+			const timeout = setTimeout(() => {
+				if (this.pendingCommands.has(commandId)) {
+					this.pendingCommands.delete(commandId);
+					reject(new Error("Command timed out"));
+				}
+			}, 30000); // 30s timeout
 
-        // Assuming `ws` has a `.send()` method.
-        // We will need the Protobuf definitions here to encode if we do it here.
-        // To avoid circular deps or complex imports, let's emit an event or expects `ws` to be smart?
-        
-        // Alternative: Pass the command to `ws.send()`.
-        // But we need to encode it into `ServerPayload`.
-        
-        // Let's simply expose `getConnection(agentId)` so services can use it?
-        // No, encapsulation is better.
-        
-        // Let's try to assume agent.ts handles the actual socket "send" invocation if we return it?
-        // No, `nodes.ts` calls `agentManager`.
-        
-        // Let's add `sendPayload(agentId, buffer)`
-        ws.send(payload); // payload should be Uint8Array (ServerPayload)
+			this.pendingCommands.set(commandId, { resolve, reject, timeout });
+
+			try {
+				ws.send(payload);
+			} catch (error) {
+				clearTimeout(timeout);
+				this.pendingCommands.delete(commandId);
+				reject(error);
+			}
+		});
 	}
-    
-    getConnection(agentId: number) {
-        return this.connections.get(agentId);
-    }
+
+	handleCommandResponse(response: CommandResponse) {
+		const pending = this.pendingCommands.get(response.id);
+		if (pending) {
+			clearTimeout(pending.timeout);
+			this.pendingCommands.delete(response.id);
+			if (response.success) {
+				pending.resolve(response);
+			} else {
+				pending.reject(new Error(response.error || "Unknown agent error"));
+			}
+		} else {
+			console.warn(`Received response for unknown command ID: ${response.id}`);
+		}
+	}
+
+	getConnection(agentId: number) {
+		return this.connections.get(agentId);
+	}
 }
 
 export const agentManagerService = new Elysia({

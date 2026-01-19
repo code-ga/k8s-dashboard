@@ -164,16 +164,16 @@ func (kc *K8sClient) GetClusterInfo() (map[string]string, error) {
 		totalCPU += cpu.MilliValue()
 		totalMemory += memory.Value() / (1024 * 1024) // in Mi
 	}
-	info["totalCPU(millicores)"] = string(totalCPU)
-	info["totalMemory(Mi)"] = string(totalMemory)
+	info["totalCPU(millicores)"] = fmt.Sprintf("%d", totalCPU)
+	info["totalMemory(Mi)"] = fmt.Sprintf("%d", totalMemory)
 
 	// get used resources
 	usedCPU, usedMemory, err := kc.GetUsedResources()
 	if err != nil {
 		return nil, err
 	}
-	info["usedCPU(millicores)"] = string(usedCPU)
-	info["usedMemory(Mi)"] = string(usedMemory)
+	info["usedCPU(millicores)"] = fmt.Sprintf("%d", usedCPU)
+	info["usedMemory(Mi)"] = fmt.Sprintf("%d", usedMemory)
 	return info, nil
 }
 
@@ -229,6 +229,7 @@ func (kc *K8sClient) GetFullClusterState() (*pb.Heartbeat, error) {
 			CpuCapacity: cpuCap,
 			RamCapacity: memCap,
 			Labels:      labels,
+			Uid:         string(node.UID),
 			// CpuUsage: ... (requires metrics server or manual aggregation)
 			// RamUsage: ...
 		})
@@ -291,6 +292,7 @@ func (kc *K8sClient) GetFullClusterState() (*pb.Heartbeat, error) {
 			MemoryRequest: memReq,
 			MemoryLimit:   memLim,
 			Command:       cmdStr,
+			Uid:           string(pod.UID),
 			// EnvVariables: ... (might be sensitive, skipping for now or format as needed)
 		})
 	}
@@ -314,6 +316,7 @@ func (kc *K8sClient) GetFullClusterState() (*pb.Heartbeat, error) {
 			ExternalPort: ePort,
 			ClusterIp:    scv.Spec.ClusterIP,
 			Selector:     scv.Spec.Selector,
+			Uid:          string(scv.UID),
 		})
 	}
 
@@ -342,6 +345,7 @@ func (kc *K8sClient) GetFullClusterState() (*pb.Heartbeat, error) {
 			Labels:              dep.Labels,
 			Selector:            dep.Spec.Selector.MatchLabels,
 			DockerImage:         image,
+			Uid:                 string(dep.UID),
 		})
 	}
 

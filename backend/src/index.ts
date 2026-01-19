@@ -30,4 +30,5 @@ export const app = new Elysia()
 console.log(`Listening on ${app.server?.url}`);
 
 export type App = typeof app;
-
+export * as databaseTypes from "./database/type";
+export * as requestTypes from "./types";

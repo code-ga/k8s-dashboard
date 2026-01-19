@@ -7,7 +7,15 @@ option go_package = "./pb";
 message AgentPayload {
   oneof payload {
     Heartbeat heartbeat = 1;
+    CommandResponse command_response = 2;
   }
+}
+
+message CommandResponse {
+  string id = 1;
+  bool success = 2;
+  string error = 3;
+  string data = 4;
 }
 
 // Wrapper for messages sent from Server to Agent
@@ -57,6 +65,7 @@ message Node {
   int64 ram_capacity = 5;
   // JSON string or key=value pairs for labels
   map<string, string> labels = 6;
+  string uid = 7;
 }
 
 message Deployment {
@@ -71,6 +80,7 @@ message Deployment {
   map<string, string> selector = 7;
   // Image used in the first container of the template (simplified)
   string docker_image = 8;
+  string uid = 9;
 }
 
 message Pod {
@@ -94,6 +104,7 @@ message Pod {
   string env_variables = 12;
   
   int32 internal_port = 13;
+  string uid = 14;
 }
 
 message Service {
@@ -106,6 +117,7 @@ message Service {
   // Selector labels
   map<string, string> selector = 7;
   string domain = 8;
+  string uid = 9;
 }
 
 message Command {
@@ -116,6 +128,8 @@ message Command {
     CREATE_DEPLOYMENT = 2;
     SCALE_DEPLOYMENT = 3;
     DELETE_DEPLOYMENT = 4;
+    CREATE_POD = 5;
+    DELETE_POD = 6;
   }
   CommandType type = 2;
   

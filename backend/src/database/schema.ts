@@ -1,13 +1,17 @@
-import { relations } from "drizzle-orm";
+// ALERT: user table only for auth, profile table for user data
+
 import {
 	boolean,
 	integer,
+	jsonb,
 	pgEnum,
 	pgTable,
 	serial,
 	text,
 	timestamp,
+	uniqueIndex,
 } from "drizzle-orm/pg-core";
+import { defineRelations } from "drizzle-orm";
 
 export const user = pgTable("user", {
 	id: text("id").primaryKey(),
@@ -68,13 +72,28 @@ export const verification = pgTable("verification", {
 		.$onUpdate(() => /* @__PURE__ */ new Date())
 		.notNull(),
 });
-const roleEnum = pgEnum("role", ["admin", "user"]);
-export const userRole = pgTable("userRole", {
-	id: serial("id").primaryKey(),
-	userId: text("userId")
+export const permissionEnum = pgEnum("permission", [
+	"user",
+	"manager",
+	"default-account",
+	"admin",
+]);
+export const profile = pgTable("profile", {
+	id: text("id")
+		.primaryKey()
+		.$defaultFn(() => crypto.randomUUID()),
+	userId: text("user_id")
 		.notNull()
-		.references(() => user.id),
-	role: roleEnum("role").notNull().default("user"),
+		.references(() => user.id, { onDelete: "cascade" })
+		.unique(),
+	createdAt: timestamp("created_at").defaultNow().notNull(),
+
+	username: text("username").notNull(),
+	permission: permissionEnum().array().default(["user"]).notNull(),
+
+	updatedAt: timestamp("updated_at")
+		.$onUpdate(() => /* @__PURE__ */ new Date())
+		.notNull(),
 });
 
 export const clusterAgent = pgTable("clusterAgent", {
@@ -102,20 +121,18 @@ export const k8sCluster = pgTable("k8sCluster", {
 	clusterDomain: text("cluster_domain").notNull(),
 	status: clusterStatus().notNull().default("inactive"),
 
-	agentId: serial("agent_id")
+	agentId: integer("agent_id")
 		.notNull()
 		.references(() => clusterAgent.id, { onDelete: "cascade" }),
-	nodeId: integer("node_id")
-		.notNull()
-		.array()
-		.references(() => clusterAgent.id, { onDelete: "cascade" }),
+	nodeIds: integer("node_id").notNull().array().default([]),
+	// .references(() => k8sClusterNode.id, { onDelete: "cascade" }),
 
 	enableS3Service: boolean("enable_s3_service").default(false).notNull(),
 	s3AdminSecretKey: text("s3_admin_secret_key"),
-	ramCapacity: integer("ram_capacity").notNull(),
-	cpuCapacity: integer("cpu_capacity").notNull(),
-	cpuUsage: integer("cpu_usage").notNull(),
-	ramUsage: integer("ram_usage").notNull(),
+	ramCapacity: integer("ram_capacity").notNull().default(1000000000),
+	cpuCapacity: integer("cpu_capacity").notNull().default(1000000000),
+	cpuUsage: integer("cpu_usage").notNull().default(0),
+	ramUsage: integer("ram_usage").notNull().default(0),
 	createdAt: timestamp("created_at").defaultNow().notNull(),
 	updatedAt: timestamp("updated_at")
 		.$onUpdate(() => /* @__PURE__ */ new Date())
@@ -124,7 +141,7 @@ export const k8sCluster = pgTable("k8sCluster", {
 
 export const k8sClusterNode = pgTable("k8sClusterNode", {
 	id: serial("id").primaryKey(),
-	clusterId: serial("cluster_id")
+	clusterId: integer("cluster_id")
 		.notNull()
 		.references(() => k8sCluster.id, { onDelete: "cascade" }),
 	name: text("name").notNull(),
@@ -132,79 +149,131 @@ export const k8sClusterNode = pgTable("k8sClusterNode", {
 	ramUsage: integer("ram_usage").notNull(),
 	cpuCapacity: integer("cpu_capacity").notNull(),
 	ramCapacity: integer("ram_capacity").notNull(),
-	lable:text("lable").notNull(),
+	labels: text("labels").notNull(),
 	createdAt: timestamp("created_at").defaultNow().notNull(),
 	updatedAt: timestamp("updated_at")
 		.$onUpdate(() => /* @__PURE__ */ new Date())
 		.notNull(),
-});
-
+	k8sUid: text("k8s_uid"),
+}, (table) => ({
+	clusterUidIdx: uniqueIndex("node_cluster_uid_idx").on(table.clusterId, table.k8sUid),
+}));
 
 export const k8sDeployments = pgTable("k8sDeployments", {
 	id: serial("id").primaryKey(),
-	clusterId: serial("cluster_id")
+	clusterId: integer("cluster_id")
 		.notNull()
 		.references(() => k8sCluster.id, { onDelete: "cascade" }),
-	name: text("name").notNull(),
-    namespace: text("namespace").notNull(),
-	replicas: integer("replicas").notNull(),
-    availableReplicas: integer("available_replicas").notNull(),
-    unavailableReplicas: integer("unavailable_replicas").notNull(),
-    dockerImage: text("docker_image"),
-    labels: text("labels"), // JSON string
-    selector: text("selector"), // JSON string
 
-    // Spec fields moved from k8sPods
-	cpuRequest:integer("cpu_request").default(0).notNull(),
-	cpuLimit:integer("cpu_limit").default(0).notNull(),
-	memoryRequest:integer("memory_request").default(0).notNull(),
-	memoryLimit:integer("memory_limit").default(0).notNull(),
-	command:text("command").default("").notNull(),
-	envVariables:text("env_variables").default("").notNull(),
-	internalPort:integer("internal_port").default(0).notNull(),
+	ownerId: text("owner_id")
+		.notNull()
+		.references(() => profile.id, { onDelete: "cascade" }),
+	name: text("name").notNull(),
+	namespace: text("namespace").notNull(),
+	replicas: integer("replicas").notNull(),
+	availableReplicas: integer("available_replicas").notNull(),
+	unavailableReplicas: integer("unavailable_replicas").notNull(),
+	dockerImage: text("docker_image"),
+	labels: text("labels"), // JSON string
+	selector: text("selector"), // JSON string
+
+	// Spec fields moved from k8sPods
+	cpuRequest: integer("cpu_request").default(0).notNull(),
+	cpuLimit: integer("cpu_limit").default(0).notNull(),
+	memoryRequest: integer("memory_request").default(0).notNull(),
+	memoryLimit: integer("memory_limit").default(0).notNull(),
+	command: text("command").default("").notNull(),
+	envVariables: text("env_variables").default("").notNull(),
+	internalPort: integer("internal_port").default(0).notNull(),
 
 	createdAt: timestamp("created_at").defaultNow().notNull(),
 	updatedAt: timestamp("updated_at")
 		.$onUpdate(() => /* @__PURE__ */ new Date())
 		.notNull(),
-});
-
-export const k8sDeploymentsClusterRelation = relations(k8sDeployments, ({ one, many }) => ({
-	cluster: one(k8sCluster, {
-		fields: [k8sDeployments.clusterId],
-		references: [k8sCluster.id],
-	}),
-    pods: many(k8sPods),
+	k8sUid: text("k8s_uid"),
+}, (table) => ({
+	clusterUidIdx: uniqueIndex("dep_cluster_uid_idx").on(table.clusterId, table.k8sUid),
 }));
 
 export const k8sPods = pgTable("k8sPods", {
 	id: serial("id").primaryKey(),
-	clusterId: serial("cluster_id")
+	clusterId: integer("cluster_id")
 		.notNull()
 		.references(() => k8sCluster.id, { onDelete: "cascade" }),
-    deploymentId: serial("deployment_id")
-		.references(() => k8sDeployments.id, { onDelete: "set null" }), // Pods can exist without deployment (bare pods)
-	nodeId: serial("node_id") // Can be null if pending? Schema says serial (autoincrement) which implies NOT NULL usually in Drizzle unless specified. 
-        // Existing schema had it as serial and references k8sClusterNode.
+	deploymentId: integer("deployment_id").references(() => k8sDeployments.id, {
+		onDelete: "set null",
+	}), // Pods can exist without deployment (bare pods)
+	nodeId: integer("node_id") // Can be null if pending? Schema says serial (autoincrement) which implies NOT NULL usually in Drizzle unless specified.
+		// Existing schema had it as serial and references k8sClusterNode.
 		.notNull()
 		.references(() => k8sClusterNode.id, { onDelete: "cascade" }),
+	ownerId: text("owner_id")
+		.notNull()
+		.references(() => profile.id, { onDelete: "cascade" }),
+
 	name: text("name").notNull(),
 	namespace: text("namespace").notNull(),
-	dockerImage:text("docker_image").notNull(),
+	dockerImage: text("docker_image").notNull(),
 	// replicas removed
-	cpuRequest:integer("cpu_request").notNull(),
-	cpuLimit:integer("cpu_limit").notNull(),
-	memoryRequest:integer("memory_request").notNull(),
-	memoryLimit:integer("memory_limit").notNull(),
-    // Keep these on pod for actual usage/status? Or remove if we only care about spec on Deployment?
-    // User asked to reconstruct "like k8s architecture". K8s Pods have specs. 
-    // But specifically "only deployment have the replicas".
-    // I will keep resource specs on Pods as they reflect the actual pod spec (which might differ during updates).
-	command:text("command").notNull(),
-	envVariables:text("env_variables").notNull(),
+	cpuRequest: integer("cpu_request").notNull(),
+	cpuLimit: integer("cpu_limit").notNull(),
+	memoryRequest: integer("memory_request").notNull(),
+	memoryLimit: integer("memory_limit").notNull(),
+	// Keep these on pod for actual usage/status? Or remove if we only care about spec on Deployment?
+	// User asked to reconstruct "like k8s architecture". K8s Pods have specs.
+	// But specifically "only deployment have the replicas".
+	// I will keep resource specs on Pods as they reflect the actual pod spec (which might differ during updates).
+	command: text("command").notNull(),
+	envVariables: text("env_variables").notNull(),
 
-	inernalPort:integer("inernal_port").notNull(),
+	internalPort: integer("internal_port").notNull(),
 
+	createdAt: timestamp("created_at").defaultNow().notNull(),
+	updatedAt: timestamp("updated_at")
+		.$onUpdate(() => /* @__PURE__ */ new Date())
+		.notNull(),
+	k8sUid: text("k8s_uid"),
+}, (table) => ({
+	clusterUidIdx: uniqueIndex("pod_cluster_uid_idx").on(table.clusterId, table.k8sUid),
+}));
+
+export const k8sServices = pgTable("k8sServices", {
+	id: serial("id").primaryKey(),
+	clusterId: integer("cluster_id")
+		.notNull()
+		.references(() => k8sCluster.id, { onDelete: "cascade" }),
+	nodeId: integer("node_id")
+		.notNull()
+		.references(() => k8sClusterNode.id, { onDelete: "cascade" }),
+	podId: integer("pod_id")
+		.notNull()
+		.references(() => k8sPods.id, { onDelete: "cascade" }),
+
+	internalPort: integer("internal_port").notNull(),
+	externalPort: integer("external_port").notNull(),
+	domain: text("domain").notNull(),
+	namespace: text("namespace").notNull(),
+	labels: text("labels").notNull(),
+
+	name: text("name").notNull(),
+	createdAt: timestamp("created_at").defaultNow().notNull(),
+	updatedAt: timestamp("updated_at")
+		.$onUpdate(() => /* @__PURE__ */ new Date())
+		.notNull(),
+	k8sUid: text("k8s_uid"),
+}, (table) => ({
+	clusterUidIdx: uniqueIndex("svc_cluster_uid_idx").on(table.clusterId, table.k8sUid),
+}));
+export interface AppState {
+	createNewAdmin: boolean;
+}
+
+export const AppState = pgTable("app_state", {
+	id: serial("id").primaryKey(),
+
+	state: jsonb("state").notNull().$type<AppState>().default({
+		createNewAdmin: true,
+	}),
 	createdAt: timestamp("created_at").defaultNow().notNull(),
 	updatedAt: timestamp("updated_at")
 		.$onUpdate(() => /* @__PURE__ */ new Date())
@@ -213,113 +282,98 @@ export const k8sPods = pgTable("k8sPods", {
 
 // Restoration of missing relations and services table
 
-export const k8sPodsNodeRelation = relations(k8sPods, ({ one }) => ({
-	node: one(k8sClusterNode, {
-		fields: [k8sPods.nodeId],
-		references: [k8sClusterNode.id],
-	}),
-}));
-
-export const k8sPodsClusterRelation = relations(k8sPods, ({ one }) => ({
-	cluster: one(k8sCluster, {
-		fields: [k8sPods.clusterId],
-		references: [k8sCluster.id],
-	}),
-    deployment: one(k8sDeployments, {
-        fields: [k8sPods.deploymentId],
-        references: [k8sDeployments.id],
-    }),
-}));
-
-export const k8sServices = pgTable("k8sServices", {
-	id: serial("id").primaryKey(),
-	clusterId: serial("cluster_id")
-		.notNull()
-		.references(() => k8sCluster.id, { onDelete: "cascade" }),
-	nodeId: serial("node_id")
-		.notNull()
-		.references(() => k8sClusterNode.id, { onDelete: "cascade" }),
-	podId: serial("pod_id")
-		.notNull()
-		.references(() => k8sPods.id, { onDelete: "cascade" }),
-
-	internalPort:integer("internal_port").notNull(),
-	externalPort:integer("external_port").notNull(),
-	domain:text("domain").notNull(),
-	namespace: text("namespace").notNull(),
-	lable:text("lable").notNull(),
-
-	name: text("name").notNull(),
-	createdAt: timestamp("created_at").defaultNow().notNull(),
-	updatedAt: timestamp("updated_at")
-		.$onUpdate(() => /* @__PURE__ */ new Date())
-		.notNull(),
-});
-
-export const k8sServicesNodeRelation = relations(k8sServices, ({ one }) => ({
-	node: one(k8sClusterNode, {
-		fields: [k8sServices.nodeId],
-		references: [k8sClusterNode.id],
-	}),
-}));
-
-export const k8sServicesClusterRelation = relations(k8sServices, ({ one }) => ({
-	cluster: one(k8sCluster, {
-		fields: [k8sServices.clusterId],
-		references: [k8sCluster.id],
-	}),
-}));
-
-export const k8sServicesPodRelation = relations(k8sServices, ({ one }) => ({
-	pod: one(k8sPods, {
-		fields: [k8sServices.podId],
-		references: [k8sPods.id],
-	}),
-}));
-
-export const clusterK8sClusterRelation = relations(k8sCluster, ({ one }) => ({
-	agent: one(clusterAgent, {
-		fields: [k8sCluster.agentId],
-		references: [clusterAgent.id],
-	}),
-}));
-
-export const agentClusterRelation = relations(clusterAgent, ({ one }) => ({
-	cluster: one(k8sCluster, {
-		fields: [clusterAgent.id],
-		references: [k8sCluster.agentId],
-	}),
-}));
-
-export const k8sClusterRelations = relations(k8sCluster, ({ many, one }) => ({
-	nodes: many(k8sClusterNode),
-    deployments: many(k8sDeployments),
-    services: many(k8sServices),
-    agent: one(clusterAgent, {
-        fields: [k8sCluster.agentId],
-        references: [clusterAgent.id],
-    }),
-}));
-
-export const k8sClusterNodeRelations = relations(k8sClusterNode, ({ one, many }) => ({
-    cluster: one(k8sCluster, {
-        fields: [k8sClusterNode.clusterId],
-        references: [k8sCluster.id],
-    }),
-    pods: many(k8sPods),
-    services: many(k8sServices),
-}));
-
 export const schema = {
 	user,
 	session,
 	account,
 	verification,
-	userRole,
+	profile,
 	k8sCluster,
 	clusterAgent,
 	k8sPods,
 	k8sClusterNode,
 	k8sServices,
-    k8sDeployments,
+	k8sDeployments,
+	AppState,
 } as const;
+
+export const schemaRelations = defineRelations(schema, (r) => ({
+	k8sCluster: {
+		agent: r.one.clusterAgent({
+			from: r.k8sCluster.agentId,
+			to: r.clusterAgent.id,
+		}),
+		nodes: r.many.k8sClusterNode(),
+		deployments: r.many.k8sDeployments(),
+		services: r.many.k8sServices(),
+	},
+	clusterAgent: {
+		cluster: r.one.k8sCluster({
+			from: r.clusterAgent.id,
+			to: r.k8sCluster.agentId,
+		}),
+	},
+	k8sPods: {
+		node: r.one.k8sClusterNode({
+			from: r.k8sPods.nodeId,
+			to: r.k8sClusterNode.id,
+		}),
+		cluster: r.one.k8sCluster({
+			from: r.k8sPods.clusterId,
+			to: r.k8sCluster.id,
+		}),
+		deployment: r.one.k8sDeployments({
+			from: r.k8sPods.deploymentId,
+			to: r.k8sDeployments.id,
+		}),
+		owner: r.one.profile({
+			from: r.k8sPods.ownerId,
+			to: r.profile.id,
+		}),
+	},
+	k8sServices: {
+		node: r.one.k8sClusterNode({
+			from: r.k8sServices.nodeId,
+			to: r.k8sClusterNode.id,
+		}),
+		cluster: r.one.k8sCluster({
+			from: r.k8sServices.clusterId,
+			to: r.k8sCluster.id,
+		}),
+		pod: r.one.k8sPods({
+			from: r.k8sServices.podId,
+			to: r.k8sPods.id,
+		}),
+	},
+	k8sClusterNode: {
+		cluster: r.one.k8sCluster({
+			from: r.k8sClusterNode.clusterId,
+			to: r.k8sCluster.id,
+		}),
+		pods: r.many.k8sPods(),
+		services: r.many.k8sServices(),
+	},
+	k8sDeployments: {
+		cluster: r.one.k8sCluster({
+			from: r.k8sDeployments.clusterId,
+			to: r.k8sCluster.id,
+		}),
+		pods: r.many.k8sPods(),
+		owner: r.one.profile({
+			from: r.k8sDeployments.ownerId,
+			to: r.profile.id,
+		}),
+	},
+	profile: {
+		user: r.one.user({
+			from: r.profile.userId,
+			to: r.user.id,
+		}),
+	},
+	user: {
+		profile: r.one.profile({
+			from: r.user.id,
+			to: r.profile.userId,
+		}),
+	},
+}));

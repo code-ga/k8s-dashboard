@@ -8,22 +8,24 @@ import { dbSchemaTypes } from "../database/type";
 import { eq } from "drizzle-orm";
 import { agentManagerService } from "../services/agentManager";
 
-export const nodesRoute = new Elysia({ prefix: "/nodes" })
+export const nodesRoute = new Elysia({ prefix: "/nodes/:clusterId" })
 	.use(authenticationMiddleware)
 	.use(agentManagerService)
 	.guard(
 		{
 			userAuth: true,
-			adminAuth:"admin"
+			roleAuth: ["manager"],
 		},
 		(app) =>
 			app
 				.get(
-					"/token/:clusterId",
+					"/token",
 					async (ctx) => {
 						const clusterId = Number(ctx.params.clusterId);
 						const cluster = await db.query.k8sCluster.findFirst({
-							where: eq(schema.k8sCluster.id, clusterId),
+							where: {
+								id: clusterId,
+							},
 							with: {
 								agent: true,
 							},
@@ -98,7 +100,9 @@ export const nodesRoute = new Elysia({ prefix: "/nodes" })
 							tags: ["Nodes"],
 						},
 						response: {
-							200: baseResponseSchema(Type.Object(dbSchemaTypes.k8sClusterNode)),
+							200: baseResponseSchema(
+								Type.Object(dbSchemaTypes.k8sClusterNode),
+							),
 							404: errorResponseSchema,
 						},
 					},
@@ -113,7 +117,7 @@ export const nodesRoute = new Elysia({ prefix: "/nodes" })
 							.update(schema.k8sClusterNode)
 							.set({
 								name,
-								lable,
+								labels: lable,
 								updatedAt: new Date(),
 							})
 							.where(eq(schema.k8sClusterNode.id, nodeId))
@@ -141,11 +145,50 @@ export const nodesRoute = new Elysia({ prefix: "/nodes" })
 						body: Type.Partial(
 							Type.Object({
 								name: dbSchemaTypes.k8sClusterNode.name,
-								lable: dbSchemaTypes.k8sClusterNode.lable,
+								lable: dbSchemaTypes.k8sClusterNode.labels,
 							}),
 						),
 						response: {
-							200: baseResponseSchema(Type.Object(dbSchemaTypes.k8sClusterNode)),
+							200: baseResponseSchema(
+								Type.Object(dbSchemaTypes.k8sClusterNode),
+							),
+							404: errorResponseSchema,
+						},
+					},
+				)
+				.get(
+					"/",
+					async (ctx) => {
+						const clusterId = Number(ctx.params.clusterId);
+						const cluster = await db.query.k8sClusterNode.findMany({
+							where: {
+								clusterId: clusterId,
+							},
+						});
+
+						if (!cluster) {
+							return ctx.status(404, {
+								success: false,
+								message: "Cluster or agent not found",
+								timestamp: Date.now(),
+							});
+						}
+
+						return ctx.status(200, {
+							success: true,
+							message: "Node join token fetched successfully",
+							data: cluster,
+							timestamp: Date.now(),
+						});
+					},
+					{
+						detail: {
+							tags: ["Nodes"],
+						},
+						response: {
+							200: baseResponseSchema(
+								Type.Array(Type.Object(dbSchemaTypes.k8sClusterNode)),
+							),
 							404: errorResponseSchema,
 						},
 					},

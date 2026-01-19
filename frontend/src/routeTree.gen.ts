@@ -12,7 +12,13 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
 import { Route as DemoTanstackQueryRouteImport } from './routes/demo/tanstack-query'
+import { Route as DashboardUsersRouteImport } from './routes/dashboard/users'
+import { Route as DashboardSettingsRouteImport } from './routes/dashboard/settings'
+import { Route as DashboardClusterIdIndexRouteImport } from './routes/dashboard/cluster/$id/index'
+import { Route as DashboardClusterIdPodsRouteImport } from './routes/dashboard/cluster/$id/pods'
+import { Route as DashboardClusterIdNodesRouteImport } from './routes/dashboard/cluster/$id/nodes'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -29,42 +35,119 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DashboardIndexRoute = DashboardIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const DemoTanstackQueryRoute = DemoTanstackQueryRouteImport.update({
   id: '/demo/tanstack-query',
   path: '/demo/tanstack-query',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DashboardUsersRoute = DashboardUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardSettingsRoute = DashboardSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardClusterIdIndexRoute = DashboardClusterIdIndexRouteImport.update({
+  id: '/cluster/$id/',
+  path: '/cluster/$id/',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardClusterIdPodsRoute = DashboardClusterIdPodsRouteImport.update({
+  id: '/cluster/$id/pods',
+  path: '/cluster/$id/pods',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardClusterIdNodesRoute = DashboardClusterIdNodesRouteImport.update({
+  id: '/cluster/$id/nodes',
+  path: '/cluster/$id/nodes',
+  getParentRoute: () => DashboardRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/dashboard': typeof DashboardRoute
+  '/dashboard': typeof DashboardRouteWithChildren
   '/login': typeof LoginRoute
+  '/dashboard/settings': typeof DashboardSettingsRoute
+  '/dashboard/users': typeof DashboardUsersRoute
   '/demo/tanstack-query': typeof DemoTanstackQueryRoute
+  '/dashboard/': typeof DashboardIndexRoute
+  '/dashboard/cluster/$id/nodes': typeof DashboardClusterIdNodesRoute
+  '/dashboard/cluster/$id/pods': typeof DashboardClusterIdPodsRoute
+  '/dashboard/cluster/$id': typeof DashboardClusterIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
+  '/dashboard/settings': typeof DashboardSettingsRoute
+  '/dashboard/users': typeof DashboardUsersRoute
   '/demo/tanstack-query': typeof DemoTanstackQueryRoute
+  '/dashboard': typeof DashboardIndexRoute
+  '/dashboard/cluster/$id/nodes': typeof DashboardClusterIdNodesRoute
+  '/dashboard/cluster/$id/pods': typeof DashboardClusterIdPodsRoute
+  '/dashboard/cluster/$id': typeof DashboardClusterIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/dashboard': typeof DashboardRoute
+  '/dashboard': typeof DashboardRouteWithChildren
   '/login': typeof LoginRoute
+  '/dashboard/settings': typeof DashboardSettingsRoute
+  '/dashboard/users': typeof DashboardUsersRoute
   '/demo/tanstack-query': typeof DemoTanstackQueryRoute
+  '/dashboard/': typeof DashboardIndexRoute
+  '/dashboard/cluster/$id/nodes': typeof DashboardClusterIdNodesRoute
+  '/dashboard/cluster/$id/pods': typeof DashboardClusterIdPodsRoute
+  '/dashboard/cluster/$id/': typeof DashboardClusterIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/dashboard' | '/login' | '/demo/tanstack-query'
+  fullPaths:
+    | '/'
+    | '/dashboard'
+    | '/login'
+    | '/dashboard/settings'
+    | '/dashboard/users'
+    | '/demo/tanstack-query'
+    | '/dashboard/'
+    | '/dashboard/cluster/$id/nodes'
+    | '/dashboard/cluster/$id/pods'
+    | '/dashboard/cluster/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/dashboard' | '/login' | '/demo/tanstack-query'
-  id: '__root__' | '/' | '/dashboard' | '/login' | '/demo/tanstack-query'
+  to:
+    | '/'
+    | '/login'
+    | '/dashboard/settings'
+    | '/dashboard/users'
+    | '/demo/tanstack-query'
+    | '/dashboard'
+    | '/dashboard/cluster/$id/nodes'
+    | '/dashboard/cluster/$id/pods'
+    | '/dashboard/cluster/$id'
+  id:
+    | '__root__'
+    | '/'
+    | '/dashboard'
+    | '/login'
+    | '/dashboard/settings'
+    | '/dashboard/users'
+    | '/demo/tanstack-query'
+    | '/dashboard/'
+    | '/dashboard/cluster/$id/nodes'
+    | '/dashboard/cluster/$id/pods'
+    | '/dashboard/cluster/$id/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  DashboardRoute: typeof DashboardRoute
+  DashboardRoute: typeof DashboardRouteWithChildren
   LoginRoute: typeof LoginRoute
   DemoTanstackQueryRoute: typeof DemoTanstackQueryRoute
 }
@@ -92,6 +175,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dashboard/': {
+      id: '/dashboard/'
+      path: '/'
+      fullPath: '/dashboard/'
+      preLoaderRoute: typeof DashboardIndexRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/demo/tanstack-query': {
       id: '/demo/tanstack-query'
       path: '/demo/tanstack-query'
@@ -99,12 +189,69 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DemoTanstackQueryRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dashboard/users': {
+      id: '/dashboard/users'
+      path: '/users'
+      fullPath: '/dashboard/users'
+      preLoaderRoute: typeof DashboardUsersRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/settings': {
+      id: '/dashboard/settings'
+      path: '/settings'
+      fullPath: '/dashboard/settings'
+      preLoaderRoute: typeof DashboardSettingsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/cluster/$id/': {
+      id: '/dashboard/cluster/$id/'
+      path: '/cluster/$id'
+      fullPath: '/dashboard/cluster/$id'
+      preLoaderRoute: typeof DashboardClusterIdIndexRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/cluster/$id/pods': {
+      id: '/dashboard/cluster/$id/pods'
+      path: '/cluster/$id/pods'
+      fullPath: '/dashboard/cluster/$id/pods'
+      preLoaderRoute: typeof DashboardClusterIdPodsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/cluster/$id/nodes': {
+      id: '/dashboard/cluster/$id/nodes'
+      path: '/cluster/$id/nodes'
+      fullPath: '/dashboard/cluster/$id/nodes'
+      preLoaderRoute: typeof DashboardClusterIdNodesRouteImport
+      parentRoute: typeof DashboardRoute
+    }
   }
 }
 
+interface DashboardRouteChildren {
+  DashboardSettingsRoute: typeof DashboardSettingsRoute
+  DashboardUsersRoute: typeof DashboardUsersRoute
+  DashboardIndexRoute: typeof DashboardIndexRoute
+  DashboardClusterIdNodesRoute: typeof DashboardClusterIdNodesRoute
+  DashboardClusterIdPodsRoute: typeof DashboardClusterIdPodsRoute
+  DashboardClusterIdIndexRoute: typeof DashboardClusterIdIndexRoute
+}
+
+const DashboardRouteChildren: DashboardRouteChildren = {
+  DashboardSettingsRoute: DashboardSettingsRoute,
+  DashboardUsersRoute: DashboardUsersRoute,
+  DashboardIndexRoute: DashboardIndexRoute,
+  DashboardClusterIdNodesRoute: DashboardClusterIdNodesRoute,
+  DashboardClusterIdPodsRoute: DashboardClusterIdPodsRoute,
+  DashboardClusterIdIndexRoute: DashboardClusterIdIndexRoute,
+}
+
+const DashboardRouteWithChildren = DashboardRoute._addFileChildren(
+  DashboardRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  DashboardRoute: DashboardRoute,
+  DashboardRoute: DashboardRouteWithChildren,
   LoginRoute: LoginRoute,
   DemoTanstackQueryRoute: DemoTanstackQueryRoute,
 }

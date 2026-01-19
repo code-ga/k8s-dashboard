@@ -12,6 +12,14 @@ export const protobufPackage = "api";
 /** Wrapper for all messages sent from Agent to Server */
 export interface AgentPayload {
   heartbeat?: Heartbeat | undefined;
+  commandResponse?: CommandResponse | undefined;
+}
+
+export interface CommandResponse {
+  id: string;
+  success: boolean;
+  error: string;
+  data: string;
 }
 
 /** Wrapper for messages sent from Server to Agent */
@@ -55,6 +63,7 @@ export interface Node {
   ramCapacity: number;
   /** JSON string or key=value pairs for labels */
   labels: { [key: string]: string };
+  uid: string;
 }
 
 export interface Node_LabelsEntry {
@@ -74,6 +83,7 @@ export interface Deployment {
   selector: { [key: string]: string };
   /** Image used in the first container of the template (simplified) */
   dockerImage: string;
+  uid: string;
 }
 
 export interface Deployment_LabelsEntry {
@@ -104,6 +114,7 @@ export interface Pod {
   /** JSON string or sensitive data masked */
   envVariables: string;
   internalPort: number;
+  uid: string;
 }
 
 export interface Service {
@@ -117,6 +128,7 @@ export interface Service {
   /** Selector labels */
   selector: { [key: string]: string };
   domain: string;
+  uid: string;
 }
 
 export interface Service_SelectorEntry {
@@ -140,6 +152,8 @@ export enum Command_CommandType {
   CREATE_DEPLOYMENT = 2,
   SCALE_DEPLOYMENT = 3,
   DELETE_DEPLOYMENT = 4,
+  CREATE_POD = 5,
+  DELETE_POD = 6,
   UNRECOGNIZED = -1,
 }
 
@@ -160,6 +174,12 @@ export function command_CommandTypeFromJSON(object: any): Command_CommandType {
     case 4:
     case "DELETE_DEPLOYMENT":
       return Command_CommandType.DELETE_DEPLOYMENT;
+    case 5:
+    case "CREATE_POD":
+      return Command_CommandType.CREATE_POD;
+    case 6:
+    case "DELETE_POD":
+      return Command_CommandType.DELETE_POD;
     case -1:
     case "UNRECOGNIZED":
     default:
@@ -179,6 +199,10 @@ export function command_CommandTypeToJSON(object: Command_CommandType): string {
       return "SCALE_DEPLOYMENT";
     case Command_CommandType.DELETE_DEPLOYMENT:
       return "DELETE_DEPLOYMENT";
+    case Command_CommandType.CREATE_POD:
+      return "CREATE_POD";
+    case Command_CommandType.DELETE_POD:
+      return "DELETE_POD";
     case Command_CommandType.UNRECOGNIZED:
     default:
       return "UNRECOGNIZED";
@@ -186,13 +210,16 @@ export function command_CommandTypeToJSON(object: Command_CommandType): string {
 }
 
 function createBaseAgentPayload(): AgentPayload {
-  return { heartbeat: undefined };
+  return { heartbeat: undefined, commandResponse: undefined };
 }
 
 export const AgentPayload: MessageFns<AgentPayload> = {
   encode(message: AgentPayload, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     if (message.heartbeat !== undefined) {
       Heartbeat.encode(message.heartbeat, writer.uint32(10).fork()).join();
+    }
+    if (message.commandResponse !== undefined) {
+      CommandResponse.encode(message.commandResponse, writer.uint32(18).fork()).join();
     }
     return writer;
   },
@@ -212,6 +239,14 @@ export const AgentPayload: MessageFns<AgentPayload> = {
           message.heartbeat = Heartbeat.decode(reader, reader.uint32());
           continue;
         }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.commandResponse = CommandResponse.decode(reader, reader.uint32());
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -222,13 +257,19 @@ export const AgentPayload: MessageFns<AgentPayload> = {
   },
 
   fromJSON(object: any): AgentPayload {
-    return { heartbeat: isSet(object.heartbeat) ? Heartbeat.fromJSON(object.heartbeat) : undefined };
+    return {
+      heartbeat: isSet(object.heartbeat) ? Heartbeat.fromJSON(object.heartbeat) : undefined,
+      commandResponse: isSet(object.commandResponse) ? CommandResponse.fromJSON(object.commandResponse) : undefined,
+    };
   },
 
   toJSON(message: AgentPayload): unknown {
     const obj: any = {};
     if (message.heartbeat !== undefined) {
       obj.heartbeat = Heartbeat.toJSON(message.heartbeat);
+    }
+    if (message.commandResponse !== undefined) {
+      obj.commandResponse = CommandResponse.toJSON(message.commandResponse);
     }
     return obj;
   },
@@ -241,6 +282,117 @@ export const AgentPayload: MessageFns<AgentPayload> = {
     message.heartbeat = (object.heartbeat !== undefined && object.heartbeat !== null)
       ? Heartbeat.fromPartial(object.heartbeat)
       : undefined;
+    message.commandResponse = (object.commandResponse !== undefined && object.commandResponse !== null)
+      ? CommandResponse.fromPartial(object.commandResponse)
+      : undefined;
+    return message;
+  },
+};
+
+function createBaseCommandResponse(): CommandResponse {
+  return { id: "", success: false, error: "", data: "" };
+}
+
+export const CommandResponse: MessageFns<CommandResponse> = {
+  encode(message: CommandResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== "") {
+      writer.uint32(10).string(message.id);
+    }
+    if (message.success !== false) {
+      writer.uint32(16).bool(message.success);
+    }
+    if (message.error !== "") {
+      writer.uint32(26).string(message.error);
+    }
+    if (message.data !== "") {
+      writer.uint32(34).string(message.data);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): CommandResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseCommandResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.id = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 16) {
+            break;
+          }
+
+          message.success = reader.bool();
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.error = reader.string();
+          continue;
+        }
+        case 4: {
+          if (tag !== 34) {
+            break;
+          }
+
+          message.data = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): CommandResponse {
+    return {
+      id: isSet(object.id) ? globalThis.String(object.id) : "",
+      success: isSet(object.success) ? globalThis.Boolean(object.success) : false,
+      error: isSet(object.error) ? globalThis.String(object.error) : "",
+      data: isSet(object.data) ? globalThis.String(object.data) : "",
+    };
+  },
+
+  toJSON(message: CommandResponse): unknown {
+    const obj: any = {};
+    if (message.id !== "") {
+      obj.id = message.id;
+    }
+    if (message.success !== false) {
+      obj.success = message.success;
+    }
+    if (message.error !== "") {
+      obj.error = message.error;
+    }
+    if (message.data !== "") {
+      obj.data = message.data;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<CommandResponse>, I>>(base?: I): CommandResponse {
+    return CommandResponse.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<CommandResponse>, I>>(object: I): CommandResponse {
+    const message = createBaseCommandResponse();
+    message.id = object.id ?? "";
+    message.success = object.success ?? false;
+    message.error = object.error ?? "";
+    message.data = object.data ?? "";
     return message;
   },
 };
@@ -558,7 +710,7 @@ export const ClusterResource: MessageFns<ClusterResource> = {
 };
 
 function createBaseNode(): Node {
-  return { name: "", cpuUsage: 0, ramUsage: 0, cpuCapacity: 0, ramCapacity: 0, labels: {} };
+  return { name: "", cpuUsage: 0, ramUsage: 0, cpuCapacity: 0, ramCapacity: 0, labels: {}, uid: "" };
 }
 
 export const Node: MessageFns<Node> = {
@@ -581,6 +733,9 @@ export const Node: MessageFns<Node> = {
     globalThis.Object.entries(message.labels).forEach(([key, value]: [string, string]) => {
       Node_LabelsEntry.encode({ key: key as any, value }, writer.uint32(50).fork()).join();
     });
+    if (message.uid !== "") {
+      writer.uint32(58).string(message.uid);
+    }
     return writer;
   },
 
@@ -642,6 +797,14 @@ export const Node: MessageFns<Node> = {
           }
           continue;
         }
+        case 7: {
+          if (tag !== 58) {
+            break;
+          }
+
+          message.uid = reader.string();
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -667,6 +830,7 @@ export const Node: MessageFns<Node> = {
           {},
         )
         : {},
+      uid: isSet(object.uid) ? globalThis.String(object.uid) : "",
     };
   },
 
@@ -696,6 +860,9 @@ export const Node: MessageFns<Node> = {
         });
       }
     }
+    if (message.uid !== "") {
+      obj.uid = message.uid;
+    }
     return obj;
   },
 
@@ -718,6 +885,7 @@ export const Node: MessageFns<Node> = {
       },
       {},
     );
+    message.uid = object.uid ?? "";
     return message;
   },
 };
@@ -808,6 +976,7 @@ function createBaseDeployment(): Deployment {
     labels: {},
     selector: {},
     dockerImage: "",
+    uid: "",
   };
 }
 
@@ -836,6 +1005,9 @@ export const Deployment: MessageFns<Deployment> = {
     });
     if (message.dockerImage !== "") {
       writer.uint32(66).string(message.dockerImage);
+    }
+    if (message.uid !== "") {
+      writer.uint32(74).string(message.uid);
     }
     return writer;
   },
@@ -917,6 +1089,14 @@ export const Deployment: MessageFns<Deployment> = {
           message.dockerImage = reader.string();
           continue;
         }
+        case 9: {
+          if (tag !== 74) {
+            break;
+          }
+
+          message.uid = reader.string();
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -952,6 +1132,7 @@ export const Deployment: MessageFns<Deployment> = {
         )
         : {},
       dockerImage: isSet(object.dockerImage) ? globalThis.String(object.dockerImage) : "",
+      uid: isSet(object.uid) ? globalThis.String(object.uid) : "",
     };
   },
 
@@ -993,6 +1174,9 @@ export const Deployment: MessageFns<Deployment> = {
     if (message.dockerImage !== "") {
       obj.dockerImage = message.dockerImage;
     }
+    if (message.uid !== "") {
+      obj.uid = message.uid;
+    }
     return obj;
   },
 
@@ -1025,6 +1209,7 @@ export const Deployment: MessageFns<Deployment> = {
       {},
     );
     message.dockerImage = object.dockerImage ?? "";
+    message.uid = object.uid ?? "";
     return message;
   },
 };
@@ -1196,6 +1381,7 @@ function createBasePod(): Pod {
     command: "",
     envVariables: "",
     internalPort: 0,
+    uid: "",
   };
 }
 
@@ -1239,6 +1425,9 @@ export const Pod: MessageFns<Pod> = {
     }
     if (message.internalPort !== 0) {
       writer.uint32(104).int32(message.internalPort);
+    }
+    if (message.uid !== "") {
+      writer.uint32(114).string(message.uid);
     }
     return writer;
   },
@@ -1354,6 +1543,14 @@ export const Pod: MessageFns<Pod> = {
           message.internalPort = reader.int32();
           continue;
         }
+        case 14: {
+          if (tag !== 114) {
+            break;
+          }
+
+          message.uid = reader.string();
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -1378,6 +1575,7 @@ export const Pod: MessageFns<Pod> = {
       command: isSet(object.command) ? globalThis.String(object.command) : "",
       envVariables: isSet(object.envVariables) ? globalThis.String(object.envVariables) : "",
       internalPort: isSet(object.internalPort) ? globalThis.Number(object.internalPort) : 0,
+      uid: isSet(object.uid) ? globalThis.String(object.uid) : "",
     };
   },
 
@@ -1422,6 +1620,9 @@ export const Pod: MessageFns<Pod> = {
     if (message.internalPort !== 0) {
       obj.internalPort = Math.round(message.internalPort);
     }
+    if (message.uid !== "") {
+      obj.uid = message.uid;
+    }
     return obj;
   },
 
@@ -1443,6 +1644,7 @@ export const Pod: MessageFns<Pod> = {
     message.command = object.command ?? "";
     message.envVariables = object.envVariables ?? "";
     message.internalPort = object.internalPort ?? 0;
+    message.uid = object.uid ?? "";
     return message;
   },
 };
@@ -1457,6 +1659,7 @@ function createBaseService(): Service {
     clusterIp: "",
     selector: {},
     domain: "",
+    uid: "",
   };
 }
 
@@ -1485,6 +1688,9 @@ export const Service: MessageFns<Service> = {
     });
     if (message.domain !== "") {
       writer.uint32(66).string(message.domain);
+    }
+    if (message.uid !== "") {
+      writer.uint32(74).string(message.uid);
     }
     return writer;
   },
@@ -1563,6 +1769,14 @@ export const Service: MessageFns<Service> = {
           message.domain = reader.string();
           continue;
         }
+        case 9: {
+          if (tag !== 74) {
+            break;
+          }
+
+          message.uid = reader.string();
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -1590,6 +1804,7 @@ export const Service: MessageFns<Service> = {
         )
         : {},
       domain: isSet(object.domain) ? globalThis.String(object.domain) : "",
+      uid: isSet(object.uid) ? globalThis.String(object.uid) : "",
     };
   },
 
@@ -1625,6 +1840,9 @@ export const Service: MessageFns<Service> = {
     if (message.domain !== "") {
       obj.domain = message.domain;
     }
+    if (message.uid !== "") {
+      obj.uid = message.uid;
+    }
     return obj;
   },
 
@@ -1649,6 +1867,7 @@ export const Service: MessageFns<Service> = {
       {},
     );
     message.domain = object.domain ?? "";
+    message.uid = object.uid ?? "";
     return message;
   },
 };
