@@ -109,7 +109,7 @@ export const clusterAgent = pgTable("clusterAgent", {
 		.notNull(),
 });
 
-const clusterStatus = pgEnum("cluster_status", ["active", "inactive"]);
+export const clusterStatus = pgEnum("cluster_status", ["active", "inactive"]);
 export const k8sCluster = pgTable("k8sCluster", {
 	id: serial("id").primaryKey(),
 	name: text("name").notNull(),
@@ -139,131 +139,161 @@ export const k8sCluster = pgTable("k8sCluster", {
 		.notNull(),
 });
 
-export const k8sClusterNode = pgTable("k8sClusterNode", {
-	id: serial("id").primaryKey(),
-	clusterId: integer("cluster_id")
-		.notNull()
-		.references(() => k8sCluster.id, { onDelete: "cascade" }),
-	name: text("name").notNull(),
-	cpuUsage: integer("cpu_usage").notNull(),
-	ramUsage: integer("ram_usage").notNull(),
-	cpuCapacity: integer("cpu_capacity").notNull(),
-	ramCapacity: integer("ram_capacity").notNull(),
-	labels: text("labels").notNull(),
-	createdAt: timestamp("created_at").defaultNow().notNull(),
-	updatedAt: timestamp("updated_at")
-		.$onUpdate(() => /* @__PURE__ */ new Date())
-		.notNull(),
-	k8sUid: text("k8s_uid"),
-}, (table) => ({
-	clusterUidIdx: uniqueIndex("node_cluster_uid_idx").on(table.clusterId, table.k8sUid),
-}));
+export const k8sClusterNode = pgTable(
+	"k8sClusterNode",
+	{
+		id: serial("id").primaryKey(),
+		clusterId: integer("cluster_id")
+			.notNull()
+			.references(() => k8sCluster.id, { onDelete: "cascade" }),
+		name: text("name").notNull(),
+		cpuUsage: integer("cpu_usage").notNull(),
+		ramUsage: integer("ram_usage").notNull(),
+		cpuCapacity: integer("cpu_capacity").notNull(),
+		ramCapacity: integer("ram_capacity").notNull(),
+		labels: text("labels").notNull(),
+		status: text("status").notNull().default("Unknown"),
+		roles: text("roles").array().notNull().default([]),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+		updatedAt: timestamp("updated_at")
+			.$onUpdate(() => /* @__PURE__ */ new Date())
+			.notNull(),
+		k8sUid: text("k8s_uid"),
+	},
+	(table) => ({
+		clusterUidIdx: uniqueIndex("node_cluster_uid_idx").on(
+			table.clusterId,
+			table.k8sUid,
+		),
+	}),
+);
 
-export const k8sDeployments = pgTable("k8sDeployments", {
-	id: serial("id").primaryKey(),
-	clusterId: integer("cluster_id")
-		.notNull()
-		.references(() => k8sCluster.id, { onDelete: "cascade" }),
+export const k8sDeployments = pgTable(
+	"k8sDeployments",
+	{
+		id: serial("id").primaryKey(),
+		clusterId: integer("cluster_id")
+			.notNull()
+			.references(() => k8sCluster.id, { onDelete: "cascade" }),
 
-	ownerId: text("owner_id")
-		.notNull()
-		.references(() => profile.id, { onDelete: "cascade" }),
-	name: text("name").notNull(),
-	namespace: text("namespace").notNull(),
-	replicas: integer("replicas").notNull(),
-	availableReplicas: integer("available_replicas").notNull(),
-	unavailableReplicas: integer("unavailable_replicas").notNull(),
-	dockerImage: text("docker_image"),
-	labels: text("labels"), // JSON string
-	selector: text("selector"), // JSON string
+		ownerId: text("owner_id")
+			.notNull()
+			.references(() => profile.id, { onDelete: "cascade" }),
+		name: text("name").notNull(),
+		namespace: text("namespace").notNull(),
+		replicas: integer("replicas").notNull(),
+		availableReplicas: integer("available_replicas").notNull(),
+		unavailableReplicas: integer("unavailable_replicas").notNull(),
+		dockerImage: text("docker_image"),
+		labels: text("labels"), // JSON string
+		selector: text("selector"), // JSON string
 
-	// Spec fields moved from k8sPods
-	cpuRequest: integer("cpu_request").default(0).notNull(),
-	cpuLimit: integer("cpu_limit").default(0).notNull(),
-	memoryRequest: integer("memory_request").default(0).notNull(),
-	memoryLimit: integer("memory_limit").default(0).notNull(),
-	command: text("command").default("").notNull(),
-	envVariables: text("env_variables").default("").notNull(),
-	internalPort: integer("internal_port").default(0).notNull(),
+		// Spec fields moved from k8sPods
+		cpuRequest: integer("cpu_request").default(0).notNull(),
+		cpuLimit: integer("cpu_limit").default(0).notNull(),
+		memoryRequest: integer("memory_request").default(0).notNull(),
+		memoryLimit: integer("memory_limit").default(0).notNull(),
+		command: text("command").default("").notNull(),
+		envVariables: text("env_variables").default("").notNull(),
+		internalPort: integer("internal_port").default(0).notNull(),
 
-	createdAt: timestamp("created_at").defaultNow().notNull(),
-	updatedAt: timestamp("updated_at")
-		.$onUpdate(() => /* @__PURE__ */ new Date())
-		.notNull(),
-	k8sUid: text("k8s_uid"),
-}, (table) => ({
-	clusterUidIdx: uniqueIndex("dep_cluster_uid_idx").on(table.clusterId, table.k8sUid),
-}));
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+		updatedAt: timestamp("updated_at")
+			.$onUpdate(() => /* @__PURE__ */ new Date())
+			.notNull(),
+		k8sUid: text("k8s_uid"),
+	},
+	(table) => ({
+		clusterUidIdx: uniqueIndex("dep_cluster_uid_idx").on(
+			table.clusterId,
+			table.k8sUid,
+		),
+	}),
+);
 
-export const k8sPods = pgTable("k8sPods", {
-	id: serial("id").primaryKey(),
-	clusterId: integer("cluster_id")
-		.notNull()
-		.references(() => k8sCluster.id, { onDelete: "cascade" }),
-	deploymentId: integer("deployment_id").references(() => k8sDeployments.id, {
-		onDelete: "set null",
-	}), // Pods can exist without deployment (bare pods)
-	nodeId: integer("node_id") // Can be null if pending? Schema says serial (autoincrement) which implies NOT NULL usually in Drizzle unless specified.
-		// Existing schema had it as serial and references k8sClusterNode.
-		.notNull()
-		.references(() => k8sClusterNode.id, { onDelete: "cascade" }),
-	ownerId: text("owner_id")
-		.notNull()
-		.references(() => profile.id, { onDelete: "cascade" }),
+export const k8sPods = pgTable(
+	"k8sPods",
+	{
+		id: serial("id").primaryKey(),
+		clusterId: integer("cluster_id")
+			.notNull()
+			.references(() => k8sCluster.id, { onDelete: "cascade" }),
+		deploymentId: integer("deployment_id").references(() => k8sDeployments.id, {
+			onDelete: "set null",
+		}), // Pods can exist without deployment (bare pods)
+		nodeId: integer("node_id") // Can be null if pending? Schema says serial (autoincrement) which implies NOT NULL usually in Drizzle unless specified.
+			// Existing schema had it as serial and references k8sClusterNode.
+			.notNull()
+			.references(() => k8sClusterNode.id, { onDelete: "cascade" }),
+		ownerId: text("owner_id")
+			.notNull()
+			.references(() => profile.id, { onDelete: "cascade" }),
 
-	name: text("name").notNull(),
-	namespace: text("namespace").notNull(),
-	dockerImage: text("docker_image").notNull(),
-	// replicas removed
-	cpuRequest: integer("cpu_request").notNull(),
-	cpuLimit: integer("cpu_limit").notNull(),
-	memoryRequest: integer("memory_request").notNull(),
-	memoryLimit: integer("memory_limit").notNull(),
-	// Keep these on pod for actual usage/status? Or remove if we only care about spec on Deployment?
-	// User asked to reconstruct "like k8s architecture". K8s Pods have specs.
-	// But specifically "only deployment have the replicas".
-	// I will keep resource specs on Pods as they reflect the actual pod spec (which might differ during updates).
-	command: text("command").notNull(),
-	envVariables: text("env_variables").notNull(),
+		name: text("name").notNull(),
+		namespace: text("namespace").notNull(),
+		dockerImage: text("docker_image").notNull(),
+		// replicas removed
+		cpuRequest: integer("cpu_request").notNull(),
+		cpuLimit: integer("cpu_limit").notNull(),
+		memoryRequest: integer("memory_request").notNull(),
+		memoryLimit: integer("memory_limit").notNull(),
+		// Keep these on pod for actual usage/status? Or remove if we only care about spec on Deployment?
+		// User asked to reconstruct "like k8s architecture". K8s Pods have specs.
+		// But specifically "only deployment have the replicas".
+		// I will keep resource specs on Pods as they reflect the actual pod spec (which might differ during updates).
+		command: text("command").notNull(),
+		envVariables: text("env_variables").notNull(),
 
-	internalPort: integer("internal_port").notNull(),
+		internalPort: integer("internal_port").notNull(),
 
-	createdAt: timestamp("created_at").defaultNow().notNull(),
-	updatedAt: timestamp("updated_at")
-		.$onUpdate(() => /* @__PURE__ */ new Date())
-		.notNull(),
-	k8sUid: text("k8s_uid"),
-}, (table) => ({
-	clusterUidIdx: uniqueIndex("pod_cluster_uid_idx").on(table.clusterId, table.k8sUid),
-}));
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+		updatedAt: timestamp("updated_at")
+			.$onUpdate(() => /* @__PURE__ */ new Date())
+			.notNull(),
+		k8sUid: text("k8s_uid"),
+	},
+	(table) => ({
+		clusterUidIdx: uniqueIndex("pod_cluster_uid_idx").on(
+			table.clusterId,
+			table.k8sUid,
+		),
+	}),
+);
 
-export const k8sServices = pgTable("k8sServices", {
-	id: serial("id").primaryKey(),
-	clusterId: integer("cluster_id")
-		.notNull()
-		.references(() => k8sCluster.id, { onDelete: "cascade" }),
-	nodeId: integer("node_id")
-		.notNull()
-		.references(() => k8sClusterNode.id, { onDelete: "cascade" }),
-	podId: integer("pod_id")
-		.notNull()
-		.references(() => k8sPods.id, { onDelete: "cascade" }),
+export const k8sServices = pgTable(
+	"k8sServices",
+	{
+		id: serial("id").primaryKey(),
+		clusterId: integer("cluster_id")
+			.notNull()
+			.references(() => k8sCluster.id, { onDelete: "cascade" }),
+		nodeId: integer("node_id").references(() => k8sClusterNode.id, {
+			onDelete: "set null",
+		}),
+		podId: integer("pod_id").references(() => k8sPods.id, {
+			onDelete: "set null",
+		}),
 
-	internalPort: integer("internal_port").notNull(),
-	externalPort: integer("external_port").notNull(),
-	domain: text("domain").notNull(),
-	namespace: text("namespace").notNull(),
-	labels: text("labels").notNull(),
+		internalPort: integer("internal_port").notNull(),
+		externalPort: integer("external_port").notNull(),
+		domain: text("domain").notNull(),
+		namespace: text("namespace").notNull(),
+		labels: text("labels").notNull(),
 
-	name: text("name").notNull(),
-	createdAt: timestamp("created_at").defaultNow().notNull(),
-	updatedAt: timestamp("updated_at")
-		.$onUpdate(() => /* @__PURE__ */ new Date())
-		.notNull(),
-	k8sUid: text("k8s_uid"),
-}, (table) => ({
-	clusterUidIdx: uniqueIndex("svc_cluster_uid_idx").on(table.clusterId, table.k8sUid),
-}));
+		name: text("name").notNull(),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+		updatedAt: timestamp("updated_at")
+			.$onUpdate(() => /* @__PURE__ */ new Date())
+			.notNull(),
+		k8sUid: text("k8s_uid"),
+	},
+	(table) => ({
+		clusterUidIdx: uniqueIndex("svc_cluster_uid_idx").on(
+			table.clusterId,
+			table.k8sUid,
+		),
+	}),
+);
 export interface AppState {
 	createNewAdmin: boolean;
 }

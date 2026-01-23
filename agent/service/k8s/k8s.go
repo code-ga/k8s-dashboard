@@ -3,6 +3,9 @@ package k8s
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io"
 	"k8s-dashboard/agents/infra/garageHQ"
@@ -11,6 +14,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/google/uuid"
 
 	pb "k8s-dashboard/agents/pb/agent-backend"
 
@@ -224,12 +229,38 @@ func (kc *K8sClient) GetFullClusterState() (*pb.Heartbeat, error) {
 			labels[k] = v
 		}
 
+		// Extract roles from labels
+		var roles []string
+		for k := range node.Labels {
+			if strings.HasPrefix(k, "node-role.kubernetes.io/") {
+				role := strings.TrimPrefix(k, "node-role.kubernetes.io/")
+				if role != "" {
+					roles = append(roles, role)
+				}
+			}
+		}
+
+		// Extract status (Ready condition)
+		status := "Unknown"
+		for _, condition := range node.Status.Conditions {
+			if condition.Type == corev1.NodeReady {
+				if condition.Status == corev1.ConditionTrue {
+					status = "Ready"
+				} else {
+					status = "NotReady"
+				}
+				break
+			}
+		}
+
 		pbNodes = append(pbNodes, &pb.Node{
 			Name:        node.Name,
 			CpuCapacity: cpuCap,
 			RamCapacity: memCap,
 			Labels:      labels,
 			Uid:         string(node.UID),
+			Status:      status,
+			Roles:       roles,
 			// CpuUsage: ... (requires metrics server or manual aggregation)
 			// RamUsage: ...
 		})
@@ -772,4 +803,110 @@ func (k *K8sClient) ScaleDeployment(namespace, deploymentName string, replicas i
 		return fmt.Errorf("failed to update scale for deployment %s: %w", deploymentName, err)
 	}
 	return nil
+}
+func (k *K8sClient) DeleteNode(nodeName string) error {
+	return k.Clientset.CoreV1().Nodes().Delete(k.Context, nodeName, metav1.DeleteOptions{})
+}
+
+func (k *K8sClient) GenerateJoinCommand() (string, error) {
+	// 1. Generate Token ID and Secret using UUID
+	// kubeadm tokens must be [a-z0-9]{6}.[a-z0-9]{16}
+	u1 := uuid.New().String()
+	tokenID := strings.ReplaceAll(u1, "-", "")[:6]
+	u2 := uuid.New().String()
+	tokenSecret := strings.ReplaceAll(u2, "-", "")[:16]
+	token := fmt.Sprintf("%s.%s", tokenID, tokenSecret)
+
+	// 2. Create Bootstrap Token Secret
+	secretName := fmt.Sprintf("bootstrap-token-%s", tokenID)
+	expiration := time.Now().Add(24 * time.Hour).Format(time.RFC3339)
+
+	data := map[string][]byte{
+		"token-id":                       []byte(tokenID),
+		"token-secret":                   []byte(tokenSecret),
+		"expiration":                     []byte(expiration),
+		"usage-bootstrap-authentication": []byte("true"),
+		"usage-bootstrap-signing":        []byte("true"),
+		"extra-groups":                   []byte("system:bootstrappers:kubeadm:default-node-token"),
+	}
+
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      secretName,
+			Namespace: "kube-system",
+		},
+		Type: corev1.SecretTypeBootstrapToken,
+		Data: data,
+	}
+
+	_, err := k.Clientset.CoreV1().Secrets("kube-system").Create(k.Context, secret, metav1.CreateOptions{})
+	if err != nil {
+		if errors.IsAlreadyExists(err) {
+			// Try to update if exists? Or just fail? For random token, collision is rare.
+			return "", fmt.Errorf("bootstrap token collision: %w", err)
+		}
+		return "", fmt.Errorf("failed to create bootstrap token secret: %w", err)
+	}
+
+	// 3. Get Cluster Info for CA Hash and Endpoint
+	cm, err := k.Clientset.CoreV1().ConfigMaps("kube-public").Get(k.Context, "cluster-info", metav1.GetOptions{})
+	if err != nil {
+		return "", fmt.Errorf("failed to get cluster-info configmap: %w", err)
+	}
+
+	kubeconfigStr, ok := cm.Data["kubeconfig"]
+	if !ok {
+		return "", fmt.Errorf("cluster-info configmap does not contain kubeconfig")
+	}
+
+	// Simple parsing of kubeconfig to get CA cert and server
+	// We could use clientcmd, but manual parsing for specific fields avoids heavy dependencies if simple
+	// Format is typically standard YAML.
+	config, err := clientcmd.Load([]byte(kubeconfigStr))
+	if err != nil {
+		return "", fmt.Errorf("failed to parse cluster-info kubeconfig: %w", err)
+	}
+
+	if len(config.Clusters) == 0 {
+		return "", fmt.Errorf("no clusters found in cluster-info kubeconfig")
+	}
+
+	// Pick the first cluster (usually only one)
+	var server string
+	var caData []byte
+	for _, c := range config.Clusters {
+		server = c.Server
+		caData = c.CertificateAuthorityData
+		break
+	}
+
+	// Calculate SHA256 hash of the decoded CA cert
+	// NOTE: cluster.CertificateAuthorityData is []byte
+	hash := sha256.Sum256(caData)
+	hashStr := hex.EncodeToString(hash[:])
+
+	// 4. Construct Command
+	// kubeadm join <endpoint> --token <token> --discovery-token-ca-cert-hash sha256:<hash>
+	// Endpoint usually includes https://, strip it for host:port if needed?
+	// kubeadm join expects host:port.
+	endpoint := strings.TrimPrefix(server, "https://")
+	endpoint = strings.TrimPrefix(endpoint, "http://")
+
+	cmd := fmt.Sprintf("kubeadm join %s --token %s --discovery-token-ca-cert-hash sha256:%s", endpoint, token, hashStr)
+
+	// Return structured data using the new Protobuf message
+	response := &pb.JoinTokenData{
+		Command:                  cmd,
+		Token:                    token,
+		DiscoveryTokenCaCertHash: "sha256:" + hashStr,
+		ApiServerEndpoint:        endpoint,
+		Expiration:               expiration,
+	}
+
+	jsonBytes, err := json.Marshal(response)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal join token response: %w", err)
+	}
+
+	return string(jsonBytes), nil
 }

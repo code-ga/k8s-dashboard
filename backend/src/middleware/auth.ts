@@ -9,20 +9,27 @@ import { isAllElementsPresent } from "../utils/array";
 export const authenticationMiddleware = new Elysia({
 	name: "authentication",
 }).macro({
-	userAuth: {
+	userAuth: (config: { requiredProfile: boolean }) => ({
 		async resolve({ status, request: { headers } }) {
 			const session = await auth.api.getSession({
 				headers,
 			});
 
 			if (!session) return status(401);
-
+			const profile = await db.query.profile.findFirst({
+				where: {
+					userId: session.user.id,
+				},
+			});
+			if (config.requiredProfile && !profile) return status(401);
 			return {
 				user: session.user,
 				session: session.session,
+				profile,
 			};
 		},
-	},
+	}),
+
 	agentAuth: {
 		async resolve({ status, request: { headers } }) {
 			const authenticationHeader = headers.get("Authorization");
@@ -68,22 +75,24 @@ export const authenticationMiddleware = new Elysia({
 
 			const userPermissions = userProfile[0].permission;
 			if (!userPermissions) return status(401);
-			if (userPermissions.includes("admin"))
+			if (checkPermission(userPermissions, permissions)) {
 				return {
 					user: session.user,
 					session: session.session,
 					permission: userPermissions,
 					profile: userProfile[0],
 				};
-			// if all permissions are in userPermissions return true
-			if (isAllElementsPresent(permissions, userPermissions))
-				return {
-					user: session.user,
-					session: session.session,
-					permission: userPermissions,
-					profile: userProfile[0],
-				};
+			}
 			return status(403);
 		},
 	}),
 });
+
+export const checkPermission = (
+	userPermissions: Static<typeof dbSchemaTypes.profile.permission>,
+	permissions: Static<typeof dbSchemaTypes.profile.permission>,
+) => {
+	if (!userPermissions) return false;
+	if (userPermissions.includes("admin")) return true;
+	return isAllElementsPresent(permissions, userPermissions);
+};

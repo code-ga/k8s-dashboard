@@ -5,12 +5,10 @@ import {
 	k8sPods,
 	k8sDeployments,
 	k8sClusterNode,
-	profile,
 } from "../database/schema";
 import { eq, and, isNull, type InferInsertModel } from "drizzle-orm";
 import type {
 	ServerPayload,
-	Command,
 	Heartbeat,
 } from "../../pb-generated/agent-backend/websocket"; // Check imports carefully
 import { Command_CommandType } from "../../pb-generated/agent-backend/websocket";
@@ -57,14 +55,24 @@ export class AgentService {
 				let existingNode = await db
 					.select()
 					.from(k8sClusterNode)
-					.where(and(eq(k8sClusterNode.clusterId, cluster.id), eq(k8sClusterNode.k8sUid, node.uid)));
+					.where(
+						and(
+							eq(k8sClusterNode.clusterId, cluster.id),
+							eq(k8sClusterNode.k8sUid, node.uid),
+						),
+					);
 
 				// 2. Fallback to Name (to link new UID to existing record)
 				if (existingNode.length === 0) {
 					existingNode = await db
 						.select()
 						.from(k8sClusterNode)
-						.where(and(eq(k8sClusterNode.clusterId, cluster.id), eq(k8sClusterNode.name, node.name)));
+						.where(
+							and(
+								eq(k8sClusterNode.clusterId, cluster.id),
+								eq(k8sClusterNode.name, node.name),
+							),
+						);
 				}
 
 				const nodeData: InferInsertModel<typeof k8sClusterNode> = {
@@ -76,6 +84,8 @@ export class AgentService {
 					ramCapacity: Number(node.ramCapacity),
 					labels: JSON.stringify(node.labels),
 					k8sUid: node.uid,
+					status: node.status || "Unknown",
+					roles: node.roles || [],
 					updatedAt: new Date(),
 				};
 
@@ -97,7 +107,12 @@ export class AgentService {
 				let existing = await db
 					.select()
 					.from(k8sDeployments)
-					.where(and(eq(k8sDeployments.clusterId, cluster.id), eq(k8sDeployments.k8sUid, dep.uid)));
+					.where(
+						and(
+							eq(k8sDeployments.clusterId, cluster.id),
+							eq(k8sDeployments.k8sUid, dep.uid),
+						),
+					);
 
 				// 2. Fallback to Name/Namespace
 				if (existing.length === 0) {
@@ -113,7 +128,10 @@ export class AgentService {
 						);
 				}
 
-				const depData: Omit<InferInsertModel<typeof k8sDeployments>, "ownerId"> = {
+				const depData: Omit<
+					InferInsertModel<typeof k8sDeployments>,
+					"ownerId"
+				> = {
 					clusterId: cluster.id,
 					name: dep.name,
 					namespace: dep.namespace,
@@ -193,7 +211,12 @@ export class AgentService {
 					let existingPodResult = await db
 						.select()
 						.from(k8sPods)
-						.where(and(eq(k8sPods.clusterId, cluster.id), eq(k8sPods.k8sUid, pod.uid)));
+						.where(
+							and(
+								eq(k8sPods.clusterId, cluster.id),
+								eq(k8sPods.k8sUid, pod.uid),
+							),
+						);
 
 					// 2. Fallback to Name/Namespace
 					if (existingPodResult.length === 0) {
@@ -319,7 +342,9 @@ spec:
 		const configuredPods = await db
 			.select()
 			.from(k8sPods)
-			.where(and(eq(k8sPods.clusterId, cluster.id), isNull(k8sPods.deploymentId)));
+			.where(
+				and(eq(k8sPods.clusterId, cluster.id), isNull(k8sPods.deploymentId)),
+			);
 
 		const activePods = heartbeat.pods || [];
 
@@ -329,8 +354,10 @@ spec:
 			);
 
 			if (!matchingPod) {
-				console.log(`Missing Pod: ${dbPod.name} in ${dbPod.namespace}. Restoring...`);
-				
+				console.log(
+					`Missing Pod: ${dbPod.name} in ${dbPod.namespace}. Restoring...`,
+				);
+
 				// Construct Minimal Pod Manifest
 				const manifest = `
 apiVersion: v1

@@ -31,6 +31,8 @@ const (
 	Command_DELETE_DEPLOYMENT Command_CommandType = 4
 	Command_CREATE_POD        Command_CommandType = 5
 	Command_DELETE_POD        Command_CommandType = 6
+	Command_DELETE_NODE       Command_CommandType = 7
+	Command_GET_JOIN_TOKEN    Command_CommandType = 8
 )
 
 // Enum value maps for Command_CommandType.
@@ -43,6 +45,8 @@ var (
 		4: "DELETE_DEPLOYMENT",
 		5: "CREATE_POD",
 		6: "DELETE_POD",
+		7: "DELETE_NODE",
+		8: "GET_JOIN_TOKEN",
 	}
 	Command_CommandType_value = map[string]int32{
 		"UNKNOWN":           0,
@@ -52,6 +56,8 @@ var (
 		"DELETE_DEPLOYMENT": 4,
 		"CREATE_POD":        5,
 		"DELETE_POD":        6,
+		"DELETE_NODE":       7,
+		"GET_JOIN_TOKEN":    8,
 	}
 )
 
@@ -472,6 +478,8 @@ type Node struct {
 	// JSON string or key=value pairs for labels
 	Labels        map[string]string `protobuf:"bytes,6,rep,name=labels,proto3" json:"labels,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	Uid           string            `protobuf:"bytes,7,opt,name=uid,proto3" json:"uid,omitempty"`
+	Status        string            `protobuf:"bytes,8,opt,name=status,proto3" json:"status,omitempty"`
+	Roles         []string          `protobuf:"bytes,9,rep,name=roles,proto3" json:"roles,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -553,6 +561,20 @@ func (x *Node) GetUid() string {
 		return x.Uid
 	}
 	return ""
+}
+
+func (x *Node) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *Node) GetRoles() []string {
+	if x != nil {
+		return x.Roles
+	}
+	return nil
 }
 
 type Deployment struct {
@@ -1005,6 +1027,82 @@ func (x *Command) GetTargetName() string {
 	return ""
 }
 
+type JoinTokenData struct {
+	state                    protoimpl.MessageState `protogen:"open.v1"`
+	Command                  string                 `protobuf:"bytes,1,opt,name=command,proto3" json:"command,omitempty"`
+	Token                    string                 `protobuf:"bytes,2,opt,name=token,proto3" json:"token,omitempty"`
+	DiscoveryTokenCaCertHash string                 `protobuf:"bytes,3,opt,name=discovery_token_ca_cert_hash,json=discoveryTokenCaCertHash,proto3" json:"discovery_token_ca_cert_hash,omitempty"`
+	ApiServerEndpoint        string                 `protobuf:"bytes,4,opt,name=api_server_endpoint,json=apiServerEndpoint,proto3" json:"api_server_endpoint,omitempty"`
+	Expiration               string                 `protobuf:"bytes,5,opt,name=expiration,proto3" json:"expiration,omitempty"`
+	unknownFields            protoimpl.UnknownFields
+	sizeCache                protoimpl.SizeCache
+}
+
+func (x *JoinTokenData) Reset() {
+	*x = JoinTokenData{}
+	mi := &file_agent_backend_websocket_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *JoinTokenData) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*JoinTokenData) ProtoMessage() {}
+
+func (x *JoinTokenData) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_backend_websocket_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use JoinTokenData.ProtoReflect.Descriptor instead.
+func (*JoinTokenData) Descriptor() ([]byte, []int) {
+	return file_agent_backend_websocket_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *JoinTokenData) GetCommand() string {
+	if x != nil {
+		return x.Command
+	}
+	return ""
+}
+
+func (x *JoinTokenData) GetToken() string {
+	if x != nil {
+		return x.Token
+	}
+	return ""
+}
+
+func (x *JoinTokenData) GetDiscoveryTokenCaCertHash() string {
+	if x != nil {
+		return x.DiscoveryTokenCaCertHash
+	}
+	return ""
+}
+
+func (x *JoinTokenData) GetApiServerEndpoint() string {
+	if x != nil {
+		return x.ApiServerEndpoint
+	}
+	return ""
+}
+
+func (x *JoinTokenData) GetExpiration() string {
+	if x != nil {
+		return x.Expiration
+	}
+	return ""
+}
+
 var File_agent_backend_websocket_proto protoreflect.FileDescriptor
 
 const file_agent_backend_websocket_proto_rawDesc = "" +
@@ -1033,7 +1131,7 @@ const file_agent_backend_websocket_proto_rawDesc = "" +
 	"\fcpu_capacity\x18\x01 \x01(\x03R\vcpuCapacity\x12!\n" +
 	"\fram_capacity\x18\x02 \x01(\x03R\vramCapacity\x12\x1b\n" +
 	"\tcpu_usage\x18\x03 \x01(\x03R\bcpuUsage\x12\x1b\n" +
-	"\tram_usage\x18\x04 \x01(\x03R\bramUsage\"\x96\x02\n" +
+	"\tram_usage\x18\x04 \x01(\x03R\bramUsage\"\xc4\x02\n" +
 	"\x04Node\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1b\n" +
 	"\tcpu_usage\x18\x02 \x01(\x03R\bcpuUsage\x12\x1b\n" +
@@ -1041,7 +1139,9 @@ const file_agent_backend_websocket_proto_rawDesc = "" +
 	"\fcpu_capacity\x18\x04 \x01(\x03R\vcpuCapacity\x12!\n" +
 	"\fram_capacity\x18\x05 \x01(\x03R\vramCapacity\x12-\n" +
 	"\x06labels\x18\x06 \x03(\v2\x15.api.Node.LabelsEntryR\x06labels\x12\x10\n" +
-	"\x03uid\x18\a \x01(\tR\x03uid\x1a9\n" +
+	"\x03uid\x18\a \x01(\tR\x03uid\x12\x16\n" +
+	"\x06status\x18\b \x01(\tR\x06status\x12\x14\n" +
+	"\x05roles\x18\t \x03(\tR\x05roles\x1a9\n" +
 	"\vLabelsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xd9\x03\n" +
@@ -1092,14 +1192,14 @@ const file_agent_backend_websocket_proto_rawDesc = "" +
 	"\x03uid\x18\t \x01(\tR\x03uid\x1a;\n" +
 	"\rSelectorEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xc1\x02\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xe6\x02\n" +
 	"\aCommand\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12,\n" +
 	"\x04type\x18\x02 \x01(\x0e2\x18.api.Command.CommandTypeR\x04type\x12\x18\n" +
 	"\apayload\x18\x03 \x01(\tR\apayload\x12)\n" +
 	"\x10target_namespace\x18\x04 \x01(\tR\x0ftargetNamespace\x12\x1f\n" +
 	"\vtarget_name\x18\x05 \x01(\tR\n" +
-	"targetName\"\x91\x01\n" +
+	"targetName\"\xb6\x01\n" +
 	"\vCommandType\x12\v\n" +
 	"\aUNKNOWN\x10\x00\x12\x11\n" +
 	"\rEDIT_RESOURCE\x10\x01\x12\x15\n" +
@@ -1109,7 +1209,17 @@ const file_agent_backend_websocket_proto_rawDesc = "" +
 	"\n" +
 	"CREATE_POD\x10\x05\x12\x0e\n" +
 	"\n" +
-	"DELETE_POD\x10\x06B\x06Z\x04./pbb\x06proto3"
+	"DELETE_POD\x10\x06\x12\x0f\n" +
+	"\vDELETE_NODE\x10\a\x12\x12\n" +
+	"\x0eGET_JOIN_TOKEN\x10\b\"\xcf\x01\n" +
+	"\rJoinTokenData\x12\x18\n" +
+	"\acommand\x18\x01 \x01(\tR\acommand\x12\x14\n" +
+	"\x05token\x18\x02 \x01(\tR\x05token\x12>\n" +
+	"\x1cdiscovery_token_ca_cert_hash\x18\x03 \x01(\tR\x18discoveryTokenCaCertHash\x12.\n" +
+	"\x13api_server_endpoint\x18\x04 \x01(\tR\x11apiServerEndpoint\x12\x1e\n" +
+	"\n" +
+	"expiration\x18\x05 \x01(\tR\n" +
+	"expirationB\x06Z\x04./pbb\x06proto3"
 
 var (
 	file_agent_backend_websocket_proto_rawDescOnce sync.Once
@@ -1124,7 +1234,7 @@ func file_agent_backend_websocket_proto_rawDescGZIP() []byte {
 }
 
 var file_agent_backend_websocket_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_agent_backend_websocket_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
+var file_agent_backend_websocket_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
 var file_agent_backend_websocket_proto_goTypes = []any{
 	(Command_CommandType)(0), // 0: api.Command.CommandType
 	(*AgentPayload)(nil),     // 1: api.AgentPayload
@@ -1137,10 +1247,11 @@ var file_agent_backend_websocket_proto_goTypes = []any{
 	(*Pod)(nil),              // 8: api.Pod
 	(*Service)(nil),          // 9: api.Service
 	(*Command)(nil),          // 10: api.Command
-	nil,                      // 11: api.Node.LabelsEntry
-	nil,                      // 12: api.Deployment.LabelsEntry
-	nil,                      // 13: api.Deployment.SelectorEntry
-	nil,                      // 14: api.Service.SelectorEntry
+	(*JoinTokenData)(nil),    // 11: api.JoinTokenData
+	nil,                      // 12: api.Node.LabelsEntry
+	nil,                      // 13: api.Deployment.LabelsEntry
+	nil,                      // 14: api.Deployment.SelectorEntry
+	nil,                      // 15: api.Service.SelectorEntry
 }
 var file_agent_backend_websocket_proto_depIdxs = []int32{
 	4,  // 0: api.AgentPayload.heartbeat:type_name -> api.Heartbeat
@@ -1151,10 +1262,10 @@ var file_agent_backend_websocket_proto_depIdxs = []int32{
 	8,  // 5: api.Heartbeat.pods:type_name -> api.Pod
 	9,  // 6: api.Heartbeat.services:type_name -> api.Service
 	7,  // 7: api.Heartbeat.deployments:type_name -> api.Deployment
-	11, // 8: api.Node.labels:type_name -> api.Node.LabelsEntry
-	12, // 9: api.Deployment.labels:type_name -> api.Deployment.LabelsEntry
-	13, // 10: api.Deployment.selector:type_name -> api.Deployment.SelectorEntry
-	14, // 11: api.Service.selector:type_name -> api.Service.SelectorEntry
+	12, // 8: api.Node.labels:type_name -> api.Node.LabelsEntry
+	13, // 9: api.Deployment.labels:type_name -> api.Deployment.LabelsEntry
+	14, // 10: api.Deployment.selector:type_name -> api.Deployment.SelectorEntry
+	15, // 11: api.Service.selector:type_name -> api.Service.SelectorEntry
 	0,  // 12: api.Command.type:type_name -> api.Command.CommandType
 	13, // [13:13] is the sub-list for method output_type
 	13, // [13:13] is the sub-list for method input_type
@@ -1181,7 +1292,7 @@ func file_agent_backend_websocket_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agent_backend_websocket_proto_rawDesc), len(file_agent_backend_websocket_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   14,
+			NumMessages:   15,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

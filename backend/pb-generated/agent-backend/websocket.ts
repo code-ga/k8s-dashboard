@@ -64,6 +64,8 @@ export interface Node {
   /** JSON string or key=value pairs for labels */
   labels: { [key: string]: string };
   uid: string;
+  status: string;
+  roles: string[];
 }
 
 export interface Node_LabelsEntry {
@@ -154,6 +156,8 @@ export enum Command_CommandType {
   DELETE_DEPLOYMENT = 4,
   CREATE_POD = 5,
   DELETE_POD = 6,
+  DELETE_NODE = 7,
+  GET_JOIN_TOKEN = 8,
   UNRECOGNIZED = -1,
 }
 
@@ -180,6 +184,12 @@ export function command_CommandTypeFromJSON(object: any): Command_CommandType {
     case 6:
     case "DELETE_POD":
       return Command_CommandType.DELETE_POD;
+    case 7:
+    case "DELETE_NODE":
+      return Command_CommandType.DELETE_NODE;
+    case 8:
+    case "GET_JOIN_TOKEN":
+      return Command_CommandType.GET_JOIN_TOKEN;
     case -1:
     case "UNRECOGNIZED":
     default:
@@ -203,10 +213,22 @@ export function command_CommandTypeToJSON(object: Command_CommandType): string {
       return "CREATE_POD";
     case Command_CommandType.DELETE_POD:
       return "DELETE_POD";
+    case Command_CommandType.DELETE_NODE:
+      return "DELETE_NODE";
+    case Command_CommandType.GET_JOIN_TOKEN:
+      return "GET_JOIN_TOKEN";
     case Command_CommandType.UNRECOGNIZED:
     default:
       return "UNRECOGNIZED";
   }
+}
+
+export interface JoinTokenData {
+  command: string;
+  token: string;
+  discoveryTokenCaCertHash: string;
+  apiServerEndpoint: string;
+  expiration: string;
 }
 
 function createBaseAgentPayload(): AgentPayload {
@@ -710,7 +732,17 @@ export const ClusterResource: MessageFns<ClusterResource> = {
 };
 
 function createBaseNode(): Node {
-  return { name: "", cpuUsage: 0, ramUsage: 0, cpuCapacity: 0, ramCapacity: 0, labels: {}, uid: "" };
+  return {
+    name: "",
+    cpuUsage: 0,
+    ramUsage: 0,
+    cpuCapacity: 0,
+    ramCapacity: 0,
+    labels: {},
+    uid: "",
+    status: "",
+    roles: [],
+  };
 }
 
 export const Node: MessageFns<Node> = {
@@ -735,6 +767,12 @@ export const Node: MessageFns<Node> = {
     });
     if (message.uid !== "") {
       writer.uint32(58).string(message.uid);
+    }
+    if (message.status !== "") {
+      writer.uint32(66).string(message.status);
+    }
+    for (const v of message.roles) {
+      writer.uint32(74).string(v!);
     }
     return writer;
   },
@@ -805,6 +843,22 @@ export const Node: MessageFns<Node> = {
           message.uid = reader.string();
           continue;
         }
+        case 8: {
+          if (tag !== 66) {
+            break;
+          }
+
+          message.status = reader.string();
+          continue;
+        }
+        case 9: {
+          if (tag !== 74) {
+            break;
+          }
+
+          message.roles.push(reader.string());
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -831,6 +885,8 @@ export const Node: MessageFns<Node> = {
         )
         : {},
       uid: isSet(object.uid) ? globalThis.String(object.uid) : "",
+      status: isSet(object.status) ? globalThis.String(object.status) : "",
+      roles: globalThis.Array.isArray(object?.roles) ? object.roles.map((e: any) => globalThis.String(e)) : [],
     };
   },
 
@@ -863,6 +919,12 @@ export const Node: MessageFns<Node> = {
     if (message.uid !== "") {
       obj.uid = message.uid;
     }
+    if (message.status !== "") {
+      obj.status = message.status;
+    }
+    if (message.roles?.length) {
+      obj.roles = message.roles;
+    }
     return obj;
   },
 
@@ -886,6 +948,8 @@ export const Node: MessageFns<Node> = {
       {},
     );
     message.uid = object.uid ?? "";
+    message.status = object.status ?? "";
+    message.roles = object.roles?.map((e) => e) || [];
     return message;
   },
 };
@@ -2068,6 +2132,132 @@ export const Command: MessageFns<Command> = {
     message.payload = object.payload ?? "";
     message.targetNamespace = object.targetNamespace ?? "";
     message.targetName = object.targetName ?? "";
+    return message;
+  },
+};
+
+function createBaseJoinTokenData(): JoinTokenData {
+  return { command: "", token: "", discoveryTokenCaCertHash: "", apiServerEndpoint: "", expiration: "" };
+}
+
+export const JoinTokenData: MessageFns<JoinTokenData> = {
+  encode(message: JoinTokenData, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.command !== "") {
+      writer.uint32(10).string(message.command);
+    }
+    if (message.token !== "") {
+      writer.uint32(18).string(message.token);
+    }
+    if (message.discoveryTokenCaCertHash !== "") {
+      writer.uint32(26).string(message.discoveryTokenCaCertHash);
+    }
+    if (message.apiServerEndpoint !== "") {
+      writer.uint32(34).string(message.apiServerEndpoint);
+    }
+    if (message.expiration !== "") {
+      writer.uint32(42).string(message.expiration);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): JoinTokenData {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseJoinTokenData();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.command = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.token = reader.string();
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.discoveryTokenCaCertHash = reader.string();
+          continue;
+        }
+        case 4: {
+          if (tag !== 34) {
+            break;
+          }
+
+          message.apiServerEndpoint = reader.string();
+          continue;
+        }
+        case 5: {
+          if (tag !== 42) {
+            break;
+          }
+
+          message.expiration = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): JoinTokenData {
+    return {
+      command: isSet(object.command) ? globalThis.String(object.command) : "",
+      token: isSet(object.token) ? globalThis.String(object.token) : "",
+      discoveryTokenCaCertHash: isSet(object.discoveryTokenCaCertHash)
+        ? globalThis.String(object.discoveryTokenCaCertHash)
+        : "",
+      apiServerEndpoint: isSet(object.apiServerEndpoint) ? globalThis.String(object.apiServerEndpoint) : "",
+      expiration: isSet(object.expiration) ? globalThis.String(object.expiration) : "",
+    };
+  },
+
+  toJSON(message: JoinTokenData): unknown {
+    const obj: any = {};
+    if (message.command !== "") {
+      obj.command = message.command;
+    }
+    if (message.token !== "") {
+      obj.token = message.token;
+    }
+    if (message.discoveryTokenCaCertHash !== "") {
+      obj.discoveryTokenCaCertHash = message.discoveryTokenCaCertHash;
+    }
+    if (message.apiServerEndpoint !== "") {
+      obj.apiServerEndpoint = message.apiServerEndpoint;
+    }
+    if (message.expiration !== "") {
+      obj.expiration = message.expiration;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<JoinTokenData>, I>>(base?: I): JoinTokenData {
+    return JoinTokenData.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<JoinTokenData>, I>>(object: I): JoinTokenData {
+    const message = createBaseJoinTokenData();
+    message.command = object.command ?? "";
+    message.token = object.token ?? "";
+    message.discoveryTokenCaCertHash = object.discoveryTokenCaCertHash ?? "";
+    message.apiServerEndpoint = object.apiServerEndpoint ?? "";
+    message.expiration = object.expiration ?? "";
     return message;
   },
 };

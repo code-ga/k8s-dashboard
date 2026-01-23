@@ -66,6 +66,8 @@ message Node {
   // JSON string or key=value pairs for labels
   map<string, string> labels = 6;
   string uid = 7;
+  string status = 8;
+  repeated string roles = 9;
 }
 
 message Deployment {
@@ -130,6 +132,8 @@ message Command {
     DELETE_DEPLOYMENT = 4;
     CREATE_POD = 5;
     DELETE_POD = 6;
+    DELETE_NODE = 7;
+    GET_JOIN_TOKEN = 8;
   }
   CommandType type = 2;
   
@@ -139,4 +143,11 @@ message Command {
   // Target resource details if applicable
   string target_namespace = 4;
   string target_name = 5;
+}
+message JoinTokenData {
+  string command = 1;
+  string token = 2;
+  string discovery_token_ca_cert_hash = 3;
+  string api_server_endpoint = 4;
+  string expiration = 5;
 }

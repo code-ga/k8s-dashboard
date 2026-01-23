@@ -1,15 +1,10 @@
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { api } from "@/lib/api";
 import { authClient } from "@/lib/auth";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Plus, Server } from "lucide-react";
+import { Server } from "lucide-react";
+import { CreateClusterDialog } from "@/components/cluster/create-cluster-dialog";
 
 export const Route = createFileRoute("/dashboard/")({
 	component: DashboardIndex,
@@ -65,11 +60,7 @@ function DashboardIndex() {
 						Manage your Kubernetes clusters
 					</p>
 				</div>
-				{canCreate && (
-					<Button>
-						<Plus className="mr-2 h-4 w-4" /> Create Cluster
-					</Button>
-				)}
+				{canCreate && <CreateClusterDialog />}
 			</div>
 
 			<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -77,7 +68,7 @@ function DashboardIndex() {
 					<Link
 						key={cluster.id}
 						to={`/dashboard/cluster/$id`}
-            params={{ id: `${cluster.id}` }}
+						params={{ id: `${cluster.id}` }}
 						className="block h-full"
 					>
 						<Card className="h-full hover:bg-muted/50 transition-colors cursor-pointer">

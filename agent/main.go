@@ -218,6 +218,22 @@ func handleCommand(kc *k8s.K8sClient, cmd *pb.Command) (string, error) {
 		} else {
 			err = fmt.Errorf("missing target for DELETE_POD command")
 		}
+	case pb.Command_DELETE_NODE:
+		if cmd.TargetName != "" {
+			err = kc.DeleteNode(cmd.TargetName)
+			if err == nil {
+				resultData = "Node deleted successfully"
+			}
+		} else {
+			err = fmt.Errorf("missing target_name for DELETE_NODE command")
+		}
+	case pb.Command_GET_JOIN_TOKEN:
+		log.Println("Generating join token...")
+		if cmdStr, joinErr := kc.GenerateJoinCommand(); joinErr != nil {
+			err = fmt.Errorf("failed to generate join token: %v", joinErr)
+		} else {
+			resultData = cmdStr
+		}
 	default:
 		log.Printf("Unknown command type: %v", cmd.Type)
 		return "", fmt.Errorf("unknown command type: %v", cmd.Type)

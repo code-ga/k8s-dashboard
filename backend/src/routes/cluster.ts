@@ -11,11 +11,7 @@ import { agentManagerService } from "../services/agentManager";
 export const clusterRoute = new Elysia({ prefix: "/cluster" })
 	.use(authenticationMiddleware)
 	.use(agentManagerService)
-	.onStart(async (app) => {
-		console.log(app.decorator.agentManager.instanceId);
-		// You can initialize connections or other resources here
-	})
-	.guard({ userAuth: true }, (app) =>
+	.guard({ userAuth: { requiredProfile: false } }, (app) =>
 		app.get("/", async (ctx) => {
 			const clusters = await db.select().from(schema.k8sCluster);
 			return ctx.status(200, {
@@ -28,7 +24,9 @@ export const clusterRoute = new Elysia({ prefix: "/cluster" })
 	)
 	.guard(
 		{
-			userAuth: true,
+			userAuth: {
+				requiredProfile: true,
+			},
 			roleAuth: ["manager"],
 		},
 		(app) =>
@@ -37,6 +35,17 @@ export const clusterRoute = new Elysia({ prefix: "/cluster" })
 					"/",
 					async (ctx) => {
 						const { name, description, tags } = ctx.body;
+						const agent = await db
+							.insert(schema.clusterAgent)
+							.values({})
+							.returning();
+						if (agent.length === 0 || !agent[0]) {
+							return ctx.status(500, {
+								success: false,
+								message: "Failed to create agent",
+								timestamp: Date.now(),
+							});
+						}
 						const cluster = await db
 							.insert(schema.k8sCluster)
 							.values({
@@ -45,6 +54,7 @@ export const clusterRoute = new Elysia({ prefix: "/cluster" })
 								tags,
 								clusterDomain: ctx.body.clusterDomain,
 								enableS3Service: ctx.body.enableS3Service || false,
+								agentId: agent[0].id,
 							})
 							.returning();
 						if (cluster.length === 0 || !cluster[0]) {

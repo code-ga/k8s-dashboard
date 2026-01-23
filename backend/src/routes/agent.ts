@@ -16,10 +16,6 @@ import {
 export const agentRoute = new Elysia({ prefix: "/agents" })
 	.use(authenticationMiddleware)
 	.use(agentManagerService)
-	.onStart(async (app) => {
-		console.log(app.decorator.agentManager.instanceId);
-		// You can initialize connections or other resources here
-	})
 	.guard(
 		{
 			agentAuth: true,

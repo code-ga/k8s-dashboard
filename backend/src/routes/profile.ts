@@ -17,7 +17,11 @@ export const profileRouter = new Elysia({
 	.use(authenticationMiddleware)
 	.use(appStateService)
 	.guard(
-		{ userAuth: true },
+		{
+			userAuth: {
+				requiredProfile: false,
+			},
+		},
 		(app) =>
 			app
 				.get(
