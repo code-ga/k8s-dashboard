@@ -47,7 +47,22 @@ func main() {
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt)
 
-	u := url.URL{Scheme: "ws", Host: *addr, Path: "/api/agent/ws"}
+	// parse addr
+	maybeUrl, err := url.Parse(*addr)
+	if err != nil {
+		log.Fatalf("Invalid address: %v", err)
+	}
+	wsScheme := "ws"
+	// if addr is https we use wss
+	switch maybeUrl.Scheme {
+		case "https":
+			wsScheme = "wss"
+		case "http":
+			wsScheme = "ws"
+		default:
+			wsScheme = "ws"
+	}
+	u := url.URL{Scheme: wsScheme, Host: maybeUrl.Host, Path: "/api/agent/ws"}
 	log.Printf("connecting to %s", u.String())
 
 	header := make(http.Header)
