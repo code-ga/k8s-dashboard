@@ -131,9 +131,15 @@ export interface Service {
   selector: { [key: string]: string };
   domain: string;
   uid: string;
+  labels: { [key: string]: string };
 }
 
 export interface Service_SelectorEntry {
+  key: string;
+  value: string;
+}
+
+export interface Service_LabelsEntry {
   key: string;
   value: string;
 }
@@ -1724,6 +1730,7 @@ function createBaseService(): Service {
     selector: {},
     domain: "",
     uid: "",
+    labels: {},
   };
 }
 
@@ -1756,6 +1763,9 @@ export const Service: MessageFns<Service> = {
     if (message.uid !== "") {
       writer.uint32(74).string(message.uid);
     }
+    globalThis.Object.entries(message.labels).forEach(([key, value]: [string, string]) => {
+      Service_LabelsEntry.encode({ key: key as any, value }, writer.uint32(82).fork()).join();
+    });
     return writer;
   },
 
@@ -1841,6 +1851,17 @@ export const Service: MessageFns<Service> = {
           message.uid = reader.string();
           continue;
         }
+        case 10: {
+          if (tag !== 82) {
+            break;
+          }
+
+          const entry10 = Service_LabelsEntry.decode(reader, reader.uint32());
+          if (entry10.value !== undefined) {
+            message.labels[entry10.key] = entry10.value;
+          }
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -1869,6 +1890,15 @@ export const Service: MessageFns<Service> = {
         : {},
       domain: isSet(object.domain) ? globalThis.String(object.domain) : "",
       uid: isSet(object.uid) ? globalThis.String(object.uid) : "",
+      labels: isObject(object.labels)
+        ? (globalThis.Object.entries(object.labels) as [string, any][]).reduce(
+          (acc: { [key: string]: string }, [key, value]: [string, any]) => {
+            acc[key] = globalThis.String(value);
+            return acc;
+          },
+          {},
+        )
+        : {},
     };
   },
 
@@ -1907,6 +1937,15 @@ export const Service: MessageFns<Service> = {
     if (message.uid !== "") {
       obj.uid = message.uid;
     }
+    if (message.labels) {
+      const entries = globalThis.Object.entries(message.labels) as [string, string][];
+      if (entries.length > 0) {
+        obj.labels = {};
+        entries.forEach(([k, v]) => {
+          obj.labels[k] = v;
+        });
+      }
+    }
     return obj;
   },
 
@@ -1932,6 +1971,15 @@ export const Service: MessageFns<Service> = {
     );
     message.domain = object.domain ?? "";
     message.uid = object.uid ?? "";
+    message.labels = (globalThis.Object.entries(object.labels ?? {}) as [string, string][]).reduce(
+      (acc: { [key: string]: string }, [key, value]: [string, string]) => {
+        if (value !== undefined) {
+          acc[key] = globalThis.String(value);
+        }
+        return acc;
+      },
+      {},
+    );
     return message;
   },
 };
@@ -2006,6 +2054,82 @@ export const Service_SelectorEntry: MessageFns<Service_SelectorEntry> = {
   },
   fromPartial<I extends Exact<DeepPartial<Service_SelectorEntry>, I>>(object: I): Service_SelectorEntry {
     const message = createBaseService_SelectorEntry();
+    message.key = object.key ?? "";
+    message.value = object.value ?? "";
+    return message;
+  },
+};
+
+function createBaseService_LabelsEntry(): Service_LabelsEntry {
+  return { key: "", value: "" };
+}
+
+export const Service_LabelsEntry: MessageFns<Service_LabelsEntry> = {
+  encode(message: Service_LabelsEntry, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.key !== "") {
+      writer.uint32(10).string(message.key);
+    }
+    if (message.value !== "") {
+      writer.uint32(18).string(message.value);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): Service_LabelsEntry {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseService_LabelsEntry();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.key = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.value = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): Service_LabelsEntry {
+    return {
+      key: isSet(object.key) ? globalThis.String(object.key) : "",
+      value: isSet(object.value) ? globalThis.String(object.value) : "",
+    };
+  },
+
+  toJSON(message: Service_LabelsEntry): unknown {
+    const obj: any = {};
+    if (message.key !== "") {
+      obj.key = message.key;
+    }
+    if (message.value !== "") {
+      obj.value = message.value;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<Service_LabelsEntry>, I>>(base?: I): Service_LabelsEntry {
+    return Service_LabelsEntry.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<Service_LabelsEntry>, I>>(object: I): Service_LabelsEntry {
+    const message = createBaseService_LabelsEntry();
     message.key = object.key ?? "";
     message.value = object.value ?? "";
     return message;

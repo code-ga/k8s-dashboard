@@ -5,6 +5,7 @@ import {
 	k8sPods,
 	k8sDeployments,
 	k8sClusterNode,
+	schema,
 } from "../database/schema";
 import { eq, and, isNull, type InferInsertModel } from "drizzle-orm";
 import type {
@@ -263,6 +264,59 @@ export class AgentService {
 			}
 		}
 
+		// Sync Services
+		if (heartbeat.services) {
+			for (const svc of heartbeat.services) {
+				// 1. Try Find by UID
+				let existingSvc = await db
+					.select()
+					.from(schema.k8sServices)
+					.where(
+						and(
+							eq(schema.k8sServices.clusterId, cluster.id),
+							eq(schema.k8sServices.k8sUid, svc.uid),
+						),
+					);
+
+				// 2. Fallback to Name/Namespace
+				if (existingSvc.length === 0) {
+					existingSvc = await db
+						.select()
+						.from(schema.k8sServices)
+						.where(
+							and(
+								eq(schema.k8sServices.clusterId, cluster.id),
+								eq(schema.k8sServices.name, svc.name),
+								eq(schema.k8sServices.namespace, svc.namespace),
+							),
+						);
+				}
+
+				const svcData: InferInsertModel<typeof schema.k8sServices> = {
+					clusterId: cluster.id,
+					name: svc.name,
+					namespace: svc.namespace,
+					type: svc.type,
+					clusterIp: svc.clusterIp,
+					internalPort: svc.internalPort,
+					externalPort: svc.externalPort || null,
+					selector: JSON.stringify(svc.selector),
+					k8sUid: svc.uid,
+					labels: JSON.stringify(svc.labels),
+					updatedAt: new Date(),
+				};
+
+				if (existingSvc.length > 0 && existingSvc[0]?.k8sUid) {
+					await db
+						.update(schema.k8sServices)
+						.set(svcData)
+						.where(eq(schema.k8sServices.id, existingSvc[0].id));
+				} else {
+					await db.insert(schema.k8sServices).values(svcData);
+				}
+			}
+		}
+
 		// 2. Validate Deployments (Source of Truth: k8sDeployments in DB)
 		const configuredDeployments = await db.query.k8sDeployments.findMany({
 			where: {
@@ -387,6 +441,59 @@ spec:
 						payload: manifest,
 						targetNamespace: dbPod.namespace,
 						targetName: dbPod.name,
+					},
+				};
+			}
+		}
+
+		// 4. Validate Services (Source of Truth: k8sServices in DB)
+		const configuredServices = await db.query.k8sServices.findMany({
+			where: {
+				clusterId: cluster.id,
+			},
+		});
+
+		const activeServices = heartbeat.services || [];
+
+		for (const dbSvc of configuredServices) {
+			const matchingService = activeServices.find(
+				(s) => s.name === dbSvc.name && s.namespace === dbSvc.namespace,
+			);
+
+			if (!matchingService) {
+				console.log(
+					`Missing Service: ${dbSvc.name} in ${dbSvc.namespace}. Restoring...`,
+				);
+
+				// Construct Service Manifest (JSON is valid for ApplyManifest)
+				const manifest = {
+					apiVersion: "v1",
+					kind: "Service",
+					metadata: {
+						name: dbSvc.name,
+						namespace: dbSvc.namespace,
+						labels: dbSvc.labels ? JSON.parse(dbSvc.labels) : {},
+					},
+					spec: {
+						type: dbSvc.type || "ClusterIP",
+						selector: dbSvc.selector ? JSON.parse(dbSvc.selector) : {},
+						ports: [
+							{
+								port: dbSvc.internalPort,
+								targetPort: dbSvc.internalPort,
+								...(dbSvc.externalPort ? { nodePort: dbSvc.externalPort } : {}),
+							},
+						],
+					},
+				};
+
+				return {
+					command: {
+						id: crypto.randomUUID(),
+						type: Command_CommandType.CREATE_DEPLOYMENT, // Maps to ApplyManifest in Agent
+						payload: JSON.stringify(manifest),
+						targetNamespace: dbSvc.namespace,
+						targetName: dbSvc.name,
 					},
 				};
 			}

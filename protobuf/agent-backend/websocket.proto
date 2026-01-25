@@ -120,6 +120,7 @@ message Service {
   map<string, string> selector = 7;
   string domain = 8;
   string uid = 9;
+  map<string, string> labels = 10;
 }
 
 message Command {

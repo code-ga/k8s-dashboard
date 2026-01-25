@@ -852,6 +852,7 @@ type Service struct {
 	Selector      map[string]string `protobuf:"bytes,7,rep,name=selector,proto3" json:"selector,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	Domain        string            `protobuf:"bytes,8,opt,name=domain,proto3" json:"domain,omitempty"`
 	Uid           string            `protobuf:"bytes,9,opt,name=uid,proto3" json:"uid,omitempty"`
+	Labels        map[string]string `protobuf:"bytes,10,rep,name=labels,proto3" json:"labels,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -947,6 +948,13 @@ func (x *Service) GetUid() string {
 		return x.Uid
 	}
 	return ""
+}
+
+func (x *Service) GetLabels() map[string]string {
+	if x != nil {
+		return x.Labels
+	}
+	return nil
 }
 
 type Command struct {
@@ -1178,7 +1186,7 @@ const file_agent_backend_websocket_proto_rawDesc = "" +
 	"\acommand\x18\v \x01(\tR\acommand\x12#\n" +
 	"\renv_variables\x18\f \x01(\tR\fenvVariables\x12#\n" +
 	"\rinternal_port\x18\r \x01(\x05R\finternalPort\x12\x10\n" +
-	"\x03uid\x18\x0e \x01(\tR\x03uid\"\xd7\x02\n" +
+	"\x03uid\x18\x0e \x01(\tR\x03uid\"\xc4\x03\n" +
 	"\aService\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1c\n" +
 	"\tnamespace\x18\x02 \x01(\tR\tnamespace\x12\x12\n" +
@@ -1189,8 +1197,13 @@ const file_agent_backend_websocket_proto_rawDesc = "" +
 	"cluster_ip\x18\x06 \x01(\tR\tclusterIp\x126\n" +
 	"\bselector\x18\a \x03(\v2\x1a.api.Service.SelectorEntryR\bselector\x12\x16\n" +
 	"\x06domain\x18\b \x01(\tR\x06domain\x12\x10\n" +
-	"\x03uid\x18\t \x01(\tR\x03uid\x1a;\n" +
+	"\x03uid\x18\t \x01(\tR\x03uid\x120\n" +
+	"\x06labels\x18\n" +
+	" \x03(\v2\x18.api.Service.LabelsEntryR\x06labels\x1a;\n" +
 	"\rSelectorEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1a9\n" +
+	"\vLabelsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xe6\x02\n" +
 	"\aCommand\x12\x0e\n" +
@@ -1234,7 +1247,7 @@ func file_agent_backend_websocket_proto_rawDescGZIP() []byte {
 }
 
 var file_agent_backend_websocket_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_agent_backend_websocket_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
+var file_agent_backend_websocket_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
 var file_agent_backend_websocket_proto_goTypes = []any{
 	(Command_CommandType)(0), // 0: api.Command.CommandType
 	(*AgentPayload)(nil),     // 1: api.AgentPayload
@@ -1252,6 +1265,7 @@ var file_agent_backend_websocket_proto_goTypes = []any{
 	nil,                      // 13: api.Deployment.LabelsEntry
 	nil,                      // 14: api.Deployment.SelectorEntry
 	nil,                      // 15: api.Service.SelectorEntry
+	nil,                      // 16: api.Service.LabelsEntry
 }
 var file_agent_backend_websocket_proto_depIdxs = []int32{
 	4,  // 0: api.AgentPayload.heartbeat:type_name -> api.Heartbeat
@@ -1266,12 +1280,13 @@ var file_agent_backend_websocket_proto_depIdxs = []int32{
 	13, // 9: api.Deployment.labels:type_name -> api.Deployment.LabelsEntry
 	14, // 10: api.Deployment.selector:type_name -> api.Deployment.SelectorEntry
 	15, // 11: api.Service.selector:type_name -> api.Service.SelectorEntry
-	0,  // 12: api.Command.type:type_name -> api.Command.CommandType
-	13, // [13:13] is the sub-list for method output_type
-	13, // [13:13] is the sub-list for method input_type
-	13, // [13:13] is the sub-list for extension type_name
-	13, // [13:13] is the sub-list for extension extendee
-	0,  // [0:13] is the sub-list for field type_name
+	16, // 12: api.Service.labels:type_name -> api.Service.LabelsEntry
+	0,  // 13: api.Command.type:type_name -> api.Command.CommandType
+	14, // [14:14] is the sub-list for method output_type
+	14, // [14:14] is the sub-list for method input_type
+	14, // [14:14] is the sub-list for extension type_name
+	14, // [14:14] is the sub-list for extension extendee
+	0,  // [0:14] is the sub-list for field type_name
 }
 
 func init() { file_agent_backend_websocket_proto_init() }
@@ -1292,7 +1307,7 @@ func file_agent_backend_websocket_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agent_backend_websocket_proto_rawDesc), len(file_agent_backend_websocket_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   15,
+			NumMessages:   16,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

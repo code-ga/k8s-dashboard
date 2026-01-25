@@ -275,8 +275,11 @@ export const k8sServices = pgTable(
 		}),
 
 		internalPort: integer("internal_port").notNull(),
-		externalPort: integer("external_port").notNull(),
-		domain: text("domain").notNull(),
+		externalPort: integer("external_port"),
+		type: text("type"),
+		clusterIp: text("cluster_ip"),
+		selector: text("selector"), // JSON string
+		domain: text("domain"),
 		namespace: text("namespace").notNull(),
 		labels: text("labels").notNull(),
 

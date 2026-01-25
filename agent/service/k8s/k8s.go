@@ -348,6 +348,7 @@ func (kc *K8sClient) GetFullClusterState() (*pb.Heartbeat, error) {
 			ClusterIp:    scv.Spec.ClusterIP,
 			Selector:     scv.Spec.Selector,
 			Uid:          string(scv.UID),
+			Labels:       scv.Labels,
 		})
 	}
 
