@@ -57,9 +57,13 @@ func NewK8sClient() (*K8sClient, error) {
 	if _, exists := os.LookupEnv("KUBERNETES_SERVICE_HOST"); exists {
 		config, err = rest.InClusterConfig()
 	} else {
-		homeDir, _ := os.UserHomeDir()
-		kubeconfigPath := filepath.Join(homeDir, ".kube", "config")
-		config, err = clientcmd.BuildConfigFromFlags("", kubeconfigPath)
+		if _, exists := os.LookupEnv("KUBECONFIG"); exists {
+			config, err = clientcmd.BuildConfigFromFlags("", os.Getenv("KUBECONFIG"))
+		} else {
+			homeDir, _ := os.UserHomeDir()
+			kubeconfigPath := filepath.Join(homeDir, ".kube", "config")
+			config, err = clientcmd.BuildConfigFromFlags("", kubeconfigPath)
+		}
 	}
 
 	if err != nil {
