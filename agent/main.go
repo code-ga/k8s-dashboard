@@ -62,7 +62,7 @@ func main() {
 		default:
 			wsScheme = "ws"
 	}
-	u := url.URL{Scheme: wsScheme, Host: maybeUrl.Host, Path: "/api/agent/ws"}
+	u := url.URL{Scheme: wsScheme, Host: maybeUrl.Host, Path: "/api/agents/ws"}
 	log.Printf("connecting to %s", u.String())
 
 	header := make(http.Header)
