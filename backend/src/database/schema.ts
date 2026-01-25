@@ -109,6 +109,35 @@ export const clusterAgent = pgTable("clusterAgent", {
 		.notNull(),
 });
 
+export const agentCommandStatus = pgEnum("agent_command_status", [
+	"pending",
+	"sent",
+	"success",
+	"failed",
+	"timeout",
+]);
+
+export const agentCommands = pgTable("agentCommands", {
+	id: text("id")
+		.primaryKey()
+		.$defaultFn(() => crypto.randomUUID()),
+	agentId: integer("agent_id")
+		.notNull()
+		.references(() => clusterAgent.id, { onDelete: "cascade" }),
+	clusterId: integer("cluster_id")
+		.notNull()
+		.references(() => k8sCluster.id, { onDelete: "cascade" }),
+	type: text("type").notNull(),
+	payload: jsonb("payload").notNull(),
+	status: agentCommandStatus("status").default("pending").notNull(),
+	result: jsonb("result"),
+	errorMessage: text("error_message"),
+	createdAt: timestamp("created_at").defaultNow().notNull(),
+	updatedAt: timestamp("updated_at")
+		.$onUpdate(() => /* @__PURE__ */ new Date())
+		.notNull(),
+});
+
 export const clusterStatus = pgEnum("cluster_status", ["active", "inactive"]);
 export const k8sCluster = pgTable("k8sCluster", {
 	id: serial("id").primaryKey(),
@@ -327,6 +356,7 @@ export const schema = {
 	k8sClusterNode,
 	k8sServices,
 	k8sDeployments,
+	agentCommands,
 	AppState,
 } as const;
 
@@ -339,12 +369,14 @@ export const schemaRelations = defineRelations(schema, (r) => ({
 		nodes: r.many.k8sClusterNode(),
 		deployments: r.many.k8sDeployments(),
 		services: r.many.k8sServices(),
+		agentCommands: r.many.agentCommands(),
 	},
 	clusterAgent: {
 		cluster: r.one.k8sCluster({
 			from: r.clusterAgent.id,
 			to: r.k8sCluster.agentId,
 		}),
+		commands: r.many.agentCommands(),
 	},
 	k8sPods: {
 		node: r.one.k8sClusterNode({
@@ -407,6 +439,16 @@ export const schemaRelations = defineRelations(schema, (r) => ({
 		profile: r.one.profile({
 			from: r.user.id,
 			to: r.profile.userId,
+		}),
+	},
+	agentCommands: {
+		agent: r.one.clusterAgent({
+			from: r.agentCommands.agentId,
+			to: r.clusterAgent.id,
+		}),
+		cluster: r.one.k8sCluster({
+			from: r.agentCommands.clusterId,
+			to: r.k8sCluster.id,
 		}),
 	},
 }));

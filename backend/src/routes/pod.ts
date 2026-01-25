@@ -237,6 +237,7 @@ export const podRoute = new Elysia({
 					try {
 						const response = await ctx.agentManager.sendCommand(
 							cluster.agent.id,
+							cluster.id,
 							{
 								id: crypto.randomUUID(),
 								type: 5, // CREATE_POD
@@ -252,7 +253,7 @@ export const podRoute = new Elysia({
 							data: response.data,
 							timestamp: Date.now(),
 						});
-					} catch (error:any) {
+					} catch (error: any) {
 						return ctx.status(500, {
 							success: false,
 							message: `Agent error: ${error.message}`,
@@ -311,7 +312,7 @@ export const podRoute = new Elysia({
 					}
 
 					try {
-						await ctx.agentManager.sendCommand(cluster.agentId, {
+						await ctx.agentManager.sendCommand(cluster.agentId, cluster.id, {
 							id: crypto.randomUUID(),
 							type: 6, // DELETE_POD
 							targetNamespace: pod.namespace,
@@ -370,6 +371,7 @@ export const podRoute = new Elysia({
 					try {
 						const response = await ctx.agentManager.sendCommand(
 							cluster.agentId,
+							cluster.id,
 							{
 								id: crypto.randomUUID(),
 								type: 1, // EDIT_RESOURCE

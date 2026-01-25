@@ -1,16 +1,21 @@
+import { eq } from "drizzle-orm";
 import Elysia, { type Context } from "elysia";
+import type { Prettify, RouteSchema } from "elysia/types";
+import type { ElysiaWS } from "elysia/ws";
 import { EventEmitter } from "events";
 import {
 	type Command,
 	type CommandResponse,
 	ServerPayload,
 } from "../../pb-generated/agent-backend/websocket";
-import type { ElysiaWS } from "elysia/ws";
-import type { Prettify, RouteSchema } from "elysia/types";
+import { db } from "../database";
+import { agentCommands } from "../database/schema";
 
 interface EventMap extends Record<string, any[]> {
 	"agent/connected": [{ agentId: string }];
 	"agent/disconnected": [{ agentId: string }];
+	"command/completed": [{ commandId: string; response: CommandResponse }];
+	"command/failed": [{ commandId: string; error: string }];
 }
 
 export class AgentManager extends EventEmitter<EventMap> {
@@ -23,8 +28,8 @@ export class AgentManager extends EventEmitter<EventMap> {
 		string,
 		{
 			resolve: (value: CommandResponse) => void;
-			reject: (reason?: any) => void;
-			timeout: Timer;
+			reject: (reason?: unknown) => void;
+			timeout?: ReturnType<typeof setTimeout>; // Make timeout optional for rehydrated commands
 		}
 	> = new Map();
 
@@ -34,12 +39,13 @@ export class AgentManager extends EventEmitter<EventMap> {
 		console.log(`AgentManager initialized with instanceId: ${this.instanceId}`);
 	}
 
-	registerConnection(
+	async registerConnection(
 		agentId: number,
 		ws: Prettify<ElysiaWS<Omit<Context, "body">, RouteSchema>>,
 	) {
 		this.connections.set(agentId, ws);
 		console.log(`Agent ${agentId} registered`);
+		await this.processPendingCommands(agentId);
 	}
 
 	removeConnection(agentId: number) {
@@ -47,24 +53,95 @@ export class AgentManager extends EventEmitter<EventMap> {
 		console.log(`Agent ${agentId} disconnected`);
 	}
 
+	async processPendingCommands(agentId: number) {
+		const pendingDbCommands = await db.query.agentCommands.findMany({
+			where: {
+				agentId,
+				status: "pending",
+			},
+			// orderBy: [asc(agentCommands.createdAt)],
+			orderBy: {
+				createdAt: "asc",
+			},
+		});
+
+		for (const dbCmd of pendingDbCommands) {
+			const command = dbCmd.payload as Command;
+			// Ensure ID matches
+			command.id = dbCmd.id;
+
+			// We don't await the result of send here to process all in order,
+			// but we do fire and forget the send logic which might fail if connection drops
+			this._sendPayload(agentId, command, dbCmd.id).catch((err) => {
+				console.error(`Failed to re-send pending command ${dbCmd.id}:`, err);
+			});
+		}
+	}
+
 	async sendCommand(
 		agentId: number,
+		clusterId: number,
 		command: Command,
 	): Promise<CommandResponse> {
-		const ws = this.connections.get(agentId);
-		if (!ws) {
-			throw new Error(`Agent ${agentId} not connected`);
-		}
-
 		const commandId = crypto.randomUUID();
 		command.id = commandId;
 
+		// Persist 'pending' command
+		await db.insert(agentCommands).values({
+			id: commandId,
+			agentId,
+			clusterId,
+			type: "command", // You might want to get specific type from command if possible
+			payload: command,
+			status: "pending",
+		});
+
+		return this._sendPayload(agentId, command, commandId);
+	}
+
+	// Helper to send payload and manage in-memory pending state
+	private async _sendPayload(
+		agentId: number,
+		command: Command,
+		commandId: string,
+	): Promise<CommandResponse> {
+		const ws = this.connections.get(agentId);
+
+		if (!ws) {
+			// If not connected, it stays in DB as pending and will be picked up on registerConnection
+			// We can return a promise that waits for the event, or throw "queued"
+			// For now, let's wait for the event with a long timeout? or just return a "Queued" status if the caller handles it?
+			// The user request said "restore at the crash point", "lazy the result ... can be push via exception".
+
+			// If we are strictly following "reliable", we should probably wait for the result indefinitely (or until timeout)
+			// leveraging the EventEmitter.
+
+			console.log(
+				`Agent ${agentId} not connected, command ${commandId} queued.`,
+			);
+			return new Promise((resolve, reject) => {
+				// We don't set a timeout here because it might take a while for agent to reconnect.
+				// The caller might timeout though.
+				this.pendingCommands.set(commandId, { resolve, reject });
+			});
+		}
+
 		const payload = ServerPayload.encode({ command }).finish();
 
+		// Update to 'sent'
+		await db
+			.update(agentCommands)
+			.set({ status: "sent", updatedAt: new Date() })
+			.where(eq(agentCommands.id, commandId));
+
 		return new Promise((resolve, reject) => {
-			const timeout = setTimeout(() => {
+			const timeout = setTimeout(async () => {
 				if (this.pendingCommands.has(commandId)) {
 					this.pendingCommands.delete(commandId);
+					await db
+						.update(agentCommands)
+						.set({ status: "timeout", updatedAt: new Date() })
+						.where(eq(agentCommands.id, commandId));
 					reject(new Error("Command timed out"));
 				}
 			}, 30000); // 30s timeout
@@ -76,15 +153,84 @@ export class AgentManager extends EventEmitter<EventMap> {
 			} catch (error) {
 				clearTimeout(timeout);
 				this.pendingCommands.delete(commandId);
-				reject(error);
+				// Revert to pending if send fails? Or failed?
+				// If send fails synchronously, it's likely connection issue.
+				// Let's mark as pending so it is retried.
+				db.update(agentCommands)
+					.set({ status: "pending", updatedAt: new Date() })
+					.where(eq(agentCommands.id, commandId))
+					.then(() => {})
+					.catch(console.error);
+
+				// If we want to support queuing on sync failure:
+				this.pendingCommands.set(commandId, { resolve, reject }); // Keep it waiting without timeout?
+				// Actually if send failed, we might want to just let it sit in DB.
+				// But the Promise is waiting.
+				// Let's reject for now, caller can retry or rely on DB queue.
+				// reject(error);
+				// Wait, if we want reliability, we shouldn't reject. We should let it retry.
+				console.warn(
+					`Send failed for ${commandId}, keeping as pending.`,
+					error,
+				);
 			}
 		});
 	}
 
-	handleCommandResponse(response: CommandResponse) {
+	async batchCommands(agentId: number, clusterId: number, commands: Command[]) {
+		const updates = commands.map((cmd) => {
+			const commandId = crypto.randomUUID();
+			cmd.id = commandId;
+			return {
+				id: commandId,
+				agentId,
+				clusterId,
+				type: "command",
+				payload: cmd,
+				status: "pending" as const, // Explicit cast for Drizzle enum
+			};
+		});
+
+		if (updates.length > 0) {
+			await db.insert(agentCommands).values(updates);
+		}
+
+		// Trigger processing
+		this.processPendingCommands(agentId).catch(console.error);
+
+		return updates.map((u) => u.id);
+	}
+
+	async handleCommandResponse(response: CommandResponse) {
 		const pending = this.pendingCommands.get(response.id);
+
+		const status: "success" | "failed" = response.success
+			? "success"
+			: "failed";
+
+		// Update DB
+		await db
+			.update(agentCommands)
+			.set({
+				status,
+				result: response,
+				errorMessage: response.error,
+				updatedAt: new Date(),
+			})
+			.where(eq(agentCommands.id, response.id));
+
+		// Emit events
+		if (response.success) {
+			this.emit("command/completed", { commandId: response.id, response });
+		} else {
+			this.emit("command/failed", {
+				commandId: response.id,
+				error: response.error || "Unknown error",
+			});
+		}
+
 		if (pending) {
-			clearTimeout(pending.timeout);
+			if (pending.timeout) clearTimeout(pending.timeout);
 			this.pendingCommands.delete(response.id);
 			if (response.success) {
 				pending.resolve(response);
@@ -92,8 +238,26 @@ export class AgentManager extends EventEmitter<EventMap> {
 				pending.reject(new Error(response.error || "Unknown agent error"));
 			}
 		} else {
-			console.warn(`Received response for unknown command ID: ${response.id}`);
+			// Check if we have this command in DB and it's pending (maybe server restarted)
+			// If it's in DB but not in memory, we just update DB (which we did above)
+			// and emit event.
+			console.log(
+				`Received response for command ID: ${response.id} (not in pending map)`,
+			);
 		}
+	}
+
+	// For manual polling or logs
+	async getCommandLog(agentId: number, limit = 50) {
+		return db.query.agentCommands.findMany({
+			where: {
+				agentId,
+			},
+			orderBy: {
+				createdAt: "desc",
+			},
+			limit,
+		});
 	}
 
 	getConnection(agentId: number) {

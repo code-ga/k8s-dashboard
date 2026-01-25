@@ -13,6 +13,7 @@ import type {
 	Heartbeat,
 } from "../../pb-generated/agent-backend/websocket"; // Check imports carefully
 import { Command_CommandType } from "../../pb-generated/agent-backend/websocket";
+import YAML from "yaml";
 export class AgentService {
 	// Process incoming heartbeat
 	async handleHeartbeat(
@@ -338,30 +339,45 @@ export class AgentService {
 				);
 
 				// Construct Minimal Deployment Manifest
-				const manifest = `
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: ${dbDep.name}
-  namespace: ${dbDep.namespace}
-  labels:
-    app: ${dbDep.name}
-spec:
-  replicas: ${dbDep.replicas}
-  selector:
-    matchLabels:
-      app: ${dbDep.name}
-  template:
-    metadata:
-      labels:
-        app: ${dbDep.name}
-    spec:
-      containers:
-      - name: ${dbDep.name}
-        image: ${dbDep.dockerImage}
-        ports:
-        - containerPort: ${dbDep.internalPort}
-`;
+				const manifest = YAML.stringify({
+					apiVersion: "apps/v1",
+					kind: "Deployment",
+					metadata: {
+						name: dbDep.name,
+						namespace: dbDep.namespace,
+						labels: {
+							app: dbDep.name,
+						},
+					},
+					spec: {
+						replicas: dbDep.replicas,
+						selector: {
+							matchLabels: {
+								app: dbDep.name,
+							},
+						},
+						template: {
+							metadata: {
+								labels: {
+									app: dbDep.name,
+								},
+							},
+							spec: {
+								containers: [
+									{
+										name: dbDep.name,
+										image: dbDep.dockerImage,
+										ports: [
+											{
+												containerPort: dbDep.internalPort,
+											},
+										],
+									},
+								],
+							},
+						},
+					},
+				});
 				// Send CREATE (ApplyManifest) Command
 				return {
 					command: {
@@ -413,27 +429,38 @@ spec:
 				);
 
 				// Construct Minimal Pod Manifest
-				const manifest = `
-apiVersion: v1
-kind: Pod
-metadata:
-  name: ${dbPod.name}
-  namespace: ${dbPod.namespace}
-spec:
-  containers:
-  - name: ${dbPod.name}
-    image: ${dbPod.dockerImage}
-    command: ${dbPod.command ? JSON.stringify(dbPod.command.split(" ")) : "null"}
-    ports:
-    - containerPort: ${dbPod.internalPort}
-    resources:
-      requests:
-        cpu: "${dbPod.cpuRequest}m"
-        memory: "${dbPod.memoryRequest}Mi"
-      limits:
-        cpu: "${dbPod.cpuLimit}m"
-        memory: "${dbPod.memoryLimit}Mi"
-`;
+				const manifest = YAML.stringify({
+					apiVersion: "v1",
+					kind: "Pod",
+					metadata: {
+						name: dbPod.name,
+						namespace: dbPod.namespace,
+					},
+					spec: {
+						containers: [
+							{
+								name: dbPod.name,
+								image: dbPod.dockerImage,
+								command: dbPod.command ? dbPod.command.split(" ") : null,
+								ports: [
+									{
+										containerPort: dbPod.internalPort,
+									},
+								],
+								resources: {
+									requests: {
+										cpu: `${dbPod.cpuRequest}m`,
+										memory: `${dbPod.memoryRequest}Mi`,
+									},
+									limits: {
+										cpu: `${dbPod.cpuLimit}m`,
+										memory: `${dbPod.memoryLimit}Mi`,
+									},
+								},
+							},
+						],
+					},
+				});
 				return {
 					command: {
 						id: crypto.randomUUID(),
@@ -491,7 +518,7 @@ spec:
 					command: {
 						id: crypto.randomUUID(),
 						type: Command_CommandType.CREATE_DEPLOYMENT, // Maps to ApplyManifest in Agent
-						payload: JSON.stringify(manifest),
+						payload: YAML.stringify(manifest),
 						targetNamespace: dbSvc.namespace,
 						targetName: dbSvc.name,
 					},
