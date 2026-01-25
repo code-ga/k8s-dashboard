@@ -8,10 +8,7 @@ import { dbSchemaTypes } from "../database/type";
 import { eq } from "drizzle-orm";
 import { agentManagerService } from "../services/agentManager";
 import { agentService } from "../services/agent.service";
-import {
-	AgentPayload,
-	ServerPayload,
-} from "../../pb-generated/agent-backend/websocket";
+import { AgentPayload } from "../../pb-generated/agent-backend/websocket";
 
 export const agentRoute = new Elysia({ prefix: "/agents" })
 	.use(authenticationMiddleware)
@@ -186,19 +183,15 @@ export const agentRoute = new Elysia({ prefix: "/agents" })
 						try {
 							// Decode Protobuf
 							const payload = AgentPayload.decode(
-								new Uint8Array(message as any),
+								new Uint8Array(message),
 							);
 
 							if (payload.heartbeat) {
-								const response = await agentService.handleHeartbeat(
+								await agentService.handleHeartbeat(
 									agent.id,
 									payload.heartbeat,
+									ws.data.agentManager,
 								);
-								if (response) {
-									// Send Command back
-									const responseBytes = ServerPayload.encode(response).finish();
-									ws.send(responseBytes);
-								}
 							}
 
 							if (payload.commandResponse) {

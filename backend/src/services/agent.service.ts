@@ -9,17 +9,19 @@ import {
 } from "../database/schema";
 import { eq, and, isNull, type InferInsertModel } from "drizzle-orm";
 import type {
-	ServerPayload,
 	Heartbeat,
+	Command,
 } from "../../pb-generated/agent-backend/websocket"; // Check imports carefully
 import { Command_CommandType } from "../../pb-generated/agent-backend/websocket";
 import YAML from "yaml";
+import type { AgentManager } from "./agentManager";
 export class AgentService {
 	// Process incoming heartbeat
 	async handleHeartbeat(
 		agentId: number,
 		heartbeat: Heartbeat,
-	): Promise<ServerPayload | null> {
+		agentManager: AgentManager,
+	): Promise<void> {
 		console.log(`Processing heartbeat for agent ${agentId}`);
 
 		// 1. Update Cluster Stats (CPU/RAM Usage)
@@ -32,7 +34,7 @@ export class AgentService {
 
 		if (!cluster) {
 			console.error(`No cluster found for agent ${agentId}`);
-			return null;
+			return;
 		}
 
 		// Update real-time stats
@@ -379,15 +381,14 @@ export class AgentService {
 					},
 				});
 				// Send CREATE (ApplyManifest) Command
-				return {
-					command: {
-						id: crypto.randomUUID(),
-						type: Command_CommandType.CREATE_DEPLOYMENT, // Maps to ApplyManifest in Agent
-						payload: manifest,
-						targetNamespace: dbDep.namespace,
-						targetName: dbDep.name,
-					},
-				};
+				await agentManager.sendCommand(agentId, cluster.id, {
+					id: "", // Will be set by agentManager
+					type: Command_CommandType.CREATE_DEPLOYMENT, // Maps to ApplyManifest in Agent
+					payload: manifest,
+					targetNamespace: dbDep.namespace,
+					targetName: dbDep.name,
+				});
+				return;
 			}
 
 			// If exists, check Replicas
@@ -396,15 +397,14 @@ export class AgentService {
 					`Mismatch for ${dbDep.name} in ${dbDep.namespace}: Wanted ${dbDep.replicas}, Got ${matchingDeployment.replicas}`,
 				);
 
-				return {
-					command: {
-						id: crypto.randomUUID(),
-						type: Command_CommandType.SCALE_DEPLOYMENT,
-						payload: dbDep.replicas.toString(),
-						targetNamespace: dbDep.namespace,
-						targetName: dbDep.name,
-					},
-				};
+				await agentManager.sendCommand(agentId, cluster.id, {
+					id: "", // Will be set by agentManager
+					type: Command_CommandType.SCALE_DEPLOYMENT,
+					payload: dbDep.replicas.toString(),
+					targetNamespace: dbDep.namespace,
+					targetName: dbDep.name,
+				});
+				return;
 			}
 		}
 
@@ -461,15 +461,14 @@ export class AgentService {
 						],
 					},
 				});
-				return {
-					command: {
-						id: crypto.randomUUID(),
-						type: Command_CommandType.CREATE_POD,
-						payload: manifest,
-						targetNamespace: dbPod.namespace,
-						targetName: dbPod.name,
-					},
-				};
+				await agentManager.sendCommand(agentId, cluster.id, {
+					id: "",
+					type: Command_CommandType.CREATE_POD,
+					payload: manifest,
+					targetNamespace: dbPod.namespace,
+					targetName: dbPod.name,
+				});
+				return;
 			}
 		}
 
@@ -514,19 +513,18 @@ export class AgentService {
 					},
 				};
 
-				return {
-					command: {
-						id: crypto.randomUUID(),
-						type: Command_CommandType.CREATE_DEPLOYMENT, // Maps to ApplyManifest in Agent
-						payload: YAML.stringify(manifest),
-						targetNamespace: dbSvc.namespace,
-						targetName: dbSvc.name,
-					},
-				};
+				await agentManager.sendCommand(agentId, cluster.id, {
+					id: "",
+					type: Command_CommandType.CREATE_DEPLOYMENT, // Maps to ApplyManifest in Agent
+					payload: YAML.stringify(manifest),
+					targetNamespace: dbSvc.namespace,
+					targetName: dbSvc.name,
+				});
+				return;
 			}
 		}
 
-		return null;
+		return;
 	}
 
 	async getAgentByToken(token: string) {
