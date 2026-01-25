@@ -17,6 +17,7 @@ export const deploymentRoute = new Elysia({
 })
 	.use(authenticationMiddleware)
 	.use(agentManagerService)
+	.decorate("websocketData", new Map<string, any>())
 	.guard({ roleAuth: ["manager"] }, (app) =>
 		app.get(
 			"/all",
@@ -480,5 +481,147 @@ export const deploymentRoute = new Elysia({
 						500: errorResponseSchema,
 					},
 				},
-			),
+			)
+			.ws("/logs/:id", {
+				detail: { tags: ["Deployments"] },
+				open: async (ws) => {
+					// 1. Auth & Validation (ws.data context)
+					const { clusterId, id } = ws.data.params;
+					const profile = ws.data.profile;
+
+					if (!clusterId || !id) {
+						ws.send("Missing params");
+						ws.close();
+						return;
+					}
+
+					// Verify Deployment access
+					const deployment = await db.query.k8sDeployments.findFirst({
+						where: {
+							id: Number(id),
+							clusterId: Number(clusterId),
+						},
+					});
+
+					if (!deployment) {
+						ws.send("Deployment not found");
+						ws.close();
+						return;
+					}
+
+					// Permission Check
+					const isManager = checkPermission(profile?.permission || [], [
+						"manager",
+					]);
+					if (!isManager && deployment.ownerId !== profile?.id) {
+						ws.send("Unauthorized");
+						ws.close();
+						return;
+					}
+
+					const cluster = await db.query.k8sCluster.findFirst({
+						where: { id: Number(clusterId) },
+						with: { agent: true },
+					});
+
+					if (!cluster || !cluster.agent) {
+						ws.send("Cluster/Agent not found");
+						ws.close();
+						return;
+					}
+
+					// 2. Find a running pod for this deployment
+					// We need to look up pods that belong to this deployment.
+					// Schema has `deploymentId` on k8sPods.
+
+					const pods = await db.query.k8sPods.findMany({
+						where: {
+							deploymentId: deployment.id,
+							clusterId: cluster.id,
+						},
+					});
+
+					if (pods.length === 0) {
+						ws.send("No pods found for this deployment");
+						ws.close();
+						return;
+					}
+
+					// Pick the first one (or preferably one that is 'Running' if we had status)
+					// Verify if we have status in DB? schema.ts says k8sPods has internalPort etc but not explicit 'status' column
+					// visible in the snippet provided earlier?
+					// Wait, step 5 view of pod.ts uses `dbSchemaTypes.k8sPods`.
+					// Step 7 schema.ts: k8sPods has `createdAt`, `k8sUid`, `cpuRequest`...
+					// NO `status` column in k8sPods!
+					// However, AgentService syncs pods.
+					// If we don't have status, we just pick the first one.
+					const targetPod = pods[0];
+					console.log("targetPod", targetPod);
+					if (!targetPod) {
+						ws.send("No pods found for this deployment");
+						ws.close();
+						return;
+					}
+
+					// Start stream using existing generic STREAM_LOGS command
+					const payload = JSON.stringify({
+						namespace: targetPod.namespace,
+						name: targetPod.name,
+						tailLines: 100,
+						follow: true,
+					});
+
+					try {
+						// Command Type 9: STREAM_LOGS (from pod.ts usage)
+						const streamId = await ws.data.agentManager.startStream(
+							cluster.agent.id,
+							cluster.id,
+							9, // STREAM_LOGS
+							payload,
+							ws,
+						);
+
+						// Store stream info for cleanup
+						// We don't have `websocketData` map here unless we decorate it like in pod.ts
+						// Deployment router was created new.
+						// NEED TO CHECK IF `.decorate("websocketData", ...)` was added to deploymentRoute.
+						// It wasn't in my previous `create deployment.ts` step!
+						// I must add the decoration or use a shared one.
+
+						// Strategy: I will add the decoration to this router now.
+						// But I am inside the .ws() call which is inside a guard etc.
+						// I should have added .decorate at the top level of the router.
+						// I will rely on `ws.data` having it if I add it to the top level chain.
+
+						// For this replace_content, I'll assume ws.data.websocketData exists
+						// AND I will issue another replace to add the decorate call at the top.
+
+						if (ws.data.websocketData) {
+							ws.data.websocketData.set(ws.id, {
+								clusterId: Number(clusterId),
+								streamId,
+								podId: targetPod.id, // storing podId for tracking
+								agentId: Number(cluster.agent.id),
+							});
+						} else {
+							// Fallback if not decorated yet?
+							// We need to decorate. I'll make sure to add it.
+							console.error("websocketData missing in context");
+							ws.close();
+						}
+					} catch (e: any) {
+						ws.send(`Error starting stream: ${e.message}`);
+						ws.close();
+					}
+				},
+				close: async (ws) => {
+					if (ws.data.websocketData) {
+						const data = ws.data.websocketData.get(ws.id);
+						if (data) {
+							await ws.data.agentManager.stopStream(data.streamId);
+							ws.data.websocketData.delete(ws.id);
+						}
+					}
+				},
+			}),
 	);
