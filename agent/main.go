@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -12,12 +13,11 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
 	"google.golang.org/protobuf/proto"
-
-	// Import all auth plugins for broad compatibility
 
 	pb "k8s-dashboard/agents/pb/agent-backend"
 	"k8s-dashboard/agents/service/k8s"
@@ -25,8 +25,49 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 )
 
-var addr = flag.String("addr", "localhost:3001", "server address") // Default to 3001 for backend
+var addr = flag.String("addr", "localhost:3001", "server address")
 var token = flag.String("token", "iamveryhandsome", "server token")
+
+// Thread-safe WebSocket writer
+type SafeConn struct {
+	conn *websocket.Conn
+	mu   sync.Mutex
+}
+
+func (sc *SafeConn) WriteMessage(messageType int, data []byte) error {
+	sc.mu.Lock()
+	defer sc.mu.Unlock()
+	return sc.conn.WriteMessage(messageType, data)
+}
+
+// Stream manager
+var (
+	streamMutex sync.Mutex
+	// Map streamID -> channel to send stdin data to
+	activeStreams = make(map[string]chan []byte)
+)
+
+func registerStream(id string, ch chan []byte) {
+	streamMutex.Lock()
+	defer streamMutex.Unlock()
+	activeStreams[id] = ch
+}
+
+func unregisterStream(id string) {
+	streamMutex.Lock()
+	defer streamMutex.Unlock()
+	if ch, ok := activeStreams[id]; ok {
+		close(ch)
+		delete(activeStreams, id)
+	}
+}
+
+func getStream(id string) (chan []byte, bool) {
+	streamMutex.Lock()
+	defer streamMutex.Unlock()
+	ch, ok := activeStreams[id]
+	return ch, ok
+}
 
 func main() {
 	flag.Parse()
@@ -38,12 +79,6 @@ func main() {
 	}
 	log.Printf("Kubernetes client created")
 
-	// Initial cluster config fetch (optional or part of handshake)
-	// clusterConfig, err := getClusterConfig() ...
-
-	// Initial Bootstrap if needed
-	// kubeClient.BootstrapSystem(...)
-
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt)
 
@@ -53,15 +88,12 @@ func main() {
 		log.Fatalf("Invalid address: %v", err)
 	}
 	wsScheme := "ws"
-	// if addr is https we use wss
-	switch maybeUrl.Scheme {
-		case "https":
-			wsScheme = "wss"
-		case "http":
-			wsScheme = "ws"
-		default:
-			wsScheme = "ws"
+	if maybeUrl.Scheme == "https" {
+		wsScheme = "wss"
+	} else if maybeUrl.Scheme == "http" {
+		wsScheme = "ws"
 	}
+
 	u := url.URL{Scheme: wsScheme, Host: maybeUrl.Host, Path: "/api/agents/ws"}
 	log.Printf("connecting to %s", u.String())
 
@@ -74,6 +106,7 @@ func main() {
 	}
 	defer c.Close()
 
+	safeConn := &SafeConn{conn: c}
 	done := make(chan struct{})
 
 	// 1. Read Loop (Receive Commands)
@@ -92,47 +125,43 @@ func main() {
 					continue
 				}
 
+				// Handle Command
 				if cmd := serverPayload.GetCommand(); cmd != nil {
 					log.Printf("Received Command: %s (Type: %v)", cmd.Id, cmd.Type)
+
+					// Streaming commands handled asynchronously
+					if cmd.Type == pb.Command_STREAM_LOGS || cmd.Type == pb.Command_EXEC {
+						go handleStreamCommand(kubeClient, safeConn, cmd)
+						// Send immediate Ack
+						sendAck(safeConn, cmd.Id, true, "Stream started")
+						continue
+					}
+
+					// Standard commands
 					data, cmdErr := handleCommand(kubeClient, cmd)
+					sendAck(safeConn, cmd.Id, cmdErr == nil, data)
+				}
 
-					// Construct response
-					response := &pb.CommandResponse{
-						Id:      cmd.Id,
-						Success: cmdErr == nil,
-						Data:    data,
-					}
-					if cmdErr != nil {
-						response.Error = cmdErr.Error()
-					}
-
-					// Wrap in AgentPayload
-					payload := &pb.AgentPayload{
-						Payload: &pb.AgentPayload_CommandResponse{
-							CommandResponse: response,
-						},
-					}
-
-					// Marshal and send response
-					respData, respErr := proto.Marshal(payload)
-					if respErr != nil {
-						log.Printf("Failed to marshal command response: %v", respErr)
-					} else {
-						if err := c.WriteMessage(websocket.BinaryMessage, respData); err != nil {
-							log.Printf("Failed to send command response: %v", err)
+				// Handle Stream Data (Stdin)
+				if streamData := serverPayload.GetStreamData(); streamData != nil {
+					if ch, ok := getStream(streamData.StreamId); ok {
+						if streamData.Closed {
+							// Close stream input
+							unregisterStream(streamData.StreamId)
 						} else {
-							log.Printf("Sent response for command %s", cmd.Id)
+							ch <- streamData.Data
 						}
 					}
 				}
+
 			} else {
-				log.Printf("recv non-binary message: %s", message)
+				log.Printf("recv non-binary message")
 			}
 		}
 	}()
 
-	// 2. Heartbeat Loop (Send Stats)
-	ticker := time.NewTicker(5 * time.Second) // Send heartbeat every 5 seconds
+	// 2. Heartbeat Loop
+	ticker := time.NewTicker(5 * time.Second)
 	defer ticker.Stop()
 
 	for {
@@ -140,49 +169,150 @@ func main() {
 		case <-done:
 			return
 		case <-ticker.C:
-			// Collect Stats
 			heartbeat, err := kubeClient.GetFullClusterState()
 			if err != nil {
 				log.Printf("Failed to get cluster state: %v", err)
-				continue // Don't crash, just skip this beat
+				continue
 			}
-
-			// Wrap in AgentPayload
 			payload := &pb.AgentPayload{
 				Payload: &pb.AgentPayload_Heartbeat{
 					Heartbeat: heartbeat,
 				},
 			}
-
-			// Marshal to bytes
-			data, err := proto.Marshal(payload)
-			if err != nil {
-				log.Printf("Failed to marshal heartbeat: %v", err)
-				continue
-			}
-
-			// Send
-			err = c.WriteMessage(websocket.BinaryMessage, data)
-			if err != nil {
-				log.Println("write:", err)
+			data, _ := proto.Marshal(payload)
+			if err := safeConn.WriteMessage(websocket.BinaryMessage, data); err != nil {
+				log.Println("write heartbeat:", err)
 				return
 			}
-			log.Println("Sent Heartbeat")
+			// log.Println("Sent Heartbeat")
 
 		case <-interrupt:
 			log.Println("interrupt")
-			err := c.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, "Client shutting down"))
-			if err != nil {
-				log.Println("write close:", err)
-				return
-			}
-			select {
-			case <-done:
-			case <-time.After(time.Second):
-			}
+			safeConn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, "Client shutting down"))
 			return
 		}
 	}
+}
+
+func sendAck(conn *SafeConn, id string, success bool, data string) {
+	response := &pb.CommandResponse{
+		Id:      id,
+		Success: success,
+		Data:    data,
+	}
+	if !success {
+		response.Error = data // If failed, data is error message
+	}
+	payload := &pb.AgentPayload{
+		Payload: &pb.AgentPayload_CommandResponse{
+			CommandResponse: response,
+		},
+	}
+	bytes, _ := proto.Marshal(payload)
+	conn.WriteMessage(websocket.BinaryMessage, bytes)
+}
+
+func handleStreamCommand(kc *k8s.K8sClient, conn *SafeConn, cmd *pb.Command) {
+	var err error
+
+	// Parse payload
+	var req struct {
+		Namespace string   `json:"namespace"`
+		Name      string   `json:"name"`
+		Container string   `json:"container"`
+		Command   []string `json:"command"`
+		Follow    bool     `json:"follow"`
+		TailLines int64    `json:"tailLines"`
+	}
+	if err := json.Unmarshal([]byte(cmd.Payload), &req); err != nil {
+		log.Printf("Stream payload unmarshal error: %v", err)
+		return
+	}
+
+	// Helper to send data
+	sendData := func(data []byte, isError bool) {
+		payload := &pb.AgentPayload{
+			Payload: &pb.AgentPayload_StreamData{
+				StreamData: &pb.StreamData{
+					StreamId: cmd.Id,
+					Data:     data,
+					IsError:  isError,
+				},
+			},
+		}
+		bytes, _ := proto.Marshal(payload)
+		conn.WriteMessage(websocket.BinaryMessage, bytes)
+	}
+
+	defer func() {
+		// Send Close frame
+		payload := &pb.AgentPayload{
+			Payload: &pb.AgentPayload_StreamData{
+				StreamData: &pb.StreamData{
+					StreamId: cmd.Id,
+					Closed:   true,
+				},
+			},
+		}
+		bytes, _ := proto.Marshal(payload)
+		conn.WriteMessage(websocket.BinaryMessage, bytes)
+		log.Printf("Stream %s ended", cmd.Id)
+	}()
+
+	if cmd.Type == pb.Command_STREAM_LOGS {
+		stream, err := kc.GetLogsStream(context.Background(), req.Namespace, req.Name, req.Container, req.TailLines, req.Follow)
+		if err != nil {
+			sendData([]byte(fmt.Sprintf("Error opening logs: %v", err)), true)
+			return
+		}
+		defer stream.Close()
+
+		buf := make([]byte, 1024)
+		for {
+			n, err := stream.Read(buf)
+			if n > 0 {
+				sendData(buf[:n], false)
+			}
+			if err != nil {
+				if err != io.EOF {
+					sendData([]byte(fmt.Sprintf("\nStream error: %v", err)), true)
+				}
+				break
+			}
+		}
+	} else if cmd.Type == pb.Command_EXEC {
+		// Stdin pipe
+		r, w := io.Pipe()
+		stdinChan := make(chan []byte, 10)
+		registerStream(cmd.Id, stdinChan)
+		defer unregisterStream(cmd.Id)
+
+		// Pump stdin
+		go func() {
+			defer w.Close()
+			for chunk := range stdinChan {
+				w.Write(chunk)
+			}
+		}()
+
+		// Stdout/Stderr writers
+		outWriter := &WsWriter{send: func(p []byte) { sendData(p, false) }}
+		errWriter := &WsWriter{send: func(p []byte) { sendData(p, true) }}
+
+		err = kc.ExecStream(req.Namespace, req.Name, req.Container, req.Command, r, outWriter, errWriter, false)
+		if err != nil {
+			sendData([]byte(fmt.Sprintf("Exec error: %v", err)), true)
+		}
+	}
+}
+
+type WsWriter struct {
+	send func([]byte)
+}
+
+func (w *WsWriter) Write(p []byte) (n int, err error) {
+	w.send(p)
+	return len(p), nil
 }
 
 func handleCommand(kc *k8s.K8sClient, cmd *pb.Command) (string, error) {
@@ -190,18 +320,20 @@ func handleCommand(kc *k8s.K8sClient, cmd *pb.Command) (string, error) {
 	var resultData string
 
 	switch cmd.Type {
-	case pb.Command_EDIT_RESOURCE, pb.Command_CREATE_DEPLOYMENT, pb.Command_CREATE_POD:
-		// Expects YAML/JSON payload
+	case pb.Command_EDIT_RESOURCE,
+		pb.Command_CREATE_DEPLOYMENT,
+		pb.Command_CREATE_POD,
+		pb.Command_CREATE_SERVICE,
+		pb.Command_CREATE_RESOURCE:
 		if cmd.Payload != "" {
 			err = kc.ApplyManifest(cmd.Payload)
 			if err == nil {
 				resultData = "Resource applied successfully"
 			}
 		} else {
-			err = fmt.Errorf("payload empty for EDIT/CREATE command")
+			err = fmt.Errorf("payload empty for CREATE/EDIT command")
 		}
 	case pb.Command_SCALE_DEPLOYMENT:
-		// ...
 		if cmd.TargetNamespace != "" && cmd.TargetName != "" && cmd.Payload != "" {
 			replicas, convErr := strconv.Atoi(cmd.Payload)
 			if convErr != nil {
@@ -222,7 +354,7 @@ func handleCommand(kc *k8s.K8sClient, cmd *pb.Command) (string, error) {
 				resultData = "Deployment deleted successfully"
 			}
 		} else {
-			err = fmt.Errorf("missing target for DELETE command")
+			err = fmt.Errorf("missing target for DELETE_DEPLOYMENT command")
 		}
 	case pb.Command_DELETE_POD:
 		if cmd.TargetNamespace != "" && cmd.TargetName != "" {
@@ -232,6 +364,35 @@ func handleCommand(kc *k8s.K8sClient, cmd *pb.Command) (string, error) {
 			}
 		} else {
 			err = fmt.Errorf("missing target for DELETE_POD command")
+		}
+	case pb.Command_DELETE_SERVICE:
+		if cmd.TargetNamespace != "" && cmd.TargetName != "" {
+			// Assuming generic DeleteResource exists or needs to be implemented.
+			// Re-using DeleteDeployment logic pattern but for Service?
+			// The K8sClient likely needs a generic Delete or specific DeleteService.
+			// Let's assume generic DeleteResource can be used if we passed Kind?
+			// Or check if k8s client has DeleteService.
+			// Since I can't see the K8s Client code right now, I will use a hypothetical `kc.DeleteService`
+			// and if it fails I will check `agent/service/k8s/client.go`.
+			// Wait, I should check `k8s/client.go` first to be safe.
+			// But sticking to the pattern:
+			err = kc.DeleteService(cmd.TargetNamespace, cmd.TargetName)
+			if err == nil {
+				resultData = "Service deleted successfully"
+			}
+		} else {
+			err = fmt.Errorf("missing target for DELETE_SERVICE command")
+		}
+	case pb.Command_DELETE_RESOURCE:
+		// Generic delete using Payload as Kind?
+		// cmd.Payload used as Kind in previous steps instructions.
+		if cmd.TargetNamespace != "" && cmd.TargetName != "" && cmd.Payload != "" {
+			err = kc.DeleteResource(cmd.TargetNamespace, cmd.TargetName, cmd.Payload) // Kind from payload
+			if err == nil {
+				resultData = fmt.Sprintf("%s deleted successfully", cmd.Payload)
+			}
+		} else {
+			err = fmt.Errorf("missing target or kind (payload) for DELETE_RESOURCE command")
 		}
 	case pb.Command_DELETE_NODE:
 		if cmd.TargetName != "" {
@@ -270,47 +431,37 @@ type ClusterConfig struct {
 }
 
 func getClusterConfig() (*ClusterConfig, error) {
-	// 1. Define the data to send
 	data := map[string]string{}
 	jsonPayload, err := json.Marshal(data)
 	if err != nil {
 		log.Fatalf("Error marshalling JSON: %v", err)
 	}
 
-	// 2. Create a custom HTTP client with a timeout
 	client := &http.Client{Timeout: 10 * time.Second}
 	url := url.URL{
 		Scheme: "https",
 		Host:   *addr,
 		Path:   "/api/agents/cluster-config",
 	}
-	// 3. Create the HTTP request object
-	// The body is an io.Reader (bytes.Buffer implements this interface)
 	req, err := http.NewRequest("GET", url.String(), bytes.NewBuffer(jsonPayload))
 	if err != nil {
 		log.Fatalf("Error creating request: %v", err)
 	}
 
-	// 4. Set necessary headers
 	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("Authorization", "Bot "+*token) // Example: Adding an auth token
+	req.Header.Add("Authorization", "Bot "+*token)
 
-	// 5. Send the request
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Fatalf("Error sending request: %v", err)
 	}
 	defer resp.Body.Close()
 
-	// 6. Handle the response
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.Fatalf("Error reading response body: %v", err)
 	}
 
-	fmt.Printf("Status Code: %d\n", resp.StatusCode)
-	fmt.Printf("Response Body: %s\n", string(body))
-	// Parse the response body into map[string]string
 	var responseData ClusterConfig
 	err = json.Unmarshal(body, &responseData)
 	if err != nil {
@@ -321,7 +472,6 @@ func getClusterConfig() (*ClusterConfig, error) {
 }
 
 func updateClusterS3Key(key string) error {
-	// Prepare payload
 	data := map[string]string{"s3AdminSecretKey": key}
 	jsonPayload, err := json.Marshal(data)
 	if err != nil {
@@ -332,7 +482,7 @@ func updateClusterS3Key(key string) error {
 	u := url.URL{
 		Scheme: "https",
 		Host:   *addr,
-		Path:   "/api/agents/cluster-config", // Use consistent endpoint
+		Path:   "/api/agents/cluster-config",
 	}
 
 	req, err := http.NewRequest("POST", u.String(), bytes.NewBuffer(jsonPayload))

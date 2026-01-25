@@ -7,7 +7,10 @@ import { Type } from "@sinclair/typebox";
 import { dbSchemaTypes } from "../database/type";
 import { eq } from "drizzle-orm";
 import { agentManagerService } from "../services/agentManager";
-import { Command,Command_CommandType } from "../../pb-generated/agent-backend/websocket";
+import {
+	Command,
+	Command_CommandType,
+} from "../../pb-generated/agent-backend/websocket";
 
 export const nodesRoute = new Elysia({ prefix: "/nodes/:clusterId" })
 	.use(authenticationMiddleware)
@@ -45,6 +48,7 @@ export const nodesRoute = new Elysia({ prefix: "/nodes/:clusterId" })
 						try {
 							const response = await ctx.agentManager.sendCommand(
 								cluster.agent.id,
+								cluster.id,
 								{
 									id: "", // Will be filled by sendCommand
 									type: Command_CommandType.GET_JOIN_TOKEN,
@@ -160,7 +164,7 @@ export const nodesRoute = new Elysia({ prefix: "/nodes/:clusterId" })
 
 						try {
 							// Send DELETE command to Agent
-							await ctx.agentManager.sendCommand(cluster.agent.id, {
+							await ctx.agentManager.sendCommand(cluster.agent.id,cluster.id, {
 								id: "", // Will be filled by sendCommand
 								type: 7, // DELETE_NODE (pb.Command_CommandType.DELETE_NODE)
 								targetName: node.name,

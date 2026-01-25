@@ -182,9 +182,7 @@ export const agentRoute = new Elysia({ prefix: "/agents" })
 
 						try {
 							// Decode Protobuf
-							const payload = AgentPayload.decode(
-								new Uint8Array(message),
-							);
+							const payload = AgentPayload.decode(new Uint8Array(message));
 
 							if (payload.heartbeat) {
 								await agentService.handleHeartbeat(
@@ -198,6 +196,9 @@ export const agentRoute = new Elysia({ prefix: "/agents" })
 								ws.data.agentManager.handleCommandResponse(
 									payload.commandResponse,
 								);
+							}
+							if (payload.streamData) {
+								ws.data.agentManager.handleStreamData(payload.streamData);
 							}
 						} catch (error) {
 							console.error(

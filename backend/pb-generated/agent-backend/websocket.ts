@@ -13,6 +13,17 @@ export const protobufPackage = "api";
 export interface AgentPayload {
   heartbeat?: Heartbeat | undefined;
   commandResponse?: CommandResponse | undefined;
+  streamData?: StreamData | undefined;
+}
+
+export interface StreamData {
+  streamId: string;
+  /** Data chunk */
+  data: Uint8Array;
+  /** True for stderr */
+  isError: boolean;
+  /** Stream closed */
+  closed: boolean;
 }
 
 export interface CommandResponse {
@@ -25,6 +36,7 @@ export interface CommandResponse {
 /** Wrapper for messages sent from Server to Agent */
 export interface ServerPayload {
   command?: Command | undefined;
+  streamData?: StreamData | undefined;
 }
 
 export interface Heartbeat {
@@ -164,6 +176,12 @@ export enum Command_CommandType {
   DELETE_POD = 6,
   DELETE_NODE = 7,
   GET_JOIN_TOKEN = 8,
+  STREAM_LOGS = 9,
+  EXEC = 10,
+  CREATE_SERVICE = 11,
+  DELETE_SERVICE = 12,
+  DELETE_RESOURCE = 13,
+  CREATE_RESOURCE = 14,
   UNRECOGNIZED = -1,
 }
 
@@ -196,6 +214,24 @@ export function command_CommandTypeFromJSON(object: any): Command_CommandType {
     case 8:
     case "GET_JOIN_TOKEN":
       return Command_CommandType.GET_JOIN_TOKEN;
+    case 9:
+    case "STREAM_LOGS":
+      return Command_CommandType.STREAM_LOGS;
+    case 10:
+    case "EXEC":
+      return Command_CommandType.EXEC;
+    case 11:
+    case "CREATE_SERVICE":
+      return Command_CommandType.CREATE_SERVICE;
+    case 12:
+    case "DELETE_SERVICE":
+      return Command_CommandType.DELETE_SERVICE;
+    case 13:
+    case "DELETE_RESOURCE":
+      return Command_CommandType.DELETE_RESOURCE;
+    case 14:
+    case "CREATE_RESOURCE":
+      return Command_CommandType.CREATE_RESOURCE;
     case -1:
     case "UNRECOGNIZED":
     default:
@@ -223,6 +259,18 @@ export function command_CommandTypeToJSON(object: Command_CommandType): string {
       return "DELETE_NODE";
     case Command_CommandType.GET_JOIN_TOKEN:
       return "GET_JOIN_TOKEN";
+    case Command_CommandType.STREAM_LOGS:
+      return "STREAM_LOGS";
+    case Command_CommandType.EXEC:
+      return "EXEC";
+    case Command_CommandType.CREATE_SERVICE:
+      return "CREATE_SERVICE";
+    case Command_CommandType.DELETE_SERVICE:
+      return "DELETE_SERVICE";
+    case Command_CommandType.DELETE_RESOURCE:
+      return "DELETE_RESOURCE";
+    case Command_CommandType.CREATE_RESOURCE:
+      return "CREATE_RESOURCE";
     case Command_CommandType.UNRECOGNIZED:
     default:
       return "UNRECOGNIZED";
@@ -238,7 +286,7 @@ export interface JoinTokenData {
 }
 
 function createBaseAgentPayload(): AgentPayload {
-  return { heartbeat: undefined, commandResponse: undefined };
+  return { heartbeat: undefined, commandResponse: undefined, streamData: undefined };
 }
 
 export const AgentPayload: MessageFns<AgentPayload> = {
@@ -248,6 +296,9 @@ export const AgentPayload: MessageFns<AgentPayload> = {
     }
     if (message.commandResponse !== undefined) {
       CommandResponse.encode(message.commandResponse, writer.uint32(18).fork()).join();
+    }
+    if (message.streamData !== undefined) {
+      StreamData.encode(message.streamData, writer.uint32(26).fork()).join();
     }
     return writer;
   },
@@ -275,6 +326,14 @@ export const AgentPayload: MessageFns<AgentPayload> = {
           message.commandResponse = CommandResponse.decode(reader, reader.uint32());
           continue;
         }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.streamData = StreamData.decode(reader, reader.uint32());
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -288,6 +347,7 @@ export const AgentPayload: MessageFns<AgentPayload> = {
     return {
       heartbeat: isSet(object.heartbeat) ? Heartbeat.fromJSON(object.heartbeat) : undefined,
       commandResponse: isSet(object.commandResponse) ? CommandResponse.fromJSON(object.commandResponse) : undefined,
+      streamData: isSet(object.streamData) ? StreamData.fromJSON(object.streamData) : undefined,
     };
   },
 
@@ -298,6 +358,9 @@ export const AgentPayload: MessageFns<AgentPayload> = {
     }
     if (message.commandResponse !== undefined) {
       obj.commandResponse = CommandResponse.toJSON(message.commandResponse);
+    }
+    if (message.streamData !== undefined) {
+      obj.streamData = StreamData.toJSON(message.streamData);
     }
     return obj;
   },
@@ -313,6 +376,117 @@ export const AgentPayload: MessageFns<AgentPayload> = {
     message.commandResponse = (object.commandResponse !== undefined && object.commandResponse !== null)
       ? CommandResponse.fromPartial(object.commandResponse)
       : undefined;
+    message.streamData = (object.streamData !== undefined && object.streamData !== null)
+      ? StreamData.fromPartial(object.streamData)
+      : undefined;
+    return message;
+  },
+};
+
+function createBaseStreamData(): StreamData {
+  return { streamId: "", data: new Uint8Array(0), isError: false, closed: false };
+}
+
+export const StreamData: MessageFns<StreamData> = {
+  encode(message: StreamData, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.streamId !== "") {
+      writer.uint32(10).string(message.streamId);
+    }
+    if (message.data.length !== 0) {
+      writer.uint32(18).bytes(message.data);
+    }
+    if (message.isError !== false) {
+      writer.uint32(24).bool(message.isError);
+    }
+    if (message.closed !== false) {
+      writer.uint32(32).bool(message.closed);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): StreamData {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseStreamData();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.streamId = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.data = reader.bytes();
+          continue;
+        }
+        case 3: {
+          if (tag !== 24) {
+            break;
+          }
+
+          message.isError = reader.bool();
+          continue;
+        }
+        case 4: {
+          if (tag !== 32) {
+            break;
+          }
+
+          message.closed = reader.bool();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): StreamData {
+    return {
+      streamId: isSet(object.streamId) ? globalThis.String(object.streamId) : "",
+      data: isSet(object.data) ? bytesFromBase64(object.data) : new Uint8Array(0),
+      isError: isSet(object.isError) ? globalThis.Boolean(object.isError) : false,
+      closed: isSet(object.closed) ? globalThis.Boolean(object.closed) : false,
+    };
+  },
+
+  toJSON(message: StreamData): unknown {
+    const obj: any = {};
+    if (message.streamId !== "") {
+      obj.streamId = message.streamId;
+    }
+    if (message.data.length !== 0) {
+      obj.data = base64FromBytes(message.data);
+    }
+    if (message.isError !== false) {
+      obj.isError = message.isError;
+    }
+    if (message.closed !== false) {
+      obj.closed = message.closed;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<StreamData>, I>>(base?: I): StreamData {
+    return StreamData.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<StreamData>, I>>(object: I): StreamData {
+    const message = createBaseStreamData();
+    message.streamId = object.streamId ?? "";
+    message.data = object.data ?? new Uint8Array(0);
+    message.isError = object.isError ?? false;
+    message.closed = object.closed ?? false;
     return message;
   },
 };
@@ -426,13 +600,16 @@ export const CommandResponse: MessageFns<CommandResponse> = {
 };
 
 function createBaseServerPayload(): ServerPayload {
-  return { command: undefined };
+  return { command: undefined, streamData: undefined };
 }
 
 export const ServerPayload: MessageFns<ServerPayload> = {
   encode(message: ServerPayload, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     if (message.command !== undefined) {
       Command.encode(message.command, writer.uint32(10).fork()).join();
+    }
+    if (message.streamData !== undefined) {
+      StreamData.encode(message.streamData, writer.uint32(18).fork()).join();
     }
     return writer;
   },
@@ -452,6 +629,14 @@ export const ServerPayload: MessageFns<ServerPayload> = {
           message.command = Command.decode(reader, reader.uint32());
           continue;
         }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.streamData = StreamData.decode(reader, reader.uint32());
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -462,13 +647,19 @@ export const ServerPayload: MessageFns<ServerPayload> = {
   },
 
   fromJSON(object: any): ServerPayload {
-    return { command: isSet(object.command) ? Command.fromJSON(object.command) : undefined };
+    return {
+      command: isSet(object.command) ? Command.fromJSON(object.command) : undefined,
+      streamData: isSet(object.streamData) ? StreamData.fromJSON(object.streamData) : undefined,
+    };
   },
 
   toJSON(message: ServerPayload): unknown {
     const obj: any = {};
     if (message.command !== undefined) {
       obj.command = Command.toJSON(message.command);
+    }
+    if (message.streamData !== undefined) {
+      obj.streamData = StreamData.toJSON(message.streamData);
     }
     return obj;
   },
@@ -480,6 +671,9 @@ export const ServerPayload: MessageFns<ServerPayload> = {
     const message = createBaseServerPayload();
     message.command = (object.command !== undefined && object.command !== null)
       ? Command.fromPartial(object.command)
+      : undefined;
+    message.streamData = (object.streamData !== undefined && object.streamData !== null)
+      ? StreamData.fromPartial(object.streamData)
       : undefined;
     return message;
   },
@@ -2385,6 +2579,31 @@ export const JoinTokenData: MessageFns<JoinTokenData> = {
     return message;
   },
 };
+
+function bytesFromBase64(b64: string): Uint8Array {
+  if ((globalThis as any).Buffer) {
+    return Uint8Array.from(globalThis.Buffer.from(b64, "base64"));
+  } else {
+    const bin = globalThis.atob(b64);
+    const arr = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; ++i) {
+      arr[i] = bin.charCodeAt(i);
+    }
+    return arr;
+  }
+}
+
+function base64FromBytes(arr: Uint8Array): string {
+  if ((globalThis as any).Buffer) {
+    return globalThis.Buffer.from(arr).toString("base64");
+  } else {
+    const bin: string[] = [];
+    arr.forEach((byte) => {
+      bin.push(globalThis.String.fromCharCode(byte));
+    });
+    return globalThis.btoa(bin.join(""));
+  }
+}
 
 type Builtin = Date | Function | Uint8Array | string | number | boolean | undefined;
 

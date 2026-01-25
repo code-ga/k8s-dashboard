@@ -8,7 +8,15 @@ message AgentPayload {
   oneof payload {
     Heartbeat heartbeat = 1;
     CommandResponse command_response = 2;
+    StreamData stream_data = 3;
   }
+}
+
+message StreamData {
+  string stream_id = 1;
+  bytes data = 2; // Data chunk
+  bool is_error = 3; // True for stderr
+  bool closed = 4; // Stream closed
 }
 
 message CommandResponse {
@@ -22,6 +30,7 @@ message CommandResponse {
 message ServerPayload {
   oneof payload {
     Command command = 1;
+    StreamData stream_data = 2;
   }
 }
 
@@ -135,6 +144,12 @@ message Command {
     DELETE_POD = 6;
     DELETE_NODE = 7;
     GET_JOIN_TOKEN = 8;
+    STREAM_LOGS = 9;
+    EXEC = 10;
+    CREATE_SERVICE = 11;
+    DELETE_SERVICE = 12;
+    DELETE_RESOURCE = 13;
+    CREATE_RESOURCE = 14;
   }
   CommandType type = 2;
   
@@ -152,3 +167,4 @@ message JoinTokenData {
   string api_server_endpoint = 4;
   string expiration = 5;
 }
+

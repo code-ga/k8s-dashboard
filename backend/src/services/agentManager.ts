@@ -6,6 +6,7 @@ import { EventEmitter } from "events";
 import {
 	type Command,
 	type CommandResponse,
+	type StreamData,
 	ServerPayload,
 } from "../../pb-generated/agent-backend/websocket";
 import { db } from "../database";
@@ -30,6 +31,13 @@ export class AgentManager extends EventEmitter<EventMap> {
 			resolve: (value: CommandResponse) => void;
 			reject: (reason?: unknown) => void;
 			timeout?: ReturnType<typeof setTimeout>; // Make timeout optional for rehydrated commands
+		}
+	> = new Map();
+	private streamSessions: Map<
+		string,
+		{
+			userWs: any;
+			agentId: number;
 		}
 	> = new Map();
 
@@ -262,6 +270,83 @@ export class AgentManager extends EventEmitter<EventMap> {
 
 	getConnection(agentId: number) {
 		return this.connections.get(agentId);
+	}
+
+	async startStream(
+		agentId: number,
+		clusterId: number,
+		commandType: number,
+		payloadStr: string,
+		userWs: any,
+	): Promise<string> {
+		const streamId = crypto.randomUUID();
+		this.streamSessions.set(streamId, { userWs, agentId });
+
+		try {
+			// Send the command to start the stream. Agent should acknowledge with CommandResponse.
+			// streamId is passed as the Command ID so we can correlate.
+			await this.sendCommand(agentId, clusterId, {
+				id: streamId,
+				type: commandType,
+				payload: payloadStr,
+				targetName: "",
+				targetNamespace: "",
+			});
+			return streamId;
+		} catch (error) {
+			this.streamSessions.delete(streamId);
+			throw error;
+		}
+	}
+
+	async stopStream(streamId: string) {
+		const session = this.streamSessions.get(streamId);
+		if (session) {
+			// Notify agent to close stream
+			await this.sendStreamDataToAgent(session.agentId, {
+				streamId,
+				data: new Uint8Array(0),
+				isError: false,
+				closed: true,
+			});
+			this.streamSessions.delete(streamId);
+		}
+	}
+
+	handleStreamData(data: StreamData) {
+		const session = this.streamSessions.get(data.streamId);
+		if (!session) return;
+
+		if (data.closed) {
+			// Stream closed by agent (e.g. process exited)
+			// Close user connection? Or just send a message?
+			// Usually we close the user WS.
+			// Check if userWs is open first? Elysia/Bun handles this?
+			try {
+				session.userWs.close();
+			} catch (e) {
+				// ignore
+			}
+			this.streamSessions.delete(data.streamId);
+			return;
+		}
+
+		if (data.data && data.data.length > 0) {
+			try {
+				session.userWs.send(data.data);
+			} catch (e) {
+				console.error("Failed to send data to user", e);
+				this.stopStream(data.streamId);
+			}
+		}
+	}
+
+	async sendStreamDataToAgent(agentId: number, data: StreamData) {
+		const ws = this.connections.get(agentId);
+		if (ws) {
+			const payload = ServerPayload.encode({ streamData: data }).finish();
+			ws.send(payload);
+		}
 	}
 }
 
