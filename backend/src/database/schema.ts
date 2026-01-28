@@ -235,6 +235,7 @@ export const k8sDeployments = pgTable(
 		idleTimeoutSeconds: integer("idle_timeout_seconds").default(0).notNull(),
 		lastAccessedAt: timestamp("last_accessed_at"),
 		isAutoScaling: boolean("is_auto_scaling").default(false).notNull(),
+		isAlwaysRunning: boolean("is_always_running").default(false).notNull(),
 	},
 	(table) => ({
 		clusterUidIdx: uniqueIndex("dep_cluster_uid_idx").on(
@@ -307,9 +308,8 @@ export const k8sServices = pgTable(
 			onDelete: "set null",
 		}),
 		ownerId: text("owner_id")
-			.notNull()
-			.references(() => profile.id, { onDelete: "cascade" }),
-		globalPort: integer("global_port"), // the port that will be exposed to the cluster (every node will open this port and point to specific pod)
+			.references(() => profile.id, { onDelete: "set null" }),
+		// globalPort: integer("global_port"), // the port that will be exposed to the cluster (every node will open this port and point to specific pod)
 
 		internalPort: integer("internal_port").notNull(),
 		externalPort: integer("external_port"),
@@ -351,6 +351,19 @@ export const AppState = pgTable("app_state", {
 		.notNull(),
 });
 
+export const gatewayPorts = pgTable("gateway_ports", {
+	id: serial("id").primaryKey(),
+	clusterId: integer("cluster_id")
+		.notNull()
+		.references(() => k8sCluster.id, { onDelete: "cascade" }),
+	protocol: text("protocol").notNull(), // tcp | udp | http
+	port: integer("port").notNull(),
+	allocated: boolean("allocated").default(false).notNull(),
+	serviceId: integer("service_id").references(() => k8sServices.id, {
+		onDelete: "set null",
+	}),
+});
+
 // Restoration of missing relations and services table
 
 export const schema = {
@@ -366,6 +379,7 @@ export const schema = {
 	k8sServices,
 	k8sDeployments,
 	agentCommands,
+	gatewayPorts,
 	AppState,
 } as const;
 
@@ -462,6 +476,16 @@ export const schemaRelations = defineRelations(schema, (r) => ({
 		cluster: r.one.k8sCluster({
 			from: r.agentCommands.clusterId,
 			to: r.k8sCluster.id,
+		}),
+	},
+	gatewayPorts: {
+		cluster: r.one.k8sCluster({
+			from: r.gatewayPorts.clusterId,
+			to: r.k8sCluster.id,
+		}),
+		service: r.one.k8sServices({
+			from: r.gatewayPorts.serviceId,
+			to: r.k8sServices.id,
 		}),
 	},
 }));

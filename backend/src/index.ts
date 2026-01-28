@@ -6,6 +6,9 @@ import { openapi } from "@elysiajs/openapi";
 import { Elysia } from "elysia";
 import { OpenAPI } from "./libs/auths/openAPI";
 import { apiRouter } from "./routes";
+import { scalingController } from "./services/scaling.controller";
+
+scalingController.start();
 
 export const app = new Elysia()
 	.use(

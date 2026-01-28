@@ -8,7 +8,9 @@
 - [ ] pod can open many ports
 - [ ] each service deal with one port of pods
 - [ ] service run on different node have different ip and port
-
+```
+go build -o agent . && ./agent --addr https://k8s-dashboard-backend.nbth.dev/ --token 1b87285f-3417-4886-b64c-af8ed41675e6
+```
 ## Future Implementation
 ### Deployment Logs Strategy
 Currently, we implement the **Single Random Pod** strategy for deployment logs (consistent with default `kubectl logs deployment/foo` behavior).

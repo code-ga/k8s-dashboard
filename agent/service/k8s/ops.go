@@ -104,14 +104,25 @@ func (k *K8sClient) ApplyManifest(yamlContent string) error {
 // Simple helper to pluralize Kinds (HelmChart -> helmcharts)
 // A real implementation would use discovery client, but this is safe for your known types.
 func toPlural(kind string) string {
+	lowerKind := strings.ToLower(kind)
 	switch kind {
 	case "HelmChart":
 		return "helmcharts"
 	case "Cluster":
-		return "clusters" // for CNPG
+		return "clusters"
+	case "IngressRoute":
+		return "ingressroutes"
+	case "IngressRouteTCP":
+		return "ingressroutetcps"
+	case "IngressRouteUDP":
+		return "ingressrouteudps"
+	case "Middleware":
+		return "middlewares"
 	default:
-		// Fallback: simple English pluralization
-		return kind + "s"
+		if strings.HasSuffix(lowerKind, "s") {
+			return lowerKind
+		}
+		return lowerKind + "s"
 	}
 }
 

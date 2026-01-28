@@ -350,6 +350,8 @@ export class AgentManager extends EventEmitter<EventMap> {
 	}
 }
 
+export const agentManager = new AgentManager();
+
 export const agentManagerService = new Elysia({
 	name: "service/agent-manager",
-}).decorate("agentManager", new AgentManager());
+}).decorate("agentManager", agentManager);

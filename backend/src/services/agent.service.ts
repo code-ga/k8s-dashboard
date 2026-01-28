@@ -5,6 +5,7 @@ import {
 	k8sPods,
 	k8sDeployments,
 	k8sClusterNode,
+	gatewayPorts,
 	schema,
 } from "../database/schema";
 import { eq, and, isNull, type InferInsertModel } from "drizzle-orm";
@@ -582,6 +583,48 @@ export class AgentService {
 			.where(eq(k8sCluster.id, cluster.id));
 
 		return agent[0];
+	}
+	async allocateGatewayPort(
+		clusterId: number,
+		protocol: "http" | "tcp" | "udp",
+	) {
+		const result = await db
+			.select({ port: gatewayPorts.port })
+			.from(gatewayPorts)
+			.where(eq(gatewayPorts.clusterId, clusterId));
+
+		const usedPortSet = new Set(result.map((p) => p.port));
+
+		let portToUse = -1;
+		for (let port = 30000; port <= 31000; port++) {
+			if (!usedPortSet.has(port)) {
+				portToUse = port;
+				break;
+			}
+		}
+
+		if (portToUse === -1) {
+			throw new Error("No available ports");
+		}
+		const [entry] = await db
+			.insert(gatewayPorts)
+			.values({
+				clusterId,
+				protocol,
+				port: portToUse,
+				allocated: true,
+			})
+			.returning();
+
+		return entry;
+	}
+
+	async releaseGatewayPort(clusterId: number, port: number) {
+		await db
+			.delete(gatewayPorts)
+			.where(
+				and(eq(gatewayPorts.clusterId, clusterId), eq(gatewayPorts.port, port)),
+			);
 	}
 }
 

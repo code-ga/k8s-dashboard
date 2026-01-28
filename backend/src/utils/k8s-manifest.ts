@@ -48,6 +48,17 @@ export interface ServiceDTO {
 	labels?: Record<string, string>;
 }
 
+export interface IngressRouteDTO {
+	name: string;
+	namespace: string;
+	protocol: "http" | "tcp" | "udp";
+	port: number; // externalPort on gateway
+	internalPort: number;
+	serviceName: string;
+	domain?: string;
+	labels?: Record<string, string>;
+}
+
 export const generatePodManifest = (dto: PodDTO): string => {
 	const manifest = {
 		apiVersion: "v1",
@@ -159,4 +170,94 @@ export const generateServiceManifest = (dto: ServiceDTO): string => {
 		},
 	};
 	return YAML.stringify(manifest);
+};
+
+export const generateIngressRouteManifest = (dto: IngressRouteDTO): string => {
+	const entryPoint =
+		dto.protocol === "http"
+			? "websecure"
+			: `${dto.protocol === "tcp" ? "p" : "u"}${dto.port}`;
+
+	if (dto.protocol === "http") {
+		const manifest = {
+			apiVersion: "traefik.io/v1alpha1",
+			kind: "IngressRoute",
+			metadata: {
+				name: dto.name,
+				namespace: dto.namespace,
+				labels: dto.labels,
+			},
+			spec: {
+				entryPoints: ["web", "websecure"],
+				routes: [
+					{
+						match: `Host(\`${dto.domain}\`)`,
+						kind: "Rule",
+						services: [
+							{
+								name: dto.serviceName,
+								port: dto.internalPort,
+							},
+						],
+					},
+				],
+			},
+		};
+		return YAML.stringify(manifest);
+	}
+
+	if (dto.protocol === "tcp") {
+		const manifest = {
+			apiVersion: "traefik.io/v1alpha1",
+			kind: "IngressRouteTCP",
+			metadata: {
+				name: dto.name,
+				namespace: dto.namespace,
+				labels: dto.labels,
+			},
+			spec: {
+				entryPoints: [entryPoint],
+				routes: [
+					{
+						match: "HostSNI(`*`)",
+						services: [
+							{
+								name: dto.serviceName,
+								port: dto.internalPort,
+							},
+						],
+					},
+				],
+			},
+		};
+		return YAML.stringify(manifest);
+	}
+
+	if (dto.protocol === "udp") {
+		const manifest = {
+			apiVersion: "traefik.io/v1alpha1",
+			kind: "IngressRouteUDP",
+			metadata: {
+				name: dto.name,
+				namespace: dto.namespace,
+				labels: dto.labels,
+			},
+			spec: {
+				entryPoints: [entryPoint],
+				routes: [
+					{
+						services: [
+							{
+								name: dto.serviceName,
+								port: dto.internalPort,
+							},
+						],
+					},
+				],
+			},
+		};
+		return YAML.stringify(manifest);
+	}
+
+	throw new Error(`Unsupported protocol: ${dto.protocol}`);
 };
