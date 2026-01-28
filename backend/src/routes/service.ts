@@ -83,6 +83,7 @@ export const serviceRoute = new Elysia({
 					const services = await db.query.k8sServices.findMany({
 						where: {
 							clusterId: Number(clusterId),
+							ownerId: ctx.profile.id,
 						},
 					});
 					return ctx.status(200, {

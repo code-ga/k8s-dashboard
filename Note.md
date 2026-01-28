@@ -4,7 +4,10 @@
 - [x] Service sync by each heartbeat in k8s cluster
 - [x] Update frontend/src/routes/dashboard/cluster/$id/nodes.tsx (Display join token command)
 - [x] show node role in k8s cluster
-- [ ] batch lazy command (sending batch message to agent and save to db the stage of command (pending, sent, success, failed) )
+- [x] batch lazy command (sending batch message to agent and save to db the stage of command (pending, sent, success, failed) )
+- [ ] pod can open many ports
+- [ ] each service deal with one port of pods
+- [ ] service run on different node have different ip and port
 
 ## Future Implementation
 ### Deployment Logs Strategy

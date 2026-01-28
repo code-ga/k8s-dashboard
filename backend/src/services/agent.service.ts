@@ -308,6 +308,7 @@ export class AgentService {
 					k8sUid: svc.uid,
 					labels: JSON.stringify(svc.labels),
 					updatedAt: new Date(),
+					ownerId: "",
 				};
 
 				if (existingSvc.length > 0 && existingSvc[0]?.k8sUid) {
@@ -316,6 +317,18 @@ export class AgentService {
 						.set(svcData)
 						.where(eq(schema.k8sServices.id, existingSvc[0].id));
 				} else {
+					const defaultOwner = await db.query.profile.findFirst({
+						where: {
+							permission: {
+								arrayContains: ["default-account"],
+							},
+						},
+					});
+					if (!defaultOwner) {
+						console.error("Default owner not found for pod syncing");
+					} else {
+						svcData.ownerId = defaultOwner.id;
+					}
 					await db.insert(schema.k8sServices).values(svcData);
 				}
 			}

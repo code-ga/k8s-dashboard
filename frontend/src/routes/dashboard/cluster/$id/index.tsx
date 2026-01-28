@@ -3,7 +3,15 @@ import { api } from "@/lib/api";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Box, HardDrive, Cpu, Activity } from "lucide-react";
+import {
+	ArrowLeft,
+	Box,
+	HardDrive,
+	Cpu,
+	Activity,
+	Layers,
+	Network,
+} from "lucide-react";
 
 export const Route = createFileRoute("/dashboard/cluster/$id/")({
 	component: ClusterOverview,
@@ -106,6 +114,26 @@ function ClusterOverview() {
 								<Box className="h-5 w-5" /> Pods
 							</CardTitle>
 							<CardContent>View and manage pods</CardContent>
+						</CardHeader>
+					</Card>
+				</Link>
+				<Link to={`/dashboard/cluster/$id/deployments`} params={{ id }}>
+					<Card className="hover:bg-muted/50 transition-colors cursor-pointer">
+						<CardHeader>
+							<CardTitle className="flex items-center gap-2">
+								<Layers className="h-5 w-5" /> Deployments
+							</CardTitle>
+							<CardContent>Manage application deployments</CardContent>
+						</CardHeader>
+					</Card>
+				</Link>
+				<Link to={`/dashboard/cluster/$id/services`} params={{ id }}>
+					<Card className="hover:bg-muted/50 transition-colors cursor-pointer">
+						<CardHeader>
+							<CardTitle className="flex items-center gap-2">
+								<Network className="h-5 w-5" /> Services
+							</CardTitle>
+							<CardContent>Manage network services</CardContent>
 						</CardHeader>
 					</Card>
 				</Link>

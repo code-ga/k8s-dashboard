@@ -183,6 +183,7 @@ export const k8sClusterNode = pgTable(
 		labels: text("labels").notNull(),
 		status: text("status").notNull().default("Unknown"),
 		roles: text("roles").array().notNull().default([]),
+		publicIp: text("public_ip"), // the public ip of node if node is in cloud
 		createdAt: timestamp("created_at").defaultNow().notNull(),
 		updatedAt: timestamp("updated_at")
 			.$onUpdate(() => /* @__PURE__ */ new Date())
@@ -231,6 +232,9 @@ export const k8sDeployments = pgTable(
 			.$onUpdate(() => /* @__PURE__ */ new Date())
 			.notNull(),
 		k8sUid: text("k8s_uid"),
+		idleTimeoutSeconds: integer("idle_timeout_seconds").default(0).notNull(),
+		lastAccessedAt: timestamp("last_accessed_at"),
+		isAutoScaling: boolean("is_auto_scaling").default(false).notNull(),
 	},
 	(table) => ({
 		clusterUidIdx: uniqueIndex("dep_cluster_uid_idx").on(
@@ -302,6 +306,10 @@ export const k8sServices = pgTable(
 		podId: integer("pod_id").references(() => k8sPods.id, {
 			onDelete: "set null",
 		}),
+		ownerId: text("owner_id")
+			.notNull()
+			.references(() => profile.id, { onDelete: "cascade" }),
+		globalPort: integer("global_port"), // the port that will be exposed to the cluster (every node will open this port and point to specific pod)
 
 		internalPort: integer("internal_port").notNull(),
 		externalPort: integer("external_port"),
@@ -318,6 +326,7 @@ export const k8sServices = pgTable(
 			.$onUpdate(() => /* @__PURE__ */ new Date())
 			.notNull(),
 		k8sUid: text("k8s_uid"),
+		exposureProtocol: text("exposure_protocol"), // http | tcp | udp
 	},
 	(table) => ({
 		clusterUidIdx: uniqueIndex("svc_cluster_uid_idx").on(
@@ -408,6 +417,10 @@ export const schemaRelations = defineRelations(schema, (r) => ({
 		pod: r.one.k8sPods({
 			from: r.k8sServices.podId,
 			to: r.k8sPods.id,
+		}),
+		owner: r.one.profile({
+			from: r.k8sServices.ownerId,
+			to: r.profile.id,
 		}),
 	},
 	k8sClusterNode: {
