@@ -1,0 +1,228 @@
+import { Button } from "@/components/ui/button";
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogHeader,
+	DialogTitle,
+	DialogTrigger,
+} from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { api } from "@/lib/api";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Settings, Trash2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
+
+interface Deployment {
+	id: number;
+	name: string;
+	namespace: string;
+	replicas: number;
+	availableReplicas: number;
+	unavailableReplicas: number;
+	dockerImage: string;
+}
+
+interface ManageDeploymentDialogProps {
+	deployment: Deployment;
+	clusterId: string;
+}
+
+export function ManageDeploymentDialog({
+	deployment,
+	clusterId,
+}: ManageDeploymentDialogProps) {
+	const [open, setOpen] = useState(false);
+	const [activeTab, setActiveTab] = useState("overview");
+	const queryClient = useQueryClient();
+
+	const deleteMutation = useMutation({
+		mutationFn: async () => {
+			const res = await api.api
+				.deployments({ clusterId })
+				[deployment.id.toString()].delete();
+			if (res.error) {
+				throw new Error(
+					res.error.value?.message || "Failed to delete deployment",
+				);
+			}
+			return res.data;
+		},
+		onSuccess: () => {
+			toast.success("Deployment deleted successfully");
+			queryClient.invalidateQueries({ queryKey: ["deployments", clusterId] });
+			setOpen(false);
+		},
+		onError: (error) => {
+			toast.error(error.message);
+		},
+	});
+
+	return (
+		<Dialog open={open} onOpenChange={setOpen}>
+			<DialogTrigger asChild>
+				<Button variant="ghost" size="sm">
+					<Settings className="h-4 w-4" />
+				</Button>
+			</DialogTrigger>
+			<DialogContent className="sm:max-w-[800px] h-[600px] flex flex-col">
+				<DialogHeader>
+					<DialogTitle>Manage Deployment: {deployment.name}</DialogTitle>
+					<DialogDescription>
+						View details and stream logs for this deployment.
+					</DialogDescription>
+				</DialogHeader>
+
+				<Tabs
+					value={activeTab}
+					onValueChange={setActiveTab}
+					className="flex-1 flex flex-col"
+				>
+					<TabsList className="grid w-full grid-cols-2">
+						<TabsTrigger value="overview">Overview</TabsTrigger>
+						<TabsTrigger value="logs">Logs</TabsTrigger>
+					</TabsList>
+
+					<TabsContent
+						value="overview"
+						className="flex-1 overflow-auto space-y-4"
+					>
+						<div className="grid grid-cols-2 gap-4 p-4 bg-muted rounded-lg">
+							<div>
+								<label className="text-sm font-medium text-muted-foreground">
+									Name
+								</label>
+								<p className="font-mono">{deployment.name}</p>
+							</div>
+							<div>
+								<label className="text-sm font-medium text-muted-foreground">
+									Namespace
+								</label>
+								<p className="font-mono">{deployment.namespace}</p>
+							</div>
+							<div>
+								<label className="text-sm font-medium text-muted-foreground">
+									Replicas
+								</label>
+								<p className="font-mono">
+									{deployment.availableReplicas} / {deployment.replicas}
+									{deployment.unavailableReplicas > 0 && (
+										<span className="text-yellow-500 ml-2">
+											({deployment.unavailableReplicas} unavailable)
+										</span>
+									)}
+								</p>
+							</div>
+							<div>
+								<label className="text-sm font-medium text-muted-foreground">
+									Image
+								</label>
+								<p className="font-mono text-sm break-all">
+									{deployment.dockerImage}
+								</p>
+							</div>
+						</div>
+
+						<Button
+							variant="destructive"
+							onClick={() => deleteMutation.mutate()}
+							disabled={deleteMutation.isPending}
+						>
+							<Trash2 className="h-4 w-4 mr-2" />
+							{deleteMutation.isPending ? "Deleting..." : "Delete Deployment"}
+						</Button>
+					</TabsContent>
+
+					<TabsContent value="logs" className="flex-1 overflow-hidden">
+						<DeploymentLogs
+							deployment={deployment}
+							clusterId={clusterId}
+							isActive={activeTab === "logs"}
+						/>
+					</TabsContent>
+				</Tabs>
+			</DialogContent>
+		</Dialog>
+	);
+}
+
+interface DeploymentLogsProps {
+	deployment: Deployment;
+	clusterId: string;
+	isActive: boolean;
+}
+
+function DeploymentLogs({
+	deployment,
+	clusterId,
+	isActive,
+}: DeploymentLogsProps) {
+	const [logs, setLogs] = useState<string>("");
+	const [autoScroll, setAutoScroll] = useState(true);
+	const logsRef = useRef<HTMLPreElement>(null);
+	const wsRef = useRef<WebSocket | null>(null);
+
+	useEffect(() => {
+		if (!isActive) {
+			wsRef.current?.close();
+			wsRef.current = null;
+			return;
+		}
+
+		const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+		const ws = new WebSocket(
+			`${protocol}//${window.location.host}/api/deployments/${clusterId}/logs/${deployment.id}`,
+		);
+		wsRef.current = ws;
+
+		ws.onmessage = (event) => {
+			if (event.data instanceof Blob) {
+				event.data.text().then((text) => {
+					setLogs((prev) => prev + text);
+				});
+			} else {
+				setLogs((prev) => prev + event.data);
+			}
+		};
+
+		ws.onerror = (error) => {
+			console.error("WebSocket error:", error);
+			toast.error("Failed to connect to log stream");
+		};
+
+		return () => {
+			ws.close();
+			wsRef.current = null;
+		};
+	}, [isActive, deployment.id, clusterId]);
+
+	useEffect(() => {
+		if (autoScroll && logsRef.current) {
+			logsRef.current.scrollTop = logsRef.current.scrollHeight;
+		}
+	}, [logs, autoScroll]);
+
+	return (
+		<div className="h-full flex flex-col">
+			<div className="flex items-center justify-between mb-2">
+				<label className="text-sm font-medium">
+					Live Logs (from a pod in deployment)
+				</label>
+				<Button
+					variant={autoScroll ? "default" : "outline"}
+					size="sm"
+					onClick={() => setAutoScroll(!autoScroll)}
+				>
+					{autoScroll ? "Auto-scroll ON" : "Auto-scroll OFF"}
+				</Button>
+			</div>
+			<pre
+				ref={logsRef}
+				className="flex-1 bg-black text-green-400 p-4 rounded-lg overflow-auto font-mono text-xs"
+			>
+				{logs || "Waiting for logs..."}
+			</pre>
+		</div>
+	);
+}

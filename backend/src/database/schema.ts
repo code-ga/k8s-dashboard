@@ -285,6 +285,7 @@ export const k8sPods = pgTable(
 			.$onUpdate(() => /* @__PURE__ */ new Date())
 			.notNull(),
 		k8sUid: text("k8s_uid"),
+		status: text("status").notNull().default("Unknown"),
 	},
 	(table) => ({
 		clusterUidIdx: uniqueIndex("pod_cluster_uid_idx").on(
@@ -307,8 +308,9 @@ export const k8sServices = pgTable(
 		podId: integer("pod_id").references(() => k8sPods.id, {
 			onDelete: "set null",
 		}),
-		ownerId: text("owner_id")
-			.references(() => profile.id, { onDelete: "set null" }),
+		ownerId: text("owner_id").references(() => profile.id, {
+			onDelete: "set null",
+		}),
 		// globalPort: integer("global_port"), // the port that will be exposed to the cluster (every node will open this port and point to specific pod)
 
 		internalPort: integer("internal_port").notNull(),

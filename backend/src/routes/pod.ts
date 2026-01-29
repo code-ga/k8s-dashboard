@@ -676,6 +676,9 @@ export const podRoute = new Elysia({
 							data: bytes,
 							isError: false,
 							closed: false,
+							type: 0, // DATA
+							rows: 0,
+							cols: 0,
 						});
 					}
 				},

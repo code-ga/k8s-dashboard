@@ -254,6 +254,7 @@ export class AgentService {
 						envVariables: pod.envVariables || "",
 						internalPort: pod.internalPort,
 						k8sUid: pod.uid,
+						status: pod.status || "Unknown",
 						updatedAt: new Date(),
 					};
 
@@ -309,7 +310,6 @@ export class AgentService {
 					k8sUid: svc.uid,
 					labels: JSON.stringify(svc.labels),
 					updatedAt: new Date(),
-					ownerId: "",
 				};
 
 				if (existingSvc.length > 0 && existingSvc[0]?.k8sUid) {

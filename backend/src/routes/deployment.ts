@@ -602,6 +602,9 @@ export const deploymentRoute = new Elysia({
 								streamId,
 								podId: targetPod.id, // storing podId for tracking
 								agentId: Number(cluster.agent.id),
+								type: 0, // DATA
+								rows: 0,
+								cols: 0,
 							});
 						} else {
 							// Fallback if not decorated yet?

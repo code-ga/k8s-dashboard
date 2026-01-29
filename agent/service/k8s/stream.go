@@ -11,8 +11,39 @@ import (
 	"k8s.io/client-go/tools/remotecommand"
 )
 
+// TerminalSizeQueue implements remotecommand.TerminalSizeQueue
+type TerminalSizeQueue struct {
+	resizeChan chan remotecommand.TerminalSize
+}
+
+func NewTerminalSizeQueue() *TerminalSizeQueue {
+	return &TerminalSizeQueue{
+		resizeChan: make(chan remotecommand.TerminalSize, 1),
+	}
+}
+
+func (q *TerminalSizeQueue) Next() *remotecommand.TerminalSize {
+	size, ok := <-q.resizeChan
+	if !ok {
+		return nil
+	}
+	return &size
+}
+
+func (q *TerminalSizeQueue) Push(width, height uint16) {
+	select {
+	case q.resizeChan <- remotecommand.TerminalSize{Width: width, Height: height}:
+	default:
+		// Drop old resize if channel is full
+	}
+}
+
+func (q *TerminalSizeQueue) Close() {
+	close(q.resizeChan)
+}
+
 // ExecStream starts a remote command execution and links it to the provided IO streams.
-func (k *K8sClient) ExecStream(namespace, podName, containerName string, cmd []string, stdin io.Reader, stdout, stderr io.Writer, tty bool) error {
+func (k *K8sClient) ExecStream(namespace, podName, containerName string, cmd []string, stdin io.Reader, stdout, stderr io.Writer, tty bool, sizeQueue *TerminalSizeQueue) error {
 	req := k.Clientset.CoreV1().RESTClient().Post().
 		Resource("pods").
 		Name(podName).
@@ -40,12 +71,17 @@ func (k *K8sClient) ExecStream(namespace, podName, containerName string, cmd []s
 		return fmt.Errorf("failed to create executor: %w", err)
 	}
 
-	err = exec.Stream(remotecommand.StreamOptions{
+	streamOpts := remotecommand.StreamOptions{
 		Stdin:  stdin,
 		Stdout: stdout,
 		Stderr: stderr,
 		Tty:    tty,
-	})
+	}
+	if tty && sizeQueue != nil {
+		streamOpts.TerminalSizeQueue = sizeQueue
+	}
+
+	err = exec.Stream(streamOpts)
 
 	return err
 }
@@ -70,6 +106,6 @@ func (k *K8sClient) GetLogsStream(ctx context.Context, namespace, podName, conta
 // ExecInPod is a helper for synchronous execution, used by bootstrap logic.
 func (k *K8sClient) ExecInPod(namespace, podName, containerName string, cmd []string) (string, string, error) {
 	var stdout, stderr bytes.Buffer
-	err := k.ExecStream(namespace, podName, containerName, cmd, nil, &stdout, &stderr, false)
+	err := k.ExecStream(namespace, podName, containerName, cmd, nil, &stdout, &stderr, false, nil)
 	return stdout.String(), stderr.String(), err
 }

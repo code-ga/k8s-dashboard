@@ -41,32 +41,39 @@ func (sc *SafeConn) WriteMessage(messageType int, data []byte) error {
 }
 
 // Stream manager
+type StreamEntry struct {
+	stdinChan   chan []byte
+	resizeQueue *k8s.TerminalSizeQueue
+}
+
 var (
-	streamMutex sync.Mutex
-	// Map streamID -> channel to send stdin data to
-	activeStreams = make(map[string]chan []byte)
+	streamMutex   sync.Mutex
+	activeStreams = make(map[string]*StreamEntry)
 )
 
-func registerStream(id string, ch chan []byte) {
+func registerStream(id string, entry *StreamEntry) {
 	streamMutex.Lock()
 	defer streamMutex.Unlock()
-	activeStreams[id] = ch
+	activeStreams[id] = entry
 }
 
 func unregisterStream(id string) {
 	streamMutex.Lock()
 	defer streamMutex.Unlock()
-	if ch, ok := activeStreams[id]; ok {
-		close(ch)
+	if entry, ok := activeStreams[id]; ok {
+		close(entry.stdinChan)
+		if entry.resizeQueue != nil {
+			entry.resizeQueue.Close()
+		}
 		delete(activeStreams, id)
 	}
 }
 
-func getStream(id string) (chan []byte, bool) {
+func getStream(id string) (*StreamEntry, bool) {
 	streamMutex.Lock()
 	defer streamMutex.Unlock()
-	ch, ok := activeStreams[id]
-	return ch, ok
+	entry, ok := activeStreams[id]
+	return entry, ok
 }
 
 func main() {
@@ -142,20 +149,24 @@ func main() {
 					sendAck(safeConn, cmd.Id, cmdErr == nil, data)
 				}
 
-				// Handle Stream Data (Stdin)
+				// Handle Stream Data (Stdin/Resize)
 				if streamData := serverPayload.GetStreamData(); streamData != nil {
-					if ch, ok := getStream(streamData.StreamId); ok {
+					if entry, ok := getStream(streamData.StreamId); ok {
 						if streamData.Closed {
-							// Close stream input
 							unregisterStream(streamData.StreamId)
+						} else if streamData.Type == pb.StreamData_RESIZE {
+							if entry.resizeQueue != nil {
+								entry.resizeQueue.Push(uint16(streamData.Cols), uint16(streamData.Rows))
+							}
 						} else {
-							ch <- streamData.Data
+							entry.stdinChan <- streamData.Data
 						}
 					}
 				}
 
 			} else {
-				log.Printf("recv non-binary message")
+				// print message
+				log.Printf("recv non-binary message: %s", string(message))
 			}
 		}
 	}()
@@ -284,7 +295,8 @@ func handleStreamCommand(kc *k8s.K8sClient, conn *SafeConn, cmd *pb.Command) {
 		// Stdin pipe
 		r, w := io.Pipe()
 		stdinChan := make(chan []byte, 10)
-		registerStream(cmd.Id, stdinChan)
+		resizeQueue := k8s.NewTerminalSizeQueue()
+		registerStream(cmd.Id, &StreamEntry{stdinChan: stdinChan, resizeQueue: resizeQueue})
 		defer unregisterStream(cmd.Id)
 
 		// Pump stdin
@@ -299,7 +311,8 @@ func handleStreamCommand(kc *k8s.K8sClient, conn *SafeConn, cmd *pb.Command) {
 		outWriter := &WsWriter{send: func(p []byte) { sendData(p, false) }}
 		errWriter := &WsWriter{send: func(p []byte) { sendData(p, true) }}
 
-		err = kc.ExecStream(req.Namespace, req.Name, req.Container, req.Command, r, outWriter, errWriter, false)
+		// Default to TTY true for interactive terminals
+		err = kc.ExecStream(req.Namespace, req.Name, req.Container, req.Command, r, outWriter, errWriter, true, resizeQueue)
 		if err != nil {
 			sendData([]byte(fmt.Sprintf("Exec error: %v", err)), true)
 		}

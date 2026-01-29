@@ -1,8 +1,5 @@
 import { Button } from "@/components/ui/button";
-import {
-	Card,
-	CardContent
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
 	Table,
 	TableBody,
@@ -15,6 +12,8 @@ import { api } from "@/lib/api";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { ArrowLeft, Box } from "lucide-react";
+import { CreatePodDialog } from "@/components/pod/create-pod-dialog";
+import { ManagePodDialog } from "@/components/pod/manage-pod-dialog";
 
 export const Route = createFileRoute("/dashboard/cluster/$id/pods")({
 	component: ClusterPods,
@@ -22,54 +21,37 @@ export const Route = createFileRoute("/dashboard/cluster/$id/pods")({
 
 function ClusterPods() {
 	const { id } = useParams({ from: "/dashboard/cluster/$id/pods" });
-	// const queryClient = useQueryClient();
 
 	const { data: pods, isLoading } = useQuery({
 		queryKey: ["pods", id],
 		queryFn: async () => {
-			// Pod route prefix is /:clusterId/pods
-			// api treat params as object
-			// The route definition in pod.ts is `prefix: "/:clusterId/pods"`
-			// Elysia Eden might map this as api[{clusterId}].pods.index.get() ??
-			// Let's verify how dynamic prefix is handled in Eden treaty.
-			// Usually it's api.param(clusterId).pods.get() if using standard eden?
-			// But treaty uses object access.
-			// It might be `api[id].pods.index.get()` ? No keys are strings.
-			// Wait, if prefix has param, it might not work well with treaty auto-completion if not specific.
-			// Let's assume standard `api({ clusterId: id }).pods.index.get()` or similar.
-			// Actually `pod.ts` prefix is `/pops/:clusterId`.
-			// Let's try `api[id].pods.index.get()` pattern if id is dynamic?
-			// The safe fallback is raw fetch if type safety is tricky.
-			// But let's try `api[id].pods.get()` (if index is default).
-
-			// Checking `pod.ts`:
-			// `export const podRoute = new Elysia({ prefix: "/pops/:clusterId" })`
-			// Treaty: api[':clusterId'].pods...
-			// Using `api({ clusterId: id }).pods.index.get()` is the standard treaty way for params.
-
 			const res = await api.api.pods({ clusterId: id }).get();
 			if (res.error) throw res.error;
-			if (!res.data.data) throw new Error(res.data.message || "Failed to fetch pods");
+			if (!res.data.data)
+				throw new Error(res.data.message || "Failed to fetch pods");
 			return res.data.data;
 		},
 	});
-
-	// Start/Delete Pod Mutation (if available) - Pod route only has GET currently.
 
 	if (isLoading) return <div>Loading pods...</div>;
 
 	return (
 		<div className="space-y-6">
-			<div className="flex items-center gap-4">
-				<Link to={`/dashboard/cluster/$id`} params={{ id }}>
-					<Button variant="ghost" size="icon">
-						<ArrowLeft className="h-4 w-4" />
-					</Button>
-				</Link>
-				<div>
-					<h2 className="text-3xl font-bold tracking-tight">Pods</h2>
-					<p className="text-muted-foreground">List of pods in this cluster</p>
+			<div className="flex items-center justify-between">
+				<div className="flex items-center gap-4">
+					<Link to={`/dashboard/cluster/$id`} params={{ id }}>
+						<Button variant="ghost" size="icon">
+							<ArrowLeft className="h-4 w-4" />
+						</Button>
+					</Link>
+					<div>
+						<h2 className="text-3xl font-bold tracking-tight">Pods</h2>
+						<p className="text-muted-foreground">
+							List of pods in this cluster
+						</p>
+					</div>
 				</div>
+				<CreatePodDialog clusterId={id} />
 			</div>
 
 			<Card>
@@ -82,6 +64,7 @@ function ClusterPods() {
 								<TableHead>Status</TableHead>
 								<TableHead>Image</TableHead>
 								<TableHead>CPU / MEM</TableHead>
+								<TableHead className="text-right">Actions</TableHead>
 							</TableRow>
 						</TableHeader>
 						<TableBody>
@@ -92,8 +75,7 @@ function ClusterPods() {
 										{pod.name}
 									</TableCell>
 									<TableCell>{pod.namespace}</TableCell>
-									<TableCell>Running</TableCell>{" "}
-									{/* No status in schema yet? */}
+									<TableCell>{pod.status || "Running"}</TableCell>
 									<TableCell
 										className="max-w-[200px] truncate"
 										title={pod.dockerImage}
@@ -103,11 +85,14 @@ function ClusterPods() {
 									<TableCell>
 										{pod.cpuRequest}m / {pod.memoryRequest}Mi
 									</TableCell>
+									<TableCell className="text-right">
+										<ManagePodDialog pod={pod} clusterId={id} />
+									</TableCell>
 								</TableRow>
 							))}
 							{(!pods || pods.length === 0) && (
 								<TableRow>
-									<TableCell colSpan={5} className="text-center py-4">
+									<TableCell colSpan={6} className="text-center py-4">
 										No pods found
 									</TableCell>
 								</TableRow>

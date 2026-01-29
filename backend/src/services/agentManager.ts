@@ -135,6 +135,7 @@ export class AgentManager extends EventEmitter<EventMap> {
 		}
 
 		const payload = ServerPayload.encode({ command }).finish();
+		console.log("Sending payload:", payload);
 
 		// Update to 'sent'
 		await db
@@ -308,6 +309,9 @@ export class AgentManager extends EventEmitter<EventMap> {
 				data: new Uint8Array(0),
 				isError: false,
 				closed: true,
+				type: 0, // DATA
+				rows: 0,
+				cols: 0,
 			});
 			this.streamSessions.delete(streamId);
 		}
@@ -346,6 +350,22 @@ export class AgentManager extends EventEmitter<EventMap> {
 		if (ws) {
 			const payload = ServerPayload.encode({ streamData: data }).finish();
 			ws.send(payload);
+		}
+	}
+
+	// Helper method for sending resize events from frontend to agent
+	async sendResizeEvent(streamId: string, rows: number, cols: number) {
+		const session = this.streamSessions.get(streamId);
+		if (session) {
+			await this.sendStreamDataToAgent(session.agentId, {
+				streamId,
+				data: new Uint8Array(0),
+				isError: false,
+				closed: false,
+				type: 1, // RESIZE
+				rows,
+				cols,
+			});
 		}
 	}
 }

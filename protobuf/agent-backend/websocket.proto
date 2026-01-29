@@ -17,6 +17,14 @@ message StreamData {
   bytes data = 2; // Data chunk
   bool is_error = 3; // True for stderr
   bool closed = 4; // Stream closed
+  
+  enum StreamDataType {
+    DATA = 0;
+    RESIZE = 1;
+  }
+  StreamDataType type = 5;
+  int32 rows = 6;
+  int32 cols = 7;
 }
 
 message CommandResponse {

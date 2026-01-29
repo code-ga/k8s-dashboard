@@ -43,6 +43,8 @@ import {
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { CreateDeploymentDialog } from "@/components/deployment/create-deployment-dialog";
+import { ManageDeploymentDialog } from "@/components/deployment/manage-deployment-dialog";
 
 export const Route = createFileRoute("/dashboard/cluster/$id/deployments")({
 	component: ClusterDeployments,
@@ -218,18 +220,21 @@ function ClusterDeployments() {
 
 	return (
 		<div className="space-y-6">
-			<div className="flex items-center gap-4">
-				<Link to={`/dashboard/cluster/$id`} params={{ id }}>
-					<Button variant="ghost" size="icon">
-						<ArrowLeft className="h-4 w-4" />
-					</Button>
-				</Link>
-				<div>
-					<h2 className="text-3xl font-bold tracking-tight">Deployments</h2>
-					<p className="text-muted-foreground">
-						List of deployments in this cluster
-					</p>
+			<div className="flex items-center justify-between">
+				<div className="flex items-center gap-4">
+					<Link to={`/dashboard/cluster/$id`} params={{ id }}>
+						<Button variant="ghost" size="icon">
+							<ArrowLeft className="h-4 w-4" />
+						</Button>
+					</Link>
+					<div>
+						<h2 className="text-3xl font-bold tracking-tight">Deployments</h2>
+						<p className="text-muted-foreground">
+							List of deployments in this cluster
+						</p>
+					</div>
 				</div>
+				<CreateDeploymentDialog clusterId={id} />
 			</div>
 
 			<Card>
@@ -280,7 +285,8 @@ function ClusterDeployments() {
 									>
 										{dep.dockerImage}
 									</TableCell>
-									<TableCell className="text-right">
+									<TableCell className="text-right space-x-1">
+										<ManageDeploymentDialog deployment={dep} clusterId={id} />
 										<ScaleSettingsDialog deployment={dep} clusterId={id} />
 									</TableCell>
 								</TableRow>

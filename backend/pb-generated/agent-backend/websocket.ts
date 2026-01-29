@@ -24,6 +24,42 @@ export interface StreamData {
   isError: boolean;
   /** Stream closed */
   closed: boolean;
+  type: StreamData_StreamDataType;
+  rows: number;
+  cols: number;
+}
+
+export enum StreamData_StreamDataType {
+  DATA = 0,
+  RESIZE = 1,
+  UNRECOGNIZED = -1,
+}
+
+export function streamData_StreamDataTypeFromJSON(object: any): StreamData_StreamDataType {
+  switch (object) {
+    case 0:
+    case "DATA":
+      return StreamData_StreamDataType.DATA;
+    case 1:
+    case "RESIZE":
+      return StreamData_StreamDataType.RESIZE;
+    case -1:
+    case "UNRECOGNIZED":
+    default:
+      return StreamData_StreamDataType.UNRECOGNIZED;
+  }
+}
+
+export function streamData_StreamDataTypeToJSON(object: StreamData_StreamDataType): string {
+  switch (object) {
+    case StreamData_StreamDataType.DATA:
+      return "DATA";
+    case StreamData_StreamDataType.RESIZE:
+      return "RESIZE";
+    case StreamData_StreamDataType.UNRECOGNIZED:
+    default:
+      return "UNRECOGNIZED";
+  }
 }
 
 export interface CommandResponse {
@@ -384,7 +420,7 @@ export const AgentPayload: MessageFns<AgentPayload> = {
 };
 
 function createBaseStreamData(): StreamData {
-  return { streamId: "", data: new Uint8Array(0), isError: false, closed: false };
+  return { streamId: "", data: new Uint8Array(0), isError: false, closed: false, type: 0, rows: 0, cols: 0 };
 }
 
 export const StreamData: MessageFns<StreamData> = {
@@ -400,6 +436,15 @@ export const StreamData: MessageFns<StreamData> = {
     }
     if (message.closed !== false) {
       writer.uint32(32).bool(message.closed);
+    }
+    if (message.type !== 0) {
+      writer.uint32(40).int32(message.type);
+    }
+    if (message.rows !== 0) {
+      writer.uint32(48).int32(message.rows);
+    }
+    if (message.cols !== 0) {
+      writer.uint32(56).int32(message.cols);
     }
     return writer;
   },
@@ -443,6 +488,30 @@ export const StreamData: MessageFns<StreamData> = {
           message.closed = reader.bool();
           continue;
         }
+        case 5: {
+          if (tag !== 40) {
+            break;
+          }
+
+          message.type = reader.int32() as any;
+          continue;
+        }
+        case 6: {
+          if (tag !== 48) {
+            break;
+          }
+
+          message.rows = reader.int32();
+          continue;
+        }
+        case 7: {
+          if (tag !== 56) {
+            break;
+          }
+
+          message.cols = reader.int32();
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -458,6 +527,9 @@ export const StreamData: MessageFns<StreamData> = {
       data: isSet(object.data) ? bytesFromBase64(object.data) : new Uint8Array(0),
       isError: isSet(object.isError) ? globalThis.Boolean(object.isError) : false,
       closed: isSet(object.closed) ? globalThis.Boolean(object.closed) : false,
+      type: isSet(object.type) ? streamData_StreamDataTypeFromJSON(object.type) : 0,
+      rows: isSet(object.rows) ? globalThis.Number(object.rows) : 0,
+      cols: isSet(object.cols) ? globalThis.Number(object.cols) : 0,
     };
   },
 
@@ -475,6 +547,15 @@ export const StreamData: MessageFns<StreamData> = {
     if (message.closed !== false) {
       obj.closed = message.closed;
     }
+    if (message.type !== 0) {
+      obj.type = streamData_StreamDataTypeToJSON(message.type);
+    }
+    if (message.rows !== 0) {
+      obj.rows = Math.round(message.rows);
+    }
+    if (message.cols !== 0) {
+      obj.cols = Math.round(message.cols);
+    }
     return obj;
   },
 
@@ -487,6 +568,9 @@ export const StreamData: MessageFns<StreamData> = {
     message.data = object.data ?? new Uint8Array(0);
     message.isError = object.isError ?? false;
     message.closed = object.closed ?? false;
+    message.type = object.type ?? 0;
+    message.rows = object.rows ?? 0;
+    message.cols = object.cols ?? 0;
     return message;
   },
 };
