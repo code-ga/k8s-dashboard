@@ -13,6 +13,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Settings, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { ExposeDialog } from "../service/expose-dialog";
 
 interface Deployment {
 	id: number;
@@ -22,6 +23,9 @@ interface Deployment {
 	availableReplicas: number;
 	unavailableReplicas: number;
 	dockerImage: string;
+	selector?: string;
+	labels?: string;
+	internalPort?: number;
 }
 
 interface ManageDeploymentDialogProps {
@@ -40,8 +44,8 @@ export function ManageDeploymentDialog({
 	const deleteMutation = useMutation({
 		mutationFn: async () => {
 			const res = await api.api
-				.deployments({ clusterId })
-				[deployment.id.toString()].delete();
+				.deployments({ clusterId })({ id: deployment.id.toString() })
+				.delete();
 			if (res.error) {
 				throw new Error(
 					res.error.value?.message || "Failed to delete deployment",
@@ -58,6 +62,10 @@ export function ManageDeploymentDialog({
 			toast.error(error.message);
 		},
 	});
+
+	const selector = deployment.selector
+		? JSON.parse(deployment.selector)
+		: { app: deployment.name };
 
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
@@ -90,21 +98,21 @@ export function ManageDeploymentDialog({
 					>
 						<div className="grid grid-cols-2 gap-4 p-4 bg-muted rounded-lg">
 							<div>
-								<label className="text-sm font-medium text-muted-foreground">
+								<div className="text-sm font-medium text-muted-foreground">
 									Name
-								</label>
+								</div>
 								<p className="font-mono">{deployment.name}</p>
 							</div>
 							<div>
-								<label className="text-sm font-medium text-muted-foreground">
+								<div className="text-sm font-medium text-muted-foreground">
 									Namespace
-								</label>
+								</div>
 								<p className="font-mono">{deployment.namespace}</p>
 							</div>
 							<div>
-								<label className="text-sm font-medium text-muted-foreground">
+								<div className="text-sm font-medium text-muted-foreground">
 									Replicas
-								</label>
+								</div>
 								<p className="font-mono">
 									{deployment.availableReplicas} / {deployment.replicas}
 									{deployment.unavailableReplicas > 0 && (
@@ -115,23 +123,32 @@ export function ManageDeploymentDialog({
 								</p>
 							</div>
 							<div>
-								<label className="text-sm font-medium text-muted-foreground">
+								<div className="text-sm font-medium text-muted-foreground">
 									Image
-								</label>
+								</div>
 								<p className="font-mono text-sm break-all">
 									{deployment.dockerImage}
 								</p>
 							</div>
 						</div>
 
-						<Button
-							variant="destructive"
-							onClick={() => deleteMutation.mutate()}
-							disabled={deleteMutation.isPending}
-						>
-							<Trash2 className="h-4 w-4 mr-2" />
-							{deleteMutation.isPending ? "Deleting..." : "Delete Deployment"}
-						</Button>
+						<div className="flex gap-2">
+							<ExposeDialog
+								clusterId={clusterId}
+								defaultName={deployment.name}
+								defaultNamespace={deployment.namespace}
+								defaultInternalPort={deployment.internalPort}
+								selector={selector}
+							/>
+							<Button
+								variant="destructive"
+								onClick={() => deleteMutation.mutate()}
+								disabled={deleteMutation.isPending}
+							>
+								<Trash2 className="h-4 w-4 mr-2" />
+								{deleteMutation.isPending ? "Deleting..." : "Delete Deployment"}
+							</Button>
+						</div>
 					</TabsContent>
 
 					<TabsContent value="logs" className="flex-1 overflow-hidden">
@@ -206,9 +223,9 @@ function DeploymentLogs({
 	return (
 		<div className="h-full flex flex-col">
 			<div className="flex items-center justify-between mb-2">
-				<label className="text-sm font-medium">
+				<p className="text-sm font-medium">
 					Live Logs (from a pod in deployment)
-				</label>
+				</p>
 				<Button
 					variant={autoScroll ? "default" : "outline"}
 					size="sm"

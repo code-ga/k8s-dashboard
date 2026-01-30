@@ -28,16 +28,59 @@ import (
 var addr = flag.String("addr", "localhost:3001", "server address")
 var token = flag.String("token", "iamveryhandsome", "server token")
 
-// Thread-safe WebSocket writer
+// Thread-safe WebSocket writer with auto-reconnect support
 type SafeConn struct {
-	conn *websocket.Conn
-	mu   sync.Mutex
+	conn   *websocket.Conn
+	mu     sync.Mutex
+	cond   *sync.Cond
+	closed bool
+}
+
+func NewSafeConn() *SafeConn {
+	s := &SafeConn{}
+	s.cond = sync.NewCond(&s.mu)
+	return s
 }
 
 func (sc *SafeConn) WriteMessage(messageType int, data []byte) error {
 	sc.mu.Lock()
+	for sc.conn == nil && !sc.closed {
+		sc.cond.Wait()
+	}
+	if sc.closed {
+		sc.mu.Unlock()
+		return fmt.Errorf("connection closed")
+	}
+	// Gorilla websocket connection is not thread-safe for concurrent writes.
+	// We keep the lock during the actual write.
+	err := sc.conn.WriteMessage(messageType, data)
+	if err != nil {
+		log.Printf("Write error: %v, marking connection as down", err)
+		sc.conn = nil // Next writer will wait for reconnect
+	}
+	sc.mu.Unlock()
+	return err
+}
+
+func (sc *SafeConn) SetConn(c *websocket.Conn) {
+	sc.mu.Lock()
 	defer sc.mu.Unlock()
-	return sc.conn.WriteMessage(messageType, data)
+	if sc.conn != nil {
+		sc.conn.Close()
+	}
+	sc.conn = c
+	sc.cond.Broadcast()
+}
+
+func (sc *SafeConn) Close() {
+	sc.mu.Lock()
+	defer sc.mu.Unlock()
+	sc.closed = true
+	if sc.conn != nil {
+		sc.conn.Close()
+		sc.conn = nil
+	}
+	sc.cond.Broadcast()
 }
 
 // Stream manager
@@ -51,17 +94,23 @@ var (
 	activeStreams = make(map[string]*StreamEntry)
 )
 
-func registerStream(id string, entry *StreamEntry) {
+func registerStream(id string, entry *StreamEntry) bool {
 	streamMutex.Lock()
 	defer streamMutex.Unlock()
+	if _, exists := activeStreams[id]; exists {
+		return false
+	}
 	activeStreams[id] = entry
+	return true
 }
 
 func unregisterStream(id string) {
 	streamMutex.Lock()
 	defer streamMutex.Unlock()
 	if entry, ok := activeStreams[id]; ok {
-		close(entry.stdinChan)
+		if entry.stdinChan != nil {
+			close(entry.stdinChan)
+		}
 		if entry.resizeQueue != nil {
 			entry.resizeQueue.Close()
 		}
@@ -78,7 +127,7 @@ func getStream(id string) (*StreamEntry, bool) {
 
 func main() {
 	flag.Parse()
-	log.SetFlags(0)
+	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
 
 	kubeClient, err := k8s.NewK8sClient()
 	if err != nil {
@@ -97,82 +146,99 @@ func main() {
 	wsScheme := "ws"
 	if maybeUrl.Scheme == "https" {
 		wsScheme = "wss"
-	} else if maybeUrl.Scheme == "http" {
-		wsScheme = "ws"
 	}
-
 	u := url.URL{Scheme: wsScheme, Host: maybeUrl.Host, Path: "/api/agents/ws"}
-	log.Printf("connecting to %s", u.String())
 
 	header := make(http.Header)
 	header.Add("Authorization", "Bot "+*token)
 
-	c, _, err := websocket.DefaultDialer.Dial(u.String(), header)
-	if err != nil {
-		log.Fatal("dial:", err)
-	}
-	defer c.Close()
+	safeConn := NewSafeConn()
 
-	safeConn := &SafeConn{conn: c}
-	done := make(chan struct{})
-
-	// 1. Read Loop (Receive Commands)
 	go func() {
-		defer close(done)
-		for {
-			mt, message, err := c.ReadMessage()
-			if err != nil {
-				log.Println("read:", err)
-				return
+		<-interrupt
+		log.Println("Interrupt received, shutting down...")
+		safeConn.Close()
+		os.Exit(0)
+	}()
+
+	for {
+		log.Printf("connecting to %s", u.String())
+		c, _, err := websocket.DefaultDialer.Dial(u.String(), header)
+		if err != nil {
+			log.Printf("Dial failed: %v. Retrying in 5 seconds...", err)
+			time.Sleep(5 * time.Second)
+			continue
+		}
+
+		log.Printf("Connected to backend")
+		safeConn.SetConn(c)
+
+		done := make(chan struct{})
+
+		// Start loops
+		go readLoop(c, safeConn, kubeClient, done)
+		go heartbeatLoop(safeConn, kubeClient, done)
+
+		<-done
+		log.Printf("Connection lost, attempting to reconnect...")
+		safeConn.SetConn(nil)
+		time.Sleep(2 * time.Second)
+	}
+}
+
+func readLoop(c *websocket.Conn, safeConn *SafeConn, kubeClient *k8s.K8sClient, done chan struct{}) {
+	defer close(done)
+	for {
+		mt, message, err := c.ReadMessage()
+		if err != nil {
+			log.Printf("Read error: %v", err)
+			return
+		}
+		if mt == websocket.BinaryMessage {
+			var serverPayload pb.ServerPayload
+			if err := proto.Unmarshal(message, &serverPayload); err != nil {
+				log.Printf("Failed to unmarshal server payload: %v", err)
+				continue
 			}
-			if mt == websocket.BinaryMessage {
-				var serverPayload pb.ServerPayload
-				if err := proto.Unmarshal(message, &serverPayload); err != nil {
-					log.Printf("Failed to unmarshal server payload: %v", err)
+
+			// Handle Command
+			if cmd := serverPayload.GetCommand(); cmd != nil {
+				log.Printf("Received Command: %s (Type: %v)", cmd.Id, cmd.Type)
+
+				if cmd.Type == pb.Command_STREAM_LOGS || cmd.Type == pb.Command_EXEC {
+					go handleStreamCommand(kubeClient, safeConn, cmd)
+					sendAck(safeConn, cmd.Id, true, "Stream task initiated")
 					continue
 				}
 
-				// Handle Command
-				if cmd := serverPayload.GetCommand(); cmd != nil {
-					log.Printf("Received Command: %s (Type: %v)", cmd.Id, cmd.Type)
+				data, cmdErr := handleCommand(kubeClient, cmd)
+				sendAck(safeConn, cmd.Id, cmdErr == nil, data)
+			}
 
-					// Streaming commands handled asynchronously
-					if cmd.Type == pb.Command_STREAM_LOGS || cmd.Type == pb.Command_EXEC {
-						go handleStreamCommand(kubeClient, safeConn, cmd)
-						// Send immediate Ack
-						sendAck(safeConn, cmd.Id, true, "Stream started")
-						continue
-					}
-
-					// Standard commands
-					data, cmdErr := handleCommand(kubeClient, cmd)
-					sendAck(safeConn, cmd.Id, cmdErr == nil, data)
-				}
-
-				// Handle Stream Data (Stdin/Resize)
-				if streamData := serverPayload.GetStreamData(); streamData != nil {
-					if entry, ok := getStream(streamData.StreamId); ok {
-						if streamData.Closed {
-							unregisterStream(streamData.StreamId)
-						} else if streamData.Type == pb.StreamData_RESIZE {
-							if entry.resizeQueue != nil {
-								entry.resizeQueue.Push(uint16(streamData.Cols), uint16(streamData.Rows))
-							}
-						} else {
+			// Handle Stream Data (Stdin/Resize)
+			if streamData := serverPayload.GetStreamData(); streamData != nil {
+				if entry, ok := getStream(streamData.StreamId); ok {
+					if streamData.Closed {
+						unregisterStream(streamData.StreamId)
+					} else if streamData.Type == pb.StreamData_RESIZE {
+						if entry.resizeQueue != nil {
+							entry.resizeQueue.Push(uint16(streamData.Cols), uint16(streamData.Rows))
+						}
+					} else {
+						if entry.stdinChan != nil {
 							entry.stdinChan <- streamData.Data
 						}
 					}
 				}
-
-			} else {
-				// print message
-				log.Printf("recv non-binary message: %s", string(message))
 			}
+		} else {
+			log.Printf("Recv non-binary message: %s", string(message))
 		}
-	}()
+	}
+}
 
-	// 2. Heartbeat Loop
-	ticker := time.NewTicker(5 * time.Second)
+func heartbeatLoop(safeConn *SafeConn, kubeClient *k8s.K8sClient, done chan struct{}) {
+	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
 
 	for {
@@ -192,15 +258,13 @@ func main() {
 			}
 			data, _ := proto.Marshal(payload)
 			if err := safeConn.WriteMessage(websocket.BinaryMessage, data); err != nil {
-				log.Println("write heartbeat:", err)
-				return
+				// WriteMessage already logs and sets conn=nil on error
+				log.Printf("Heartbeat write failed: %v", err)
+				// We don't return here because done might be closed soon by readLoop anyway,
+				// and WriteMessage will block until reconnect.
+				// But actually, if the writer fails, we might want to signal done if readLoop hasn't already.
+				// For heartbeats, if it keeps failing, let's just let it block.
 			}
-			// log.Println("Sent Heartbeat")
-
-		case <-interrupt:
-			log.Println("interrupt")
-			safeConn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, "Client shutting down"))
-			return
 		}
 	}
 }
@@ -224,7 +288,13 @@ func sendAck(conn *SafeConn, id string, success bool, data string) {
 }
 
 func handleStreamCommand(kc *k8s.K8sClient, conn *SafeConn, cmd *pb.Command) {
-	var err error
+	// Check if already running
+	// For logs, we might not have a stdinChan, but we still want to avoid duplicates
+	if !registerStream(cmd.Id, &StreamEntry{}) {
+		log.Printf("Stream %s is already running, ignoring", cmd.Id)
+		return
+	}
+	defer unregisterStream(cmd.Id)
 
 	// Parse payload
 	var req struct {
@@ -252,6 +322,7 @@ func handleStreamCommand(kc *k8s.K8sClient, conn *SafeConn, cmd *pb.Command) {
 			},
 		}
 		bytes, _ := proto.Marshal(payload)
+		// This will block if connection is down, and resume when it's back
 		conn.WriteMessage(websocket.BinaryMessage, bytes)
 	}
 
@@ -273,12 +344,13 @@ func handleStreamCommand(kc *k8s.K8sClient, conn *SafeConn, cmd *pb.Command) {
 	if cmd.Type == pb.Command_STREAM_LOGS {
 		stream, err := kc.GetLogsStream(context.Background(), req.Namespace, req.Name, req.Container, req.TailLines, req.Follow)
 		if err != nil {
+			log.Printf("Error opening logs: %v", err)
 			sendData([]byte(fmt.Sprintf("Error opening logs: %v", err)), true)
 			return
 		}
 		defer stream.Close()
 
-		buf := make([]byte, 1024)
+		buf := make([]byte, 2048)
 		for {
 			n, err := stream.Read(buf)
 			if n > 0 {
@@ -286,6 +358,7 @@ func handleStreamCommand(kc *k8s.K8sClient, conn *SafeConn, cmd *pb.Command) {
 			}
 			if err != nil {
 				if err != io.EOF {
+					log.Printf("Log stream error for %s: %v", cmd.Id, err)
 					sendData([]byte(fmt.Sprintf("\nStream error: %v", err)), true)
 				}
 				break
@@ -296,8 +369,14 @@ func handleStreamCommand(kc *k8s.K8sClient, conn *SafeConn, cmd *pb.Command) {
 		r, w := io.Pipe()
 		stdinChan := make(chan []byte, 10)
 		resizeQueue := k8s.NewTerminalSizeQueue()
-		registerStream(cmd.Id, &StreamEntry{stdinChan: stdinChan, resizeQueue: resizeQueue})
-		defer unregisterStream(cmd.Id)
+
+		// Update the entry with actual channels
+		streamMutex.Lock()
+		if entry, ok := activeStreams[cmd.Id]; ok {
+			entry.stdinChan = stdinChan
+			entry.resizeQueue = resizeQueue
+		}
+		streamMutex.Unlock()
 
 		// Pump stdin
 		go func() {
@@ -312,8 +391,9 @@ func handleStreamCommand(kc *k8s.K8sClient, conn *SafeConn, cmd *pb.Command) {
 		errWriter := &WsWriter{send: func(p []byte) { sendData(p, true) }}
 
 		// Default to TTY true for interactive terminals
-		err = kc.ExecStream(req.Namespace, req.Name, req.Container, req.Command, r, outWriter, errWriter, true, resizeQueue)
+		err := kc.ExecStream(req.Namespace, req.Name, req.Container, req.Command, r, outWriter, errWriter, true, resizeQueue)
 		if err != nil {
+			log.Printf("Exec error: %v", err)
 			sendData([]byte(fmt.Sprintf("Exec error: %v", err)), true)
 		}
 	}

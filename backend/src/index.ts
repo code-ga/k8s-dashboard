@@ -13,7 +13,7 @@ scalingController.start();
 export const app = new Elysia()
 	.use(
 		cors({
-			methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+			// methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
 			credentials: true,
 		}),
 	)

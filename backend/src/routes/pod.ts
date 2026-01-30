@@ -492,8 +492,12 @@ export const podRoute = new Elysia({
 					// Assume it works.
 					const { clusterId, podId } = ws.data.params;
 					const profile = ws.data.profile;
+					console.log("Cluster ID:", clusterId);
+					console.log("Pod ID:", podId);
+					console.log("Profile:", profile);
 
 					if (!clusterId || !podId) {
+						console.log("Missing params");
 						ws.send("Missing params");
 						ws.close();
 						return;
@@ -508,6 +512,7 @@ export const podRoute = new Elysia({
 					});
 
 					if (!pod) {
+						console.log("Pod not found");
 						ws.send("Pod not found");
 						ws.close();
 						return;
@@ -518,6 +523,7 @@ export const podRoute = new Elysia({
 						"manager",
 					]);
 					if (!isManager && pod.ownerId !== profile?.id) {
+						console.log("Unauthorized");
 						ws.send("Unauthorized");
 						ws.close();
 						return;
@@ -529,6 +535,7 @@ export const podRoute = new Elysia({
 					});
 
 					if (!cluster || !cluster.agent) {
+						console.log("Cluster/Agent not found");
 						ws.send("Cluster/Agent not found");
 						ws.close();
 						return;
@@ -546,6 +553,7 @@ export const podRoute = new Elysia({
 						tailLines: 100,
 						follow: true,
 					});
+					console.log("Payload:", payload);
 
 					try {
 						// Command Type 9: STREAM_LOGS
@@ -556,6 +564,7 @@ export const podRoute = new Elysia({
 							payload,
 							ws,
 						);
+						console.log("Stream ID:", streamId);
 						// Store streamId in ws.data for cleanup
 						// ws.data.streamId = streamId;
 						// ws.data.agentId = cluster.agent.id;
@@ -573,6 +582,7 @@ export const podRoute = new Elysia({
 				},
 				close: async (ws) => {
 					const data = ws.data.websocketData.get(ws.id);
+					console.log("Closing stream", data);
 					if (data) {
 						await ws.data.agentManager.stopStream(data.streamId);
 						ws.data.websocketData.delete(ws.id);

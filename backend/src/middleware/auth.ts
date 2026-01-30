@@ -10,7 +10,9 @@ export const authenticationMiddleware = new Elysia({
 	name: "authentication",
 }).macro({
 	userAuth: (config: { requiredProfile: boolean }) => ({
-		async resolve({ status, request: { headers } }) {
+		async resolve({ status, request: { headers, url } }) {
+			console.log("Authentication middleware");
+			console.log("Path: ", url);
 			const session = await auth.api.getSession({
 				headers,
 			});

@@ -56,7 +56,6 @@ export class AgentService {
 		// Update Nodes
 		if (heartbeat.nodes) {
 			for (const node of heartbeat.nodes) {
-				console.log(`Processing node ${JSON.stringify(node)}`);
 				// 1. Try Find by UID
 				let existingNode = await db
 					.select()

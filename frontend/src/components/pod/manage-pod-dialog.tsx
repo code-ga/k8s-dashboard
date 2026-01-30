@@ -17,6 +17,8 @@ import { Terminal } from "xterm";
 import { FitAddon } from "xterm-addon-fit";
 import { WebLinksAddon } from "xterm-addon-web-links";
 import "xterm/css/xterm.css";
+import { BACKEND_URL } from "../../constants";
+import { ExposeDialog } from "../service/expose-dialog";
 
 interface Pod {
 	id: number;
@@ -29,6 +31,7 @@ interface Pod {
 	cpuLimit: number;
 	memoryRequest: number;
 	memoryLimit: number;
+	internalPort: number;
 }
 
 interface ManagePodDialogProps {
@@ -43,7 +46,9 @@ export function ManagePodDialog({ pod, clusterId }: ManagePodDialogProps) {
 
 	const deleteMutation = useMutation({
 		mutationFn: async () => {
-			const res = await api.api.pods({ clusterId })[pod.id.toString()].delete();
+			const res = await api.api
+				.pods({ clusterId })({ id: pod.id.toString() })
+				.delete();
 			if (res.error) {
 				throw new Error(res.error.value?.message || "Failed to delete pod");
 			}
@@ -91,61 +96,70 @@ export function ManagePodDialog({ pod, clusterId }: ManagePodDialogProps) {
 					>
 						<div className="grid grid-cols-2 gap-4 p-4 bg-muted rounded-lg">
 							<div>
-								<label className="text-sm font-medium text-muted-foreground">
+								<div className="text-sm font-medium text-muted-foreground">
 									Name
-								</label>
+								</div>
 								<p className="font-mono">{pod.name}</p>
 							</div>
 							<div>
-								<label className="text-sm font-medium text-muted-foreground">
+								<div className="text-sm font-medium text-muted-foreground">
 									Namespace
-								</label>
+								</div>
 								<p className="font-mono">{pod.namespace}</p>
 							</div>
 							<div>
-								<label className="text-sm font-medium text-muted-foreground">
+								<div className="text-sm font-medium text-muted-foreground">
 									Status
-								</label>
+								</div>
 								<p className="font-mono">{pod.status}</p>
 							</div>
 							<div>
-								<label className="text-sm font-medium text-muted-foreground">
+								<div className="text-sm font-medium text-muted-foreground">
 									Node
-								</label>
+								</div>
 								<p className="font-mono">{pod.nodeName}</p>
 							</div>
 							<div className="col-span-2">
-								<label className="text-sm font-medium text-muted-foreground">
+								<div className="text-sm font-medium text-muted-foreground">
 									Image
-								</label>
+								</div>
 								<p className="font-mono">{pod.dockerImage}</p>
 							</div>
 							<div>
-								<label className="text-sm font-medium text-muted-foreground">
+								<div className="text-sm font-medium text-muted-foreground">
 									CPU Request/Limit
-								</label>
+								</div>
 								<p className="font-mono">
 									{pod.cpuRequest}m / {pod.cpuLimit}m
 								</p>
 							</div>
 							<div>
-								<label className="text-sm font-medium text-muted-foreground">
+								<div className="text-sm font-medium text-muted-foreground">
 									Memory Request/Limit
-								</label>
+								</div>
 								<p className="font-mono">
 									{pod.memoryRequest}Mi / {pod.memoryLimit}Mi
 								</p>
 							</div>
 						</div>
 
-						<Button
-							variant="destructive"
-							onClick={() => deleteMutation.mutate()}
-							disabled={deleteMutation.isPending}
-						>
-							<Trash2 className="h-4 w-4 mr-2" />
-							{deleteMutation.isPending ? "Deleting..." : "Delete Pod"}
-						</Button>
+						<div className="flex gap-2">
+							<ExposeDialog
+								clusterId={clusterId}
+								defaultName={pod.name}
+								defaultNamespace={pod.namespace}
+								defaultInternalPort={pod.internalPort}
+								selector={{ app: pod.name }}
+							/>
+							<Button
+								variant="destructive"
+								onClick={() => deleteMutation.mutate()}
+								disabled={deleteMutation.isPending}
+							>
+								<Trash2 className="h-4 w-4 mr-2" />
+								{deleteMutation.isPending ? "Deleting..." : "Delete Pod"}
+							</Button>
+						</div>
 					</TabsContent>
 
 					<TabsContent value="logs" className="flex-1 overflow-hidden">
@@ -189,8 +203,9 @@ function PodLogs({ pod, clusterId, isActive }: PodLogsProps) {
 		}
 
 		const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+		const backendUrl = new URL(BACKEND_URL);
 		const ws = new WebSocket(
-			`${protocol}//${window.location.host}/api/pods/${clusterId}/logs/${pod.id}`,
+			`${protocol}//${backendUrl.host}/api/pods/${clusterId}/logs/${pod.id}`,
 		);
 		wsRef.current = ws;
 
@@ -224,7 +239,7 @@ function PodLogs({ pod, clusterId, isActive }: PodLogsProps) {
 	return (
 		<div className="h-full flex flex-col">
 			<div className="flex items-center justify-between mb-2">
-				<label className="text-sm font-medium">Live Logs</label>
+				<div className="text-sm font-medium">Live Logs</div>
 				<Button
 					variant={autoScroll ? "default" : "outline"}
 					size="sm"

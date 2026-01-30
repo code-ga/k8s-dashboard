@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -98,6 +99,7 @@ func (k *K8sClient) GetLogsStream(ctx context.Context, namespace, podName, conta
 	req := k.Clientset.CoreV1().Pods(namespace).GetLogs(podName, opts)
 	stream, err := req.Stream(ctx)
 	if err != nil {
+		log.Printf("Error opening logs: %v", err)
 		return nil, fmt.Errorf("failed to open log stream: %w", err)
 	}
 	return stream, nil
