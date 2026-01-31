@@ -152,6 +152,14 @@ export const serviceRoute = new Elysia({
 				async (ctx) => {
 					const clusterId = Number(ctx.params.clusterId);
 					const body = ctx.body;
+					if (body.protocol === "tcp" || body.protocol === "udp") {
+						return ctx.status(400, {
+							success: false,
+							message:
+								"This feature is temporary unavailable due to maintenance and security reasons",
+							timestamp: Date.now(),
+						});
+					}
 					if (!body.externalPort && body.protocol === "http") {
 						return ctx.status(400, {
 							success: false,
@@ -177,7 +185,11 @@ export const serviceRoute = new Elysia({
 						});
 					}
 
-					if (!body.domain && body.protocol === "http" && !cluster.clusterDomain) {
+					if (
+						!body.domain &&
+						body.protocol === "http" &&
+						!cluster.clusterDomain
+					) {
 						return ctx.status(400, {
 							success: false,
 							message: "Domain is required for http protocol",

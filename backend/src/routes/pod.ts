@@ -303,10 +303,22 @@ export const podRoute = new Elysia({
 						),
 						resources: Type.Optional(
 							Type.Object({
-								cpuRequest: Type.Optional(Type.String()),
-								cpuLimit: Type.Optional(Type.String()),
-								memoryRequest: Type.Optional(Type.String()),
-								memoryLimit: Type.Optional(Type.String()),
+								// cpuRequest: Type.Optional(Type.String()),
+								// cpuLimit: Type.Optional(Type.String()),
+								// memoryRequest: Type.Optional(Type.String()),
+								// memoryLimit: Type.Optional(Type.String()),
+								requests: Type.Optional(
+									Type.Object({
+										cpu: Type.Optional(Type.String()),
+										memory: Type.Optional(Type.String()),
+									}),
+								),
+								limits: Type.Optional(
+									Type.Object({
+										cpu: Type.Optional(Type.String()),
+										memory: Type.Optional(Type.String()),
+									}),
+								),
 							}),
 						),
 						labels: Type.Optional(Type.Record(Type.String(), Type.String())),
@@ -576,6 +588,7 @@ export const podRoute = new Elysia({
 							agentId: Number(cluster.agent.id),
 						});
 					} catch (e: any) {
+						console.log("Error starting stream:", e);
 						ws.send(`Error starting stream: ${e.message}`);
 						ws.close();
 					}
@@ -588,14 +601,20 @@ export const podRoute = new Elysia({
 						ws.data.websocketData.delete(ws.id);
 					}
 				},
+				sendPings: true,
+				idleTimeout: Infinity,
 			})
 			.ws("/exec/:podId", {
 				detail: { tags: ["Pods"] },
 				open: async (ws) => {
 					const { clusterId, podId } = ws.data.params;
 					const profile = ws.data.profile;
+					console.log("Cluster ID:", clusterId);
+					console.log("Pod ID:", podId);
+					console.log("Profile:", profile);
 
 					if (!clusterId || !podId) {
+						console.log("Missing params");
 						ws.send("Missing params");
 						ws.close();
 						return;
@@ -609,6 +628,7 @@ export const podRoute = new Elysia({
 					});
 
 					if (!pod) {
+						console.log("Pod not found");
 						ws.send("Pod not found");
 						ws.close();
 						return;
@@ -618,6 +638,7 @@ export const podRoute = new Elysia({
 						"manager",
 					]);
 					if (!isManager && pod.ownerId !== profile?.id) {
+						console.log("Unauthorized");
 						ws.send("Unauthorized");
 						ws.close();
 						return;
@@ -629,6 +650,7 @@ export const podRoute = new Elysia({
 					});
 
 					if (!cluster || !cluster.agent) {
+						console.log("Cluster/Agent not found");
 						ws.send("Cluster/Agent not found");
 						ws.close();
 						return;
@@ -642,6 +664,7 @@ export const podRoute = new Elysia({
 						command: ["/bin/sh"],
 						// container?
 					});
+					console.log("Payload:", payload);
 
 					try {
 						// Command Type 10: EXEC
@@ -652,6 +675,7 @@ export const podRoute = new Elysia({
 							payload,
 							ws,
 						);
+						console.log("Stream ID:", streamId);
 						// ws.data.streamId = streamId;
 						// ws.data.agentId = cluster.agent.id;
 						ws.data.websocketData.set(ws.id, {
@@ -662,6 +686,7 @@ export const podRoute = new Elysia({
 							agentId: Number(cluster.agent.id),
 						});
 					} catch (e: any) {
+						console.log("Error starting stream:", e);
 						ws.send(`Error starting stream: ${e.message}`);
 						ws.close();
 					}

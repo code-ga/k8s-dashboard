@@ -1,10 +1,18 @@
 import YAML from "yaml";
 
 export interface ResourceResources {
-	cpuRequest?: string; // e.g., "100m"
-	cpuLimit?: string;
-	memoryRequest?: string; // e.g., "128Mi"
-	memoryLimit?: string;
+	// cpuRequest?: string; // e.g., "100m"
+	// cpuLimit?: string;
+	// memoryRequest?: string; // e.g., "128Mi"
+	// memoryLimit?: string;
+	requests?: {
+		cpu?: string;
+		memory?: string;
+	};
+	limits?: {
+		cpu?: string;
+		memory?: string;
+	};
 }
 
 export interface PodDTO {
@@ -82,12 +90,12 @@ export const generatePodManifest = (dto: PodDTO): string => {
 					resources: dto.resources
 						? {
 								requests: {
-									cpu: dto.resources.cpuRequest,
-									memory: dto.resources.memoryRequest,
+									cpu: dto.resources.requests?.cpu,
+									memory: dto.resources.requests?.memory,
 								},
 								limits: {
-									cpu: dto.resources.cpuLimit,
-									memory: dto.resources.memoryLimit,
+									cpu: dto.resources.limits?.cpu,
+									memory: dto.resources.limits?.memory,
 								},
 							}
 						: undefined,
@@ -136,12 +144,12 @@ export const generateDeploymentManifest = (dto: DeploymentDTO): string => {
 							resources: dto.resources
 								? {
 										requests: {
-											cpu: dto.resources.cpuRequest,
-											memory: dto.resources.memoryRequest,
+											cpu: dto.resources.requests?.cpu,
+											memory: dto.resources.requests?.memory,
 										},
 										limits: {
-											cpu: dto.resources.cpuLimit,
-											memory: dto.resources.memoryLimit,
+											cpu: dto.resources.limits?.cpu,
+											memory: dto.resources.limits?.memory,
 										},
 									}
 								: undefined,

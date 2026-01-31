@@ -53,13 +53,13 @@ export const auth = betterAuth({
 						await db.insert(schema.profile).values({
 							userId: user.id,
 							username: user.email,
-							permission: ["admin","default-account"],
+							permission: ["admin", "default-account"],
 						});
 					} else {
 						await db.insert(schema.profile).values({
 							userId: user.id,
 							username: user.email,
-							permission: ["user"],
+							permission: [], // admin will be assigned later
 						});
 					}
 				},

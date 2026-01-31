@@ -14,8 +14,8 @@ import { Settings, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Terminal } from "xterm";
-import { FitAddon } from "xterm-addon-fit";
-import { WebLinksAddon } from "xterm-addon-web-links";
+import { FitAddon } from "@xterm/addon-fit";
+import { WebLinksAddon } from "@xterm/addon-web-links";
 import "xterm/css/xterm.css";
 import { BACKEND_URL } from "../../constants";
 import { ExposeDialog } from "../service/expose-dialog";
@@ -230,6 +230,8 @@ function PodLogs({ pod, clusterId, isActive }: PodLogsProps) {
 		};
 	}, [isActive, pod.id, clusterId]);
 
+	// Auto-scroll to bottom when new logs arrive
+	// biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
 	useEffect(() => {
 		if (autoScroll && logsRef.current) {
 			logsRef.current.scrollTop = logsRef.current.scrollHeight;
@@ -286,78 +288,113 @@ function PodTerminal({ pod, clusterId, isActive }: PodTerminalProps) {
 			return;
 		}
 
-		// Initialize xterm
-		const term = new Terminal({
-			cursorBlink: true,
-			fontSize: 14,
-			fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
-			theme: {
-				background: "#1a1b26",
-				foreground: "#a9b1d6",
-				cursor: "#c0caf5",
-			},
-		});
+		let isCancelled = false;
+		let term: Terminal | null = null;
+		let ws: WebSocket | null = null;
+		let resizeObserver: ResizeObserver | null = null;
 
-		const fitAddon = new FitAddon();
-		const webLinksAddon = new WebLinksAddon();
+		const init = () => {
+			if (isCancelled || !terminalRef.current) return;
 
-		term.loadAddon(fitAddon);
-		term.loadAddon(webLinksAddon);
-		term.open(terminalRef.current);
-		fitAddon.fit();
+			// Initialize xterm
+			term = new Terminal({
+				cursorBlink: true,
+				fontSize: 14,
+				fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+				theme: {
+					background: "#1a1b26",
+					foreground: "#a9b1d6",
+					cursor: "#c0caf5",
+				},
+			});
 
-		xtermRef.current = term;
-		fitAddonRef.current = fitAddon;
+			const fitAddon = new FitAddon();
+			const webLinksAddon = new WebLinksAddon();
 
-		// Connect WebSocket
-		const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-		const ws = new WebSocket(
-			`${protocol}//${window.location.host}/api/pods/${clusterId}/exec/${pod.id}`,
-		);
-		wsRef.current = ws;
+			term.loadAddon(fitAddon);
+			term.loadAddon(webLinksAddon);
 
-		ws.binaryType = "arraybuffer";
+			term.open(terminalRef.current);
 
-		ws.onopen = () => {
-			term.write("\x1b[33mConnecting to pod terminal...\x1b[0m\r\n");
-			// Send initial size
-			sendResize(term.cols, term.rows);
-		};
-
-		ws.onmessage = (event) => {
-			if (event.data instanceof ArrayBuffer) {
-				term.write(new Uint8Array(event.data));
-			} else {
-				term.write(event.data);
+			// Only fit if dimensions are available
+			if (
+				terminalRef.current.clientWidth > 0 &&
+				terminalRef.current.clientHeight > 0
+			) {
+				try {
+					fitAddon.fit();
+				} catch (e) {
+					console.warn("Fit error:", e);
+				}
 			}
+
+			xtermRef.current = term;
+			fitAddonRef.current = fitAddon;
+
+			// Connect WebSocket
+			const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+			const backendUrl = new URL(BACKEND_URL);
+			ws = new WebSocket(
+				`${protocol}//${backendUrl.host}/api/pods/${clusterId}/exec/${pod.id}`,
+			);
+			wsRef.current = ws;
+
+			ws.binaryType = "arraybuffer";
+
+			ws.onopen = () => {
+				if (!term) return;
+				term.write("\x1b[33mConnecting to pod terminal...\x1b[0m\r\n");
+				sendResize(term.cols, term.rows);
+			};
+
+			ws.onmessage = (event) => {
+				if (!term) return;
+				if (event.data instanceof ArrayBuffer) {
+					term.write(new Uint8Array(event.data));
+				} else {
+					term.write(event.data);
+				}
+			};
+
+			ws.onerror = () => {
+				term?.write("\x1b[31mError connecting to terminal\x1b[0m\r\n");
+			};
+
+			ws.onclose = () => {
+				term?.write("\x1b[31m\r\nConnection closed\x1b[0m\r\n");
+			};
+
+			// Send user input to WebSocket
+			term.onData((data) => {
+				if (ws?.readyState === WebSocket.OPEN) {
+					ws.send(data);
+				}
+			});
+
+			// Handle resize
+			resizeObserver = new ResizeObserver(() => {
+				if (!fitAddon || !term) return;
+				try {
+					if (terminalRef.current && terminalRef.current.clientWidth > 0) {
+						fitAddon.fit();
+						sendResize(term.cols, term.rows);
+					}
+				} catch (_e) {
+					// Ignore resize errors
+				}
+			});
+			resizeObserver.observe(terminalRef.current);
 		};
 
-		ws.onerror = () => {
-			term.write("\x1b[31mError connecting to terminal\x1b[0m\r\n");
-		};
-
-		ws.onclose = () => {
-			term.write("\x1b[31m\r\nConnection closed\x1b[0m\r\n");
-		};
-
-		// Send user input to WebSocket
-		term.onData((data) => {
-			if (ws.readyState === WebSocket.OPEN) {
-				ws.send(data);
-			}
-		});
-
-		// Handle resize
-		const resizeObserver = new ResizeObserver(() => {
-			fitAddon.fit();
-			sendResize(term.cols, term.rows);
-		});
-		resizeObserver.observe(terminalRef.current);
+		// Use requestAnimationFrame to ensure the container is rendered and has size
+		const rafId = requestAnimationFrame(init);
 
 		return () => {
-			resizeObserver.disconnect();
-			term.dispose();
-			ws.close();
+			isCancelled = true;
+			cancelAnimationFrame(rafId);
+			resizeObserver?.disconnect();
+			term?.dispose();
+			ws?.close();
 			xtermRef.current = null;
 			wsRef.current = null;
 		};

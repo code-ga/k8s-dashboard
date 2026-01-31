@@ -225,10 +225,22 @@ export const deploymentRoute = new Elysia({
 						),
 						resources: Type.Optional(
 							Type.Object({
-								cpuRequest: Type.Optional(Type.String()),
-								cpuLimit: Type.Optional(Type.String()),
-								memoryRequest: Type.Optional(Type.String()),
-								memoryLimit: Type.Optional(Type.String()),
+								// cpuRequest: Type.Optional(Type.String()),
+								// cpuLimit: Type.Optional(Type.String()),
+								// memoryRequest: Type.Optional(Type.String()),
+								// memoryLimit: Type.Optional(Type.String()),
+								requests: Type.Optional(
+									Type.Object({
+										cpu: Type.Optional(Type.String()),
+										memory: Type.Optional(Type.String()),
+									}),
+								),
+								limits: Type.Optional(
+									Type.Object({
+										cpu: Type.Optional(Type.String()),
+										memory: Type.Optional(Type.String()),
+									}),
+								),
 							}),
 						),
 						labels: Type.Optional(Type.Record(Type.String(), Type.String())),

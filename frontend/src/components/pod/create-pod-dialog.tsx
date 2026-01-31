@@ -308,7 +308,7 @@ export function CreatePodDialog({ clusterId }: CreatePodDialogProps) {
 							</Button>
 						</div>
 						{envVars.map((envVar, index) => (
-							<div key={index} className="flex gap-2 items-center">
+							<div key={envVar.name} className="flex gap-2 items-center">
 								<Input
 									value={envVar.name}
 									onChange={(e) => updateEnvVar(index, "name", e.target.value)}

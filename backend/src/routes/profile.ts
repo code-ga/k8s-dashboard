@@ -73,9 +73,9 @@ export const profileRouter = new Elysia({
 							});
 						}
 						const appState = await ctx.appState.getAppState();
-						const permission = ["user"] as Static<
+						const permission = [] as Static<
 							typeof dbSchemaTypes.profile.permission
-						>;
+						>; // admin will be assigned later
 						if (appState.createNewAdmin) {
 							permission.push("admin");
 						}

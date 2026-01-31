@@ -15,7 +15,7 @@ import {
 import { api, type databaseTypes } from "@/lib/api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { Static } from "elysia";
+import type { Static } from "@sinclair/typebox";
 
 export const Route = createFileRoute("/dashboard/users")({
 	component: UserManagement,

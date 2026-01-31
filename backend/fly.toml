@@ -1,0 +1,17 @@
+app = "k8s-dashboard-backend"
+primary_region = "hkg"
+
+[http_service]
+  internal_port = 3001
+  force_https = true
+  auto_stop_machines = 'suspend'
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ['app']
+
+[[vm]]
+  size = 'shared-cpu-1x'
+  memory_mb = 512
+
+[env]
+  NODE_ENV = "production"

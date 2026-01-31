@@ -206,6 +206,8 @@ func readLoop(c *websocket.Conn, safeConn *SafeConn, kubeClient *k8s.K8sClient, 
 				log.Printf("Received Command: %s (Type: %v)", cmd.Id, cmd.Type)
 
 				if cmd.Type == pb.Command_STREAM_LOGS || cmd.Type == pb.Command_EXEC {
+					// Handle streaming commands separately
+					log.Printf("Starting stream command: %s", cmd.Id)
 					go handleStreamCommand(kubeClient, safeConn, cmd)
 					sendAck(safeConn, cmd.Id, true, "Stream task initiated")
 					continue
