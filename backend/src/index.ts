@@ -10,6 +10,8 @@ import { scalingController } from "./services/scaling.controller";
 
 scalingController.start();
 
+const port = process.env.PORT || 3001;
+
 export const app = new Elysia()
 	.use(
 		cors({
@@ -28,7 +30,7 @@ export const app = new Elysia()
 	)
 
 	.use(apiRouter)
-	.listen(3001);
+	.listen(port);
 
 console.log(`Listening on ${app.server?.url}`);
 
