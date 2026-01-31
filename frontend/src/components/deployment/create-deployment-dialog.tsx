@@ -17,7 +17,7 @@ import { Plus, X } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useForm } from "@tanstack/react-form";
-import { zodValidator } from "@tanstack/zod-form-adapter";
+// import { zodValidator } from "@tanstack/zod-form-adapter";
 import { z } from "zod";
 
 const envVarSchema = z.object({
@@ -124,10 +124,10 @@ export function CreateDeploymentDialog({
 			labels: "",
 			selector: "",
 		},
-		validatorAdapter: zodValidator(),
-		validators: {
-			onChange: deploymentSchema,
-		},
+		// validatorAdapter: zodValidator(),
+		// validators: {
+		// 	onChange: deploymentSchema,
+		// },
 		onSubmit: async ({ value }) => {
 			await mutation.mutateAsync({ ...value, envVars });
 		},

@@ -11,7 +11,7 @@ import {
 import { eq, and, isNull, type InferInsertModel } from "drizzle-orm";
 import type {
 	Heartbeat,
-	Command,
+	// Command,
 } from "../../pb-generated/agent-backend/websocket"; // Check imports carefully
 import { Command_CommandType } from "../../pb-generated/agent-backend/websocket";
 import YAML from "yaml";

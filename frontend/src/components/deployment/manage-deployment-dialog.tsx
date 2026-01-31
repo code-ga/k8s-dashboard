@@ -8,28 +8,28 @@ import {
 	DialogTrigger,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { api } from "@/lib/api";
+import { api, type databaseTypes, type SchemaStatic } from "@/lib/api";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Settings, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { ExposeDialog } from "../service/expose-dialog";
 
-interface Deployment {
-	id: number;
-	name: string;
-	namespace: string;
-	replicas: number;
-	availableReplicas: number;
-	unavailableReplicas: number;
-	dockerImage: string;
-	selector?: string;
-	labels?: string;
-	internalPort?: number;
-}
+// interface Deployment {
+// 	id: number;
+// 	name: string;
+// 	namespace: string;
+// 	replicas: number;
+// 	availableReplicas: number;
+// 	unavailableReplicas: number;
+// 	dockerImage: string;
+// 	selector?: string;
+// 	labels?: string;
+// 	internalPort?: number;
+// }
 
 interface ManageDeploymentDialogProps {
-	deployment: Deployment;
+	deployment: SchemaStatic<databaseTypes.databaseTypes["k8sDeployments"]>;
 	clusterId: string;
 }
 

@@ -8,7 +8,7 @@ import { dbSchemaTypes } from "../database/type";
 import { eq } from "drizzle-orm";
 import { agentManagerService } from "../services/agentManager";
 import {
-	Command,
+	// Command,
 	Command_CommandType,
 } from "../../pb-generated/agent-backend/websocket";
 

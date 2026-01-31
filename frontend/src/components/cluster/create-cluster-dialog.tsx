@@ -18,7 +18,7 @@ import { Plus } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useForm } from "@tanstack/react-form";
-import { zodValidator } from "@tanstack/zod-form-adapter";
+// import { zodValidator } from "@tanstack/zod-form-adapter";
 import { z } from "zod";
 
 const clusterSchema = z.object({
@@ -67,10 +67,10 @@ export function CreateClusterDialog() {
 			tags: "",
 			enableS3Service: false,
 		},
-		validatorAdapter: zodValidator(),
-		validators: {
-			onChange: clusterSchema,
-		},
+		// validatorAdapter: zodValidator(),
+		// validators: {
+		// 	onChange: clusterSchema,
+		// },
 		onSubmit: async ({ value }) => {
 			await mutation.mutateAsync(value);
 		},

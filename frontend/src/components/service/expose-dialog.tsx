@@ -23,7 +23,7 @@ import { Globe } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useForm } from "@tanstack/react-form";
-import { zodValidator } from "@tanstack/zod-form-adapter";
+// import { zodValidator } from "@tanstack/zod-form-adapter";
 import { z } from "zod";
 
 const exposeSchema = z.object({

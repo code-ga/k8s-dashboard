@@ -100,10 +100,10 @@ export function CreatePodDialog({ clusterId }: CreatePodDialogProps) {
 			command: "",
 			args: "",
 		},
-		validatorAdapter: zodValidator(),
-		validators: {
-			onChange: podSchema,
-		},
+		// validatorAdapter: zodValidator(),
+		// validators: {
+		// 	onChange: podSchema,
+		// },
 		onSubmit: async ({ value }) => {
 			await mutation.mutateAsync({ ...value, envVars });
 		},

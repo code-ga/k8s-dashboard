@@ -219,6 +219,7 @@ export const serviceRoute = new Elysia({
 							{
 								port: body.internalPort,
 								targetPort: body.internalPort,
+								///@ts-expect-error
 								protocol: body.protocol === "udp" ? "UDP" : "TCP",
 							},
 						],

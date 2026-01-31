@@ -28,5 +28,6 @@
       "elysia": ["../backend/node_modules/elysia"],
       "@sinclair/typebox": ["../backend/node_modules/@sinclair/typebox"]
     }
-  }
+  },
+  "exclude": ["../backend"]
 }

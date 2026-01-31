@@ -8,7 +8,7 @@ import {
 	DialogTrigger,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { api } from "@/lib/api";
+import { api, type databaseTypes, type SchemaStatic } from "@/lib/api";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Settings, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -20,22 +20,22 @@ import "xterm/css/xterm.css";
 import { BACKEND_URL } from "../../constants";
 import { ExposeDialog } from "../service/expose-dialog";
 
-interface Pod {
-	id: number;
-	name: string;
-	namespace: string;
-	nodeName: string;
-	dockerImage: string;
-	status: string;
-	cpuRequest: number;
-	cpuLimit: number;
-	memoryRequest: number;
-	memoryLimit: number;
-	internalPort: number;
-}
+// interface Pod {
+// 	id: number;
+// 	name: string;
+// 	namespace: string;
+// 	nodeName: string;
+// 	dockerImage: string;
+// 	status: string;
+// 	cpuRequest: number;
+// 	cpuLimit: number;
+// 	memoryRequest: number;
+// 	memoryLimit: number;
+// 	internalPort: number;
+// }
 
 interface ManagePodDialogProps {
-	pod: Pod;
+	pod: SchemaStatic<databaseTypes.databaseTypes["k8sPods"]>;
 	clusterId: string;
 }
 
