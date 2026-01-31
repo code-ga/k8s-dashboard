@@ -1,5 +1,6 @@
 {
-  "include": ["**/*.ts", "**/*.tsx","../backend/**/*.ts"],
+  "include": ["**/*.ts", "**/*.tsx","../backend/**/*.ts"], 
+  "exclude": ["../backend"],
   "compilerOptions": {
     "target": "ES2022",
     "jsx": "react-jsx",
@@ -29,5 +30,5 @@
       "@sinclair/typebox": ["../backend/node_modules/@sinclair/typebox"]
     }
   },
-  "exclude": ["../backend"]
+ 
 }

@@ -117,7 +117,7 @@ export function ManagePodDialog({ pod, clusterId }: ManagePodDialogProps) {
 								<div className="text-sm font-medium text-muted-foreground">
 									Node
 								</div>
-								<p className="font-mono">{pod.nodeName}</p>
+								<p className="font-mono">{pod.nodeId}</p>
 							</div>
 							<div className="col-span-2">
 								<div className="text-sm font-medium text-muted-foreground">
@@ -184,7 +184,7 @@ export function ManagePodDialog({ pod, clusterId }: ManagePodDialogProps) {
 }
 
 interface PodLogsProps {
-	pod: Pod;
+	pod: SchemaStatic<databaseTypes.databaseTypes["k8sPods"]>;
 	clusterId: string;
 	isActive: boolean;
 }
@@ -261,7 +261,7 @@ function PodLogs({ pod, clusterId, isActive }: PodLogsProps) {
 }
 
 interface PodTerminalProps {
-	pod: Pod;
+	pod: SchemaStatic<databaseTypes.databaseTypes["k8sPods"]>;
 	clusterId: string;
 	isActive: boolean;
 }

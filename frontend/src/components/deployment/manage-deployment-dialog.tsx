@@ -8,7 +8,7 @@ import {
 	DialogTrigger,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { api, type databaseTypes, type SchemaStatic } from "@/lib/api";
+import { api, type databaseTypes, type SchemaStatic} from "@/lib/api";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Settings, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -165,7 +165,7 @@ export function ManageDeploymentDialog({
 }
 
 interface DeploymentLogsProps {
-	deployment: Deployment;
+	deployment: SchemaStatic<databaseTypes.databaseTypes["k8sDeployments"]>;
 	clusterId: string;
 	isActive: boolean;
 }
