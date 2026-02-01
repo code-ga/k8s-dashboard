@@ -13,8 +13,8 @@ export type SchemaStatic<P extends Record<string, TSchema>> = {
 	[T in keyof P]: Static<P[T]>;
 };
 
-export type { databaseTypes } from "@api/index";
-export type { requestTypes } from "@api/index";
+export type { databaseTypes } from "@k8s-dashboard/backend";
+export type { requestTypes } from "@k8s-dashboard/backend";
 export type SchemaType = {
 	[T in keyof databaseTypes.databaseTypes]: SchemaStatic<
 		databaseTypes.databaseTypes[T]

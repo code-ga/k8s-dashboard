@@ -41,6 +41,7 @@
       "dependencies": {
         "@elysiajs/eden": "^1.4.6",
         "@hookform/resolvers": "^5.2.2",
+        "@k8s-dashboard/backend": "workspace:*",
         "@radix-ui/react-dialog": "^1.1.15",
         "@radix-ui/react-label": "^2.1.8",
         "@radix-ui/react-select": "^2.2.6",
@@ -48,6 +49,7 @@
         "@radix-ui/react-slot": "^1.2.4",
         "@radix-ui/react-switch": "^1.2.6",
         "@radix-ui/react-tabs": "^1.1.13",
+        "@sinclair/typebox": "catalog:",
         "@tailwindcss/vite": "^4.0.6",
         "@tanstack/react-devtools": "^0.7.0",
         "@tanstack/react-form": "^1.0.0",
@@ -77,7 +79,6 @@
       },
       "devDependencies": {
         "@biomejs/biome": "2.2.4",
-        "@k8s-dashboard/backend": "workspace:*",
         "@tanstack/devtools-event-client": "^0.3.2",
         "@tanstack/devtools-vite": "^0.3.11",
         "@testing-library/dom": "^10.4.0",
@@ -86,7 +87,7 @@
         "@types/react": "^19.2.0",
         "@types/react-dom": "^19.2.0",
         "@vitejs/plugin-react": "^5.0.4",
-        "elysia": "^1.4.19",
+        "elysia": "catalog:",
         "jsdom": "^27.0.0",
         "typescript": "^5.7.2",
         "vite": "^7.1.7",
@@ -97,6 +98,10 @@
   },
   "overrides": {
     "@sinclair/typebox": "0.34.45",
+  },
+  "catalog": {
+    "@sinclair/typebox": "0.34.45",
+    "elysia": "^1.4.19",
   },
   "packages": {
     "@acemir/cssom": ["@acemir/cssom@0.9.31", "", {}, "sha512-ZnR3GSaH+/vJ0YlHau21FjfLYjMpYVIzTD8M8vIEQvIGxeOXyXdzCI140rrCY862p/C/BbzWsjc1dgnM9mkoTA=="],

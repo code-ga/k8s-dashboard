@@ -1,6 +1,5 @@
 {
-  "include": ["**/*.ts", "**/*.tsx","../backend/**/*.ts"], 
-  "exclude": ["../backend"],
+  "include": ["**/*.ts", "**/*.tsx"],
   "compilerOptions": {
     "target": "ES2022",
     "jsx": "react-jsx",
@@ -22,11 +21,8 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true,
     "baseUrl": ".",
-    "rootDirs": ["./src", "../backend/src"],
     "paths": {
-      "@/*": ["./src/*"],
-      "@api/*": ["../backend/src/*"]
+      "@/*": ["./src/*"]
     }
-  },
- 
+  }
 }
