@@ -1,6 +1,16 @@
 {
-  "dependencies": {},
+  "dependencies": {
+    "elysia": "^1.4.19",
+    "@sinclair/typebox": "0.34.45"
+  },
   "devDependencies": {
     "@biomejs/biome": "2.3.10"
+  },
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "overrides": {
+    "@sinclair/typebox": "0.34.45"
   }
 }

@@ -25,9 +25,7 @@
     "rootDirs": ["./src", "../backend/src"],
     "paths": {
       "@/*": ["./src/*"],
-      "@api/*": ["../backend/src/*"],
-      "elysia": ["../backend/node_modules/elysia"],
-      "@sinclair/typebox": ["../backend/node_modules/@sinclair/typebox"]
+      "@api/*": ["../backend/src/*"]
     }
   },
  

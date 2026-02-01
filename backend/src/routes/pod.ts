@@ -10,7 +10,7 @@ import { schema } from "../database/schema";
 import { eq } from "drizzle-orm";
 import { generatePodManifest } from "../utils/k8s-manifest";
 
-interface WebSocketData {
+export interface WebSocketData {
 	// ws: WebSocket;
 	clusterId: number;
 	streamId: string;

@@ -1,4 +1,4 @@
-import type { App, databaseTypes } from "@api/index";
+import type { App, databaseTypes } from "@k8s-dashboard/backend";
 import { BACKEND_URL } from "@/constants";
 import { treaty } from "@elysiajs/eden";
 import type { TSchema, Static } from "@sinclair/typebox";
@@ -16,7 +16,9 @@ export type SchemaStatic<P extends Record<string, TSchema>> = {
 export type { databaseTypes } from "@api/index";
 export type { requestTypes } from "@api/index";
 export type SchemaType = {
-	[T in keyof databaseTypes.databaseTypes]: SchemaStatic<databaseTypes.databaseTypes[T]>;
+	[T in keyof databaseTypes.databaseTypes]: SchemaStatic<
+		databaseTypes.databaseTypes[T]
+	>;
 };
 
 export type Api = App;

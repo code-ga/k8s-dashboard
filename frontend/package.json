@@ -48,10 +48,8 @@
     "xterm": "^5.3.0",
     "zod": "^4.3.6"
   },
-  "overrides": {
-    "@sinclair/typebox": "0.34.45"
-  },
   "devDependencies": {
+    "@k8s-dashboard/backend": "workspace:*",
     "@biomejs/biome": "2.2.4",
     "@tanstack/devtools-event-client": "^0.3.2",
     "@tanstack/devtools-vite": "^0.3.11",
