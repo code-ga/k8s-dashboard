@@ -5,9 +5,9 @@ WORKDIR /app
 # --- Stage 1: Install Dependencies ---
 FROM base AS deps
 # Copy package files for workspace resolution
-COPY ../package.json ../bun.lock ./
-COPY ../backend/package.json ./backend/
-COPY ../frontend/package.json ./frontend/
+COPY package.json bun.lock ./
+COPY backend/package.json ./backend/
+COPY frontend/package.json ./frontend/
 
 # Use Docker Buildx cache mount for Bun's download cache
 # This significantly speeds up subsequent builds
@@ -22,8 +22,8 @@ COPY --from=deps /app/node_modules ./node_modules
 # Copy backend source and root package.json
 # By only copying the backend folder, we ensure that changes in frontend/src
 # do NOT invalidate the Docker cache for this stage.
-COPY ../backend ./backend
-COPY ../package.json ./
+COPY backend ./backend
+COPY package.json ./
 
 # Set working directory to the backend package
 WORKDIR /app/backend
