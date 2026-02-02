@@ -1,0 +1,9 @@
+node_modules
+**/node_modules
+.git
+dist
+**/dist
+.env
+**/.env
+Dockerfile
+**/Dockerfile

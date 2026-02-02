@@ -45,8 +45,8 @@ export function Sidebar({ role, className }: SidebarProps) {
 		>
 			<div className="p-6">
 				<h2 className="text-lg font-bold tracking-tight flex items-center gap-2">
-					<LayoutDashboard className="w-6 h-6" />
-					K8s Dashboard
+					<LayoutDashboard className="w-6 h-6" />		
+					The-bridge (still K8s Dashboard but i think this name more cooler)
 				</h2>
 			</div>
 			<Separator />
