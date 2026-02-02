@@ -18,6 +18,7 @@ export const auth = betterAuth({
 	}),
 	emailAndPassword: {
 		enabled: true,
+		autoSignIn: true,
 	},
 	socialProviders: {
 		google: {
@@ -62,6 +63,17 @@ export const auth = betterAuth({
 							permission: [], // admin will be assigned later
 						});
 					}
+				},
+			},
+		},
+	},
+	advanced: {
+		cookies: {
+			session_token: {
+				attributes: {
+					// Set custom cookie attributes
+					sameSite: process.env.NODE_ENV === "production" ? "None" : "lax",
+					secure: process.env.NODE_ENV === "production",
 				},
 			},
 		},
