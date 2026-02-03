@@ -40,11 +40,13 @@ export class AgentManager extends EventEmitter<EventMap> {
 			agentId: number;
 		}
 	> = new Map();
+	pendingCommandIntervalId: NodeJS.Timeout;
 
 	constructor() {
 		super();
 		this.instanceId = crypto.randomUUID();
 		console.log(`AgentManager initialized with instanceId: ${this.instanceId}`);
+		this.pendingCommandIntervalId = this.pendingCommandInterval();
 	}
 
 	async registerConnection(
@@ -53,7 +55,7 @@ export class AgentManager extends EventEmitter<EventMap> {
 	) {
 		this.connections.set(agentId, ws);
 		console.log(`Agent ${agentId} registered`);
-		await this.processPendingCommands(agentId);
+		// await this.processPendingCommands(agentId);
 	}
 
 	removeConnection(agentId: number) {
@@ -61,7 +63,17 @@ export class AgentManager extends EventEmitter<EventMap> {
 		console.log(`Agent ${agentId} disconnected`);
 	}
 
+	private pendingCommandInterval() {
+		// Periodically check for pending commands every minute
+		return  setInterval(async () => {
+			for (const agentId of this.connections.keys()) {
+				await this.processPendingCommands(agentId);
+			}
+		}, 60000); // 60 seconds
+	}
+
 	async processPendingCommands(agentId: number) {
+		console.log(`Processing pending commands for agent ${agentId}...`);
 		const pendingDbCommands = await db.query.agentCommands.findMany({
 			where: {
 				agentId,
@@ -208,7 +220,7 @@ export class AgentManager extends EventEmitter<EventMap> {
 		}
 
 		// Trigger processing
-		this.processPendingCommands(agentId).catch(console.error);
+		// this.processPendingCommands(agentId).catch(console.error);
 
 		return updates.map((u) => u.id);
 	}
