@@ -85,12 +85,12 @@ export interface FileRoutesByFullPath {
   '/dashboard/settings': typeof DashboardSettingsRoute
   '/dashboard/users': typeof DashboardUsersRoute
   '/demo/tanstack-query': typeof DemoTanstackQueryRoute
-  '/dashboard': typeof DashboardIndexRoute
+  '/dashboard/': typeof DashboardIndexRoute
   '/dashboard/cluster/$id/deployments': typeof DashboardClusterIdDeploymentsRoute
   '/dashboard/cluster/$id/nodes': typeof DashboardClusterIdNodesRoute
   '/dashboard/cluster/$id/pods': typeof DashboardClusterIdPodsRoute
   '/dashboard/cluster/$id/services': typeof DashboardClusterIdServicesRoute
-  '/dashboard/cluster/$id': typeof DashboardClusterIdIndexRoute
+  '/dashboard/cluster/$id/': typeof DashboardClusterIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -127,12 +127,12 @@ export interface FileRouteTypes {
     | '/dashboard/settings'
     | '/dashboard/users'
     | '/demo/tanstack-query'
-    | '/dashboard'
+    | '/dashboard/'
     | '/dashboard/cluster/$id/deployments'
     | '/dashboard/cluster/$id/nodes'
     | '/dashboard/cluster/$id/pods'
     | '/dashboard/cluster/$id/services'
-    | '/dashboard/cluster/$id'
+    | '/dashboard/cluster/$id/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -194,7 +194,7 @@ declare module '@tanstack/react-router' {
     '/dashboard/': {
       id: '/dashboard/'
       path: '/dashboard'
-      fullPath: '/dashboard'
+      fullPath: '/dashboard/'
       preLoaderRoute: typeof DashboardIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
@@ -222,7 +222,7 @@ declare module '@tanstack/react-router' {
     '/dashboard/cluster/$id/': {
       id: '/dashboard/cluster/$id/'
       path: '/dashboard/cluster/$id'
-      fullPath: '/dashboard/cluster/$id'
+      fullPath: '/dashboard/cluster/$id/'
       preLoaderRoute: typeof DashboardClusterIdIndexRouteImport
       parentRoute: typeof rootRouteImport
     }

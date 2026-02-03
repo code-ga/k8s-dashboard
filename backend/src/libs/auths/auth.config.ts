@@ -76,6 +76,12 @@ export const auth = betterAuth({
 					secure: process.env.NODE_ENV === "production",
 				},
 			},
+			state: {
+				attributes: {
+					sameSite: process.env.NODE_ENV === "production" ? "None" : "lax",
+					secure: process.env.NODE_ENV === "production",
+				},
+			},
 		},
 	},
 });
