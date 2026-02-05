@@ -1,15 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-	DialogTrigger,
-} from "@/components/ui/dialog";
-import {
 	Form,
 	FormControl,
 	FormDescription,
@@ -35,6 +26,8 @@ import type { databaseTypes, SchemaStatic } from "@/lib/api";
 import {
 	ArrowLeft,
 	Layers,
+	Plus,
+	Settings,
 	Settings2,
 	ShieldCheck,
 	Zap,
@@ -43,8 +36,6 @@ import {
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { CreateDeploymentDialog } from "@/components/deployment/create-deployment-dialog";
-import { ManageDeploymentDialog } from "@/components/deployment/manage-deployment-dialog";
 
 export const Route = createFileRoute("/dashboard/cluster/$id/deployments")({
 	component: ClusterDeployments,
@@ -71,7 +62,11 @@ function ScaleSettingsDialog({
 	});
 
 	const mutation = useMutation({
-		mutationFn: async (values: any) => {
+		mutationFn: async (values: {
+			isAutoScaling?: boolean;
+			isAlwaysRunning?: boolean;
+			idleTimeoutSeconds?: number;
+		}) => {
 			// Updating deployment scale settings
 			const res = await api.api
 				.deployments({ clusterId })({ id: deployment.id })
@@ -86,7 +81,7 @@ function ScaleSettingsDialog({
 			queryClient.invalidateQueries({ queryKey: ["deployments", clusterId] });
 			setOpen(false);
 		},
-		onError: (error: any) => {
+		onError: (error: Error) => {
 			toast.error(error.message || "Failed to update settings");
 		},
 	});
@@ -202,6 +197,16 @@ function ScaleSettingsDialog({
 	);
 }
 
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+	DialogTrigger,
+} from "@/components/ui/dialog";
+
 function ClusterDeployments() {
 	const { id } = useParams({ from: "/dashboard/cluster/$id/deployments" });
 
@@ -234,7 +239,11 @@ function ClusterDeployments() {
 						</p>
 					</div>
 				</div>
-				<CreateDeploymentDialog clusterId={id} />
+				<Link to="/dashboard/cluster/$id/deployments/create" params={{ id }}>
+					<Button>
+						<Plus className="mr-2 h-4 w-4" /> Create Deployment
+					</Button>
+				</Link>
 			</div>
 
 			<Card>
@@ -286,7 +295,14 @@ function ClusterDeployments() {
 										{dep.dockerImage}
 									</TableCell>
 									<TableCell className="text-right space-x-1">
-										<ManageDeploymentDialog deployment={dep} clusterId={id} />
+										<Link
+											to="/dashboard/cluster/$id/deployments/$deploymentId"
+											params={{ id, deploymentId: dep.id.toString() }}
+										>
+											<Button variant="ghost" size="sm">
+												<Settings className="h-4 w-4" />
+											</Button>
+										</Link>
 										<ScaleSettingsDialog deployment={dep} clusterId={id} />
 									</TableCell>
 								</TableRow>

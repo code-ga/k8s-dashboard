@@ -220,7 +220,7 @@ interface DeploymentLogsProps {
 	isActive: boolean;
 }
 
-function DeploymentLogs({
+export function DeploymentLogs({
 	deployment,
 	clusterId,
 	isActive,

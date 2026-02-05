@@ -11,9 +11,7 @@ import {
 import { api } from "@/lib/api";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
-import { ArrowLeft, Box } from "lucide-react";
-import { CreatePodDialog } from "@/components/pod/create-pod-dialog";
-import { ManagePodDialog } from "@/components/pod/manage-pod-dialog";
+import { ArrowLeft, Box, Plus, Settings } from "lucide-react";
 
 export const Route = createFileRoute("/dashboard/cluster/$id/pods")({
 	component: ClusterPods,
@@ -51,7 +49,11 @@ function ClusterPods() {
 						</p>
 					</div>
 				</div>
-				<CreatePodDialog clusterId={id} />
+				<Link to="/dashboard/cluster/$id/pods/create" params={{ id }}>
+					<Button>
+						<Plus className="mr-2 h-4 w-4" /> Create Pod
+					</Button>
+				</Link>
 			</div>
 
 			<Card>
@@ -86,7 +88,14 @@ function ClusterPods() {
 										{pod.cpuRequest}m / {pod.memoryRequest}Mi
 									</TableCell>
 									<TableCell className="text-right">
-										<ManagePodDialog pod={pod} clusterId={id} />
+										<Link
+											to="/dashboard/cluster/$id/pods/$podId"
+											params={{ id, podId: pod.id.toString() }}
+										>
+											<Button variant="ghost" size="sm">
+												<Settings className="h-4 w-4" />
+											</Button>
+										</Link>
 									</TableCell>
 								</TableRow>
 							))}
