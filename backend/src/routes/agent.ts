@@ -71,7 +71,10 @@ export const agentRoute = new Elysia({ prefix: "/agents" })
 						return ctx.status(200, {
 							success: true,
 							message: "Cluster info fetched successfully",
-							data: clusterInfo,
+							data: {
+								...clusterInfo,
+								clusterKey: process.env.MASTER_KEY || "",
+							},
 							timestamp: Date.now(),
 						});
 					},
@@ -80,7 +83,12 @@ export const agentRoute = new Elysia({ prefix: "/agents" })
 							tags: ["Agent"],
 						},
 						response: {
-							200: baseResponseSchema(Type.Object(dbSchemaTypes.k8sCluster)),
+							200: baseResponseSchema(
+								Type.Intersect([
+									Type.Object(dbSchemaTypes.k8sCluster),
+									Type.Object({ clusterKey: Type.String() }),
+								]),
+							),
 							400: errorResponseSchema,
 							401: errorResponseSchema,
 							404: errorResponseSchema,

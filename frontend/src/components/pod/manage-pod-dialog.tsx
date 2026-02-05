@@ -14,25 +14,12 @@ import { Settings, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Terminal } from "xterm";
+import { EnvEditor, type EnvVar } from "../shared/env-editor";
 import { FitAddon } from "@xterm/addon-fit";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import "xterm/css/xterm.css";
 import { BACKEND_URL } from "../../constants";
 import { ExposeDialog } from "../service/expose-dialog";
-
-// interface Pod {
-// 	id: number;
-// 	name: string;
-// 	namespace: string;
-// 	nodeName: string;
-// 	dockerImage: string;
-// 	status: string;
-// 	cpuRequest: number;
-// 	cpuLimit: number;
-// 	memoryRequest: number;
-// 	memoryLimit: number;
-// 	internalPort: number;
-// }
 
 interface ManagePodDialogProps {
 	pod: SchemaStatic<databaseTypes.databaseTypes["k8sPods"]>;
@@ -42,6 +29,14 @@ interface ManagePodDialogProps {
 export function ManagePodDialog({ pod, clusterId }: ManagePodDialogProps) {
 	const [open, setOpen] = useState(false);
 	const [activeTab, setActiveTab] = useState("overview");
+	const [envVars, setEnvVars] = useState<EnvVar[]>(() => {
+		try {
+			return pod.envVariables ? JSON.parse(pod.envVariables) : [];
+		} catch (e) {
+			console.error("Failed to parse env variables", e);
+			return [];
+		}
+	});
 	const queryClient = useQueryClient();
 
 	const deleteMutation = useMutation({
@@ -60,6 +55,31 @@ export function ManagePodDialog({ pod, clusterId }: ManagePodDialogProps) {
 			setOpen(false);
 		},
 		onError: (error) => {
+			toast.error(error.message);
+		},
+	});
+
+	const saveEnvMutation = useMutation({
+		mutationFn: async (variables: EnvVar[]) => {
+			const envMap: Record<string, string> = {};
+			for (const v of variables) {
+				if (v.name) envMap[v.name] = v.value;
+			}
+			const res = await api.api
+				.pods({ clusterId })({ id: pod.id.toString() })
+				.patch({ env: envMap });
+			if (res.error) {
+				throw new Error(
+					res.error.value?.message || "Failed to update env vars",
+				);
+			}
+			return res.data;
+		},
+		onSuccess: () => {
+			toast.success("Environment variables updated");
+			queryClient.invalidateQueries({ queryKey: ["pods", clusterId] });
+		},
+		onError: (error: any) => {
 			toast.error(error.message);
 		},
 	});
@@ -84,8 +104,9 @@ export function ManagePodDialog({ pod, clusterId }: ManagePodDialogProps) {
 					onValueChange={setActiveTab}
 					className="flex-1 flex flex-col"
 				>
-					<TabsList className="grid w-full grid-cols-3">
+					<TabsList className="grid w-full grid-cols-4">
 						<TabsTrigger value="overview">Overview</TabsTrigger>
+						<TabsTrigger value="env">Environment</TabsTrigger>
 						<TabsTrigger value="logs">Logs</TabsTrigger>
 						<TabsTrigger value="terminal">Terminal</TabsTrigger>
 					</TabsList>
@@ -162,6 +183,21 @@ export function ManagePodDialog({ pod, clusterId }: ManagePodDialogProps) {
 						</div>
 					</TabsContent>
 
+					<TabsContent
+						value="env"
+						className="flex-1 overflow-auto p-4 space-y-4"
+					>
+						<EnvEditor variables={envVars} onChange={setEnvVars} />
+						<div className="flex justify-end">
+							<Button
+								onClick={() => saveEnvMutation.mutate(envVars)}
+								disabled={saveEnvMutation.isPending}
+							>
+								{saveEnvMutation.isPending ? "Saving..." : "Save Environment"}
+							</Button>
+						</div>
+					</TabsContent>
+
 					<TabsContent value="logs" className="flex-1 overflow-hidden">
 						<PodLogs
 							pod={pod}
@@ -189,7 +225,7 @@ interface PodLogsProps {
 	isActive: boolean;
 }
 
-function PodLogs({ pod, clusterId, isActive }: PodLogsProps) {
+export function PodLogs({ pod, clusterId, isActive }: PodLogsProps) {
 	const [logs, setLogs] = useState<string>("");
 	const [autoScroll, setAutoScroll] = useState(true);
 	const logsRef = useRef<HTMLPreElement>(null);
@@ -266,7 +302,7 @@ interface PodTerminalProps {
 	isActive: boolean;
 }
 
-function PodTerminal({ pod, clusterId, isActive }: PodTerminalProps) {
+export function PodTerminal({ pod, clusterId, isActive }: PodTerminalProps) {
 	const terminalRef = useRef<HTMLDivElement>(null);
 	const xtermRef = useRef<Terminal | null>(null);
 	const fitAddonRef = useRef<FitAddon | null>(null);

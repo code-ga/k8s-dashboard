@@ -124,6 +124,8 @@ message Pod {
   
   int32 internal_port = 13;
   string uid = 14;
+  int64 cpu_usage = 15;
+  int64 ram_usage = 16;
 }
 
 message Service {

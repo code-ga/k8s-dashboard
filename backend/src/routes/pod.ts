@@ -2,13 +2,14 @@
 import { Type } from "@sinclair/typebox";
 import { Elysia } from "elysia";
 import { db } from "../database";
-import { dbSchemaTypes } from "../database/type";
+import { schema } from "../database/schema";
+import { dbSchemaTypes, type SchemaStatic } from "../database/type";
 import { authenticationMiddleware, checkPermission } from "../middleware/auth";
 import { agentManagerService } from "../services/agentManager";
 import { baseResponseSchema, errorResponseSchema } from "../types";
-import { schema } from "../database/schema";
-import { eq } from "drizzle-orm";
+import { decrypt, encrypt } from "../utils/crypto";
 import { generatePodManifest } from "../utils/k8s-manifest";
+import { eq } from "drizzle-orm";
 
 export interface WebSocketData {
 	// ws: WebSocket;
@@ -100,9 +101,7 @@ export const podRoute = new Elysia({
 					}
 					const pods = await db.query.k8sPods.findMany({
 						where: {
-							owner: {
-								id: ctx.profile?.id,
-							},
+							ownerId: ctx.profile?.id ?? "",
 							clusterId: Number(clusterId),
 						},
 					});
@@ -149,9 +148,7 @@ export const podRoute = new Elysia({
 					}
 					const namespaces = await db.query.k8sPods.findMany({
 						where: {
-							owner: {
-								id: ctx.profile?.id,
-							},
+							ownerId: ctx.profile?.id ?? "",
 							clusterId: Number(clusterId),
 						},
 						columns: {
@@ -187,16 +184,17 @@ export const podRoute = new Elysia({
 							timestamp: Date.now(),
 						});
 					}
+					const isManager = checkPermission(ctx.profile?.permission || [], [
+						"manager",
+					]);
 					const pod = await db.query.k8sPods.findFirst({
-						where: {
-							id: Number(id),
-							owner: checkPermission(ctx.profile?.permission || [], ["manager"])
-								? {
-										id: ctx.profile?.id,
-									}
-								: undefined,
-							clusterId: Number(clusterId),
-						},
+						where: isManager
+							? { id: Number(id), clusterId: Number(clusterId) }
+							: {
+									id: Number(id),
+									clusterId: Number(clusterId),
+									ownerId: ctx.profile?.id ?? "",
+								},
 					});
 					if (!pod) {
 						return ctx.status(404, {
@@ -205,10 +203,30 @@ export const podRoute = new Elysia({
 							timestamp: Date.now(),
 						});
 					}
+					const podData = { ...pod };
+					if (podData.envVariables) {
+						// Only decrypt if user is owner or manager
+						const isManager = checkPermission(ctx.profile?.permission || [], [
+							"manager",
+						]);
+						const isOwner = pod.ownerId === ctx.profile?.id;
+
+						if (isManager || isOwner) {
+							try {
+								podData.envVariables = decrypt(pod.envVariables);
+							} catch (e) {
+								console.error("Failed to decrypt env vars for pod", pod.id, e);
+								podData.envVariables = ""; // Fail safe
+							}
+						} else {
+							podData.envVariables = ""; // Mask for others
+						}
+					}
+
 					return ctx.status(200, {
 						success: true,
 						message: "Pod fetched successfully",
-						data: pod,
+						data: podData,
 						timestamp: Date.now(),
 					});
 				},
@@ -244,25 +262,75 @@ export const podRoute = new Elysia({
 						});
 					}
 
-					// Generate manifest from DTO
-					const manifest = generatePodManifest({
-						name: body.name,
-						namespace: body.namespace,
-						image: body.image,
-						command: body.command,
-						args: body.args,
-						env: body.env,
-						ports: body.ports,
-						resources: body.resources,
-						labels: body.labels,
-					});
+					// 1. Prepare Data for DB
+					const envEncrypted = body.env
+						? encrypt(JSON.stringify(body.env))
+						: "";
+
+					if (!ctx.profile) {
+						return ctx.status(401, {
+							success: false,
+							message: "Unauthorized",
+							timestamp: Date.now(),
+						});
+					}
+
+					let newPod: SchemaStatic<typeof dbSchemaTypes.k8sPods> | undefined = undefined;
 
 					try {
+						[newPod] = await db
+							.insert(schema.k8sPods)
+							.values({
+								clusterId: cluster.id,
+								ownerId: ctx.profile.id,
+								name: body.name,
+								namespace: body.namespace,
+								dockerImage: body.image,
+								command: body.command ? body.command.join(" ") : "",
+								envVariables: envEncrypted,
+								status: "Pending",
+								internalPort:
+									body.ports && body.ports.length > 0
+										? (body.ports[0]?.containerPort ?? 0)
+										: 0,
+								cpuRequest: 0,
+								cpuLimit: 0,
+								memoryRequest: 0,
+								memoryLimit: 0,
+								updatedAt: new Date(),
+							})
+							.returning();
+					} catch (dbError: any) {
+						console.error("DB Insert Failed:", dbError);
+						return ctx.status(500, {
+							success: false,
+							message: `Database error: ${dbError.message}`,
+							timestamp: Date.now(),
+						});
+					}
+
+					// 3. Send Command to Agent
+					try {
+						if (!newPod) {
+							throw new Error("Pod not created");
+						}
+						const manifest = generatePodManifest({
+							name: body.name,
+							namespace: body.namespace,
+							image: body.image,
+							command: body.command,
+							args: body.args,
+							env: body.env, // Plaintext for Agent
+							ports: body.ports,
+							resources: body.resources,
+							labels: body.labels,
+						});
+
 						const response = await ctx.agentManager.sendCommand(
 							cluster.agent.id,
 							cluster.id,
 							{
-								id: crypto.randomUUID(),
+								id: globalThis.crypto.randomUUID(),
 								type: 5, // CREATE_POD
 								payload: manifest,
 								targetNamespace: body.namespace,
@@ -272,14 +340,16 @@ export const podRoute = new Elysia({
 
 						return ctx.status(201, {
 							success: true,
-							message: "Pod creation command sent",
-							data: response.data,
+							message: "Pod creation initiated",
+							data: { ...newPod, agentResponse: response.data },
 							timestamp: Date.now(),
 						});
-					} catch (error: any) {
-						return ctx.status(500, {
-							success: false,
-							message: `Agent error: ${error.message}`,
+					} catch (agentError: any) {
+						console.error("Agent Command Failed:", agentError);
+						return ctx.status(200, {
+							success: true,
+							message:
+								"Pod created in DB but Agent is unreachable. Will sync later.",
 							timestamp: Date.now(),
 						});
 					}
@@ -324,7 +394,13 @@ export const podRoute = new Elysia({
 						labels: Type.Optional(Type.Record(Type.String(), Type.String())),
 					}),
 					response: {
-						201: baseResponseSchema(Type.Optional(Type.String())),
+						201: baseResponseSchema(Type.Object({
+							...dbSchemaTypes.k8sPods,
+							agentResponse: Type.Optional(Type.String()),
+						})),
+						200: baseResponseSchema(Type.Optional(Type.String())),
+						401: errorResponseSchema,
+						400: errorResponseSchema,
 						404: errorResponseSchema,
 						500: errorResponseSchema,
 					},
@@ -370,7 +446,7 @@ export const podRoute = new Elysia({
 
 					try {
 						await ctx.agentManager.sendCommand(cluster.agentId, cluster.id, {
-							id: crypto.randomUUID(),
+							id: globalThis.crypto.randomUUID(),
 							type: 6, // DELETE_POD
 							targetNamespace: pod.namespace,
 							targetName: pod.name,
@@ -459,7 +535,7 @@ export const podRoute = new Elysia({
 							cluster.agent.id,
 							cluster.id,
 							{
-								id: crypto.randomUUID(),
+								id: globalThis.crypto.randomUUID(),
 								type: 1, // EDIT_RESOURCE
 								payload: manifest,
 								targetNamespace: pod.namespace,
@@ -486,6 +562,7 @@ export const podRoute = new Elysia({
 					body: Type.Object({
 						image: Type.Optional(Type.String()),
 						labels: Type.Optional(Type.Record(Type.String(), Type.String())),
+						env: Type.Optional(Type.Record(Type.String(), Type.String())),
 					}),
 					response: {
 						200: baseResponseSchema(Type.Optional(Type.String())),

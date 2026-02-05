@@ -1,6 +1,6 @@
 # Note
 ## Redesign
-- [ ] Agent need to create the node infomation and update them in time running the server just show and decided which node use for port forward
+- [x] Agent need to create the node infomation and update them in time running the server just show and decided which node use for port forward
 - [x] Service sync by each heartbeat in k8s cluster
 - [x] Update frontend/src/routes/dashboard/cluster/$id/nodes.tsx (Display join token command)
 - [x] show node role in k8s cluster
@@ -8,6 +8,7 @@
 - [ ] pod can open many ports
 - [ ] each service deal with one port of pods
 - [ ] service run on different node have different ip and port
+- [ ] deployment hold the pod id
 ```
 go build -o agent . && ./agent --addr https://k8s-dashboard-backend.nbth.dev/ --token 1b87285f-3417-4886-b64c-af8ed41675e6
 ```

@@ -12,13 +12,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, X } from "lucide-react";
-import { useState } from "react";
 import { toast } from "sonner";
 import { useForm } from "@tanstack/react-form";
-// import { zodValidator } from "@tanstack/zod-form-adapter";
+import { EnvEditor, type EnvVar } from "../shared/env-editor";
 import { z } from "zod";
+import { useQueryClient, useMutation } from "@tanstack/react-query";
+import { Plus } from "lucide-react";
+import { useState } from "react";
 
 const envVarSchema = z.object({
 	name: z.string().min(1, "Name is required"),
@@ -47,7 +47,7 @@ interface CreatePodDialogProps {
 
 export function CreatePodDialog({ clusterId }: CreatePodDialogProps) {
 	const [open, setOpen] = useState(false);
-	const [envVars, setEnvVars] = useState<{ name: string; value: string }[]>([]);
+	const [envVars, setEnvVars] = useState<EnvVar[]>([]);
 	const queryClient = useQueryClient();
 
 	const mutation = useMutation({
@@ -109,23 +109,7 @@ export function CreatePodDialog({ clusterId }: CreatePodDialogProps) {
 		},
 	});
 
-	const addEnvVar = () => {
-		setEnvVars([...envVars, { name: "", value: "" }]);
-	};
-
-	const removeEnvVar = (index: number) => {
-		setEnvVars(envVars.filter((_, i) => i !== index));
-	};
-
-	const updateEnvVar = (
-		index: number,
-		field: "name" | "value",
-		value: string,
-	) => {
-		const updated = [...envVars];
-		updated[index][field] = value;
-		setEnvVars(updated);
-	};
+	/* Removed redundant setEnvVars/updateEnvVar functions */
 
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
@@ -295,43 +279,7 @@ export function CreatePodDialog({ clusterId }: CreatePodDialogProps) {
 					</div>
 
 					{/* Environment Variables */}
-					<div className="space-y-2">
-						<div className="flex items-center justify-between">
-							<Label>Environment Variables</Label>
-							<Button
-								type="button"
-								variant="outline"
-								size="sm"
-								onClick={addEnvVar}
-							>
-								<Plus className="h-4 w-4 mr-1" /> Add
-							</Button>
-						</div>
-						{envVars.map((envVar, index) => (
-							<div key={envVar.name} className="flex gap-2 items-center">
-								<Input
-									value={envVar.name}
-									onChange={(e) => updateEnvVar(index, "name", e.target.value)}
-									placeholder="NAME"
-									className="flex-1"
-								/>
-								<Input
-									value={envVar.value}
-									onChange={(e) => updateEnvVar(index, "value", e.target.value)}
-									placeholder="value"
-									className="flex-1"
-								/>
-								<Button
-									type="button"
-									variant="ghost"
-									size="icon"
-									onClick={() => removeEnvVar(index)}
-								>
-									<X className="h-4 w-4" />
-								</Button>
-							</div>
-						))}
-					</div>
+					<EnvEditor variables={envVars} onChange={setEnvVars} />
 
 					<DialogFooter>
 						<Button type="submit" disabled={mutation.isPending}>

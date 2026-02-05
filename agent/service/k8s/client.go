@@ -21,9 +21,10 @@ type K8sClient struct {
 	Clientset     *kubernetes.Clientset
 	DynamicClient dynamic.Interface // <--- Added this to handle CRDs like HelmChart
 	RestConfig    *rest.Config
+	ClusterKey    string
 }
 
-func NewK8sClient() (*K8sClient, error) {
+func NewK8sClient(clusterKey string) (*K8sClient, error) {
 	// Initialize and return a new K8sClient
 
 	// if client run in cluster, use in-cluster config
@@ -65,6 +66,7 @@ func NewK8sClient() (*K8sClient, error) {
 		DynamicClient: dynClient,
 		Context:       context.Background(),
 		RestConfig:    config,
+		ClusterKey:    clusterKey,
 	}, nil
 }
 

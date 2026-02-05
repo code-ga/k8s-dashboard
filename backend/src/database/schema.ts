@@ -257,7 +257,6 @@ export const k8sPods = pgTable(
 		}), // Pods can exist without deployment (bare pods)
 		nodeId: integer("node_id") // Can be null if pending? Schema says serial (autoincrement) which implies NOT NULL usually in Drizzle unless specified.
 			// Existing schema had it as serial and references k8sClusterNode.
-			.notNull()
 			.references(() => k8sClusterNode.id, { onDelete: "cascade" }),
 		ownerId: text("owner_id")
 			.notNull()
@@ -286,6 +285,8 @@ export const k8sPods = pgTable(
 			.notNull(),
 		k8sUid: text("k8s_uid"),
 		status: text("status").notNull().default("Unknown"),
+		cpuUsage: integer("cpu_usage").default(0).notNull(),
+		memoryUsage: integer("memory_usage").default(0).notNull(),
 	},
 	(table) => ({
 		clusterUidIdx: uniqueIndex("pod_cluster_uid_idx").on(

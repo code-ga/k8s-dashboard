@@ -1,14 +1,18 @@
 package k8s
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
 
 	pb "k8s-dashboard/agents/pb/agent-backend"
+	"k8s-dashboard/agents/utils/crypto"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 // get cluster info like used resources, total resources etc.
@@ -127,6 +131,42 @@ func (kc *K8sClient) GetFullClusterState() (*pb.Heartbeat, error) {
 		return nil, fmt.Errorf("failed to get pods: %w", err)
 	}
 
+	// Fetch Pod Metrics
+	podMetricsMap := make(map[string]map[string]int64) // key: namespace/name -> {cpu, memory}
+	metricsGVR := schema.GroupVersionResource{Group: "metrics.k8s.io", Version: "v1beta1", Resource: "pods"}
+	metricsList, err := kc.DynamicClient.Resource(metricsGVR).List(kc.Context, metav1.ListOptions{})
+	if err == nil {
+		items := metricsList.UnstructuredContent()["items"].([]interface{})
+		for _, item := range items {
+			m := item.(map[string]interface{})
+			metadata := m["metadata"].(map[string]interface{})
+			name := metadata["name"].(string)
+			namespace := metadata["namespace"].(string)
+
+			var cpuUsed, memUsed int64
+			containers := m["containers"].([]interface{})
+			for _, c := range containers {
+				cont := c.(map[string]interface{})
+				usage := cont["usage"].(map[string]interface{})
+
+				if cpuStr, ok := usage["cpu"].(string); ok {
+					if q, err := resource.ParseQuantity(cpuStr); err == nil {
+						cpuUsed += q.MilliValue()
+					}
+				}
+				if memStr, ok := usage["memory"].(string); ok {
+					if q, err := resource.ParseQuantity(memStr); err == nil {
+						memUsed += q.Value() / (1024 * 1024)
+					}
+				}
+			}
+			key := fmt.Sprintf("%s/%s", namespace, name)
+			podMetricsMap[key] = map[string]int64{"cpu": cpuUsed, "memory": memUsed}
+		}
+	} else {
+		fmt.Printf("Warning: Failed to fetch pod metrics: %v\n", err)
+	}
+
 	var pbPods []*pb.Pod
 	var totalCPUUsage, totalMemUsage int64
 
@@ -161,10 +201,34 @@ func (kc *K8sClient) GetFullClusterState() (*pb.Heartbeat, error) {
 		// If controlled by a ReplicaSet/Deployment, we might want to know desired replicas.
 		// However, for a single Pod, it is just 1. The server can aggregate.
 
-		// Commands
 		cmdStr := ""
-		if len(pod.Spec.Containers) > 0 && len(pod.Spec.Containers[0].Command) > 0 {
-			cmdStr = strings.Join(pod.Spec.Containers[0].Command, " ")
+		if len(pod.Spec.Containers) > 0 {
+			if len(pod.Spec.Containers[0].Command) > 0 {
+				cmdStr = strings.Join(pod.Spec.Containers[0].Command, " ")
+			}
+		}
+
+		var validPort int32
+		if len(pod.Spec.Containers) > 0 && len(pod.Spec.Containers[0].Ports) > 0 {
+			validPort = pod.Spec.Containers[0].Ports[0].ContainerPort
+		}
+
+		// EnvVariables
+		var envEncrypted string
+		if len(pod.Spec.Containers) > 0 {
+			envConf := map[string]string{}
+			for _, env := range pod.Spec.Containers[0].Env {
+				envConf[env.Name] = env.Value
+			}
+			if len(envConf) > 0 {
+				jsonBytes, _ := json.Marshal(envConf)
+				if enc, err := crypto.Encrypt(string(jsonBytes), kc.ClusterKey); err == nil {
+					envEncrypted = enc
+				} else {
+					// Log error but continue?
+					fmt.Printf("Error encrypting env vars for pod %s: %v\n", pod.Name, err)
+				}
+			}
 		}
 
 		pbPods = append(pbPods, &pb.Pod{
@@ -180,7 +244,10 @@ func (kc *K8sClient) GetFullClusterState() (*pb.Heartbeat, error) {
 			MemoryLimit:   memLim,
 			Command:       cmdStr,
 			Uid:           string(pod.UID),
-			// EnvVariables: ... (might be sensitive, skipping for now or format as needed)
+			EnvVariables:  envEncrypted,
+			InternalPort:  validPort, // Assuming validPort was calculated previously or 0
+			CpuUsage:      podMetricsMap[fmt.Sprintf("%s/%s", pod.Namespace, pod.Name)]["cpu"],
+			RamUsage:      podMetricsMap[fmt.Sprintf("%s/%s", pod.Namespace, pod.Name)]["memory"],
 		})
 	}
 

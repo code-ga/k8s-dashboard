@@ -16,6 +16,11 @@ import type {
 import { Command_CommandType } from "../../pb-generated/agent-backend/websocket";
 import YAML from "yaml";
 import type { AgentManager } from "./agentManager";
+import { encrypt, decrypt } from "../utils/crypto";
+import {
+	generateDeploymentManifest,
+	generatePodManifest,
+} from "../utils/k8s-manifest";
 export class AgentService {
 	// Process incoming heartbeat
 	async handleHeartbeat(
@@ -254,6 +259,8 @@ export class AgentService {
 						internalPort: pod.internalPort,
 						k8sUid: pod.uid,
 						status: pod.status || "Unknown",
+						cpuUsage: Number(pod.cpuUsage),
+						memoryUsage: Number(pod.ramUsage),
 						updatedAt: new Date(),
 					};
 
@@ -354,46 +361,31 @@ export class AgentService {
 					`Missing Deployment: ${dbDep.name} in ${dbDep.namespace}. Creating...`,
 				);
 
-				// Construct Minimal Deployment Manifest
-				const manifest = YAML.stringify({
-					apiVersion: "apps/v1",
-					kind: "Deployment",
-					metadata: {
-						name: dbDep.name,
-						namespace: dbDep.namespace,
-						labels: {
-							app: dbDep.name,
-						},
-					},
-					spec: {
-						replicas: dbDep.replicas,
-						selector: {
-							matchLabels: {
-								app: dbDep.name,
-							},
-						},
-						template: {
-							metadata: {
-								labels: {
-									app: dbDep.name,
-								},
-							},
-							spec: {
-								containers: [
-									{
-										name: dbDep.name,
-										image: dbDep.dockerImage,
-										ports: [
-											{
-												containerPort: dbDep.internalPort,
-											},
-										],
-									},
-								],
-							},
-						},
-					},
+				let envVars: Record<string, string> | undefined;
+				if (dbDep.envVariables) {
+					try {
+						envVars = JSON.parse(decrypt(dbDep.envVariables));
+					} catch (e) {
+						console.error(
+							"Failed to decrypt env vars for deployment",
+							dbDep.name,
+							e,
+						);
+					}
+				}
+
+				const manifest = generateDeploymentManifest({
+					name: dbDep.name,
+					namespace: dbDep.namespace,
+					image: dbDep.dockerImage || "",
+					replicas: dbDep.replicas,
+					labels: dbDep.labels ? JSON.parse(dbDep.labels) : undefined,
+					selector: dbDep.selector ? JSON.parse(dbDep.selector) : undefined,
+					// internalPort conversion. DB has int, DTO has ports[{containerPort}]
+					ports: [{ containerPort: dbDep.internalPort }],
+					env: envVars,
 				});
+
 				// Send CREATE (ApplyManifest) Command
 				await agentManager.sendCommand(agentId, cluster.id, {
 					id: "", // Will be set by agentManager
@@ -442,39 +434,34 @@ export class AgentService {
 					`Missing Pod: ${dbPod.name} in ${dbPod.namespace}. Restoring...`,
 				);
 
-				// Construct Minimal Pod Manifest
-				const manifest = YAML.stringify({
-					apiVersion: "v1",
-					kind: "Pod",
-					metadata: {
-						name: dbPod.name,
-						namespace: dbPod.namespace,
+				let envVars: Record<string, string> | undefined;
+				if (dbPod.envVariables) {
+					try {
+						envVars = JSON.parse(decrypt(dbPod.envVariables));
+					} catch (e) {
+						console.error("Failed to decrypt env vars for pod", dbPod.name, e);
+					}
+				}
+
+				const manifest = generatePodManifest({
+					name: dbPod.name,
+					namespace: dbPod.namespace,
+					image: dbPod.dockerImage,
+					command: dbPod.command ? dbPod.command.split(" ") : undefined,
+					ports: [{ containerPort: dbPod.internalPort }],
+					resources: {
+						requests: {
+							cpu: `${dbPod.cpuRequest}m`,
+							memory: `${dbPod.memoryRequest}Mi`,
+						},
+						limits: {
+							cpu: `${dbPod.cpuLimit}m`,
+							memory: `${dbPod.memoryLimit}Mi`,
+						},
 					},
-					spec: {
-						containers: [
-							{
-								name: dbPod.name,
-								image: dbPod.dockerImage,
-								command: dbPod.command ? dbPod.command.split(" ") : null,
-								ports: [
-									{
-										containerPort: dbPod.internalPort,
-									},
-								],
-								resources: {
-									requests: {
-										cpu: `${dbPod.cpuRequest}m`,
-										memory: `${dbPod.memoryRequest}Mi`,
-									},
-									limits: {
-										cpu: `${dbPod.cpuLimit}m`,
-										memory: `${dbPod.memoryLimit}Mi`,
-									},
-								},
-							},
-						],
-					},
+					env: envVars,
 				});
+
 				await agentManager.sendCommand(agentId, cluster.id, {
 					id: "",
 					type: Command_CommandType.CREATE_POD,

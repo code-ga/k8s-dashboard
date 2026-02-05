@@ -1,15 +1,16 @@
 /** biome-ignore-all lint/suspicious/noExplicitAny: <explanation> */
 import { Type } from "@sinclair/typebox";
+import { eq } from "drizzle-orm";
 import { Elysia } from "elysia";
+import { Command_CommandType } from "../../pb-generated/agent-backend/websocket";
 import { db } from "../database";
-import { dbSchemaTypes } from "../database/type";
+import { schema } from "../database/schema";
+import { dbSchemaTypes, type SchemaStatic } from "../database/type";
 import { authenticationMiddleware, checkPermission } from "../middleware/auth";
 import { agentManagerService } from "../services/agentManager";
 import { baseResponseSchema, errorResponseSchema } from "../types";
-import { schema } from "../database/schema";
-import { eq } from "drizzle-orm";
+import { decrypt, encrypt } from "../utils/crypto";
 import { generateDeploymentManifest } from "../utils/k8s-manifest";
-import { Command_CommandType } from "../../pb-generated/agent-backend/websocket";
 
 export const deploymentRoute = new Elysia({
 	prefix: "/deployments/:clusterId",
@@ -73,9 +74,7 @@ export const deploymentRoute = new Elysia({
 
 					const deployments = await db.query.k8sDeployments.findMany({
 						where: {
-							owner: {
-								id: ctx.profile?.id,
-							},
+							ownerId: ctx.profile?.id ?? "",
 							clusterId: Number(clusterId),
 						},
 					});
@@ -107,16 +106,17 @@ export const deploymentRoute = new Elysia({
 							timestamp: Date.now(),
 						});
 					}
+					const isManager = checkPermission(ctx.profile?.permission || [], [
+						"manager",
+					]);
 					const deployment = await db.query.k8sDeployments.findFirst({
-						where: {
-							id: Number(id),
-							owner: checkPermission(ctx.profile?.permission || [], ["manager"])
-								? undefined // Manager sees all
-								: {
-										id: ctx.profile?.id, // User sees owned
-									},
-							clusterId: Number(clusterId),
-						},
+						where: isManager
+							? { id: Number(id), clusterId: Number(clusterId) }
+							: {
+									id: Number(id),
+									clusterId: Number(clusterId),
+									ownerId: ctx.profile?.id ?? "",
+								},
 					});
 					if (!deployment) {
 						return ctx.status(404, {
@@ -125,10 +125,33 @@ export const deploymentRoute = new Elysia({
 							timestamp: Date.now(),
 						});
 					}
+					const depData = { ...deployment };
+					if (depData.envVariables) {
+						// Only decrypt if user is owner or manager
+						const isManager = checkPermission(ctx.profile?.permission || [], [
+							"manager",
+						]);
+						const isOwner = deployment.ownerId === ctx.profile?.id;
+
+						if (isManager || isOwner) {
+							try {
+								depData.envVariables = decrypt(deployment.envVariables);
+							} catch (e) {
+								console.error(
+									"Failed to decrypt env vars for deployment",
+									deployment.id,
+									e,
+								);
+								depData.envVariables = "";
+							}
+						} else {
+							depData.envVariables = ""; // Mask
+						}
+					}
 					return ctx.status(200, {
 						success: true,
 						message: "Deployment fetched successfully",
-						data: deployment,
+						data: depData,
 						timestamp: Date.now(),
 					});
 				},
@@ -164,26 +187,83 @@ export const deploymentRoute = new Elysia({
 						});
 					}
 
-					const manifest = generateDeploymentManifest({
-						name: body.name,
-						namespace: body.namespace,
-						image: body.image,
-						replicas: body.replicas,
-						command: body.command,
-						args: body.args,
-						env: body.env,
-						ports: body.ports,
-						resources: body.resources,
-						labels: body.labels,
-						selector: body.selector,
-					});
+					// 1. Prepare Data
+					const envEncrypted = body.env
+						? encrypt(JSON.stringify(body.env))
+						: "";
+
+					let newDeployment:
+						| SchemaStatic<typeof dbSchemaTypes.k8sDeployments>
+						| undefined = undefined;
 
 					try {
+						// DefaultOwner logic?
+						// Implementation plan says "Enforce ownership checks".
+						// We have ctx.profile.id.
+
+						if (!ctx.profile) {
+							throw new Error("Unauthorized");
+						}
+
+						[newDeployment] = await db
+							.insert(schema.k8sDeployments)
+							.values({
+								clusterId: cluster.id,
+								ownerId: ctx.profile.id,
+								name: body.name,
+								namespace: body.namespace,
+								replicas: body.replicas,
+								availableReplicas: 0,
+								unavailableReplicas: body.replicas,
+								dockerImage: body.image,
+								labels: body.labels ? JSON.stringify(body.labels) : null,
+								selector: body.selector ? JSON.stringify(body.selector) : null,
+								envVariables: envEncrypted,
+								// internalPort? Schema has it?
+								// Looking at agent.service.ts earlier: `internalPort: dep.internalPort`.
+								// DeploymentDTO has ports[].
+								// Schema logic for deployments usually involves internalPort for service/gateway logic?
+								// If schema requires it, we should set it.
+								// Let's use first port if available, or 0.
+								internalPort:
+									body.ports && body.ports.length > 0
+										? (body.ports[0]?.containerPort ?? 0)
+										: 0,
+								updatedAt: new Date(),
+							})
+							.returning();
+					} catch (dbError: any) {
+						console.error("DB Insert Deployment Failed:", dbError);
+						return ctx.status(500, {
+							success: false,
+							message: `Database error: ${dbError.message}`,
+							timestamp: Date.now(),
+						});
+					}
+
+					try {
+						if (!newDeployment) {
+							throw new Error("Deployment not created");
+						}
+						const manifest = generateDeploymentManifest({
+							name: body.name,
+							namespace: body.namespace,
+							image: body.image,
+							replicas: body.replicas,
+							command: body.command,
+							args: body.args,
+							env: body.env, // Plaintext
+							ports: body.ports,
+							resources: body.resources,
+							labels: body.labels,
+							selector: body.selector,
+						});
+
 						const response = await ctx.agentManager.sendCommand(
 							cluster.agent.id,
 							cluster.id,
 							{
-								id: crypto.randomUUID(),
+								id: globalThis.crypto.randomUUID(),
 								type: Command_CommandType.CREATE_DEPLOYMENT,
 								payload: manifest,
 								targetNamespace: body.namespace,
@@ -193,14 +273,16 @@ export const deploymentRoute = new Elysia({
 
 						return ctx.status(201, {
 							success: true,
-							message: "Deployment creation command sent",
-							data: response.data,
+							message: "Deployment creation initiated",
+							data: { ...newDeployment, agentResponse: response.data },
 							timestamp: Date.now(),
 						});
-					} catch (error: any) {
-						return ctx.status(500, {
-							success: false,
-							message: `Agent error: ${error.message}`,
+					} catch (agentError: any) {
+						console.error("Agent Command Failed:", agentError);
+						return ctx.status(200, {
+							success: true,
+							message:
+								"Deployment created in DB but Agent is unreachable. Will sync later.",
 							timestamp: Date.now(),
 						});
 					}
@@ -247,7 +329,14 @@ export const deploymentRoute = new Elysia({
 						selector: Type.Optional(Type.Record(Type.String(), Type.String())),
 					}),
 					response: {
-						201: baseResponseSchema(Type.Optional(Type.String())),
+						201: baseResponseSchema(
+							Type.Object({
+								...dbSchemaTypes.k8sDeployments,
+								agentResponse: Type.Optional(Type.String()),
+							}),
+						),
+						200: baseResponseSchema(Type.Optional(Type.String())),
+						400: errorResponseSchema,
 						404: errorResponseSchema,
 						500: errorResponseSchema,
 					},
@@ -300,7 +389,8 @@ export const deploymentRoute = new Elysia({
 					// Actually, let's keep it simple: Use EDIT_RESOURCE with partial manifest (or full).
 					// Or check if we have Command_CommandType.SCALE_DEPLOYMENT available.
 
-					let commandType = Command_CommandType.EDIT_RESOURCE;
+					let commandType: Command_CommandType =
+						Command_CommandType.EDIT_RESOURCE;
 					let payload = "";
 
 					if (body.replicas !== undefined && !body.image && !body.resources) {
@@ -313,12 +403,6 @@ export const deploymentRoute = new Elysia({
 						// Ideally we should start from current state, but we only have DB state.
 						// We'll trust DB state + updates.
 
-						const labels = deployment.labels
-							? JSON.parse(deployment.labels)
-							: {};
-						const selector = deployment.selector
-							? JSON.parse(deployment.selector)
-							: {};
 						// Note: resources/ports/env are not fully stored in DB columns as structured JSON in the schema seen earlier
 						// (schema has envVariables: text, internalPort: int).
 						// This limits our ability to fully reconstruct the manifest from DB perfecty if complex fields are missing.
@@ -326,30 +410,115 @@ export const deploymentRoute = new Elysia({
 
 						// BUT: we have `deployment.replicas` in DB.
 
+						// Update DB first if env or other fields are changing
+						// Optimization: Only update fields present in body
+						const updateData: Partial<
+							SchemaStatic<typeof dbSchemaTypes.k8sDeployments>
+						> = {
+							updatedAt: new Date(),
+						};
+						if (body.image) updateData.dockerImage = body.image;
+						if (body.replicas !== undefined)
+							updateData.replicas = body.replicas;
+						if (body.env) {
+							updateData.envVariables = encrypt(JSON.stringify(body.env));
+						}
+						// labels, selector updates? Schema stores stringified.
+						if (body.labels) updateData.labels = JSON.stringify(body.labels);
+						if (body.selector)
+							updateData.selector = JSON.stringify(body.selector);
+
+						try {
+							await db
+								.update(schema.k8sDeployments)
+								.set(updateData)
+								.where(eq(schema.k8sDeployments.id, depId));
+						} catch (dbError: any) {
+							console.error("DB Update Failed", dbError);
+							return ctx.status(500, {
+								success: false,
+								message: `DB Update Failed: ${dbError.message}`,
+								timestamp: Date.now(),
+							});
+						}
+
 						payload = generateDeploymentManifest({
 							name: deployment.name,
 							namespace: deployment.namespace,
-							// if body.image is undefined, fallback to DB. DB has dockerImage.
+							// if body.image is undefined, fallback to DB
 							image: body.image || deployment.dockerImage || "",
 							replicas: body.replicas ?? deployment.replicas,
 
-							// We don't have stored command/args/ports as structured data easily in DB schema shown?
-							// Schema: command: text (""), envVariables: text (""), internalPort: int.
-							// We will use what matches.
+							// Command/Args: Not in DB schema easily? We might lose them if we don't track them.
+							// Limitation: If user didn't send them, we can't reconstruct them from just DB (unless DB has them).
+							// Assuming DB schema.k8sDeployments doesn't have command/args columns (based on agent.service.ts insert not showing them).
+							// Effectively this means updates might RESET command/args if not provided?
+							// Or we rely on `env` if provided.
+							// Current compromise: We only send what we know.
 
-							// For simplicity, we only allow updating what we can safely reconstruct or what is passed.
-							// If user doesn't pass image, we use old image.
+							env: body.env, // Use new env if provided. If not... should we use old?
+							// If body.env is undefined, and we are generating a manifest...
+							// If we generate manifest without env, it might clear it?
+							// K8s 'apply' usually merges? No, Apply on a field replaces the field.
+							// So if we omit 'env', it might keep existing (if not managed) or clear it?
+							// Actually `generateDeploymentManifest` puts `env` in the spec.
+							// If `env` is undefined, `generate` sends `undefined` (which YAML.stringify omits).
+							// So K8s should keep existing envs?
+							// Yes, if we don't specify it, K8s shouldn't touch it.
+							// BUT: if we want to UPDATE env, we send it.
+							// What if we want to keep it but update image?
+							// We should ideally decrypt existing env and send it along?
+							// Yes, to be safe for "Source of Truth" concept, the Manifest we send SHOULD represent the Desired State.
+							// If we omit it, we are saying "I don't care about this", but we DO care (DB is truth).
+							// So we should:
+							// 1. Get Decrypted DB Env (merged with body.env if provided)
+							// 2. Send that.
 
-							labels: body.labels || labels,
-							selector: body.selector || selector,
-
-							// If these are missing in body, and we can't fully reconstruct validation from DB (e.g. env is string),
-							// we might lose data if we apply a partial manifest that clobbers?
-							// EDIT_RESOURCE usually applies/patches.
-							// If we send a manifest with missing fields, K8s might remove them or merge them depending on 'kubectl apply' behavior.
-							// Safest is to only support fields we can fully control or assume others are not touched.
-							// Let's assume the manifest generator creates a minimal manifest that Apply will merge.
+							// Fix logic:
+							// const combinedEnv = body.env || (deployment.envVariables ? JSON.parse(decrypt(deployment.envVariables)) : undefined);
+							// But `deployment` variable is stale if we just updated DB?
+							// Actually we updated DB with `updateData`.
+							// So `body.env` is the new truth if present.
+							// If `body.env` is missing, `deployment.envVariables` (old) is truth.
 						});
+
+						// Re-calculate payload with correct Env preservation
+						let finalEnv = body.env;
+						if (!finalEnv && deployment.envVariables) {
+							try {
+								finalEnv = JSON.parse(decrypt(deployment.envVariables));
+							} catch (e) {
+								console.error("Decrypt fail", e);
+							}
+						}
+
+						// If we are Scaling ONLY, we don't need Env.
+						// @ts-expect-error
+						if (commandType === Command_CommandType.SCALE_DEPLOYMENT) {
+							// Payload is just number
+						} else {
+							// Re-gen manifest
+							payload = generateDeploymentManifest({
+								name: deployment.name,
+								namespace: deployment.namespace,
+								image: body.image || deployment.dockerImage || "",
+								replicas: body.replicas ?? deployment.replicas,
+								env: finalEnv,
+								labels:
+									body.labels ||
+									(deployment.labels
+										? JSON.parse(deployment.labels)
+										: undefined),
+								selector:
+									body.selector ||
+									(deployment.selector
+										? JSON.parse(deployment.selector)
+										: undefined),
+								// Still missing command/args/ports from DB if they aren't stored
+								// This is a known limitation of the current Schema.
+								// Detailed restoration requires schema updates.
+							});
+						}
 					}
 
 					try {
@@ -357,7 +526,7 @@ export const deploymentRoute = new Elysia({
 							cluster.agent.id,
 							cluster.id,
 							{
-								id: crypto.randomUUID(),
+								id: globalThis.crypto.randomUUID(),
 								type: commandType,
 								payload: payload,
 								targetNamespace: deployment.namespace,
@@ -395,6 +564,7 @@ export const deploymentRoute = new Elysia({
 								memoryLimit: Type.Optional(Type.String()),
 							}),
 						),
+						env: Type.Optional(Type.Record(Type.String(), Type.String())),
 					}),
 					response: {
 						200: baseResponseSchema(Type.Optional(Type.String())),
@@ -443,7 +613,7 @@ export const deploymentRoute = new Elysia({
 
 					try {
 						await ctx.agentManager.sendCommand(cluster.agent.id, cluster.id, {
-							id: crypto.randomUUID(),
+							id: globalThis.crypto.randomUUID(),
 							type: Command_CommandType.DELETE_DEPLOYMENT, // Assuming generic delete or specific
 							// If explicit DELETE_DEPLOYMENT exists use it, otherwise DELETE_RESOURCE
 							// Checking proto... 6 is DELETE_POD.

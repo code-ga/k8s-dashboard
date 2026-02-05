@@ -129,15 +129,6 @@ func main() {
 	flag.Parse()
 	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
 
-	kubeClient, err := k8s.NewK8sClient()
-	if err != nil {
-		log.Fatalf("Failed to create Kubernetes client: %v", err)
-	}
-	log.Printf("Kubernetes client created")
-
-	interrupt := make(chan os.Signal, 1)
-	signal.Notify(interrupt, os.Interrupt)
-
 	// parse addr
 	maybeUrl, err := url.Parse(*addr)
 	if err != nil {
@@ -148,6 +139,25 @@ func main() {
 		wsScheme = "wss"
 	}
 	u := url.URL{Scheme: wsScheme, Host: maybeUrl.Host, Path: "/api/agents/ws"}
+
+	// 1. Get Cluster Config (URL, Key, etc) from Backend (Bootstrap)
+	// This requires HTTP endpoint to be accessible.
+	// We use the flags for initial connection details.
+	config, err := getClusterConfig()
+	if err != nil {
+		log.Fatalf("Failed to get cluster config: %v", err)
+	}
+	log.Printf("Cluster Config Loaded: Name=%s, EnableS3=%v", config.Name, config.EnableS3Service)
+
+	// 2. Initialize K8s Client with Key
+	kubeClient, err := k8s.NewK8sClient(config.ClusterKey)
+	if err != nil {
+		log.Fatalf("Failed to create Kubernetes client: %v", err)
+	}
+	log.Printf("Kubernetes client created")
+
+	interrupt := make(chan os.Signal, 1)
+	signal.Notify(interrupt, os.Interrupt)
 
 	header := make(http.Header)
 	header.Add("Authorization", "Bot "+*token)
@@ -523,6 +533,7 @@ type ClusterConfig struct {
 	EnableS3Service  bool   `json:"enableS3Service"`
 	Name             string `json:"name"`
 	S3AdminSecretKey string `json:"s3AdminSecretKey"`
+	ClusterKey       string `json:"clusterKey"`
 }
 
 func getClusterConfig() (*ClusterConfig, error) {
@@ -536,7 +547,7 @@ func getClusterConfig() (*ClusterConfig, error) {
 	url := url.URL{
 		Scheme: "https",
 		Host:   *addr,
-		Path:   "/api/agents/cluster-config",
+		Path:   "/api/agents/cluster-info",
 	}
 	req, err := http.NewRequest("GET", url.String(), bytes.NewBuffer(jsonPayload))
 	if err != nil {
@@ -557,13 +568,16 @@ func getClusterConfig() (*ClusterConfig, error) {
 		log.Fatalf("Error reading response body: %v", err)
 	}
 
-	var responseData ClusterConfig
-	err = json.Unmarshal(body, &responseData)
+	var apiResp struct {
+		Data ClusterConfig `json:"data"`
+	}
+	err = json.Unmarshal(body, &apiResp)
 	if err != nil {
 		log.Fatalf("Error unmarshalling response JSON: %v", err)
 	}
 
-	return &responseData, nil
+	log.Printf("Received Cluster Key: %s...", string([]rune(apiResp.Data.ClusterKey)[:5]))
+	return &apiResp.Data, nil
 }
 
 func updateClusterS3Key(key string) error {

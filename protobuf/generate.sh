@@ -19,7 +19,7 @@ protoc --go_out=$GO_OUT_DIR --go_opt=paths=source_relative \
 # 4. Generate TypeScript code (using ts-proto)
 # Note: This assumes you ran 'npm install ts-proto' in your backend folder
 # Resolve plugin path for Windows protoc
-PROTOC_GEN_TS_PROTO_PATH=$(cygpath -w "$(pwd)/../backend/node_modules/.bin/protoc-gen-ts_proto.exe")
+PROTOC_GEN_TS_PROTO_PATH=$(cygpath -w "$(pwd)/../node_modules/.bin/protoc-gen-ts_proto.exe")
 
 echo "Generating TypeScript code..."
 protoc --plugin=protoc-gen-ts_proto="$PROTOC_GEN_TS_PROTO_PATH" \

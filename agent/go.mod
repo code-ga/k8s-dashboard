@@ -3,6 +3,7 @@ module k8s-dashboard/agents
 go 1.25.5
 
 require (
+	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.4-0.20250319132907-e064f32e3674
 	google.golang.org/protobuf v1.36.8
 	k8s.io/api v0.35.0
@@ -20,7 +21,6 @@ require (
 	github.com/go-openapi/swag v0.23.1 // indirect
 	github.com/google/gnostic-models v0.7.0 // indirect
 	github.com/google/pprof v0.0.0-20250630185457-6e76a2b096b5 // indirect
-	github.com/google/uuid v1.6.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/mailru/easyjson v0.9.0 // indirect
