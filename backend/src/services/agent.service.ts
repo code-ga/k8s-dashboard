@@ -16,7 +16,7 @@ import type {
 import { Command_CommandType } from "../../pb-generated/agent-backend/websocket";
 import YAML from "yaml";
 import type { AgentManager } from "./agentManager";
-import { encrypt, decrypt } from "../utils/crypto";
+import { decrypt } from "../utils/crypto";
 import {
 	generateDeploymentManifest,
 	generatePodManifest,
