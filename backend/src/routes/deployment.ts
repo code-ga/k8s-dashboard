@@ -427,6 +427,12 @@ export const deploymentRoute = new Elysia({
 						if (body.labels) updateData.labels = JSON.stringify(body.labels);
 						if (body.selector)
 							updateData.selector = JSON.stringify(body.selector);
+						if (body.isAutoScaling !== undefined)
+							updateData.isAutoScaling = body.isAutoScaling;
+						if (body.isAlwaysRunning !== undefined)
+							updateData.isAlwaysRunning = body.isAlwaysRunning;
+						if (body.idleTimeoutSeconds !== undefined)
+							updateData.idleTimeoutSeconds = body.idleTimeoutSeconds;
 
 						try {
 							await db
@@ -565,6 +571,9 @@ export const deploymentRoute = new Elysia({
 							}),
 						),
 						env: Type.Optional(Type.Record(Type.String(), Type.String())),
+						isAutoScaling: Type.Optional(Type.Boolean()),
+						isAlwaysRunning: Type.Optional(Type.Boolean()),
+						idleTimeoutSeconds: Type.Optional(Type.Number()),
 					}),
 					response: {
 						200: baseResponseSchema(Type.Optional(Type.String())),
