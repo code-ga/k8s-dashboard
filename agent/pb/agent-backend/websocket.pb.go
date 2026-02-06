@@ -85,6 +85,8 @@ const (
 	Command_DELETE_SERVICE    Command_CommandType = 12
 	Command_DELETE_RESOURCE   Command_CommandType = 13
 	Command_CREATE_RESOURCE   Command_CommandType = 14
+	Command_CREATE_INGRESS    Command_CommandType = 15
+	Command_DELETE_INGRESS    Command_CommandType = 16
 )
 
 // Enum value maps for Command_CommandType.
@@ -105,6 +107,8 @@ var (
 		12: "DELETE_SERVICE",
 		13: "DELETE_RESOURCE",
 		14: "CREATE_RESOURCE",
+		15: "CREATE_INGRESS",
+		16: "DELETE_INGRESS",
 	}
 	Command_CommandType_value = map[string]int32{
 		"UNKNOWN":           0,
@@ -122,6 +126,8 @@ var (
 		"DELETE_SERVICE":    12,
 		"DELETE_RESOURCE":   13,
 		"CREATE_RESOURCE":   14,
+		"CREATE_INGRESS":    15,
+		"DELETE_INGRESS":    16,
 	}
 )
 
@@ -1501,14 +1507,14 @@ const file_agent_backend_websocket_proto_rawDesc = "" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1a9\n" +
 	"\vLabelsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xd3\x03\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xfb\x03\n" +
 	"\aCommand\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12,\n" +
 	"\x04type\x18\x02 \x01(\x0e2\x18.api.Command.CommandTypeR\x04type\x12\x18\n" +
 	"\apayload\x18\x03 \x01(\tR\apayload\x12)\n" +
 	"\x10target_namespace\x18\x04 \x01(\tR\x0ftargetNamespace\x12\x1f\n" +
 	"\vtarget_name\x18\x05 \x01(\tR\n" +
-	"targetName\"\xa3\x02\n" +
+	"targetName\"\xcb\x02\n" +
 	"\vCommandType\x12\v\n" +
 	"\aUNKNOWN\x10\x00\x12\x11\n" +
 	"\rEDIT_RESOURCE\x10\x01\x12\x15\n" +
@@ -1527,7 +1533,9 @@ const file_agent_backend_websocket_proto_rawDesc = "" +
 	"\x0eCREATE_SERVICE\x10\v\x12\x12\n" +
 	"\x0eDELETE_SERVICE\x10\f\x12\x13\n" +
 	"\x0fDELETE_RESOURCE\x10\r\x12\x13\n" +
-	"\x0fCREATE_RESOURCE\x10\x0e\"\xcf\x01\n" +
+	"\x0fCREATE_RESOURCE\x10\x0e\x12\x12\n" +
+	"\x0eCREATE_INGRESS\x10\x0f\x12\x12\n" +
+	"\x0eDELETE_INGRESS\x10\x10\"\xcf\x01\n" +
 	"\rJoinTokenData\x12\x18\n" +
 	"\acommand\x18\x01 \x01(\tR\acommand\x12\x14\n" +
 	"\x05token\x18\x02 \x01(\tR\x05token\x12>\n" +

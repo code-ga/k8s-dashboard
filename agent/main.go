@@ -429,7 +429,8 @@ func handleCommand(kc *k8s.K8sClient, cmd *pb.Command) (string, error) {
 		pb.Command_CREATE_DEPLOYMENT,
 		pb.Command_CREATE_POD,
 		pb.Command_CREATE_SERVICE,
-		pb.Command_CREATE_RESOURCE:
+		pb.Command_CREATE_RESOURCE,
+		pb.Command_CREATE_INGRESS:
 		if cmd.Payload != "" {
 			err = kc.ApplyManifest(cmd.Payload)
 			if err == nil {
@@ -488,7 +489,8 @@ func handleCommand(kc *k8s.K8sClient, cmd *pb.Command) (string, error) {
 		} else {
 			err = fmt.Errorf("missing target for DELETE_SERVICE command")
 		}
-	case pb.Command_DELETE_RESOURCE:
+	case pb.Command_DELETE_RESOURCE,
+		pb.Command_DELETE_INGRESS:
 		// Generic delete using Payload as Kind?
 		// cmd.Payload used as Kind in previous steps instructions.
 		if cmd.TargetNamespace != "" && cmd.TargetName != "" && cmd.Payload != "" {

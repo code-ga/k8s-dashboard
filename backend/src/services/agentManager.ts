@@ -65,7 +65,7 @@ export class AgentManager extends EventEmitter<EventMap> {
 
 	private pendingCommandInterval() {
 		// Periodically check for pending commands every minute
-		return  setInterval(async () => {
+		return setInterval(async () => {
 			for (const agentId of this.connections.keys()) {
 				await this.processPendingCommands(agentId);
 			}
@@ -126,6 +126,7 @@ export class AgentManager extends EventEmitter<EventMap> {
 		agentId: number,
 		command: Command,
 		commandId: string,
+		_reSend: boolean = false,
 	): Promise<CommandResponse> {
 		const ws = this.connections.get(agentId);
 
@@ -360,7 +361,9 @@ export class AgentManager extends EventEmitter<EventMap> {
 
 		if (data.data && data.data.length > 0) {
 			try {
-				console.log(`Forwarding stream data to user for streamId: ${data.streamId}`);
+				console.log(
+					`Forwarding stream data to user for streamId: ${data.streamId}`,
+				);
 				const buffer = Buffer.from(data.data);
 				session.userWs.send(buffer);
 			} catch (e) {

@@ -128,12 +128,14 @@ export const ingressRoute = new Elysia({
 						});
 
 						if (!existingSvc) {
+							const svcProtocol =
+								body.protocol === "http" ? "TCP" : body.protocol;
 							// Create Service in DB
 							await db
 								.insert(schema.k8sServices)
 								.values({
 									clusterId,
-									ownerId: ctx.profile!.id,
+									ownerId: ctx.profile?.id,
 									name: body.serviceName,
 									namespace: body.namespace,
 									type: "ClusterIP", // Default for exposure
@@ -143,7 +145,7 @@ export const ingressRoute = new Elysia({
 										{
 											port: body.internalPort,
 											targetPort: body.internalPort,
-											protocol: body.protocol.toUpperCase() as any,
+											protocol: svcProtocol.toUpperCase(),
 										},
 									],
 									updatedAt: new Date(),
@@ -160,7 +162,7 @@ export const ingressRoute = new Elysia({
 									{
 										port: body.internalPort,
 										targetPort: body.internalPort,
-										protocol: body.protocol.toUpperCase() as any,
+										protocol: svcProtocol,
 									},
 								],
 								labels: body.labels,
@@ -180,7 +182,7 @@ export const ingressRoute = new Elysia({
 					try {
 						await ctx.agentManager.sendCommand(cluster.agent.id, cluster.id, {
 							id: crypto.randomUUID(),
-							type: Command_CommandType.CREATE_RESOURCE,
+							type: Command_CommandType.CREATE_INGRESS,
 							payload: routeManifest,
 							targetNamespace: body.namespace,
 							targetName: `${body.serviceName}-route`,
@@ -289,7 +291,7 @@ export const ingressRoute = new Elysia({
 					try {
 						await ctx.agentManager.sendCommand(cluster.agent.id, cluster.id, {
 							id: crypto.randomUUID(),
-							type: Command_CommandType.DELETE_RESOURCE,
+							type: Command_CommandType.DELETE_INGRESS,
 							targetNamespace: ingress.namespace,
 							targetName: ingress.name,
 							payload:

@@ -228,6 +228,8 @@ export enum Command_CommandType {
   DELETE_SERVICE = 12,
   DELETE_RESOURCE = 13,
   CREATE_RESOURCE = 14,
+  CREATE_INGRESS = 15,
+  DELETE_INGRESS = 16,
   UNRECOGNIZED = -1,
 }
 
@@ -278,6 +280,12 @@ export function command_CommandTypeFromJSON(object: any): Command_CommandType {
     case 14:
     case "CREATE_RESOURCE":
       return Command_CommandType.CREATE_RESOURCE;
+    case 15:
+    case "CREATE_INGRESS":
+      return Command_CommandType.CREATE_INGRESS;
+    case 16:
+    case "DELETE_INGRESS":
+      return Command_CommandType.DELETE_INGRESS;
     case -1:
     case "UNRECOGNIZED":
     default:
@@ -317,6 +325,10 @@ export function command_CommandTypeToJSON(object: Command_CommandType): string {
       return "DELETE_RESOURCE";
     case Command_CommandType.CREATE_RESOURCE:
       return "CREATE_RESOURCE";
+    case Command_CommandType.CREATE_INGRESS:
+      return "CREATE_INGRESS";
+    case Command_CommandType.DELETE_INGRESS:
+      return "DELETE_INGRESS";
     case Command_CommandType.UNRECOGNIZED:
     default:
       return "UNRECOGNIZED";

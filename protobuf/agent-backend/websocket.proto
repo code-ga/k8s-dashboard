@@ -167,6 +167,8 @@ message Command {
     DELETE_SERVICE = 12;
     DELETE_RESOURCE = 13;
     CREATE_RESOURCE = 14;
+    CREATE_INGRESS = 15;
+    DELETE_INGRESS = 16;
   }
   CommandType type = 2;
   
