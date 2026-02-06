@@ -544,9 +544,13 @@ func getClusterConfig() (*ClusterConfig, error) {
 	}
 
 	client := &http.Client{Timeout: 10 * time.Second}
+	backendAddr, err := url.Parse(*addr)
+	if err != nil {
+		log.Fatalf("Error parsing backend address: %v", err)
+	}
 	url := url.URL{
 		Scheme: "https",
-		Host:   *addr,
+		Host:   backendAddr.Host,
 		Path:   "/api/agents/cluster-info",
 	}
 	req, err := http.NewRequest("GET", url.String(), bytes.NewBuffer(jsonPayload))
