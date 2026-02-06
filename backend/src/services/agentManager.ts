@@ -40,6 +40,7 @@ export class AgentManager extends EventEmitter<EventMap> {
 			agentId: number;
 		}
 	> = new Map();
+	private maxRetries = 5;
 	pendingCommandIntervalId: NodeJS.Timeout;
 
 	constructor() {
@@ -86,6 +87,38 @@ export class AgentManager extends EventEmitter<EventMap> {
 		});
 
 		for (const dbCmd of pendingDbCommands) {
+			if (dbCmd.retries >= this.maxRetries) {
+				console.warn(
+					`Command ${dbCmd.id} reached max retries (${this.maxRetries}). Marking as failed.`,
+				);
+				await db
+					.update(agentCommands)
+					.set({
+						status: "failed",
+						errorMessage: "Max retries reached",
+						updatedAt: new Date(),
+					})
+					.where(eq(agentCommands.id, dbCmd.id));
+
+				// Reject the in-memory pending command if it exists
+				const pending = this.pendingCommands.get(dbCmd.id);
+				if (pending) {
+					if (pending.timeout) clearTimeout(pending.timeout);
+					this.pendingCommands.delete(dbCmd.id);
+					pending.reject(new Error("Max retries reached"));
+				}
+				continue;
+			}
+
+			// Increment retry count
+			await db
+				.update(agentCommands)
+				.set({
+					retries: dbCmd.retries + 1,
+					updatedAt: new Date(),
+				})
+				.where(eq(agentCommands.id, dbCmd.id));
+
 			const command = dbCmd.payload as Command;
 			// Ensure ID matches
 			command.id = dbCmd.id;
@@ -126,7 +159,6 @@ export class AgentManager extends EventEmitter<EventMap> {
 		agentId: number,
 		command: Command,
 		commandId: string,
-		_reSend: boolean = false,
 	): Promise<CommandResponse> {
 		const ws = this.connections.get(agentId);
 
