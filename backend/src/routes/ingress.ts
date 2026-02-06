@@ -9,7 +9,10 @@ import { authenticationMiddleware } from "../middleware/auth";
 import { agentService } from "../services/agent.service";
 import { agentManagerService } from "../services/agentManager";
 import { baseResponseSchema, errorResponseSchema } from "../types";
-import { generateIngressRouteManifest } from "../utils/k8s-manifest";
+import {
+	generateIngressRouteManifest,
+	generateServiceManifest,
+} from "../utils/k8s-manifest";
 
 export const ingressRoute = new Elysia({
 	prefix: "/ingresses/:clusterId",
@@ -113,6 +116,67 @@ export const ingressRoute = new Elysia({
 						domain: body.domain,
 					});
 
+					// --- SERVICE CREATION LOGIC ---
+					// If selector is provided, we ensure the service exists or create it
+					if (body.selector) {
+						const existingSvc = await db.query.k8sServices.findFirst({
+							where: {
+								clusterId,
+								name: body.serviceName,
+								namespace: body.namespace,
+							},
+						});
+
+						if (!existingSvc) {
+							// Create Service in DB
+							await db
+								.insert(schema.k8sServices)
+								.values({
+									clusterId,
+									ownerId: ctx.profile!.id,
+									name: body.serviceName,
+									namespace: body.namespace,
+									type: "ClusterIP", // Default for exposure
+									selector: JSON.stringify(body.selector),
+									labels: JSON.stringify(body.labels || {}),
+									ports: [
+										{
+											port: body.internalPort,
+											targetPort: body.internalPort,
+											protocol: body.protocol.toUpperCase() as any,
+										},
+									],
+									updatedAt: new Date(),
+								})
+								.returning();
+
+							// Send Create Service command to Agent
+							const svcManifest = generateServiceManifest({
+								name: body.serviceName,
+								namespace: body.namespace,
+								type: "ClusterIP",
+								selector: body.selector,
+								ports: [
+									{
+										port: body.internalPort,
+										targetPort: body.internalPort,
+										protocol: body.protocol.toUpperCase() as any,
+									},
+								],
+								labels: body.labels,
+							});
+
+							await ctx.agentManager.sendCommand(cluster.agent.id, cluster.id, {
+								id: crypto.randomUUID(),
+								type: Command_CommandType.CREATE_SERVICE,
+								payload: svcManifest,
+								targetNamespace: body.namespace,
+								targetName: body.serviceName,
+							});
+						}
+					}
+					// ------------------------------
+
 					try {
 						await ctx.agentManager.sendCommand(cluster.agent.id, cluster.id, {
 							id: crypto.randomUUID(),
@@ -170,6 +234,8 @@ export const ingressRoute = new Elysia({
 						internalPort: Type.Number(),
 						externalPort: Type.Optional(Type.Number()),
 						domain: Type.Optional(Type.String()),
+						selector: Type.Optional(Type.Record(Type.String(), Type.String())),
+						labels: Type.Optional(Type.Record(Type.String(), Type.String())),
 					}),
 					response: {
 						201: baseResponseSchema(Type.Object(dbSchemaTypes.k8sIngresses)),

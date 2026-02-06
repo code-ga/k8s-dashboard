@@ -1,5 +1,6 @@
 // ALERT: user table only for auth, profile table for user data
 
+import { defineRelations } from "drizzle-orm";
 import {
 	boolean,
 	integer,
@@ -11,8 +12,6 @@ import {
 	timestamp,
 	uniqueIndex,
 } from "drizzle-orm/pg-core";
-import { defineRelations } from "drizzle-orm";
-import type { ServicePortDTO } from "../utils/k8s-manifest";
 
 export const user = pgTable("user", {
 	id: text("id").primaryKey(),

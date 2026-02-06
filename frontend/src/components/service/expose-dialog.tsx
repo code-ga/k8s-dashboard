@@ -57,18 +57,25 @@ export function ExposeDialog({
 
 	const mutation = useMutation({
 		mutationFn: async (values: z.infer<typeof exposeSchema>) => {
-			const res = await api.api.services({ clusterId: clusterId }).expose.post({
-				name: values.name,
-				namespace: values.namespace,
-				protocol: values.protocol,
-				internalPort: values.internalPort,
-				externalPort: values.externalPort,
-				domain: values.domain || undefined,
-				selector: selector,
-			});
+			const res = await api.api
+				.ingresses({
+					clusterId: clusterId,
+				})
+				.expose.post({
+					serviceName: values.name,
+					namespace: values.namespace,
+					protocol: values.protocol,
+					internalPort: values.internalPort,
+					externalPort: values.externalPort,
+					domain: values.domain || undefined,
+					selector: selector,
+					labels: { app: defaultName }, // Generic label
+				});
 
 			if (res.error) {
-				throw new Error(res.error.value?.message || "Failed to expose service");
+				throw new Error(
+					(res.error.value as any)?.message || "Failed to expose service",
+				);
 			}
 
 			return res.data;
@@ -76,6 +83,7 @@ export function ExposeDialog({
 		onSuccess: () => {
 			toast.success("Service exposed successfully");
 			queryClient.invalidateQueries({ queryKey: ["services", clusterId] });
+			queryClient.invalidateQueries({ queryKey: ["ingresses", clusterId] });
 			setOpen(false);
 		},
 		onError: (error) => {
@@ -99,7 +107,6 @@ export function ExposeDialog({
 		onSubmit: async ({ value }) => {
 			await mutation.mutateAsync(value);
 		},
-    
 	});
 
 	return (
