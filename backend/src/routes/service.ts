@@ -1,19 +1,15 @@
 import { Type } from "@sinclair/typebox";
+import { eq } from "drizzle-orm";
 import { Elysia } from "elysia";
+import { Command_CommandType } from "../../pb-generated/agent-backend/websocket";
 import { db } from "../database";
-import { dbSchemaTypes } from "../database/type";
+import { schema } from "../database/schema";
+import { dbSchemaTypes, type SchemaStatic } from "../database/type";
 import { authenticationMiddleware } from "../middleware/auth";
 import { agentManagerService } from "../services/agentManager";
-import { agentService } from "../services/agent.service";
 import { scalingController } from "../services/scaling.controller";
 import { baseResponseSchema, errorResponseSchema } from "../types";
-import { schema } from "../database/schema";
-import { eq, and } from "drizzle-orm";
-import {
-	generateServiceManifest,
-	generateIngressRouteManifest,
-} from "../utils/k8s-manifest";
-import { Command_CommandType } from "../../pb-generated/agent-backend/websocket";
+import { generateServiceManifest } from "../utils/k8s-manifest";
 
 export const serviceRoute = new Elysia({
 	prefix: "/services/:clusterId",
@@ -34,8 +30,12 @@ export const serviceRoute = new Elysia({
 					});
 				}
 				const services = await db.query.k8sServices.findMany({
+					// where: eq(schema.k8sServices.clusterId, Number(clusterId)),
 					where: {
 						clusterId: Number(clusterId),
+					},
+					with: {
+						ingresses: true,
 					},
 				});
 				return ctx.status(200, {
@@ -70,24 +70,17 @@ export const serviceRoute = new Elysia({
 						});
 					}
 
-					// Similar to pods/deployments, limit by "owner" or visibility if needed.
-					// Schema `k8sServices` doesn't strictly have `ownerId` in the view I saw earlier?
-					// Let's check schema.ts content provided in Step 7.
-					// `k8sServices` has `clusterId`, `nodeId`, `podId`, etc. No `ownerId`.
-					// So effectively, if we don't have owner on Service, regular users might not see them
-					// unless we link them to Pods they own?
-					// For now, let's return all for the cluster if the user has access to the cluster?
-					// Or filtering by namespace if we had namespace RBAC.
-					// Given the constraint, if there's no ownerId, maybe return all or none?
-					// k8sDeployments and k8sPods have ownerId.
-					// Users usually need to see services to know how to connect.
-					// Let's return all services in the cluster for now, or filter by namespaces user owns pods in?
-					// Simple approach: Return all services for the cluster for now.
-
 					const services = await db.query.k8sServices.findMany({
+						// where: and(
+						// 	eq(schema.k8sServices.clusterId, Number(clusterId)),
+						// 	eq(schema.k8sServices.ownerId, ctx.profile.id),
+						// ),
 						where: {
 							clusterId: Number(clusterId),
 							ownerId: ctx.profile.id,
+						},
+						with: {
+							ingresses: true,
 						},
 					});
 					return ctx.status(200, {
@@ -101,7 +94,14 @@ export const serviceRoute = new Elysia({
 					detail: { tags: ["Services"] },
 					response: {
 						200: baseResponseSchema(
-							Type.Array(Type.Object(dbSchemaTypes.k8sServices)),
+							Type.Array(
+								Type.Object({
+									...dbSchemaTypes.k8sServices,
+									ingresses: Type.Array(
+										Type.Object(dbSchemaTypes.k8sIngresses),
+									),
+								}),
+							),
 						),
 						400: errorResponseSchema,
 					},
@@ -119,9 +119,16 @@ export const serviceRoute = new Elysia({
 						});
 					}
 					const service = await db.query.k8sServices.findFirst({
+						// where: and(
+						// 	eq(schema.k8sServices.id, Number(id)),
+						// 	eq(schema.k8sServices.clusterId, Number(clusterId)),
+						// ),
 						where: {
 							id: Number(id),
 							clusterId: Number(clusterId),
+						},
+						with: {
+							ingresses: true,
 						},
 					});
 					if (!service) {
@@ -141,40 +148,29 @@ export const serviceRoute = new Elysia({
 				{
 					detail: { tags: ["Services"] },
 					response: {
-						200: baseResponseSchema(Type.Object(dbSchemaTypes.k8sServices)),
+						200: baseResponseSchema(
+							Type.Object({
+								...dbSchemaTypes.k8sServices,
+								ingresses: Type.Array(Type.Object(dbSchemaTypes.k8sIngresses)),
+							}),
+						),
 						404: errorResponseSchema,
 						400: errorResponseSchema,
 					},
 				},
 			)
 			.post(
-				"/expose",
+				"/",
 				async (ctx) => {
 					const clusterId = Number(ctx.params.clusterId);
 					const body = ctx.body;
-					if (body.protocol === "tcp" || body.protocol === "udp") {
-						return ctx.status(400, {
-							success: false,
-							message:
-								"This feature is temporary unavailable due to maintenance and security reasons",
-							timestamp: Date.now(),
-						});
-					}
-					if (!body.externalPort && body.protocol === "http") {
-						return ctx.status(400, {
-							success: false,
-							message: "External port is required for http protocol",
-							timestamp: Date.now(),
-						});
-					}
 
 					const cluster = await db.query.k8sCluster.findFirst({
+						// where: eq(schema.k8sCluster.id, clusterId),
 						where: {
 							id: clusterId,
 						},
-						with: {
-							agent: true,
-						},
+						with: { agent: true },
 					});
 
 					if (!cluster || !cluster.agent) {
@@ -185,61 +181,52 @@ export const serviceRoute = new Elysia({
 						});
 					}
 
-					if (
-						!body.domain &&
-						body.protocol === "http" &&
-						!cluster.clusterDomain
-					) {
-						return ctx.status(400, {
+					let newSvc:
+						| SchemaStatic<typeof dbSchemaTypes.k8sServices>
+						| undefined;
+
+
+					try {
+						[newSvc] = await db
+							.insert(schema.k8sServices)
+							.values({
+								clusterId: cluster.id,
+								ownerId: ctx.profile.id,
+								name: body.name,
+								namespace: body.namespace,
+								type: body.type,
+								selector: JSON.stringify(body.selector),
+								labels: JSON.stringify(body.labels || {}),
+								ports: body.ports,
+								updatedAt: new Date(),
+							})
+							.returning();
+						if (!newSvc) {
+							return ctx.status(500, {
+								success: false,
+								message: "Service not created",
+								timestamp: Date.now(),
+							});
+						}
+					} catch (dbError: any) {
+						console.error("DB Insert Failed:", dbError);
+						return ctx.status(500, {
 							success: false,
-							message: "Domain is required for http protocol",
+							message: `Database error: ${dbError.message}`,
 							timestamp: Date.now(),
 						});
 					}
 
-					let externalPort = body.externalPort;
-					if (!externalPort && body.protocol !== "http") {
-						const portEntry = await agentService.allocateGatewayPort(
-							clusterId,
-							body.protocol,
-						);
-						if (!portEntry) {
-							throw new Error("Failed to allocate port");
-						}
-						externalPort = portEntry.port;
-					}
-
-					// 1. Generate Service Manifest (ClusterIP)
-					const svcManifest = generateServiceManifest({
-						name: body.name,
-						namespace: body.namespace,
-						type: "ClusterIP",
-						selector: body.selector,
-						ports: [
-							{
-								port: body.internalPort,
-								targetPort: body.internalPort,
-								///@ts-expect-error
-								protocol: body.protocol === "udp" ? "UDP" : "TCP",
-							},
-						],
-						labels: body.labels,
-					});
-
-					// 2. Generate IngressRoute Manifest
-					const routeManifest = generateIngressRouteManifest({
-						name: `${body.name}-route`,
-						namespace: body.namespace,
-						protocol: body.protocol,
-						port: externalPort || 0,
-						internalPort: body.internalPort,
-						serviceName: body.name,
-						domain: body.domain,
-						labels: body.labels,
-					});
-
 					try {
-						// Send Service Command
+						const svcManifest = generateServiceManifest({
+							name: body.name,
+							namespace: body.namespace,
+							type: body.type,
+							selector: body.selector,
+							ports: body.ports,
+							labels: body.labels,
+						});
+
 						await ctx.agentManager.sendCommand(cluster.agent.id, cluster.id, {
 							id: crypto.randomUUID(),
 							type: Command_CommandType.CREATE_SERVICE,
@@ -248,40 +235,18 @@ export const serviceRoute = new Elysia({
 							targetName: body.name,
 						});
 
-						// Send Route Command
-						await ctx.agentManager.sendCommand(cluster.agent.id, cluster.id, {
-							id: crypto.randomUUID(),
-							type: Command_CommandType.CREATE_RESOURCE,
-							payload: routeManifest,
-							targetNamespace: body.namespace,
-							targetName: `${body.name}-route`,
-						});
-
-						await db
-							.update(schema.k8sServices)
-							.set({
-								externalPort,
-								domain: body.domain,
-								exposureProtocol: body.protocol,
-							})
-							.where(
-								and(
-									eq(schema.k8sServices.clusterId, clusterId),
-									eq(schema.k8sServices.name, body.name),
-									eq(schema.k8sServices.namespace, body.namespace),
-								),
-							);
-
-						return ctx.status(200, {
+						return ctx.status(201, {
 							success: true,
-							message: "Expose commands sent",
-							data: { externalPort },
+							message: "Service creation command sent",
+							data: newSvc,
 							timestamp: Date.now(),
 						});
 					} catch (error: any) {
-						return ctx.status(500, {
-							success: false,
-							message: `Agent error: ${error.message}`,
+						return ctx.status(200, {
+							success: true,
+							message:
+								"Service created in DB but Agent is unreachable. Will sync later.",
+							data: newSvc,
 							timestamp: Date.now(),
 						});
 					}
@@ -291,23 +256,29 @@ export const serviceRoute = new Elysia({
 					body: Type.Object({
 						name: Type.String(),
 						namespace: Type.String(),
-						protocol: Type.Union([
-							Type.Literal("http"),
-							Type.Literal("tcp"),
-							Type.Literal("udp"),
+						type: Type.Union([
+							Type.Literal("ClusterIP"),
+							Type.Literal("NodePort"),
+							Type.Literal("LoadBalancer"),
 						]),
-						internalPort: Type.Number(),
-						externalPort: Type.Optional(Type.Number()),
-						domain: Type.Optional(Type.String()),
 						selector: Type.Record(Type.String(), Type.String()),
+						ports: Type.Array(
+							Type.Object({
+								port: Type.Number(),
+								targetPort: Type.Number(),
+								nodePort: Type.Optional(Type.Number()),
+								protocol: Type.Optional(
+									Type.Union([Type.Literal("TCP"), Type.Literal("UDP")]),
+								),
+								name: Type.Optional(Type.String()),
+							}),
+						),
 						labels: Type.Optional(Type.Record(Type.String(), Type.String())),
 					}),
 					response: {
-						200: baseResponseSchema(
-							Type.Object({ externalPort: Type.Optional(Type.Number()) }),
-						),
+						201: baseResponseSchema(Type.Object(dbSchemaTypes.k8sServices)),
+						200: baseResponseSchema(Type.Object(dbSchemaTypes.k8sServices)),
 						404: errorResponseSchema,
-						400: errorResponseSchema,
 						500: errorResponseSchema,
 					},
 				},
@@ -319,6 +290,10 @@ export const serviceRoute = new Elysia({
 					const clusterId = Number(ctx.params.clusterId);
 
 					const service = await db.query.k8sServices.findFirst({
+						// where: and(
+						// 	eq(schema.k8sServices.id, svcId),
+						// 	eq(schema.k8sServices.clusterId, clusterId),
+						// ),
 						where: {
 							id: svcId,
 							clusterId: clusterId,
@@ -334,12 +309,11 @@ export const serviceRoute = new Elysia({
 					}
 
 					const cluster = await db.query.k8sCluster.findFirst({
+						// where: eq(schema.k8sCluster.id, clusterId),
 						where: {
 							id: clusterId,
 						},
-						with: {
-							agent: true,
-						},
+						with: { agent: true },
 					});
 
 					if (!cluster || !cluster.agent) {
@@ -351,21 +325,6 @@ export const serviceRoute = new Elysia({
 					}
 
 					try {
-						await ctx.agentManager.sendCommand(cluster.agent.id, cluster.id, {
-							id: crypto.randomUUID(),
-							type: Command_CommandType.DELETE_RESOURCE,
-							targetNamespace: service.namespace,
-							targetName: `${service.name}-route`,
-							payload: "IngressRoute", // Traefik resource
-						});
-
-						if (service.externalPort) {
-							await agentService.releaseGatewayPort(
-								clusterId,
-								service.externalPort,
-							);
-						}
-
 						await ctx.agentManager.sendCommand(cluster.agent.id, cluster.id, {
 							id: crypto.randomUUID(),
 							type: Command_CommandType.DELETE_SERVICE,
@@ -396,136 +355,6 @@ export const serviceRoute = new Elysia({
 					detail: { tags: ["Services"] },
 					response: {
 						200: baseResponseSchema(Type.Object(dbSchemaTypes.k8sServices)),
-						404: errorResponseSchema,
-						500: errorResponseSchema,
-					},
-				},
-			)
-			.post(
-				"/de-expose/:id",
-				async (ctx) => {
-					const svcId = Number(ctx.params.id);
-					const clusterId = Number(ctx.params.clusterId);
-
-					const service = await db.query.k8sServices.findFirst({
-						where: {
-							id: svcId,
-							clusterId: clusterId,
-						},
-					});
-
-					if (!service) {
-						return ctx.status(404, {
-							success: false,
-							message: "Service not found",
-							timestamp: Date.now(),
-						});
-					}
-
-					const cluster = await db.query.k8sCluster.findFirst({
-						where: {
-							id: clusterId,
-						},
-						with: {
-							agent: true,
-						},
-					});
-
-					if (!cluster || !cluster.agent) {
-						return ctx.status(404, {
-							success: false,
-							message: "Cluster not found",
-							timestamp: Date.now(),
-						});
-					}
-
-					try {
-						await ctx.agentManager.sendCommand(cluster.agent.id, cluster.id, {
-							id: crypto.randomUUID(),
-							type: Command_CommandType.DELETE_RESOURCE,
-							targetNamespace: service.namespace,
-							targetName: `${service.name}-route`,
-							payload: "IngressRoute",
-						});
-
-						if (service.externalPort) {
-							await agentService.releaseGatewayPort(
-								clusterId,
-								service.externalPort,
-							);
-						}
-
-						await db
-							.update(schema.k8sServices)
-							.set({
-								externalPort: null,
-								domain: null,
-								exposureProtocol: null,
-							})
-							.where(eq(schema.k8sServices.id, svcId));
-
-						return ctx.status(200, {
-							success: true,
-							message: "Service de-exposed successfully",
-							data: {},
-							timestamp: Date.now(),
-						});
-					} catch (error: any) {
-						return ctx.status(500, {
-							success: false,
-							message: `Agent error: ${error.message}`,
-							timestamp: Date.now(),
-						});
-					}
-				},
-				{
-					detail: { tags: ["Services"] },
-					response: {
-						200: baseResponseSchema(Type.Object({})),
-						404: errorResponseSchema,
-						500: errorResponseSchema,
-					},
-				},
-			)
-			.post(
-				"/allocate",
-				async (ctx) => {
-					const { clusterId } = ctx.params;
-					const { protocol } = ctx.body;
-
-					try {
-						const portEntry = await agentService.allocateGatewayPort(
-							Number(clusterId),
-							protocol,
-						);
-						if (!portEntry) {
-							throw new Error("Failed to allocate port");
-						}
-						return ctx.status(201, {
-							success: true,
-							message: "Port allocated successfully",
-							data: portEntry,
-							timestamp: Date.now(),
-						});
-					} catch (error: any) {
-						return ctx.status(500, {
-							success: false,
-							message: `Allocation error: ${error.message}`,
-							timestamp: Date.now(),
-						});
-					}
-				},
-				{
-					detail: { tags: ["Services"] },
-					body: Type.Object({
-						protocol: Type.Union([
-							Type.Literal("http"),
-							Type.Literal("tcp"),
-							Type.Literal("udp"),
-						]),
-					}),
-					response: {
-						201: baseResponseSchema(Type.Object(dbSchemaTypes.gatewayPorts)),
 						404: errorResponseSchema,
 						500: errorResponseSchema,
 					},

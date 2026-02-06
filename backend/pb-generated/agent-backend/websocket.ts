@@ -169,19 +169,27 @@ export interface Pod {
   ramUsage: number;
 }
 
+export interface ServicePort {
+  name: string;
+  /** TCP, UDP */
+  protocol: string;
+  port: number;
+  targetPort: number;
+  nodePort: number;
+}
+
 export interface Service {
   name: string;
   namespace: string;
   /** ClusterIP, NodePort, LoadBalancer */
   type: string;
-  internalPort: number;
-  externalPort: number;
   clusterIp: string;
   /** Selector labels */
   selector: { [key: string]: string };
   domain: string;
   uid: string;
   labels: { [key: string]: string };
+  ports: ServicePort[];
 }
 
 export interface Service_SelectorEntry {
@@ -2143,19 +2151,140 @@ export const Pod: MessageFns<Pod> = {
   },
 };
 
+function createBaseServicePort(): ServicePort {
+  return { name: "", protocol: "", port: 0, targetPort: 0, nodePort: 0 };
+}
+
+export const ServicePort: MessageFns<ServicePort> = {
+  encode(message: ServicePort, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.name !== "") {
+      writer.uint32(10).string(message.name);
+    }
+    if (message.protocol !== "") {
+      writer.uint32(18).string(message.protocol);
+    }
+    if (message.port !== 0) {
+      writer.uint32(24).int32(message.port);
+    }
+    if (message.targetPort !== 0) {
+      writer.uint32(32).int32(message.targetPort);
+    }
+    if (message.nodePort !== 0) {
+      writer.uint32(40).int32(message.nodePort);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ServicePort {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseServicePort();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.name = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.protocol = reader.string();
+          continue;
+        }
+        case 3: {
+          if (tag !== 24) {
+            break;
+          }
+
+          message.port = reader.int32();
+          continue;
+        }
+        case 4: {
+          if (tag !== 32) {
+            break;
+          }
+
+          message.targetPort = reader.int32();
+          continue;
+        }
+        case 5: {
+          if (tag !== 40) {
+            break;
+          }
+
+          message.nodePort = reader.int32();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): ServicePort {
+    return {
+      name: isSet(object.name) ? globalThis.String(object.name) : "",
+      protocol: isSet(object.protocol) ? globalThis.String(object.protocol) : "",
+      port: isSet(object.port) ? globalThis.Number(object.port) : 0,
+      targetPort: isSet(object.targetPort)
+        ? globalThis.Number(object.targetPort)
+        : isSet(object.target_port)
+        ? globalThis.Number(object.target_port)
+        : 0,
+      nodePort: isSet(object.nodePort)
+        ? globalThis.Number(object.nodePort)
+        : isSet(object.node_port)
+        ? globalThis.Number(object.node_port)
+        : 0,
+    };
+  },
+
+  toJSON(message: ServicePort): unknown {
+    const obj: any = {};
+    if (message.name !== "") {
+      obj.name = message.name;
+    }
+    if (message.protocol !== "") {
+      obj.protocol = message.protocol;
+    }
+    if (message.port !== 0) {
+      obj.port = Math.round(message.port);
+    }
+    if (message.targetPort !== 0) {
+      obj.targetPort = Math.round(message.targetPort);
+    }
+    if (message.nodePort !== 0) {
+      obj.nodePort = Math.round(message.nodePort);
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<ServicePort>, I>>(base?: I): ServicePort {
+    return ServicePort.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<ServicePort>, I>>(object: I): ServicePort {
+    const message = createBaseServicePort();
+    message.name = object.name ?? "";
+    message.protocol = object.protocol ?? "";
+    message.port = object.port ?? 0;
+    message.targetPort = object.targetPort ?? 0;
+    message.nodePort = object.nodePort ?? 0;
+    return message;
+  },
+};
+
 function createBaseService(): Service {
-  return {
-    name: "",
-    namespace: "",
-    type: "",
-    internalPort: 0,
-    externalPort: 0,
-    clusterIp: "",
-    selector: {},
-    domain: "",
-    uid: "",
-    labels: {},
-  };
+  return { name: "", namespace: "", type: "", clusterIp: "", selector: {}, domain: "", uid: "", labels: {}, ports: [] };
 }
 
 export const Service: MessageFns<Service> = {
@@ -2169,27 +2298,24 @@ export const Service: MessageFns<Service> = {
     if (message.type !== "") {
       writer.uint32(26).string(message.type);
     }
-    if (message.internalPort !== 0) {
-      writer.uint32(32).int32(message.internalPort);
-    }
-    if (message.externalPort !== 0) {
-      writer.uint32(40).int32(message.externalPort);
-    }
     if (message.clusterIp !== "") {
-      writer.uint32(50).string(message.clusterIp);
+      writer.uint32(34).string(message.clusterIp);
     }
     globalThis.Object.entries(message.selector).forEach(([key, value]: [string, string]) => {
-      Service_SelectorEntry.encode({ key: key as any, value }, writer.uint32(58).fork()).join();
+      Service_SelectorEntry.encode({ key: key as any, value }, writer.uint32(42).fork()).join();
     });
     if (message.domain !== "") {
-      writer.uint32(66).string(message.domain);
+      writer.uint32(50).string(message.domain);
     }
     if (message.uid !== "") {
-      writer.uint32(74).string(message.uid);
+      writer.uint32(58).string(message.uid);
     }
     globalThis.Object.entries(message.labels).forEach(([key, value]: [string, string]) => {
-      Service_LabelsEntry.encode({ key: key as any, value }, writer.uint32(82).fork()).join();
+      Service_LabelsEntry.encode({ key: key as any, value }, writer.uint32(66).fork()).join();
     });
+    for (const v of message.ports) {
+      ServicePort.encode(v!, writer.uint32(74).fork()).join();
+    }
     return writer;
   },
 
@@ -2225,19 +2351,22 @@ export const Service: MessageFns<Service> = {
           continue;
         }
         case 4: {
-          if (tag !== 32) {
+          if (tag !== 34) {
             break;
           }
 
-          message.internalPort = reader.int32();
+          message.clusterIp = reader.string();
           continue;
         }
         case 5: {
-          if (tag !== 40) {
+          if (tag !== 42) {
             break;
           }
 
-          message.externalPort = reader.int32();
+          const entry5 = Service_SelectorEntry.decode(reader, reader.uint32());
+          if (entry5.value !== undefined) {
+            message.selector[entry5.key] = entry5.value;
+          }
           continue;
         }
         case 6: {
@@ -2245,7 +2374,7 @@ export const Service: MessageFns<Service> = {
             break;
           }
 
-          message.clusterIp = reader.string();
+          message.domain = reader.string();
           continue;
         }
         case 7: {
@@ -2253,10 +2382,7 @@ export const Service: MessageFns<Service> = {
             break;
           }
 
-          const entry7 = Service_SelectorEntry.decode(reader, reader.uint32());
-          if (entry7.value !== undefined) {
-            message.selector[entry7.key] = entry7.value;
-          }
+          message.uid = reader.string();
           continue;
         }
         case 8: {
@@ -2264,7 +2390,10 @@ export const Service: MessageFns<Service> = {
             break;
           }
 
-          message.domain = reader.string();
+          const entry8 = Service_LabelsEntry.decode(reader, reader.uint32());
+          if (entry8.value !== undefined) {
+            message.labels[entry8.key] = entry8.value;
+          }
           continue;
         }
         case 9: {
@@ -2272,18 +2401,7 @@ export const Service: MessageFns<Service> = {
             break;
           }
 
-          message.uid = reader.string();
-          continue;
-        }
-        case 10: {
-          if (tag !== 82) {
-            break;
-          }
-
-          const entry10 = Service_LabelsEntry.decode(reader, reader.uint32());
-          if (entry10.value !== undefined) {
-            message.labels[entry10.key] = entry10.value;
-          }
+          message.ports.push(ServicePort.decode(reader, reader.uint32()));
           continue;
         }
       }
@@ -2300,16 +2418,6 @@ export const Service: MessageFns<Service> = {
       name: isSet(object.name) ? globalThis.String(object.name) : "",
       namespace: isSet(object.namespace) ? globalThis.String(object.namespace) : "",
       type: isSet(object.type) ? globalThis.String(object.type) : "",
-      internalPort: isSet(object.internalPort)
-        ? globalThis.Number(object.internalPort)
-        : isSet(object.internal_port)
-        ? globalThis.Number(object.internal_port)
-        : 0,
-      externalPort: isSet(object.externalPort)
-        ? globalThis.Number(object.externalPort)
-        : isSet(object.external_port)
-        ? globalThis.Number(object.external_port)
-        : 0,
       clusterIp: isSet(object.clusterIp)
         ? globalThis.String(object.clusterIp)
         : isSet(object.cluster_ip)
@@ -2335,6 +2443,9 @@ export const Service: MessageFns<Service> = {
           {},
         )
         : {},
+      ports: globalThis.Array.isArray(object?.ports)
+        ? object.ports.map((e: any) => ServicePort.fromJSON(e))
+        : [],
     };
   },
 
@@ -2348,12 +2459,6 @@ export const Service: MessageFns<Service> = {
     }
     if (message.type !== "") {
       obj.type = message.type;
-    }
-    if (message.internalPort !== 0) {
-      obj.internalPort = Math.round(message.internalPort);
-    }
-    if (message.externalPort !== 0) {
-      obj.externalPort = Math.round(message.externalPort);
     }
     if (message.clusterIp !== "") {
       obj.clusterIp = message.clusterIp;
@@ -2382,6 +2487,9 @@ export const Service: MessageFns<Service> = {
         });
       }
     }
+    if (message.ports?.length) {
+      obj.ports = message.ports.map((e) => ServicePort.toJSON(e));
+    }
     return obj;
   },
 
@@ -2393,8 +2501,6 @@ export const Service: MessageFns<Service> = {
     message.name = object.name ?? "";
     message.namespace = object.namespace ?? "";
     message.type = object.type ?? "";
-    message.internalPort = object.internalPort ?? 0;
-    message.externalPort = object.externalPort ?? 0;
     message.clusterIp = object.clusterIp ?? "";
     message.selector = (globalThis.Object.entries(object.selector ?? {}) as [string, string][]).reduce(
       (acc: { [key: string]: string }, [key, value]: [string, string]) => {
@@ -2416,6 +2522,7 @@ export const Service: MessageFns<Service> = {
       },
       {},
     );
+    message.ports = object.ports?.map((e) => ServicePort.fromPartial(e)) || [];
     return message;
   },
 };

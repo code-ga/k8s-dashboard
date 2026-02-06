@@ -310,11 +310,10 @@ export class AgentService {
 					namespace: svc.namespace,
 					type: svc.type,
 					clusterIp: svc.clusterIp,
-					internalPort: svc.internalPort,
-					externalPort: svc.externalPort || null,
 					selector: JSON.stringify(svc.selector),
 					k8sUid: svc.uid,
 					labels: JSON.stringify(svc.labels),
+					ports: svc.ports,
 					updatedAt: new Date(),
 				};
 
@@ -504,13 +503,7 @@ export class AgentService {
 					spec: {
 						type: dbSvc.type || "ClusterIP",
 						selector: dbSvc.selector ? JSON.parse(dbSvc.selector) : {},
-						ports: [
-							{
-								port: dbSvc.internalPort,
-								targetPort: dbSvc.internalPort,
-								...(dbSvc.externalPort ? { nodePort: dbSvc.externalPort } : {}),
-							},
-						],
+						ports: dbSvc.ports,
 					},
 				};
 

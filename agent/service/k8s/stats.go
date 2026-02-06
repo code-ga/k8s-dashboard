@@ -257,21 +257,25 @@ func (kc *K8sClient) GetFullClusterState() (*pb.Heartbeat, error) {
 	}
 	var pbServices []*pb.Service
 	for _, scv := range services.Items {
-		var iPort, ePort int32
-		if len(scv.Spec.Ports) > 0 {
-			iPort = scv.Spec.Ports[0].Port
-			ePort = scv.Spec.Ports[0].NodePort
+		var ports []*pb.ServicePort
+		for _, p := range scv.Spec.Ports {
+			ports = append(ports, &pb.ServicePort{
+				Name:       p.Name,
+				Protocol:   string(p.Protocol),
+				Port:       p.Port,
+				TargetPort: p.TargetPort.IntVal,
+				NodePort:   p.NodePort,
+			})
 		}
 		pbServices = append(pbServices, &pb.Service{
-			Name:         scv.Name,
-			Namespace:    scv.Namespace,
-			Type:         string(scv.Spec.Type),
-			InternalPort: iPort,
-			ExternalPort: ePort,
-			ClusterIp:    scv.Spec.ClusterIP,
-			Selector:     scv.Spec.Selector,
-			Uid:          string(scv.UID),
-			Labels:       scv.Labels,
+			Name:      scv.Name,
+			Namespace: scv.Namespace,
+			Type:      string(scv.Spec.Type),
+			ClusterIp: scv.Spec.ClusterIP,
+			Selector:  scv.Spec.Selector,
+			Uid:       string(scv.UID),
+			Labels:    scv.Labels,
+			Ports:     ports,
 		})
 	}
 

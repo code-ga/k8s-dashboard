@@ -41,18 +41,20 @@ export interface DeploymentDTO {
 	selector?: Record<string, string>;
 }
 
+export interface ServicePortDTO {
+	port: number;
+	targetPort: number;
+	nodePort?: number;
+	protocol?: "TCP" | "UDP";
+	name?: string;
+}
+
 export interface ServiceDTO {
 	name: string;
 	namespace: string;
 	type: "ClusterIP" | "NodePort" | "LoadBalancer";
 	selector: Record<string, string>;
-	ports: {
-		port: number;
-		targetPort: number;
-		nodePort?: number;
-		protocol?: "TCP" | "UDP";
-		name?: string;
-	}[];
+	ports: ServicePortDTO[];
 	labels?: Record<string, string>;
 }
 

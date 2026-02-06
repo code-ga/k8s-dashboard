@@ -128,18 +128,25 @@ message Pod {
   int64 ram_usage = 16;
 }
 
+message ServicePort {
+  string name = 1;
+  string protocol = 2; // TCP, UDP
+  int32 port = 3;
+  int32 target_port = 4;
+  int32 node_port = 5;
+}
+
 message Service {
   string name = 1;
   string namespace = 2;
   string type = 3; // ClusterIP, NodePort, LoadBalancer
-  int32 internal_port = 4;
-  int32 external_port = 5;
-  string cluster_ip = 6;
+  string cluster_ip = 4;
   // Selector labels
-  map<string, string> selector = 7;
-  string domain = 8;
-  string uid = 9;
-  map<string, string> labels = 10;
+  map<string, string> selector = 5;
+  string domain = 6;
+  string uid = 7;
+  map<string, string> labels = 8;
+  repeated ServicePort ports = 9;
 }
 
 message Command {

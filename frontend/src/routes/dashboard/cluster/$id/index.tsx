@@ -137,6 +137,16 @@ function ClusterOverview() {
 						</CardHeader>
 					</Card>
 				</Link>
+				<Link to={`/dashboard/cluster/$id/ingresses`} params={{ id }}>
+					<Card className="hover:bg-muted/50 transition-colors cursor-pointer">
+						<CardHeader>
+							<CardTitle className="flex items-center gap-2">
+								<Layers className="h-5 w-5" /> Ingresses
+							</CardTitle>
+							<CardContent>Manage service exposure</CardContent>
+						</CardHeader>
+					</Card>
+				</Link>
 			</div>
 
 			{agentConfig && (

@@ -9,6 +9,7 @@ import { nodesRoute } from "./nodes";
 import { podRoute } from "./pod";
 import { deploymentRoute } from "./deployment";
 import { serviceRoute } from "./service";
+import { ingressRoute } from "./ingress";
 
 const apiRouter = new Elysia({ prefix: "/api" })
 	.use(agentManagerService)
@@ -21,6 +22,7 @@ const apiRouter = new Elysia({ prefix: "/api" })
 	.use(profileRouter)
 	.use(podRoute)
 	.use(deploymentRoute)
-	.use(serviceRoute);
+	.use(serviceRoute)
+	.use(ingressRoute);
 
 export { apiRouter };

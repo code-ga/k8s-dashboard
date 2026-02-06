@@ -12,6 +12,7 @@ import {
 	uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { defineRelations } from "drizzle-orm";
+import type { ServicePortDTO } from "../utils/k8s-manifest";
 
 export const user = pgTable("user", {
 	id: text("id").primaryKey(),
@@ -312,27 +313,53 @@ export const k8sServices = pgTable(
 		ownerId: text("owner_id").references(() => profile.id, {
 			onDelete: "set null",
 		}),
-		// globalPort: integer("global_port"), // the port that will be exposed to the cluster (every node will open this port and point to specific pod)
-
-		internalPort: integer("internal_port").notNull(),
-		externalPort: integer("external_port"),
+		name: text("name").notNull(),
+		namespace: text("namespace").notNull(),
 		type: text("type"),
 		clusterIp: text("cluster_ip"),
 		selector: text("selector"), // JSON string
-		domain: text("domain"),
-		namespace: text("namespace").notNull(),
 		labels: text("labels").notNull(),
+		ports: jsonb("ports").$type<any[]>().notNull(), // Array of ServicePortDTO
 
-		name: text("name").notNull(),
 		createdAt: timestamp("created_at").defaultNow().notNull(),
 		updatedAt: timestamp("updated_at")
 			.$onUpdate(() => /* @__PURE__ */ new Date())
 			.notNull(),
 		k8sUid: text("k8s_uid"),
-		exposureProtocol: text("exposure_protocol"), // http | tcp | udp
 	},
 	(table) => ({
 		clusterUidIdx: uniqueIndex("svc_cluster_uid_idx").on(
+			table.clusterId,
+			table.k8sUid,
+		),
+	}),
+);
+
+export const k8sIngresses = pgTable(
+	"k8sIngresses",
+	{
+		id: serial("id").primaryKey(),
+		clusterId: integer("cluster_id")
+			.notNull()
+			.references(() => k8sCluster.id, { onDelete: "cascade" }),
+		name: text("name").notNull(),
+		namespace: text("namespace").notNull(),
+		serviceId: integer("service_id").references(() => k8sServices.id, {
+			onDelete: "set null",
+		}),
+		serviceName: text("service_name"),
+		domain: text("domain"),
+		port: integer("port"), // gateway port
+		protocol: text("protocol"), // http | tcp | udp
+		path: text("path"),
+		k8sUid: text("k8s_uid"),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+		updatedAt: timestamp("updated_at")
+			.$onUpdate(() => /* @__PURE__ */ new Date())
+			.notNull(),
+	},
+	(table) => ({
+		clusterUidIdx: uniqueIndex("ing_cluster_uid_idx").on(
 			table.clusterId,
 			table.k8sUid,
 		),
@@ -380,6 +407,7 @@ export const schema = {
 	k8sPods,
 	k8sClusterNode,
 	k8sServices,
+	k8sIngresses,
 	k8sDeployments,
 	agentCommands,
 	gatewayPorts,
@@ -395,6 +423,7 @@ export const schemaRelations = defineRelations(schema, (r) => ({
 		nodes: r.many.k8sClusterNode(),
 		deployments: r.many.k8sDeployments(),
 		services: r.many.k8sServices(),
+		ingresses: r.many.k8sIngresses(),
 		agentCommands: r.many.agentCommands(),
 	},
 	clusterAgent: {
@@ -438,6 +467,17 @@ export const schemaRelations = defineRelations(schema, (r) => ({
 		owner: r.one.profile({
 			from: r.k8sServices.ownerId,
 			to: r.profile.id,
+		}),
+		ingresses: r.many.k8sIngresses(),
+	},
+	k8sIngresses: {
+		cluster: r.one.k8sCluster({
+			from: r.k8sIngresses.clusterId,
+			to: r.k8sCluster.id,
+		}),
+		service: r.one.k8sServices({
+			from: r.k8sIngresses.serviceId,
+			to: r.k8sServices.id,
 		}),
 	},
 	k8sClusterNode: {

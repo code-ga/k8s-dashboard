@@ -64,24 +64,26 @@ function ExposureDialog({
 	const [open, setOpen] = useState(false);
 	const queryClient = useQueryClient();
 
+	// Find if there is an existing ingress for this service
+	const ingress = (service as any).ingresses?.[0];
+
 	const form = useForm({
 		defaultValues: {
-			protocol: (service.exposureProtocol as "http" | "tcp" | "udp") || "http",
-			domain: service.domain || "",
-			internalPort: service.internalPort || 80,
+			protocol: (ingress?.protocol as "http" | "tcp" | "udp") || "http",
+			domain: ingress?.domain || "",
+			internalPort:
+				ingress?.internalPort || (service.ports as any[])?.[0]?.port || 80,
 		},
 	});
 
 	const exposeMutation = useMutation({
 		mutationFn: async (values: any) => {
-			const res = await api.api.services({ clusterId }).expose.post({
-				name: service.name,
+			const res = await (api.api.ingresses as any)({ clusterId }).expose.post({
+				serviceName: service.name,
 				namespace: service.namespace,
 				protocol: values.protocol,
 				internalPort: values.internalPort,
 				domain: values.protocol === "http" ? values.domain : undefined,
-				selector: JSON.parse(service.selector || "{}"),
-				labels: JSON.parse(service.labels || "{}"),
 			});
 			if (res.error) throw res.error;
 			return res.data;
@@ -98,10 +100,15 @@ function ExposureDialog({
 
 	const deExposeMutation = useMutation({
 		mutationFn: async () => {
-			const res = await api.api
-				.services({ clusterId })
-				["de-expose"]({ id: String(service.id) })
-				.post();
+			// Find the ingress associated with this service and port
+			const ingress = (service as any).ingresses?.find(
+				(i: any) => i.protocol === form.getValues().protocol,
+			);
+			if (!ingress) throw new Error("No matching ingress found to delete");
+
+			const res = await (api.api.ingresses as any)({ clusterId })({
+				id: String(ingress.id),
+			}).delete();
 			if (res.error) throw res.error;
 			return res.data;
 		},
@@ -121,11 +128,11 @@ function ExposureDialog({
 		<Dialog open={open} onOpenChange={setOpen}>
 			<DialogTrigger asChild>
 				<Button
-					variant={service.exposureProtocol ? "outline" : "default"}
+					variant={ingress ? "outline" : "default"}
 					size="sm"
 					className="gap-2"
 				>
-					{service.exposureProtocol ? (
+					{ingress ? (
 						<>
 							<ShieldCheck className="h-4 w-4 text-green-500" />
 							Manage Exposure
@@ -212,7 +219,7 @@ function ExposureDialog({
 						/>
 
 						<DialogFooter className="gap-2">
-							{service.exposureProtocol && (
+							{ingress && (
 								<Button
 									type="button"
 									variant="destructive"
@@ -225,7 +232,7 @@ function ExposureDialog({
 								</Button>
 							)}
 							<Button type="submit" disabled={exposeMutation.isPending}>
-								{service.exposureProtocol ? "Update" : "Expose"}
+								{ingress ? "Update" : "Expose"}
 							</Button>
 						</DialogFooter>
 					</form>
@@ -245,7 +252,7 @@ function ClusterServices() {
 			if (res.error) throw res.error;
 			if (!res.data.data)
 				throw new Error(res.data.message || "Failed to fetch services");
-			return res.data.data as Service[];
+			return res.data.data; // as Service[];
 		},
 	});
 
@@ -275,7 +282,7 @@ function ClusterServices() {
 								<TableHead>Name</TableHead>
 								<TableHead>Namespace</TableHead>
 								<TableHead>Type</TableHead>
-								<TableHead>Internal Port</TableHead>
+								<TableHead>Ports</TableHead>
 								<TableHead>Exposure</TableHead>
 								<TableHead className="text-right">Actions</TableHead>
 							</TableRow>
@@ -283,24 +290,41 @@ function ClusterServices() {
 						<TableBody>
 							{services?.map((svc) => (
 								<TableRow key={svc.id}>
-									<TableCell className="font-medium flex items-center gap-2">
-										<Network className="h-4 w-4 text-green-500" />
-										{svc.name}
+									<TableCell className="font-medium">
+										<div className="flex items-center gap-2">
+											<Network className="h-4 w-4 text-green-500" />
+											{svc.name}
+										</div>
 									</TableCell>
 									<TableCell>{svc.namespace}</TableCell>
 									<TableCell>{svc.type || "ClusterIP"}</TableCell>
-									<TableCell>{svc.internalPort}</TableCell>
 									<TableCell>
-										{svc.exposureProtocol ? (
-											<div className="flex items-center gap-2 text-sm text-green-600 font-medium whitespace-nowrap">
-												<ShieldCheck className="h-4 w-4" />
-												{svc.exposureProtocol.toUpperCase()}
-												{svc.externalPort ? `:${svc.externalPort}` : ""}
-												{svc.domain ? ` (${svc.domain})` : ""}
+										<div className="flex flex-col gap-1">
+											{(svc.ports as any[])?.map((p) => (
+												<div key={p.port} className="text-xs">
+													{p.port} → {p.targetPort} ({p.protocol})
+												</div>
+											))}
+										</div>
+									</TableCell>
+									<TableCell>
+										{svc.ingresses && svc.ingresses.length > 0 ? (
+											<div className="flex flex-col gap-1">
+												{svc.ingresses.map((ing) => (
+													<div
+														key={ing.id}
+														className="flex items-center gap-2 text-xs text-green-600 font-medium whitespace-nowrap"
+													>
+														<ShieldCheck className="h-3 w-3" />
+														{ing.protocol?.toUpperCase()}
+														{ing.port ? `:${ing.port}` : ""}
+														{ing.domain ? ` (${ing.domain})` : ""}
+													</div>
+												))}
 											</div>
 										) : (
-											<div className="flex items-center gap-2 text-sm text-muted-foreground whitespace-nowrap">
-												<ShieldAlert className="h-4 w-4" />
+											<div className="flex items-center gap-2 text-xs text-muted-foreground whitespace-nowrap">
+												<ShieldAlert className="h-3 w-3" />
 												Internal Only
 											</div>
 										)}
