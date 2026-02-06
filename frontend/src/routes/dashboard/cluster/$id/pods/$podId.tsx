@@ -54,7 +54,7 @@ function ManagePodPage() {
 		mutationFn: async () => {
 			const res = await api.api
 				.pods({ clusterId })({ id: podId.toString() })
-				.delete();
+				.delete()
 			if (res.error) {
 				throw new Error(res.error.value?.message || "Failed to delete pod");
 			}
@@ -66,7 +66,7 @@ function ManagePodPage() {
 			navigate({
 				to: `/dashboard/cluster/$id/pods`,
 				params: { id: clusterId },
-			});
+			})
 		},
 		onError: (error) => {
 			toast.error(error.message);
@@ -85,7 +85,7 @@ function ManagePodPage() {
 			if (res.error) {
 				throw new Error(
 					res.error.value?.message || "Failed to update env vars",
-				);
+				)
 			}
 			return res.data;
 		},
@@ -243,5 +243,5 @@ function ManagePodPage() {
 				</TabsContent>
 			</Tabs>
 		</div>
-	);
+	)
 }

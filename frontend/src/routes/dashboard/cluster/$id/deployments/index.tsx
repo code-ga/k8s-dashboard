@@ -37,7 +37,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/dashboard/cluster/$id/deployments")({
+export const Route = createFileRoute("/dashboard/cluster/$id/deployments/")({
 	component: ClusterDeployments,
 });
 
@@ -128,7 +128,7 @@ function ScaleSettingsDialog({
 											checked={field.value}
 											disabled={isAlwaysRunning}
 											onCheckedChange={(val) => {
-												field.onChange(val);
+												field.onChange(val)
 												if (val) form.setValue("isAlwaysRunning", false);
 											}}
 										/>
@@ -153,7 +153,7 @@ function ScaleSettingsDialog({
 											checked={field.value}
 											disabled={isAutoScaling}
 											onCheckedChange={(val) => {
-												field.onChange(val);
+												field.onChange(val)
 												if (val) form.setValue("isAutoScaling", false);
 											}}
 										/>
@@ -194,7 +194,7 @@ function ScaleSettingsDialog({
 				</Form>
 			</DialogContent>
 		</Dialog>
-	);
+	)
 }
 
 import {
@@ -208,7 +208,7 @@ import {
 } from "@/components/ui/dialog";
 
 function ClusterDeployments() {
-	const { id } = useParams({ from: "/dashboard/cluster/$id/deployments" });
+	const { id } = useParams({ from: "/dashboard/cluster/$id/deployments/" });
 
 	const { data: deployments, isLoading } = useQuery({
 		queryKey: ["deployments", id],
@@ -319,5 +319,5 @@ function ClusterDeployments() {
 				</CardContent>
 			</Card>
 		</div>
-	);
+	)
 }

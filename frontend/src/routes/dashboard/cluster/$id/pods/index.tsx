@@ -13,12 +13,12 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { ArrowLeft, Box, Plus, Settings } from "lucide-react";
 
-export const Route = createFileRoute("/dashboard/cluster/$id/pods")({
+export const Route = createFileRoute("/dashboard/cluster/$id/pods/")({
 	component: ClusterPods,
 });
 
 function ClusterPods() {
-	const { id } = useParams({ from: "/dashboard/cluster/$id/pods" });
+	const { id } = useParams({ from: "/dashboard/cluster/$id/pods/" });
 
 	const { data: pods, isLoading } = useQuery({
 		queryKey: ["pods", id],
@@ -111,5 +111,5 @@ function ClusterPods() {
 				</CardContent>
 			</Card>
 		</div>
-	);
+	)
 }

@@ -34,7 +34,7 @@ function ManageDeploymentPage() {
 		queryFn: async () => {
 			const res = await api.api
 				.deployments({ clusterId })({ id: deploymentId })
-				.get();
+				.get()
 			if (res.error) throw res.error;
 			if (!res.data.data)
 				throw new Error(res.data.message || "Failed to fetch deployment");
@@ -58,11 +58,11 @@ function ManageDeploymentPage() {
 		mutationFn: async () => {
 			const res = await api.api
 				.deployments({ clusterId })({ id: deploymentId.toString() })
-				.delete();
+				.delete()
 			if (res.error) {
 				throw new Error(
 					res.error.value?.message || "Failed to delete deployment",
-				);
+				)
 			}
 			return res.data;
 		},
@@ -72,7 +72,7 @@ function ManageDeploymentPage() {
 			navigate({
 				to: `/dashboard/cluster/$id/deployments`,
 				params: { id: clusterId },
-			});
+			})
 		},
 		onError: (error: Error) => {
 			toast.error(error.message);
@@ -91,7 +91,7 @@ function ManageDeploymentPage() {
 			if (res.error) {
 				throw new Error(
 					res.error.value?.message || "Failed to update env vars",
-				);
+				)
 			}
 			return res.data;
 		},
@@ -235,5 +235,5 @@ function ManageDeploymentPage() {
 				</TabsContent>
 			</Tabs>
 		</div>
-	);
+	)
 }

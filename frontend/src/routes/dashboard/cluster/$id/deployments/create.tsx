@@ -69,9 +69,9 @@ function CreateDeploymentPage() {
 				str.split(",").forEach((pair) => {
 					const [key, value] = pair.split("=").map((s) => s.trim());
 					if (key && value) result[key] = value;
-				});
+				})
 				return Object.keys(result).length > 0 ? result : undefined;
-			};
+			}
 
 			const res = await api.api.deployments({ clusterId }).post({
 				name: values.name,
@@ -95,19 +95,19 @@ function CreateDeploymentPage() {
 						? envVars.reduce(
 								(acc, curr) => {
 									if (curr.name) acc[curr.name] = curr.value;
-									return acc;
+									return acc
 								},
 								{} as Record<string, string>,
 							)
 						: undefined,
 				labels: parseLabels(values.labels),
 				selector: parseLabels(values.selector),
-			});
+			})
 
 			if (res.error) {
 				throw new Error(
 					res.error.value?.message || "Failed to create deployment",
-				);
+				)
 			}
 
 			return res.data;
@@ -117,7 +117,7 @@ function CreateDeploymentPage() {
 			navigate({
 				to: `/dashboard/cluster/$id/deployments`,
 				params: { id: clusterId },
-			});
+			})
 		},
 		onError: (error) => {
 			toast.error(error.message);
@@ -176,9 +176,9 @@ function CreateDeploymentPage() {
 				<CardContent>
 					<form
 						onSubmit={(e) => {
-							e.preventDefault();
-							e.stopPropagation();
-							form.handleSubmit();
+							e.preventDefault()
+							e.stopPropagation()
+							form.handleSubmit()
 						}}
 						className="space-y-6"
 					>
@@ -404,5 +404,5 @@ function CreateDeploymentPage() {
 				</CardContent>
 			</Card>
 		</div>
-	);
+	)
 }

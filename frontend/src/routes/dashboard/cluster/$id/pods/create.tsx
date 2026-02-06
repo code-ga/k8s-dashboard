@@ -79,12 +79,12 @@ function CreatePodPage() {
 						? envVars.reduce(
 								(acc, curr) => {
 									if (curr.name) acc[curr.name] = curr.value;
-									return acc;
+									return acc
 								},
 								{} as Record<string, string>,
 							)
 						: undefined,
-			});
+			})
 
 			if (res.error) {
 				throw new Error(res.error.value?.message || "Failed to create pod");
@@ -97,7 +97,7 @@ function CreatePodPage() {
 			navigate({
 				to: `/dashboard/cluster/$id/pods`,
 				params: { id: clusterId },
-			});
+			})
 		},
 		onError: (error) => {
 			toast.error(error.message);
@@ -148,9 +148,9 @@ function CreatePodPage() {
 				<CardContent>
 					<form
 						onSubmit={(e) => {
-							e.preventDefault();
-							e.stopPropagation();
-							form.handleSubmit();
+							e.preventDefault()
+							e.stopPropagation()
+							form.handleSubmit()
 						}}
 						className="space-y-6"
 					>
@@ -330,5 +330,5 @@ function CreatePodPage() {
 				</CardContent>
 			</Card>
 		</div>
-	);
+	)
 }
