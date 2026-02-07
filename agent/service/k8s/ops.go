@@ -173,22 +173,67 @@ func (k *K8sClient) DeleteResource(namespace, name, kind string) error {
 	// Let's try to find GVR using Discovery/Mapper?
 	// For now, let's just support common types explicitly or use a simple mapper if possible.
 
-	// Simplistic switch for common types, fallback to dynamic if we can guess.
-	switch kind {
-	case "Pod":
-		return k.DeletePod(namespace, name)
-	case "Service":
-		return k.DeleteService(namespace, name)
-	case "Deployment":
-		return k.DeleteDeployment(namespace, name)
-	case "Node":
-		return k.DeleteNode(name)
+	// Try to resolve GVR using discovery client
+	gvr, err := k.ResolveGVR(kind)
+	if err != nil {
+		// Fallback to simple switch for common types if discovery fails or not found
+		switch kind {
+		case "Pod":
+			return k.DeletePod(namespace, name)
+		case "Service":
+			return k.DeleteService(namespace, name)
+		case "Deployment":
+			return k.DeleteDeployment(namespace, name)
+		case "Node":
+			return k.DeleteNode(name)
+		}
+		return fmt.Errorf("unsupported kind for generic delete: %s, discovery error: %v", kind, err)
 	}
 
-	// Fallback to dynamic if we can construct GVR
-	// Assuming core/v1 or apps/v1 is hard.
-	// Let's return error for unknown kinds for now, or assume "v1" for core?
-	return fmt.Errorf("unsupported kind for generic delete: %s", kind)
+	// Use Dynamic Client to delete
+	var dr dynamic.ResourceInterface
+	if namespace != "" {
+		dr = k.DynamicClient.Resource(gvr).Namespace(namespace)
+	} else {
+		dr = k.DynamicClient.Resource(gvr)
+	}
+
+	err = dr.Delete(k.Context, name, metav1.DeleteOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to delete %s %s: %w", kind, name, err)
+	}
+	return nil
+}
+
+// ResolveGVR finds the GroupVersionResource for a given Kind using the discovery client.
+func (k *K8sClient) ResolveGVR(kind string) (schema.GroupVersionResource, error) {
+	// 1. Get List of Preferred Resources
+	// ServerPreferredResources returns the preferred version of every resource.
+	apiResourceLists, err := k.DiscoveryClient.ServerPreferredResources()
+
+	// ServerPreferredResources can return partial results AND an error if some groups failed to load.
+	// We should still try to find our kind in the partial results.
+	if err != nil && len(apiResourceLists) == 0 {
+		return schema.GroupVersionResource{}, fmt.Errorf("failed to get server preferred resources: %w", err)
+	}
+
+	for _, list := range apiResourceLists {
+		gv, err := schema.ParseGroupVersion(list.GroupVersion)
+		if err != nil {
+			continue // Should not happen for valid k8s response
+		}
+		for _, resource := range list.APIResources {
+			if resource.Kind == kind {
+				return schema.GroupVersionResource{
+					Group:    gv.Group,
+					Version:  gv.Version,
+					Resource: resource.Name, // This is the plural name (e.g. "pods", "deployments")
+				}, nil
+			}
+		}
+	}
+
+	return schema.GroupVersionResource{}, fmt.Errorf("kind %s not found in server resources", kind)
 }
 
 func (k *K8sClient) GenerateJoinCommand() (string, error) {

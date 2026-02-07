@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
@@ -17,11 +18,12 @@ import (
 
 type K8sClient struct {
 	// Add fields as necessary for your K8s client
-	Context       context.Context
-	Clientset     *kubernetes.Clientset
-	DynamicClient dynamic.Interface // <--- Added this to handle CRDs like HelmChart
-	RestConfig    *rest.Config
-	ClusterKey    string
+	Context         context.Context
+	Clientset       *kubernetes.Clientset
+	DynamicClient   dynamic.Interface // <--- Added this to handle CRDs like HelmChart
+	DiscoveryClient discovery.DiscoveryInterface
+	RestConfig      *rest.Config
+	ClusterKey      string
 }
 
 func NewK8sClient(clusterKey string) (*K8sClient, error) {
@@ -61,12 +63,19 @@ func NewK8sClient(clusterKey string) (*K8sClient, error) {
 		return nil, fmt.Errorf("failed to create dynamic client: %w", err)
 	}
 
+	// 4. Initialize Discovery Client (Required for Generic Deletion)
+	discoClient, err := discovery.NewDiscoveryClientForConfig(config)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create discovery client: %w", err)
+	}
+
 	return &K8sClient{
-		Clientset:     clientset,
-		DynamicClient: dynClient,
-		Context:       context.Background(),
-		RestConfig:    config,
-		ClusterKey:    clusterKey,
+		Clientset:       clientset,
+		DynamicClient:   dynClient,
+		DiscoveryClient: discoClient,
+		Context:         context.Background(),
+		RestConfig:      config,
+		ClusterKey:      clusterKey,
 	}, nil
 }
 
