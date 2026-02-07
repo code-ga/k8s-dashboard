@@ -1,4 +1,4 @@
-import { eq, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import Elysia, { type Context } from "elysia";
 import type { Prettify, RouteSchema } from "elysia/types";
 import type { ElysiaWS } from "elysia/ws";
@@ -40,7 +40,7 @@ export class AgentManager extends EventEmitter<EventMap> {
 			agentId: number;
 		}
 	> = new Map();
-	private maxRetries = 5;
+
 	pendingCommandIntervalId: NodeJS.Timeout;
 
 	constructor() {
@@ -56,7 +56,7 @@ export class AgentManager extends EventEmitter<EventMap> {
 	) {
 		this.connections.set(agentId, ws);
 		console.log(`Agent ${agentId} registered`);
-		// await this.processPendingCommands(agentId);
+		await this.processPendingCommands(agentId);
 	}
 
 	removeConnection(agentId: number) {
@@ -80,46 +80,17 @@ export class AgentManager extends EventEmitter<EventMap> {
 				agentId,
 				status: "pending",
 			},
-			// orderBy: [asc(agentCommands.createdAt)],
 			orderBy: {
 				createdAt: "asc",
 			},
+			limit: 3,
 		});
 
-		for (const dbCmd of pendingDbCommands) {
-			if (dbCmd.retries >= dbCmd.maxRetries) {
-				console.warn(
-					`Command ${dbCmd.id} reached max retries (${dbCmd.maxRetries}). Marking as failed.`,
-				);
-				await db
-					.update(agentCommands)
-					.set({
-						status: "failed",
-						errorMessage: "Max retries reached",
-						updatedAt: new Date(),
-					})
-					.where(eq(agentCommands.id, dbCmd.id));
+		while (pendingDbCommands.length > 0) {
+			const dbCmd = pendingDbCommands.shift();
+			if (!dbCmd) break;
 
-				// Reject the in-memory pending command if it exists
-				const pending = this.pendingCommands.get(dbCmd.id);
-				if (pending) {
-					if (pending.timeout) clearTimeout(pending.timeout);
-					this.pendingCommands.delete(dbCmd.id);
-					pending.reject(new Error("Max retries reached"));
-				}
-				continue;
-			}
-			console.log(
-				`Sending command ${dbCmd.id} to agent ${agentId} with retries ${dbCmd.retries}`,
-			);
-			// Increment retry count
-			await db
-				.update(agentCommands)
-				.set({
-					retries: dbCmd.retries + 1,
-					updatedAt: new Date(),
-				})
-				.where(eq(agentCommands.id, dbCmd.id));
+			console.log(`Sending command ${dbCmd.id} to agent ${agentId}`);
 
 			const command = dbCmd.payload as Command;
 			// Ensure ID matches
@@ -128,7 +99,7 @@ export class AgentManager extends EventEmitter<EventMap> {
 			// We don't await the result of send here to process all in order,
 			// but we do fire and forget the send logic which might fail if connection drops
 			this._sendPayload(agentId, command, dbCmd.id).catch((err) => {
-				console.error(`Failed to re-send pending command ${dbCmd.id}:`, err);
+				console.error(`Failed to send pending command ${dbCmd.id}:`, err);
 			});
 		}
 	}
@@ -137,9 +108,6 @@ export class AgentManager extends EventEmitter<EventMap> {
 		agentId: number,
 		clusterId: number,
 		command: Command,
-		config: {
-			maxRetries?: number;
-		} = {},
 	): Promise<CommandResponse> {
 		if (!command.id) {
 			const commandId = crypto.randomUUID();
@@ -147,16 +115,18 @@ export class AgentManager extends EventEmitter<EventMap> {
 		}
 
 		// Persist 'pending' command
-		await db.insert(agentCommands).values({
-			id: command.id,
-			agentId,
-			clusterId,
-			type: command.type.toString(),
-			payload: command,
-			status: "pending",
-			retries: 0,
-			maxRetries: config.maxRetries ?? this.maxRetries,
-		});
+		await db
+			.insert(agentCommands)
+			.values({
+				id: command.id,
+				agentId,
+				clusterId,
+				type: command.type.toString(),
+				payload: command,
+				status: "pending",
+			})
+			.returning();
+		console.log(`Command ${command.id} sent to agent ${agentId}`);
 
 		return this._sendPayload(agentId, command, command.id);
 	}
@@ -170,22 +140,18 @@ export class AgentManager extends EventEmitter<EventMap> {
 		const ws = this.connections.get(agentId);
 
 		if (!ws) {
-			// If not connected, it stays in DB as pending and will be picked up on registerConnection
-			// We can return a promise that waits for the event, or throw "queued"
-			// For now, let's wait for the event with a long timeout? or just return a "Queued" status if the caller handles it?
-			// The user request said "restore at the crash point", "lazy the result ... can be push via exception".
-
-			// If we are strictly following "reliable", we should probably wait for the result indefinitely (or until timeout)
-			// leveraging the EventEmitter.
-
 			console.log(
 				`Agent ${agentId} not connected, command ${commandId} queued.`,
 			);
-			return new Promise((resolve, reject) => {
-				// We don't set a timeout here because it might take a while for agent to reconnect.
-				// The caller might timeout though.
-				this.pendingCommands.set(commandId, { resolve, reject });
-			});
+			// Validate payload to ensure it matches Command expectations if needed,
+			// but primarily return a 'Queued' response.
+			return {
+				id: commandId,
+				success: true,
+				data: "Command queued (Agent disconnected)",
+				error: "",
+				type: command.type,
+			} as CommandResponse;
 		}
 
 		console.log("Sending payload:", command);
@@ -203,7 +169,10 @@ export class AgentManager extends EventEmitter<EventMap> {
 					this.pendingCommands.delete(commandId);
 					await db
 						.update(agentCommands)
-						.set({ status: "timeout", updatedAt: new Date() })
+						.set({
+							status: "timeout",
+							updatedAt: new Date(),
+						})
 						.where(eq(agentCommands.id, commandId));
 					reject(new Error("Command timed out"));
 				}
@@ -214,39 +183,28 @@ export class AgentManager extends EventEmitter<EventMap> {
 			try {
 				const buffer = Buffer.from(payload);
 				ws.send(buffer);
-			} catch (error) {
+			} catch (error: any) {
 				clearTimeout(timeout);
 				this.pendingCommands.delete(commandId);
-				// Revert to pending if send fails? Or failed?
-				// If send fails synchronously, it's likely connection issue.
-				// Let's mark as pending so it is retried.
+
+				// Mark as failed immediately
 				db.update(agentCommands)
-					.set({ status: "pending", updatedAt: new Date() })
+					.set({
+						status: "failed",
+						updatedAt: new Date(),
+						errorMessage: error.message || "Failed to send",
+					})
 					.where(eq(agentCommands.id, commandId))
 					.then(() => {})
 					.catch(console.error);
 
-				// If we want to support queuing on sync failure:
-				this.pendingCommands.set(commandId, { resolve, reject }); // Keep it waiting without timeout?
-				// Actually if send failed, we might want to just let it sit in DB.
-				// But the Promise is waiting.
-				// Let's reject for now, caller can retry or rely on DB queue.
-				// reject(error);
-				// Wait, if we want reliability, we shouldn't reject. We should let it retry.
-				console.warn(
-					`Send failed for ${commandId}, keeping as pending.`,
-					error,
-				);
+				reject(error);
 			}
 		});
 	}
 
-	async batchCommands(
-		agentId: number,
-		clusterId: number,
-		commands: Command[],
-		maxRetries?: number,
-	) {
+	// batchCommands method modified to remove maxRetries
+	async batchCommands(agentId: number, clusterId: number, commands: Command[]) {
 		const updates = commands.map((cmd) => {
 			const commandId = crypto.randomUUID();
 			cmd.id = commandId;
@@ -254,10 +212,9 @@ export class AgentManager extends EventEmitter<EventMap> {
 				id: commandId,
 				agentId,
 				clusterId,
-				type: "command",
+				type: cmd.type.toString(),
 				payload: cmd,
 				status: "pending" as const, // Explicit cast for Drizzle enum
-				maxRetries: maxRetries ?? this.maxRetries,
 			};
 		});
 
@@ -286,7 +243,6 @@ export class AgentManager extends EventEmitter<EventMap> {
 				result: response,
 				errorMessage: response.error,
 				updatedAt: new Date(),
-				retries: sql`${agentCommands.retries} + 1`,
 			})
 			.where(eq(agentCommands.id, response.id));
 

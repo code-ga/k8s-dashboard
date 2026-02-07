@@ -172,18 +172,13 @@ export const ingressRoute = new Elysia({
 								labels: body.labels,
 							});
 
-							await ctx.agentManager.sendCommand(
-								cluster.agent.id,
-								cluster.id,
-								{
-									id: crypto.randomUUID(),
-									type: Command_CommandType.CREATE_SERVICE,
-									payload: svcManifest,
-									targetNamespace: body.namespace,
-									targetName: body.serviceName,
-								},
-								{ maxRetries: 3 },
-							);
+							await ctx.agentManager.sendCommand(cluster.agent.id, cluster.id, {
+								id: crypto.randomUUID(),
+								type: Command_CommandType.CREATE_SERVICE,
+								payload: svcManifest,
+								targetNamespace: body.namespace,
+								targetName: body.serviceName,
+							});
 						}
 					}
 					// ------------------------------
