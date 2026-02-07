@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import Elysia, { type Context } from "elysia";
 import type { Prettify, RouteSchema } from "elysia/types";
 import type { ElysiaWS } from "elysia/ws";
@@ -109,7 +109,9 @@ export class AgentManager extends EventEmitter<EventMap> {
 				}
 				continue;
 			}
-
+			console.log(
+				`Sending command ${dbCmd.id} to agent ${agentId} with retries ${dbCmd.retries}`,
+			);
 			// Increment retry count
 			await db
 				.update(agentCommands)
@@ -149,9 +151,10 @@ export class AgentManager extends EventEmitter<EventMap> {
 			id: command.id,
 			agentId,
 			clusterId,
-			type: "command", // You might want to get specific type from command if possible
+			type: command.type.toString(),
 			payload: command,
 			status: "pending",
+			retries: 0,
 			maxRetries: config.maxRetries ?? this.maxRetries,
 		});
 
@@ -283,6 +286,7 @@ export class AgentManager extends EventEmitter<EventMap> {
 				result: response,
 				errorMessage: response.error,
 				updatedAt: new Date(),
+				retries: sql`${agentCommands.retries} + 1`,
 			})
 			.where(eq(agentCommands.id, response.id));
 
