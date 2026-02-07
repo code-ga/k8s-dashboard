@@ -87,9 +87,9 @@ export class AgentManager extends EventEmitter<EventMap> {
 		});
 
 		for (const dbCmd of pendingDbCommands) {
-			if (dbCmd.retries >= this.maxRetries) {
+			if (dbCmd.retries >= dbCmd.maxRetries) {
 				console.warn(
-					`Command ${dbCmd.id} reached max retries (${this.maxRetries}). Marking as failed.`,
+					`Command ${dbCmd.id} reached max retries (${dbCmd.maxRetries}). Marking as failed.`,
 				);
 				await db
 					.update(agentCommands)
@@ -135,6 +135,9 @@ export class AgentManager extends EventEmitter<EventMap> {
 		agentId: number,
 		clusterId: number,
 		command: Command,
+		config: {
+			maxRetries?: number;
+		} = {},
 	): Promise<CommandResponse> {
 		if (!command.id) {
 			const commandId = crypto.randomUUID();
@@ -149,6 +152,7 @@ export class AgentManager extends EventEmitter<EventMap> {
 			type: "command", // You might want to get specific type from command if possible
 			payload: command,
 			status: "pending",
+			maxRetries: config.maxRetries ?? this.maxRetries,
 		});
 
 		return this._sendPayload(agentId, command, command.id);
@@ -234,7 +238,12 @@ export class AgentManager extends EventEmitter<EventMap> {
 		});
 	}
 
-	async batchCommands(agentId: number, clusterId: number, commands: Command[]) {
+	async batchCommands(
+		agentId: number,
+		clusterId: number,
+		commands: Command[],
+		maxRetries?: number,
+	) {
 		const updates = commands.map((cmd) => {
 			const commandId = crypto.randomUUID();
 			cmd.id = commandId;
@@ -245,6 +254,7 @@ export class AgentManager extends EventEmitter<EventMap> {
 				type: "command",
 				payload: cmd,
 				status: "pending" as const, // Explicit cast for Drizzle enum
+				maxRetries: maxRetries ?? this.maxRetries,
 			};
 		});
 

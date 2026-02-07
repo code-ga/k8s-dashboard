@@ -128,8 +128,12 @@ export const ingressRoute = new Elysia({
 						});
 
 						if (!existingSvc) {
-							const svcProtocol =
-								body.protocol === "http" ? "TCP" : body.protocol;
+							const svcProtocol = (
+								body.protocol.toUpperCase() === "HTTP"
+									? "TCP"
+									: body.protocol.toUpperCase()
+							) as "TCP" | "UDP";
+							console.log(svcProtocol);
 							// Create Service in DB
 							await db
 								.insert(schema.k8sServices)
@@ -145,7 +149,7 @@ export const ingressRoute = new Elysia({
 										{
 											port: body.internalPort,
 											targetPort: body.internalPort,
-											protocol: svcProtocol.toUpperCase(),
+											protocol: svcProtocol,
 										},
 									],
 									updatedAt: new Date(),
@@ -168,13 +172,18 @@ export const ingressRoute = new Elysia({
 								labels: body.labels,
 							});
 
-							await ctx.agentManager.sendCommand(cluster.agent.id, cluster.id, {
-								id: crypto.randomUUID(),
-								type: Command_CommandType.CREATE_SERVICE,
-								payload: svcManifest,
-								targetNamespace: body.namespace,
-								targetName: body.serviceName,
-							});
+							await ctx.agentManager.sendCommand(
+								cluster.agent.id,
+								cluster.id,
+								{
+									id: crypto.randomUUID(),
+									type: Command_CommandType.CREATE_SERVICE,
+									payload: svcManifest,
+									targetNamespace: body.namespace,
+									targetName: body.serviceName,
+								},
+								{ maxRetries: 3 },
+							);
 						}
 					}
 					// ------------------------------

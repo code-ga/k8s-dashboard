@@ -131,6 +131,7 @@ export const agentCommands = pgTable("agentCommands", {
 	payload: jsonb("payload").notNull(),
 	status: agentCommandStatus("status").default("pending").notNull(),
 	retries: integer("retries").default(0).notNull(),
+	maxRetries: integer("max_retries").default(5).notNull(),
 	result: jsonb("result"),
 	errorMessage: text("error_message"),
 	createdAt: timestamp("created_at").defaultNow().notNull(),
