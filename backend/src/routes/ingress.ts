@@ -14,6 +14,17 @@ import {
 	generateServiceManifest,
 } from "../utils/k8s-manifest";
 
+const ingressWithServiceSchema = Type.Object({
+	...dbSchemaTypes.k8sIngresses,
+	service: Type.Union([
+		Type.Object({
+			...dbSchemaTypes.k8sServices,
+			ports: Type.Any(),
+		}),
+		Type.Null(),
+	]),
+});
+
 export const ingressRoute = new Elysia({
 	prefix: "/ingresses/:clusterId",
 	detail: { tags: ["Ingresses"] },
@@ -45,9 +56,44 @@ export const ingressRoute = new Elysia({
 				{
 					detail: { tags: ["Ingresses"] },
 					response: {
-						200: baseResponseSchema(
-							Type.Array(Type.Object(dbSchemaTypes.k8sIngresses)),
-						),
+						200: baseResponseSchema(Type.Array(ingressWithServiceSchema)),
+					},
+				},
+			)
+			.get(
+				"/:id",
+				async (ctx) => {
+					const { clusterId, id } = ctx.params;
+					const ingress = await db.query.k8sIngresses.findFirst({
+						where: {
+							id: Number(id),
+							clusterId: Number(clusterId),
+						},
+						with: {
+							service: true,
+						},
+					});
+
+					if (!ingress) {
+						return ctx.status(404, {
+							success: false,
+							message: "Ingress not found",
+							timestamp: Date.now(),
+						});
+					}
+
+					return ctx.status(200, {
+						success: true,
+						message: "Ingress fetched successfully",
+						data: ingress,
+						timestamp: Date.now(),
+					});
+				},
+				{
+					detail: { tags: ["Ingresses"] },
+					response: {
+						200: baseResponseSchema(ingressWithServiceSchema),
+						404: errorResponseSchema,
 					},
 				},
 			)

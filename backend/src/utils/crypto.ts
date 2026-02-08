@@ -47,7 +47,7 @@ export const decrypt = (text: string): string => {
 		return text;
 	}
 
-	const [ivHex, authTagHex, encryptedHex] = parts;
+	const [ivHex, authTagHex, encryptedHex] = parts as [string, string, string];
 	const key = getKey();
 	const iv = Buffer.from(ivHex, "hex");
 	const authTag = Buffer.from(authTagHex, "hex");

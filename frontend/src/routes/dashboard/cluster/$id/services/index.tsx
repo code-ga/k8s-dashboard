@@ -50,7 +50,7 @@ import type { databaseTypes, SchemaStatic } from "@/lib/api";
 import { CreateServiceDialog } from "@/components/service/create-dialog";
 import { Trash2 } from "lucide-react";
 
-export const Route = createFileRoute("/dashboard/cluster/$id/services")({
+export const Route = createFileRoute("/dashboard/cluster/$id/services/")({
 	component: ClusterServices,
 });
 
@@ -245,7 +245,8 @@ function ExposureDialog({
 }
 
 function ClusterServices() {
-	const { id } = useParams({ from: "/dashboard/cluster/$id/services" });
+	const { id } = useParams({ from: "/dashboard/cluster/$id/services/" });
+	const queryClient = useQueryClient();
 
 	const { data: services, isLoading } = useQuery({
 		queryKey: ["services", id],
@@ -315,7 +316,13 @@ function ClusterServices() {
 									<TableCell className="font-medium">
 										<div className="flex items-center gap-2">
 											<Network className="h-4 w-4 text-green-500" />
-											{svc.name}
+											<Link
+												to="/dashboard/cluster/$id/services/$serviceId"
+												params={{ id, serviceId: svc.id.toString() }}
+												className="hover:underline"
+											>
+												{svc.name}
+											</Link>
 										</div>
 									</TableCell>
 									<TableCell>{svc.namespace}</TableCell>

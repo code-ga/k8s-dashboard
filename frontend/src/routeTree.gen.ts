@@ -19,10 +19,14 @@ import { Route as DashboardClusterIdIndexRouteImport } from './routes/dashboard/
 import { Route as DashboardClusterIdServicesRouteImport } from './routes/dashboard/cluster/$id/services'
 import { Route as DashboardClusterIdNodesRouteImport } from './routes/dashboard/cluster/$id/nodes'
 import { Route as DashboardClusterIdIngressesRouteImport } from './routes/dashboard/cluster/$id/ingresses'
+import { Route as DashboardClusterIdServicesIndexRouteImport } from './routes/dashboard/cluster/$id/services/index'
 import { Route as DashboardClusterIdPodsIndexRouteImport } from './routes/dashboard/cluster/$id/pods/index'
+import { Route as DashboardClusterIdIngressesIndexRouteImport } from './routes/dashboard/cluster/$id/ingresses/index'
 import { Route as DashboardClusterIdDeploymentsIndexRouteImport } from './routes/dashboard/cluster/$id/deployments/index'
+import { Route as DashboardClusterIdServicesServiceIdRouteImport } from './routes/dashboard/cluster/$id/services/$serviceId'
 import { Route as DashboardClusterIdPodsCreateRouteImport } from './routes/dashboard/cluster/$id/pods/create'
 import { Route as DashboardClusterIdPodsPodIdRouteImport } from './routes/dashboard/cluster/$id/pods/$podId'
+import { Route as DashboardClusterIdIngressesIngressIdRouteImport } from './routes/dashboard/cluster/$id/ingresses/$ingressId'
 import { Route as DashboardClusterIdDeploymentsCreateRouteImport } from './routes/dashboard/cluster/$id/deployments/create'
 import { Route as DashboardClusterIdDeploymentsDeploymentIdRouteImport } from './routes/dashboard/cluster/$id/deployments/$deploymentId'
 
@@ -78,17 +82,35 @@ const DashboardClusterIdIngressesRoute =
     path: '/dashboard/cluster/$id/ingresses',
     getParentRoute: () => rootRouteImport,
   } as any)
+const DashboardClusterIdServicesIndexRoute =
+  DashboardClusterIdServicesIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => DashboardClusterIdServicesRoute,
+  } as any)
 const DashboardClusterIdPodsIndexRoute =
   DashboardClusterIdPodsIndexRouteImport.update({
     id: '/dashboard/cluster/$id/pods/',
     path: '/dashboard/cluster/$id/pods/',
     getParentRoute: () => rootRouteImport,
   } as any)
+const DashboardClusterIdIngressesIndexRoute =
+  DashboardClusterIdIngressesIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => DashboardClusterIdIngressesRoute,
+  } as any)
 const DashboardClusterIdDeploymentsIndexRoute =
   DashboardClusterIdDeploymentsIndexRouteImport.update({
     id: '/dashboard/cluster/$id/deployments/',
     path: '/dashboard/cluster/$id/deployments/',
     getParentRoute: () => rootRouteImport,
+  } as any)
+const DashboardClusterIdServicesServiceIdRoute =
+  DashboardClusterIdServicesServiceIdRouteImport.update({
+    id: '/$serviceId',
+    path: '/$serviceId',
+    getParentRoute: () => DashboardClusterIdServicesRoute,
   } as any)
 const DashboardClusterIdPodsCreateRoute =
   DashboardClusterIdPodsCreateRouteImport.update({
@@ -101,6 +123,12 @@ const DashboardClusterIdPodsPodIdRoute =
     id: '/dashboard/cluster/$id/pods/$podId',
     path: '/dashboard/cluster/$id/pods/$podId',
     getParentRoute: () => rootRouteImport,
+  } as any)
+const DashboardClusterIdIngressesIngressIdRoute =
+  DashboardClusterIdIngressesIngressIdRouteImport.update({
+    id: '/$ingressId',
+    path: '/$ingressId',
+    getParentRoute: () => DashboardClusterIdIngressesRoute,
   } as any)
 const DashboardClusterIdDeploymentsCreateRoute =
   DashboardClusterIdDeploymentsCreateRouteImport.update({
@@ -122,16 +150,20 @@ export interface FileRoutesByFullPath {
   '/dashboard/users': typeof DashboardUsersRoute
   '/demo/tanstack-query': typeof DemoTanstackQueryRoute
   '/dashboard/': typeof DashboardIndexRoute
-  '/dashboard/cluster/$id/ingresses': typeof DashboardClusterIdIngressesRoute
+  '/dashboard/cluster/$id/ingresses': typeof DashboardClusterIdIngressesRouteWithChildren
   '/dashboard/cluster/$id/nodes': typeof DashboardClusterIdNodesRoute
-  '/dashboard/cluster/$id/services': typeof DashboardClusterIdServicesRoute
+  '/dashboard/cluster/$id/services': typeof DashboardClusterIdServicesRouteWithChildren
   '/dashboard/cluster/$id/': typeof DashboardClusterIdIndexRoute
   '/dashboard/cluster/$id/deployments/$deploymentId': typeof DashboardClusterIdDeploymentsDeploymentIdRoute
   '/dashboard/cluster/$id/deployments/create': typeof DashboardClusterIdDeploymentsCreateRoute
+  '/dashboard/cluster/$id/ingresses/$ingressId': typeof DashboardClusterIdIngressesIngressIdRoute
   '/dashboard/cluster/$id/pods/$podId': typeof DashboardClusterIdPodsPodIdRoute
   '/dashboard/cluster/$id/pods/create': typeof DashboardClusterIdPodsCreateRoute
+  '/dashboard/cluster/$id/services/$serviceId': typeof DashboardClusterIdServicesServiceIdRoute
   '/dashboard/cluster/$id/deployments/': typeof DashboardClusterIdDeploymentsIndexRoute
+  '/dashboard/cluster/$id/ingresses/': typeof DashboardClusterIdIngressesIndexRoute
   '/dashboard/cluster/$id/pods/': typeof DashboardClusterIdPodsIndexRoute
+  '/dashboard/cluster/$id/services/': typeof DashboardClusterIdServicesIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -140,16 +172,18 @@ export interface FileRoutesByTo {
   '/dashboard/users': typeof DashboardUsersRoute
   '/demo/tanstack-query': typeof DemoTanstackQueryRoute
   '/dashboard': typeof DashboardIndexRoute
-  '/dashboard/cluster/$id/ingresses': typeof DashboardClusterIdIngressesRoute
   '/dashboard/cluster/$id/nodes': typeof DashboardClusterIdNodesRoute
-  '/dashboard/cluster/$id/services': typeof DashboardClusterIdServicesRoute
   '/dashboard/cluster/$id': typeof DashboardClusterIdIndexRoute
   '/dashboard/cluster/$id/deployments/$deploymentId': typeof DashboardClusterIdDeploymentsDeploymentIdRoute
   '/dashboard/cluster/$id/deployments/create': typeof DashboardClusterIdDeploymentsCreateRoute
+  '/dashboard/cluster/$id/ingresses/$ingressId': typeof DashboardClusterIdIngressesIngressIdRoute
   '/dashboard/cluster/$id/pods/$podId': typeof DashboardClusterIdPodsPodIdRoute
   '/dashboard/cluster/$id/pods/create': typeof DashboardClusterIdPodsCreateRoute
+  '/dashboard/cluster/$id/services/$serviceId': typeof DashboardClusterIdServicesServiceIdRoute
   '/dashboard/cluster/$id/deployments': typeof DashboardClusterIdDeploymentsIndexRoute
+  '/dashboard/cluster/$id/ingresses': typeof DashboardClusterIdIngressesIndexRoute
   '/dashboard/cluster/$id/pods': typeof DashboardClusterIdPodsIndexRoute
+  '/dashboard/cluster/$id/services': typeof DashboardClusterIdServicesIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -159,16 +193,20 @@ export interface FileRoutesById {
   '/dashboard/users': typeof DashboardUsersRoute
   '/demo/tanstack-query': typeof DemoTanstackQueryRoute
   '/dashboard/': typeof DashboardIndexRoute
-  '/dashboard/cluster/$id/ingresses': typeof DashboardClusterIdIngressesRoute
+  '/dashboard/cluster/$id/ingresses': typeof DashboardClusterIdIngressesRouteWithChildren
   '/dashboard/cluster/$id/nodes': typeof DashboardClusterIdNodesRoute
-  '/dashboard/cluster/$id/services': typeof DashboardClusterIdServicesRoute
+  '/dashboard/cluster/$id/services': typeof DashboardClusterIdServicesRouteWithChildren
   '/dashboard/cluster/$id/': typeof DashboardClusterIdIndexRoute
   '/dashboard/cluster/$id/deployments/$deploymentId': typeof DashboardClusterIdDeploymentsDeploymentIdRoute
   '/dashboard/cluster/$id/deployments/create': typeof DashboardClusterIdDeploymentsCreateRoute
+  '/dashboard/cluster/$id/ingresses/$ingressId': typeof DashboardClusterIdIngressesIngressIdRoute
   '/dashboard/cluster/$id/pods/$podId': typeof DashboardClusterIdPodsPodIdRoute
   '/dashboard/cluster/$id/pods/create': typeof DashboardClusterIdPodsCreateRoute
+  '/dashboard/cluster/$id/services/$serviceId': typeof DashboardClusterIdServicesServiceIdRoute
   '/dashboard/cluster/$id/deployments/': typeof DashboardClusterIdDeploymentsIndexRoute
+  '/dashboard/cluster/$id/ingresses/': typeof DashboardClusterIdIngressesIndexRoute
   '/dashboard/cluster/$id/pods/': typeof DashboardClusterIdPodsIndexRoute
+  '/dashboard/cluster/$id/services/': typeof DashboardClusterIdServicesIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -185,10 +223,14 @@ export interface FileRouteTypes {
     | '/dashboard/cluster/$id/'
     | '/dashboard/cluster/$id/deployments/$deploymentId'
     | '/dashboard/cluster/$id/deployments/create'
+    | '/dashboard/cluster/$id/ingresses/$ingressId'
     | '/dashboard/cluster/$id/pods/$podId'
     | '/dashboard/cluster/$id/pods/create'
+    | '/dashboard/cluster/$id/services/$serviceId'
     | '/dashboard/cluster/$id/deployments/'
+    | '/dashboard/cluster/$id/ingresses/'
     | '/dashboard/cluster/$id/pods/'
+    | '/dashboard/cluster/$id/services/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -197,16 +239,18 @@ export interface FileRouteTypes {
     | '/dashboard/users'
     | '/demo/tanstack-query'
     | '/dashboard'
-    | '/dashboard/cluster/$id/ingresses'
     | '/dashboard/cluster/$id/nodes'
-    | '/dashboard/cluster/$id/services'
     | '/dashboard/cluster/$id'
     | '/dashboard/cluster/$id/deployments/$deploymentId'
     | '/dashboard/cluster/$id/deployments/create'
+    | '/dashboard/cluster/$id/ingresses/$ingressId'
     | '/dashboard/cluster/$id/pods/$podId'
     | '/dashboard/cluster/$id/pods/create'
+    | '/dashboard/cluster/$id/services/$serviceId'
     | '/dashboard/cluster/$id/deployments'
+    | '/dashboard/cluster/$id/ingresses'
     | '/dashboard/cluster/$id/pods'
+    | '/dashboard/cluster/$id/services'
   id:
     | '__root__'
     | '/'
@@ -221,10 +265,14 @@ export interface FileRouteTypes {
     | '/dashboard/cluster/$id/'
     | '/dashboard/cluster/$id/deployments/$deploymentId'
     | '/dashboard/cluster/$id/deployments/create'
+    | '/dashboard/cluster/$id/ingresses/$ingressId'
     | '/dashboard/cluster/$id/pods/$podId'
     | '/dashboard/cluster/$id/pods/create'
+    | '/dashboard/cluster/$id/services/$serviceId'
     | '/dashboard/cluster/$id/deployments/'
+    | '/dashboard/cluster/$id/ingresses/'
     | '/dashboard/cluster/$id/pods/'
+    | '/dashboard/cluster/$id/services/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -234,9 +282,9 @@ export interface RootRouteChildren {
   DashboardUsersRoute: typeof DashboardUsersRoute
   DemoTanstackQueryRoute: typeof DemoTanstackQueryRoute
   DashboardIndexRoute: typeof DashboardIndexRoute
-  DashboardClusterIdIngressesRoute: typeof DashboardClusterIdIngressesRoute
+  DashboardClusterIdIngressesRoute: typeof DashboardClusterIdIngressesRouteWithChildren
   DashboardClusterIdNodesRoute: typeof DashboardClusterIdNodesRoute
-  DashboardClusterIdServicesRoute: typeof DashboardClusterIdServicesRoute
+  DashboardClusterIdServicesRoute: typeof DashboardClusterIdServicesRouteWithChildren
   DashboardClusterIdIndexRoute: typeof DashboardClusterIdIndexRoute
   DashboardClusterIdDeploymentsDeploymentIdRoute: typeof DashboardClusterIdDeploymentsDeploymentIdRoute
   DashboardClusterIdDeploymentsCreateRoute: typeof DashboardClusterIdDeploymentsCreateRoute
@@ -318,6 +366,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardClusterIdIngressesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dashboard/cluster/$id/services/': {
+      id: '/dashboard/cluster/$id/services/'
+      path: '/'
+      fullPath: '/dashboard/cluster/$id/services/'
+      preLoaderRoute: typeof DashboardClusterIdServicesIndexRouteImport
+      parentRoute: typeof DashboardClusterIdServicesRoute
+    }
     '/dashboard/cluster/$id/pods/': {
       id: '/dashboard/cluster/$id/pods/'
       path: '/dashboard/cluster/$id/pods'
@@ -325,12 +380,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardClusterIdPodsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dashboard/cluster/$id/ingresses/': {
+      id: '/dashboard/cluster/$id/ingresses/'
+      path: '/'
+      fullPath: '/dashboard/cluster/$id/ingresses/'
+      preLoaderRoute: typeof DashboardClusterIdIngressesIndexRouteImport
+      parentRoute: typeof DashboardClusterIdIngressesRoute
+    }
     '/dashboard/cluster/$id/deployments/': {
       id: '/dashboard/cluster/$id/deployments/'
       path: '/dashboard/cluster/$id/deployments'
       fullPath: '/dashboard/cluster/$id/deployments/'
       preLoaderRoute: typeof DashboardClusterIdDeploymentsIndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/dashboard/cluster/$id/services/$serviceId': {
+      id: '/dashboard/cluster/$id/services/$serviceId'
+      path: '/$serviceId'
+      fullPath: '/dashboard/cluster/$id/services/$serviceId'
+      preLoaderRoute: typeof DashboardClusterIdServicesServiceIdRouteImport
+      parentRoute: typeof DashboardClusterIdServicesRoute
     }
     '/dashboard/cluster/$id/pods/create': {
       id: '/dashboard/cluster/$id/pods/create'
@@ -345,6 +414,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/dashboard/cluster/$id/pods/$podId'
       preLoaderRoute: typeof DashboardClusterIdPodsPodIdRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/dashboard/cluster/$id/ingresses/$ingressId': {
+      id: '/dashboard/cluster/$id/ingresses/$ingressId'
+      path: '/$ingressId'
+      fullPath: '/dashboard/cluster/$id/ingresses/$ingressId'
+      preLoaderRoute: typeof DashboardClusterIdIngressesIngressIdRouteImport
+      parentRoute: typeof DashboardClusterIdIngressesRoute
     }
     '/dashboard/cluster/$id/deployments/create': {
       id: '/dashboard/cluster/$id/deployments/create'
@@ -363,6 +439,41 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface DashboardClusterIdIngressesRouteChildren {
+  DashboardClusterIdIngressesIngressIdRoute: typeof DashboardClusterIdIngressesIngressIdRoute
+  DashboardClusterIdIngressesIndexRoute: typeof DashboardClusterIdIngressesIndexRoute
+}
+
+const DashboardClusterIdIngressesRouteChildren: DashboardClusterIdIngressesRouteChildren =
+  {
+    DashboardClusterIdIngressesIngressIdRoute:
+      DashboardClusterIdIngressesIngressIdRoute,
+    DashboardClusterIdIngressesIndexRoute:
+      DashboardClusterIdIngressesIndexRoute,
+  }
+
+const DashboardClusterIdIngressesRouteWithChildren =
+  DashboardClusterIdIngressesRoute._addFileChildren(
+    DashboardClusterIdIngressesRouteChildren,
+  )
+
+interface DashboardClusterIdServicesRouteChildren {
+  DashboardClusterIdServicesServiceIdRoute: typeof DashboardClusterIdServicesServiceIdRoute
+  DashboardClusterIdServicesIndexRoute: typeof DashboardClusterIdServicesIndexRoute
+}
+
+const DashboardClusterIdServicesRouteChildren: DashboardClusterIdServicesRouteChildren =
+  {
+    DashboardClusterIdServicesServiceIdRoute:
+      DashboardClusterIdServicesServiceIdRoute,
+    DashboardClusterIdServicesIndexRoute: DashboardClusterIdServicesIndexRoute,
+  }
+
+const DashboardClusterIdServicesRouteWithChildren =
+  DashboardClusterIdServicesRoute._addFileChildren(
+    DashboardClusterIdServicesRouteChildren,
+  )
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LoginRoute: LoginRoute,
@@ -370,9 +481,10 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardUsersRoute: DashboardUsersRoute,
   DemoTanstackQueryRoute: DemoTanstackQueryRoute,
   DashboardIndexRoute: DashboardIndexRoute,
-  DashboardClusterIdIngressesRoute: DashboardClusterIdIngressesRoute,
+  DashboardClusterIdIngressesRoute:
+    DashboardClusterIdIngressesRouteWithChildren,
   DashboardClusterIdNodesRoute: DashboardClusterIdNodesRoute,
-  DashboardClusterIdServicesRoute: DashboardClusterIdServicesRoute,
+  DashboardClusterIdServicesRoute: DashboardClusterIdServicesRouteWithChildren,
   DashboardClusterIdIndexRoute: DashboardClusterIdIndexRoute,
   DashboardClusterIdDeploymentsDeploymentIdRoute:
     DashboardClusterIdDeploymentsDeploymentIdRoute,
