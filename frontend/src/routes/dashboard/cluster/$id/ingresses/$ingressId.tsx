@@ -8,7 +8,7 @@ import {
 	useNavigate,
 	useParams,
 } from "@tanstack/react-router";
-import { ArrowLeft, Network, ShieldCheck, Trash2 } from "lucide-react";
+import { ArrowLeft, Network, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute(

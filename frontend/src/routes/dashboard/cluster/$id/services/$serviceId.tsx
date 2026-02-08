@@ -11,7 +11,7 @@ import {
 import { api } from "@/lib/api";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
-import { ArrowLeft, Network, ShieldCheck, ShieldAlert } from "lucide-react";
+import { ArrowLeft, ShieldAlert, ShieldCheck } from "lucide-react";
 
 export const Route = createFileRoute(
 	"/dashboard/cluster/$id/services/$serviceId",
@@ -130,7 +130,7 @@ function ServiceDetailPage() {
 							</TableRow>
 						</TableHeader>
 						<TableBody>
-							{(service.ports as any[])?.map((port, i) => (
+							{(service.ports as any[])?.map((port, _i) => (
 								<TableRow key={port.name + service.id}>
 									<TableCell>{port.name || "-"}</TableCell>
 									<TableCell>{port.protocol}</TableCell>

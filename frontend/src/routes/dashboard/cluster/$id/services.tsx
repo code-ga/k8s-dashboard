@@ -246,6 +246,7 @@ function ExposureDialog({
 
 function ClusterServices() {
 	const { id } = useParams({ from: "/dashboard/cluster/$id/services" });
+	const queryClient = useQueryClient();
 
 	const { data: services, isLoading } = useQuery({
 		queryKey: ["services", id],
