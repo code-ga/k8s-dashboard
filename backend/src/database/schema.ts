@@ -276,7 +276,9 @@ export const k8sPods = pgTable(
 		// But specifically "only deployment have the replicas".
 		// I will keep resource specs on Pods as they reflect the actual pod spec (which might differ during updates).
 		command: text("command").notNull(),
+		args: text("args").default("").notNull(),
 		envVariables: text("env_variables").notNull(),
+		labels: text("labels").default("").notNull(), // JSON string
 
 		internalPort: integer("internal_port").notNull(),
 

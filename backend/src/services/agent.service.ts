@@ -496,6 +496,11 @@ export class AgentService {
 					namespace: dbPod.namespace,
 					image: dbPod.dockerImage,
 					command: dbPod.command ? dbPod.command.split(" ") : undefined,
+					args: dbPod.args ? dbPod.args.split(" ") : undefined,
+					labels:
+						dbPod.labels && dbPod.labels !== ""
+							? JSON.parse(dbPod.labels)
+							: undefined,
 					ports: [{ containerPort: dbPod.internalPort }],
 					resources: {
 						requests: {
@@ -540,6 +545,11 @@ export class AgentService {
 					namespace: dbPod.namespace,
 					image: dbPod.dockerImage,
 					command: dbPod.command ? dbPod.command.split(" ") : undefined,
+					args: dbPod.args ? dbPod.args.split(" ") : undefined,
+					labels:
+						dbPod.labels && dbPod.labels !== ""
+							? JSON.parse(dbPod.labels)
+							: undefined,
 					ports: [{ containerPort: dbPod.internalPort }],
 					env: envVars,
 					resources: {

@@ -9,6 +9,18 @@ import { agentManagerService } from "../services/agentManager";
 import { baseResponseSchema, errorResponseSchema } from "../types";
 import { decrypt, encrypt } from "../utils/crypto";
 import { generatePodManifest } from "../utils/k8s-manifest";
+const parseCpuStr = (cpu: string): number => {
+	if (cpu.endsWith("m")) return parseInt(cpu);
+	return parseFloat(cpu) * 1000;
+};
+
+const parseMemoryStr = (mem: string): number => {
+	if (mem.endsWith("Ki")) return Math.ceil(parseInt(mem) / 1024);
+	if (mem.endsWith("Mi")) return parseInt(mem);
+	if (mem.endsWith("Gi")) return parseInt(mem) * 1024;
+	if (mem.endsWith("Ti")) return parseInt(mem) * 1024 * 1024;
+	return parseInt(mem);
+};
 import { eq } from "drizzle-orm";
 
 export interface WebSocketData {
@@ -539,10 +551,28 @@ export const podRoute = new Elysia({
 					};
 					if (body.image) updateData.dockerImage = body.image;
 					if (body.command) updateData.command = body.command.join(" ");
+					if (body.args) updateData.args = body.args.join(" ");
 					if (body.env)
 						updateData.envVariables = encrypt(JSON.stringify(body.env));
 					if (body.ports && body.ports.length > 0) {
 						updateData.internalPort = body.ports[0]?.containerPort ?? 0;
+					}
+					if (body.labels) updateData.labels = JSON.stringify(body.labels);
+
+					// Parse resources if provided
+					if (body.resources) {
+						if (body.resources.requests?.cpu)
+							updateData.cpuRequest = parseCpuStr(body.resources.requests.cpu);
+						if (body.resources.requests?.memory)
+							updateData.memoryRequest = parseMemoryStr(
+								body.resources.requests.memory,
+							);
+						if (body.resources.limits?.cpu)
+							updateData.cpuLimit = parseCpuStr(body.resources.limits.cpu);
+						if (body.resources.limits?.memory)
+							updateData.memoryLimit = parseMemoryStr(
+								body.resources.limits.memory,
+							);
 					}
 
 					try {
@@ -569,33 +599,9 @@ export const podRoute = new Elysia({
 						}
 					}
 
-					if (body.image) {
-						return ctx.status(400, {
-							success: false,
-							message:
-								"Image update is not supported. Please delete and recreate the pod.",
-							timestamp: Date.now(),
-						});
-					}
-
-					// Generate manifest for update
-					const manifest = generatePodManifest({
-						name: pod.name,
-						namespace: pod.namespace,
-						// image: body.image || pod.dockerImage,
-						command:
-							body.command ||
-							(pod.command ? pod.command.split(" ") : undefined),
-						args: body.args,
-						env: finalEnv,
-						ports:
-							body.ports ||
-							(pod.internalPort
-								? [{ containerPort: pod.internalPort }]
-								: undefined),
-						resources: body.resources,
-						labels: body.labels,
-					});
+					// Generate manifest for update - NO LONGER USED for Agent command since we use DELETE_POD
+					// But we still need environmental preservation if we were to use it.
+					// Since we use DELETE_POD, sync will use DB spec.
 
 					try {
 						const response = await ctx.agentManager.sendCommand(
@@ -603,8 +609,8 @@ export const podRoute = new Elysia({
 							cluster.id,
 							{
 								id: globalThis.crypto.randomUUID(),
-								type: 1, // EDIT_RESOURCE
-								payload: manifest,
+								type: 6, // DELETE_POD - Trigger recreation via sync
+								payload: "",
 								targetNamespace: pod.namespace,
 								targetName: pod.name,
 							},
@@ -612,7 +618,7 @@ export const podRoute = new Elysia({
 
 						return ctx.status(200, {
 							success: true,
-							message: "Pod update command sent",
+							message: "Pod update initiated (delete and recreate)",
 							data: response.data,
 							timestamp: Date.now(),
 						});

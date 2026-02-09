@@ -10,11 +10,14 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api, type databaseTypes, type SchemaStatic } from "@/lib/api";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Settings, Trash2 } from "lucide-react";
+import { Settings, Trash2, AlertTriangle, Plus, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Terminal } from "xterm";
 import { EnvEditor, type EnvVar } from "../shared/env-editor";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { FitAddon } from "@xterm/addon-fit";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import "xterm/css/xterm.css";
@@ -29,14 +32,45 @@ interface ManagePodDialogProps {
 export function ManagePodDialog({ pod, clusterId }: ManagePodDialogProps) {
 	const [open, setOpen] = useState(false);
 	const [activeTab, setActiveTab] = useState("overview");
+
+	// State for all configurable fields
+	const [image, setImage] = useState(pod.dockerImage);
+	const [command, setCommand] = useState<string[]>(() =>
+		pod.command ? pod.command.split(" ") : [],
+	);
+	const [args, setArgs] = useState<string[]>(() =>
+		pod.args ? pod.args.split(" ") : [],
+	);
 	const [envVars, setEnvVars] = useState<EnvVar[]>(() => {
 		try {
 			return pod.envVariables ? JSON.parse(pod.envVariables) : [];
-		} catch (e) {
-			console.error("Failed to parse env variables", e);
+		} catch (_e) {
+			console.error("Failed to parse env variables", _e);
 			return [];
 		}
 	});
+	const [ports, setPorts] = useState<
+		{ containerPort: number; name?: string }[]
+	>(() =>
+		pod.internalPort ? [{ containerPort: pod.internalPort, name: "main" }] : [],
+	);
+	const [cpuRequest, setCpuRequest] = useState(`${pod.cpuRequest}m`);
+	const [cpuLimit, setCpuLimit] = useState(`${pod.cpuLimit}m`);
+	const [memoryRequest, setMemoryRequest] = useState(`${pod.memoryRequest}Mi`);
+	const [memoryLimit, setMemoryLimit] = useState(`${pod.memoryLimit}Mi`);
+	const [labels, setLabels] = useState<EnvVar[]>(() => {
+		try {
+			if (!pod.labels) return [];
+			const parsed = JSON.parse(pod.labels);
+			return Object.entries(parsed).map(([name, value]) => ({
+				name,
+				value: String(value),
+			}));
+		} catch (e) {
+			return [];
+		}
+	});
+
 	const queryClient = useQueryClient();
 
 	const deleteMutation = useMutation({
@@ -59,30 +93,56 @@ export function ManagePodDialog({ pod, clusterId }: ManagePodDialogProps) {
 		},
 	});
 
-	const saveEnvMutation = useMutation({
-		mutationFn: async (variables: EnvVar[]) => {
+	const savePodMutation = useMutation({
+		mutationFn: async () => {
 			const envMap: Record<string, string> = {};
-			for (const v of variables) {
+			for (const v of envVars) {
 				if (v.name) envMap[v.name] = v.value;
 			}
+
+			const labelsMap: Record<string, string> = {};
+			for (const l of labels) {
+				if (l.name) labelsMap[l.name] = l.value;
+			}
+
 			const res = await api.api
 				.pods({ clusterId })({ id: pod.id.toString() })
-				.patch({ env: envMap });
+				.patch({
+					image,
+					command: command.length > 0 ? command : undefined,
+					args: args.length > 0 ? args : undefined,
+					env: envMap,
+					labels: labelsMap,
+					resources: {
+						requests: { cpu: cpuRequest, memory: memoryRequest },
+						limits: { cpu: cpuLimit, memory: memoryLimit },
+					},
+					ports: ports.length > 0 ? ports : undefined,
+				});
 			if (res.error) {
-				throw new Error(
-					res.error.value?.message || "Failed to update env vars",
-				);
+				throw new Error(res.error.value?.message || "Failed to update pod");
 			}
 			return res.data;
 		},
 		onSuccess: () => {
-			toast.success("Environment variables updated");
+			toast.success("Pod update initiated (recreation)");
 			queryClient.invalidateQueries({ queryKey: ["pods", clusterId] });
 		},
 		onError: (error: any) => {
 			toast.error(error.message);
 		},
 	});
+
+	const RecreationWarning = () => (
+		<div className="bg-yellow-500/10 border border-yellow-500/50 rounded-lg p-3 flex gap-3 items-start mb-4">
+			<AlertTriangle className="h-5 w-5 text-yellow-500 shrink-0 mt-0.5" />
+			<div className="text-sm text-yellow-200">
+				<span className="font-bold text-yellow-500">Warning:</span> Saving
+				changes will cause the pod to be deleted and recreated. Active
+				connections like logs or terminal will be interrupted.
+			</div>
+		</div>
+	);
 
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
@@ -104,9 +164,12 @@ export function ManagePodDialog({ pod, clusterId }: ManagePodDialogProps) {
 					onValueChange={setActiveTab}
 					className="flex-1 flex flex-col"
 				>
-					<TabsList className="grid w-full grid-cols-4">
+					<TabsList className="grid w-full grid-cols-7">
 						<TabsTrigger value="overview">Overview</TabsTrigger>
-						<TabsTrigger value="env">Environment</TabsTrigger>
+						<TabsTrigger value="config">Config</TabsTrigger>
+						<TabsTrigger value="env">Env</TabsTrigger>
+						<TabsTrigger value="resources">Resources</TabsTrigger>
+						<TabsTrigger value="labels">Labels</TabsTrigger>
 						<TabsTrigger value="logs">Logs</TabsTrigger>
 						<TabsTrigger value="terminal">Terminal</TabsTrigger>
 					</TabsList>
@@ -184,16 +247,187 @@ export function ManagePodDialog({ pod, clusterId }: ManagePodDialogProps) {
 					</TabsContent>
 
 					<TabsContent
+						value="config"
+						className="flex-1 overflow-auto p-4 space-y-4"
+					>
+						<RecreationWarning />
+						<div className="space-y-4">
+							<div className="grid gap-2">
+								<Label>Image</Label>
+								<Input
+									value={image}
+									onChange={(e) => setImage(e.target.value)}
+								/>
+							</div>
+							<div className="grid gap-2">
+								<Label>Command (space-separated)</Label>
+								<Input
+									value={command.join(" ")}
+									onChange={(e) => setCommand(e.target.value.split(" "))}
+								/>
+							</div>
+							<div className="grid gap-2">
+								<Label>Arguments (space-separated)</Label>
+								<Input
+									value={args.join(" ")}
+									onChange={(e) => setArgs(e.target.value.split(" "))}
+								/>
+							</div>
+							<div className="space-y-2">
+								<div className="flex items-center justify-between">
+									<Label>Ports</Label>
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={() =>
+											setPorts([...ports, { containerPort: 80, name: "" }])
+										}
+									>
+										<Plus className="h-4 w-4 mr-1" /> Add Port
+									</Button>
+								</div>
+								{ports.map((p, i) => (
+									<div
+										key={`${p.containerPort}-${i}`}
+										className="flex gap-2 items-end"
+									>
+										<div className="flex-1">
+											<Label className="text-[10px] text-muted-foreground uppercase">
+												Port
+											</Label>
+											<Input
+												type="number"
+												value={p.containerPort}
+												onChange={(e) => {
+													const newPorts = [...ports];
+													newPorts[i].containerPort = Number(e.target.value);
+													setPorts(newPorts);
+												}}
+											/>
+										</div>
+										<div className="flex-1">
+											<Label className="text-[10px] text-muted-foreground uppercase">
+												Name
+											</Label>
+											<Input
+												value={p.name}
+												onChange={(e) => {
+													const newPorts = [...ports];
+													newPorts[i].name = e.target.value;
+													setPorts(newPorts);
+												}}
+											/>
+										</div>
+										<Button
+											variant="ghost"
+											size="icon"
+											onClick={() =>
+												setPorts(ports.filter((_, idx) => idx !== i))
+											}
+										>
+											<X className="h-4 w-4" />
+										</Button>
+									</div>
+								))}
+							</div>
+						</div>
+						<div className="flex justify-end pt-4">
+							<Button
+								onClick={() => savePodMutation.mutate()}
+								disabled={savePodMutation.isPending}
+							>
+								{savePodMutation.isPending ? "Updating..." : "Update Pod"}
+							</Button>
+						</div>
+					</TabsContent>
+
+					<TabsContent
 						value="env"
 						className="flex-1 overflow-auto p-4 space-y-4"
 					>
+						<RecreationWarning />
 						<EnvEditor variables={envVars} onChange={setEnvVars} />
-						<div className="flex justify-end">
+						<div className="flex justify-end pt-4">
 							<Button
-								onClick={() => saveEnvMutation.mutate(envVars)}
-								disabled={saveEnvMutation.isPending}
+								onClick={() => savePodMutation.mutate()}
+								disabled={savePodMutation.isPending}
 							>
-								{saveEnvMutation.isPending ? "Saving..." : "Save Environment"}
+								{savePodMutation.isPending ? "Updating..." : "Update Pod"}
+							</Button>
+						</div>
+					</TabsContent>
+
+					<TabsContent
+						value="resources"
+						className="flex-1 overflow-auto p-4 space-y-4"
+					>
+						<RecreationWarning />
+						<div className="grid grid-cols-2 gap-4">
+							<div className="space-y-4">
+								<h3 className="text-sm font-semibold border-b pb-1">
+									Requests
+								</h3>
+								<div className="grid gap-2">
+									<Label>CPU (m)</Label>
+									<Input
+										value={cpuRequest}
+										onChange={(e) => setCpuRequest(e.target.value)}
+									/>
+								</div>
+								<div className="grid gap-2">
+									<Label>Memory (Mi)</Label>
+									<Input
+										value={memoryRequest}
+										onChange={(e) => setMemoryRequest(e.target.value)}
+									/>
+								</div>
+							</div>
+							<div className="space-y-4">
+								<h3 className="text-sm font-semibold border-b pb-1">Limits</h3>
+								<div className="grid gap-2">
+									<Label>CPU (m)</Label>
+									<Input
+										value={cpuLimit}
+										onChange={(e) => setCpuLimit(e.target.value)}
+									/>
+								</div>
+								<div className="grid gap-2">
+									<Label>Memory (Mi)</Label>
+									<Input
+										value={memoryLimit}
+										onChange={(e) => setMemoryLimit(e.target.value)}
+									/>
+								</div>
+							</div>
+						</div>
+						<div className="flex justify-end pt-4">
+							<Button
+								onClick={() => savePodMutation.mutate()}
+								disabled={savePodMutation.isPending}
+							>
+								{savePodMutation.isPending ? "Updating..." : "Update Pod"}
+							</Button>
+						</div>
+					</TabsContent>
+
+					<TabsContent
+						value="labels"
+						className="flex-1 overflow-auto p-4 space-y-4"
+					>
+						<RecreationWarning />
+						<EnvEditor
+							variables={labels}
+							onChange={setLabels}
+							// labels use the same KV format, but we'll manually label the EnvEditor if possible
+							// Actually, EnvEditor has hardcoded "Environment Variables" label.
+							// I'll wrap it or just ignore the label for now.
+						/>
+						<div className="flex justify-end pt-4">
+							<Button
+								onClick={() => savePodMutation.mutate()}
+								disabled={savePodMutation.isPending}
+							>
+								{savePodMutation.isPending ? "Updating..." : "Update Pod"}
 							</Button>
 						</div>
 					</TabsContent>
