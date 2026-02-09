@@ -18,7 +18,7 @@ export interface ResourceResources {
 export interface PodDTO {
 	name: string;
 	namespace: string;
-	image: string;
+	image?: string; // This is necessary for the pod creation but updating image is not supported
 	command?: string[];
 	args?: string[];
 	env?: Record<string, string>;
@@ -30,7 +30,7 @@ export interface PodDTO {
 export interface DeploymentDTO {
 	name: string;
 	namespace: string;
-	image: string;
+	image?: string;
 	replicas: number;
 	command?: string[];
 	args?: string[];

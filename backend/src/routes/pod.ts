@@ -569,11 +569,20 @@ export const podRoute = new Elysia({
 						}
 					}
 
+					if (body.image) {
+						return ctx.status(400, {
+							success: false,
+							message:
+								"Image update is not supported. Please delete and recreate the pod.",
+							timestamp: Date.now(),
+						});
+					}
+
 					// Generate manifest for update
 					const manifest = generatePodManifest({
 						name: pod.name,
 						namespace: pod.namespace,
-						image: body.image || pod.dockerImage,
+						// image: body.image || pod.dockerImage,
 						command:
 							body.command ||
 							(pod.command ? pod.command.split(" ") : undefined),
@@ -653,6 +662,7 @@ export const podRoute = new Elysia({
 					response: {
 						200: baseResponseSchema(Type.Optional(Type.String())),
 						404: errorResponseSchema,
+						400: errorResponseSchema,
 						500: errorResponseSchema,
 					},
 				},
