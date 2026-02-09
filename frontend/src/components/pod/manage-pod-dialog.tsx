@@ -7,22 +7,21 @@ import {
 	DialogTitle,
 	DialogTrigger,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api, type databaseTypes, type SchemaStatic } from "@/lib/api";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Settings, Trash2, AlertTriangle, Plus, X } from "lucide-react";
+import { FitAddon } from "@xterm/addon-fit";
+import { WebLinksAddon } from "@xterm/addon-web-links";
+import { AlertTriangle, Plus, Settings, Trash2, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Terminal } from "xterm";
-import { EnvEditor, type EnvVar } from "../shared/env-editor";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { FitAddon } from "@xterm/addon-fit";
-import { WebLinksAddon } from "@xterm/addon-web-links";
 import "xterm/css/xterm.css";
 import { BACKEND_URL } from "../../constants";
 import { ExposeDialog } from "../service/expose-dialog";
+import { EnvEditor, type EnvVar } from "../shared/env-editor";
 
 interface ManagePodDialogProps {
 	pod: SchemaStatic<databaseTypes.databaseTypes["k8sPods"]>;
