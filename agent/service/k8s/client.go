@@ -7,12 +7,15 @@ import (
 	"path/filepath"
 
 	"k8s.io/client-go/discovery"
+	"k8s.io/client-go/discovery/cached/memory"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/version"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/restmapper"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
@@ -22,6 +25,7 @@ type K8sClient struct {
 	Clientset       *kubernetes.Clientset
 	DynamicClient   dynamic.Interface // <--- Added this to handle CRDs like HelmChart
 	DiscoveryClient discovery.DiscoveryInterface
+	RESTMapper      meta.RESTMapper
 	RestConfig      *rest.Config
 	ClusterKey      string
 }
@@ -69,10 +73,16 @@ func NewK8sClient(clusterKey string) (*K8sClient, error) {
 		return nil, fmt.Errorf("failed to create discovery client: %w", err)
 	}
 
+	// 5. Initialize RESTMapper (Required for dynamic GVR resolution)
+	// We need a cached discovery client for the mapper
+	cachedDiscovery := memory.NewMemCacheClient(discoClient)
+	mapper := restmapper.NewDeferredDiscoveryRESTMapper(cachedDiscovery)
+
 	return &K8sClient{
 		Clientset:       clientset,
 		DynamicClient:   dynClient,
 		DiscoveryClient: discoClient,
+		RESTMapper:      mapper,
 		Context:         context.Background(),
 		RestConfig:      config,
 		ClusterKey:      clusterKey,

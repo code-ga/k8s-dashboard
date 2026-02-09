@@ -43,7 +43,12 @@ function ManagePodPage() {
 	useEffect(() => {
 		if (pod?.envVariables) {
 			try {
-				setEnvVars(JSON.parse(pod.envVariables));
+				const EnvVars = JSON.parse(pod.envVariables);
+				const envVars: EnvVar[] = Object.entries(EnvVars).map(([name, value]) => ({
+					name,
+					value: value as string,
+				}));
+				setEnvVars(envVars);
 			} catch (e) {
 				console.error("Failed to parse env variables", e);
 			}

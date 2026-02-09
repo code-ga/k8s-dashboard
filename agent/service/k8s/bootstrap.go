@@ -30,13 +30,57 @@ func (kc *K8sClient) EnsureGatewayInstalled() error {
 	}
 
 	// 3. Traefik CRDs & Gateway installation
-	manifest := kc.getTraefikManifest(namespace)
-	err = kc.ApplyManifest(manifest)
-	if err != nil {
-		return fmt.Errorf("failed to apply traefik manifest: %w", err)
+	// Construct values for Traefik chart
+	values := map[string]interface{}{
+		"service": map[string]interface{}{
+			"type": "LoadBalancer",
+		},
+		"nodeSelector": map[string]string{
+			"role.k8s.io/edge": "true",
+		},
+		"providers": map[string]interface{}{
+			"kubernetesCRD": map[string]interface{}{
+				"enabled": true,
+			},
+			"kubernetesIngress": map[string]interface{}{
+				"enabled": true,
+			},
+		},
+		"ports": map[string]interface{}{
+			"web": map[string]interface{}{
+				"exposedPort": 80,
+				"expose":      true,
+			},
+			"websecure": map[string]interface{}{
+				"exposedPort": 443,
+				"expose":      true,
+			},
+		},
 	}
 
-	log.Printf("Traefik gateway installation initiated in %s", namespace)
+	// Add dynamic ports for user applications (30000-30100)
+	ports := values["ports"].(map[string]interface{})
+	for i := 30000; i <= 30100; i++ {
+		ports[fmt.Sprintf("p%d", i)] = map[string]interface{}{
+			"port":        i,
+			"expose":      true,
+			"exposedPort": i,
+			"protocol":    "TCP",
+		}
+		ports[fmt.Sprintf("u%d", i)] = map[string]interface{}{
+			"port":        i,
+			"expose":      true,
+			"exposedPort": i,
+			"protocol":    "UDP",
+		}
+	}
+
+	err = kc.InstallOrUpgradeChart("https://traefik.github.io/charts", "traefik", "traefik", namespace, values)
+	if err != nil {
+		return fmt.Errorf("failed to install/upgrade traefik: %w", err)
+	}
+
+	log.Printf("Traefik gateway installation initiated in %s using Helm", namespace)
 	return nil
 }
 
@@ -86,98 +130,4 @@ func (kc *K8sClient) DetectAndLabelEdgeNodes() error {
 
 	log.Printf("Labeled %d edge nodes", labeledCount)
 	return nil
-}
-
-func (kc *K8sClient) getTraefikManifest(namespace string) string {
-	entrypointsArgs := `--entrypoints.web.address=:80 --entrypoints.websecure.address=:443`
-	for i := 30000; i <= 30100; i++ {
-		entrypointsArgs += fmt.Sprintf(" --entrypoints.p%d.address=:%d", i, i)
-		entrypointsArgs += fmt.Sprintf(" --entrypoints.u%d.address=:%d/udp", i, i)
-	}
-
-	return fmt.Sprintf(`
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: traefik-ingress-controller
-  namespace: %s
----
-kind: ClusterRole
-apiVersion: rbac.authorization.k8s.io/v1
-metadata:
-  name: traefik-ingress-controller
-rules:
-  - apiGroups: [""]
-    resources: ["services", "endpoints", "secrets"]
-    verbs: ["get", "list", "watch"]
-  - apiGroups: ["extensions", "networking.k8s.io"]
-    resources: ["ingresses", "ingressclasses"]
-    verbs: ["get", "list", "watch"]
-  - apiGroups: ["traefik.io"]
-    resources: ["ingressroutes", "ingressroutetcps", "ingressrouteudps", "middlewares", "tlsoptions", "tlsstores", "traefikservices", "serverstransports"]
-    verbs: ["get", "list", "watch"]
----
-kind: ClusterRoleBinding
-apiVersion: rbac.authorization.k8s.io/v1
-metadata:
-  name: traefik-ingress-controller
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: traefik-ingress-controller
-subjects:
-  - kind: ServiceAccount
-    name: traefik-ingress-controller
-    namespace: %s
----
-kind: Deployment
-apiVersion: apps/v1
-metadata:
-  name: traefik
-  namespace: %s
-  labels:
-    app: traefik
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: traefik
-  template:
-    metadata:
-      labels:
-        app: traefik
-    spec:
-      serviceAccountName: traefik-ingress-controller
-      nodeSelector:
-        role.k8s.io/edge: "true"
-      containers:
-        - name: traefik
-          image: traefik:v3.1
-          args:
-            - --providers.kubernetesingress
-            - --providers.kubernetescrd
-            - %s
-          ports:
-            - name: web
-              containerPort: 80
-            - name: websecure
-              containerPort: 443
----
-kind: Service
-apiVersion: v1
-metadata:
-  name: traefik
-  namespace: %s
-spec:
-  type: LoadBalancer
-  selector:
-    app: traefik
-  ports:
-    - name: web
-      port: 80
-      targetPort: 80
-    - name: websecure
-      port: 443
-      targetPort: 443
-`, namespace, namespace, namespace, entrypointsArgs, namespace)
 }

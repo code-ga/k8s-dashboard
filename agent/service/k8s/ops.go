@@ -48,16 +48,14 @@ func (k *K8sClient) ApplyManifest(yamlContent string) error {
 		}
 
 		// 2. Get GVR (Group Version Resource) mapping
-		// This tells the client "where" to send this object (e.g., /apis/helm.cattle.io/v1/namespaces/x/helmcharts)
+		// This tells the client "where" to send this object
 		gvk := rawObj.GroupVersionKind()
 
-		// Simple mapping logic (In production, use RESTMapper for 100% accuracy, but this works for standard CRDs)
-		// We convert Kind "HelmChart" -> Resource "helmcharts"
-		gvr := schema.GroupVersionResource{
-			Group:    gvk.Group,
-			Version:  gvk.Version,
-			Resource: toPlural(gvk.Kind),
+		mapping, err := k.RESTMapper.RESTMapping(gvk.GroupKind(), gvk.Version)
+		if err != nil {
+			return fmt.Errorf("failed to find GVR for %s: %w", gvk.Kind, err)
 		}
+		gvr := mapping.Resource
 
 		// 3. Prepare the Resource Interface
 		var dr dynamic.ResourceInterface
@@ -99,31 +97,6 @@ func (k *K8sClient) ApplyManifest(yamlContent string) error {
 		}
 	}
 	return nil
-}
-
-// Simple helper to pluralize Kinds (HelmChart -> helmcharts)
-// A real implementation would use discovery client, but this is safe for your known types.
-func toPlural(kind string) string {
-	lowerKind := strings.ToLower(kind)
-	switch kind {
-	case "HelmChart":
-		return "helmcharts"
-	case "Cluster":
-		return "clusters"
-	case "IngressRoute":
-		return "ingressroutes"
-	case "IngressRouteTCP":
-		return "ingressroutetcps"
-	case "IngressRouteUDP":
-		return "ingressrouteudps"
-	case "Middleware":
-		return "middlewares"
-	default:
-		if strings.HasSuffix(lowerKind, "s") {
-			return lowerKind
-		}
-		return lowerKind + "s"
-	}
 }
 
 func (k *K8sClient) DeletePod(namespace, podName string) error {
