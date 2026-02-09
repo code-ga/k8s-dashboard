@@ -185,7 +185,6 @@ export const serviceRoute = new Elysia({
 						| SchemaStatic<typeof dbSchemaTypes.k8sServices>
 						| undefined;
 
-
 					try {
 						[newSvc] = await db
 							.insert(schema.k8sServices)

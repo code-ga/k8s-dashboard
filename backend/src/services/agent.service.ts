@@ -265,10 +265,25 @@ export class AgentService {
 					};
 
 					if (existingPodResult.length > 0 && existingPodResult[0]?.k8sUid) {
+						const existingPod = existingPodResult[0];
+						// Preserve "Terminating" status if set in DB
+						const newStatus =
+							existingPod.status === "Terminating"
+								? "Terminating"
+								: pod.status || "Unknown";
+
+						// Only update status/usage/tracking fields to avoid overwriting desired spec in DB
 						await db
 							.update(k8sPods)
-							.set(podData)
-							.where(eq(k8sPods.id, existingPodResult[0].id));
+							.set({
+								nodeId: node.id,
+								status: newStatus,
+								cpuUsage: Number(pod.cpuUsage),
+								memoryUsage: Number(pod.ramUsage),
+								k8sUid: pod.uid,
+								updatedAt: new Date(),
+							})
+							.where(eq(k8sPods.id, existingPod.id));
 					} else {
 						await db.insert(k8sPods).values(podData); // Fix lint: removed createdAt
 					}
@@ -396,16 +411,41 @@ export class AgentService {
 				return;
 			}
 
-			// If exists, check Replicas
-			if (matchingDeployment.replicas !== dbDep.replicas) {
+			// Check for Drifts (Source of Truth is DB)
+			const hasReplicaMismatch = matchingDeployment.replicas !== dbDep.replicas;
+			const hasImageMismatch =
+				dbDep.dockerImage &&
+				matchingDeployment.dockerImage !== dbDep.dockerImage;
+
+			if (hasReplicaMismatch || hasImageMismatch) {
 				console.log(
-					`Mismatch for ${dbDep.name} in ${dbDep.namespace}: Wanted ${dbDep.replicas}, Got ${matchingDeployment.replicas}`,
+					`Syncing Deployment ${dbDep.name}: Mismatch detected (Replicas: ${matchingDeployment.replicas} vs ${dbDep.replicas}, Image: ${matchingDeployment.dockerImage} vs ${dbDep.dockerImage})`,
 				);
 
+				let envVars: Record<string, string> | undefined;
+				if (dbDep.envVariables) {
+					try {
+						envVars = JSON.parse(decrypt(dbDep.envVariables));
+					} catch (e) {
+						console.error("Failed to decrypt env vars", dbDep.name, e);
+					}
+				}
+
+				const manifest = generateDeploymentManifest({
+					name: dbDep.name,
+					namespace: dbDep.namespace,
+					image: dbDep.dockerImage || "",
+					replicas: dbDep.replicas,
+					labels: dbDep.labels ? JSON.parse(dbDep.labels) : undefined,
+					selector: dbDep.selector ? JSON.parse(dbDep.selector) : undefined,
+					ports: [{ containerPort: dbDep.internalPort }],
+					env: envVars,
+				});
+
 				await agentManager.sendCommand(agentId, cluster.id, {
-					id: "", // Will be set by agentManager
-					type: Command_CommandType.SCALE_DEPLOYMENT,
-					payload: dbDep.replicas.toString(),
+					id: "",
+					type: Command_CommandType.CREATE_DEPLOYMENT, // Apply
+					payload: manifest,
 					targetNamespace: dbDep.namespace,
 					targetName: dbDep.name,
 				});
@@ -429,6 +469,15 @@ export class AgentService {
 			);
 
 			if (!matchingPod) {
+				// Avoid restoring pods that are marked for deletion
+				if (dbPod.status === "Terminating") {
+					console.log(
+						`Pod ${dbPod.name} is missing and was terminating. Cleaning up DB.`,
+					);
+					await db.delete(k8sPods).where(eq(k8sPods.id, dbPod.id));
+					continue;
+				}
+
 				console.log(
 					`Missing Pod: ${dbPod.name} in ${dbPod.namespace}. Restoring...`,
 				);
@@ -467,6 +516,65 @@ export class AgentService {
 					payload: manifest,
 					targetNamespace: dbPod.namespace,
 					targetName: dbPod.name,
+				});
+				return;
+			}
+
+			// Check for Drifts in Existing Pods
+			if (matchingPod.dockerImage !== dbPod.dockerImage) {
+				console.log(
+					`Syncing Pod ${dbPod.name}: Image mismatch detected (${matchingPod.dockerImage} vs ${dbPod.dockerImage})`,
+				);
+
+				let envVars: Record<string, string> | undefined;
+				if (dbPod.envVariables) {
+					try {
+						envVars = JSON.parse(decrypt(dbPod.envVariables));
+					} catch (e) {
+						console.error("Failed to decrypt env vars", dbPod.name, e);
+					}
+				}
+
+				const manifest = generatePodManifest({
+					name: dbPod.name,
+					namespace: dbPod.namespace,
+					image: dbPod.dockerImage,
+					command: dbPod.command ? dbPod.command.split(" ") : undefined,
+					ports: [{ containerPort: dbPod.internalPort }],
+					env: envVars,
+					resources: {
+						requests: {
+							cpu: `${dbPod.cpuRequest}m`,
+							memory: `${dbPod.memoryRequest}Mi`,
+						},
+						limits: {
+							cpu: `${dbPod.cpuLimit}m`,
+							memory: `${dbPod.memoryLimit}Mi`,
+						},
+					},
+				});
+
+				await agentManager.sendCommand(agentId, cluster.id, {
+					id: "",
+					type: Command_CommandType.CREATE_POD, // This will overwrite/update the pod
+					payload: manifest,
+					targetNamespace: dbPod.namespace,
+					targetName: dbPod.name,
+				});
+				return;
+			}
+
+			// Re-send DELETE if pod is still alive but marked as Terminating in DB
+			if (matchingPod && dbPod.status === "Terminating") {
+				console.log(
+					`Pod ${dbPod.name} persists in cluster but is marked as Terminating in DB. Re-sending delete command.`,
+				);
+				await agentManager.sendCommand(agentId, cluster.id, {
+					id: "",
+					type: 6, // DELETE_POD
+					targetNamespace: dbPod.namespace,
+					targetName: dbPod.name,
+					payload: "",
 				});
 				return;
 			}

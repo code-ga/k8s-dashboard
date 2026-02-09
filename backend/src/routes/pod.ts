@@ -275,7 +275,8 @@ export const podRoute = new Elysia({
 						});
 					}
 
-					let newPod: SchemaStatic<typeof dbSchemaTypes.k8sPods> | undefined = undefined;
+					let newPod: SchemaStatic<typeof dbSchemaTypes.k8sPods> | undefined =
+						undefined;
 
 					try {
 						[newPod] = await db
@@ -394,10 +395,12 @@ export const podRoute = new Elysia({
 						labels: Type.Optional(Type.Record(Type.String(), Type.String())),
 					}),
 					response: {
-						201: baseResponseSchema(Type.Object({
-							...dbSchemaTypes.k8sPods,
-							agentResponse: Type.Optional(Type.String()),
-						})),
+						201: baseResponseSchema(
+							Type.Object({
+								...dbSchemaTypes.k8sPods,
+								agentResponse: Type.Optional(Type.String()),
+							}),
+						),
 						200: baseResponseSchema(Type.Optional(Type.String())),
 						401: errorResponseSchema,
 						400: errorResponseSchema,
@@ -445,6 +448,13 @@ export const podRoute = new Elysia({
 					}
 
 					try {
+						// 1. Mark as terminating in DB first
+						await db
+							.update(schema.k8sPods)
+							.set({ status: "Terminating", updatedAt: new Date() })
+							.where(eq(schema.k8sPods.id, podId));
+
+						// 2. Send Command
 						await ctx.agentManager.sendCommand(cluster.agentId, cluster.id, {
 							id: globalThis.crypto.randomUUID(),
 							type: 6, // DELETE_POD
@@ -453,18 +463,24 @@ export const podRoute = new Elysia({
 							payload: "",
 						});
 
+						// 3. Final Delete from DB
 						await db.delete(schema.k8sPods).where(eq(schema.k8sPods.id, podId));
 
 						return ctx.status(200, {
 							success: true,
-							message: "Pod deleted successfully",
+							message: "Pod deletion initiated",
 							data: pod,
 							timestamp: Date.now(),
 						});
 					} catch (error: any) {
-						return ctx.status(500, {
-							success: false,
-							message: `Agent error: ${error.message}`,
+						console.error("Agent Delete Command Failed:", error);
+						// If sendCommand failed, DB already has status 'Terminating'
+						// Dashboard will show it as terminating and sync will eventually catch up
+						return ctx.status(200, {
+							success: true,
+							message:
+								"Pod marked for deletion in DB but Agent is unreachable. Will sync later.",
+							data: pod,
 							timestamp: Date.now(),
 						});
 					}
@@ -517,17 +533,59 @@ export const podRoute = new Elysia({
 						});
 					}
 
-					// Generate manifest for update - merge (simple approach) or just send fields
-					// For K8s "Edit", we usually send the full desired state or a strategic merge patch.
-					// Agent "EDIT_RESOURCE" likely does `kubectl apply` or `patch`.
-					// We'll generate a manifest with *just* the fields we want to update (like labels).
-					// For Pods, most fields are immutable.
+					// Update DB record
+					const updateData: any = {
+						updatedAt: new Date(),
+					};
+					if (body.image) updateData.dockerImage = body.image;
+					if (body.command) updateData.command = body.command.join(" ");
+					if (body.env)
+						updateData.envVariables = encrypt(JSON.stringify(body.env));
+					if (body.ports && body.ports.length > 0) {
+						updateData.internalPort = body.ports[0]?.containerPort ?? 0;
+					}
 
+					try {
+						await db
+							.update(schema.k8sPods)
+							.set(updateData)
+							.where(eq(schema.k8sPods.id, podId));
+					} catch (dbError: any) {
+						console.error("DB Update Failed:", dbError);
+						return ctx.status(500, {
+							success: false,
+							message: `Database update failed: ${dbError.message}`,
+							timestamp: Date.now(),
+						});
+					}
+
+					// Merge env for manifest
+					let finalEnv = body.env;
+					if (!finalEnv && pod.envVariables) {
+						try {
+							finalEnv = JSON.parse(decrypt(pod.envVariables));
+						} catch (e) {
+							console.error("Failed to decrypt env for pod", pod.id, e);
+						}
+					}
+
+					// Generate manifest for update
 					const manifest = generatePodManifest({
 						name: pod.name,
 						namespace: pod.namespace,
-						image: body.image || pod.dockerImage, // basic update support
-						labels: body.labels, // merge logic is complex, just sending what user wants for now
+						image: body.image || pod.dockerImage,
+						command:
+							body.command ||
+							(pod.command ? pod.command.split(" ") : undefined),
+						args: body.args,
+						env: finalEnv,
+						ports:
+							body.ports ||
+							(pod.internalPort
+								? [{ containerPort: pod.internalPort }]
+								: undefined),
+						resources: body.resources,
+						labels: body.labels,
 					});
 
 					try {
@@ -550,9 +608,11 @@ export const podRoute = new Elysia({
 							timestamp: Date.now(),
 						});
 					} catch (error: any) {
-						return ctx.status(500, {
-							success: false,
-							message: `Agent error: ${error.message}`,
+						console.error("Agent Update Command Failed:", error);
+						return ctx.status(200, {
+							success: true,
+							message:
+								"Pod updated in DB but Agent is unreachable. Will sync later.",
 							timestamp: Date.now(),
 						});
 					}
@@ -561,8 +621,34 @@ export const podRoute = new Elysia({
 					detail: { tags: ["Pods"] },
 					body: Type.Object({
 						image: Type.Optional(Type.String()),
-						labels: Type.Optional(Type.Record(Type.String(), Type.String())),
+						command: Type.Optional(Type.Array(Type.String())),
+						args: Type.Optional(Type.Array(Type.String())),
 						env: Type.Optional(Type.Record(Type.String(), Type.String())),
+						ports: Type.Optional(
+							Type.Array(
+								Type.Object({
+									containerPort: Type.Number(),
+									name: Type.Optional(Type.String()),
+								}),
+							),
+						),
+						resources: Type.Optional(
+							Type.Object({
+								requests: Type.Optional(
+									Type.Object({
+										cpu: Type.Optional(Type.String()),
+										memory: Type.Optional(Type.String()),
+									}),
+								),
+								limits: Type.Optional(
+									Type.Object({
+										cpu: Type.Optional(Type.String()),
+										memory: Type.Optional(Type.String()),
+									}),
+								),
+							}),
+						),
+						labels: Type.Optional(Type.Record(Type.String(), Type.String())),
 					}),
 					response: {
 						200: baseResponseSchema(Type.Optional(Type.String())),
