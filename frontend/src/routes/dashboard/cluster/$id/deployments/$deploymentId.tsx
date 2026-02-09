@@ -3,11 +3,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api, type databaseTypes, type SchemaStatic } from "@/lib/api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Trash2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { toast } from "sonner";
 import { EnvEditor, type EnvVar } from "@/components/shared/env-editor";
 import { ExposeDialog } from "@/components/service/expose-dialog";
-import { DeploymentLogs } from "@/components/deployment/manage-deployment-dialog";
 import {
 	createFileRoute,
 	Link,
@@ -34,7 +33,7 @@ function ManageDeploymentPage() {
 		queryFn: async () => {
 			const res = await api.api
 				.deployments({ clusterId })({ id: deploymentId })
-				.get()
+				.get();
 			if (res.error) throw res.error;
 			if (!res.data.data)
 				throw new Error(res.data.message || "Failed to fetch deployment");
@@ -48,8 +47,8 @@ function ManageDeploymentPage() {
 		if (deployment?.envVariables) {
 			try {
 				setEnvVars(JSON.parse(deployment.envVariables));
-			} catch (e) {
-				console.error("Failed to parse env variables", e);
+			} catch (_e) {
+				console.error("Failed to parse env variables", _e);
 			}
 		}
 	}, [deployment]);
@@ -58,11 +57,11 @@ function ManageDeploymentPage() {
 		mutationFn: async () => {
 			const res = await api.api
 				.deployments({ clusterId })({ id: deploymentId.toString() })
-				.delete()
+				.delete();
 			if (res.error) {
 				throw new Error(
 					res.error.value?.message || "Failed to delete deployment",
-				)
+				);
 			}
 			return res.data;
 		},
@@ -72,7 +71,7 @@ function ManageDeploymentPage() {
 			navigate({
 				to: `/dashboard/cluster/$id/deployments`,
 				params: { id: clusterId },
-			})
+			});
 		},
 		onError: (error: Error) => {
 			toast.error(error.message);
@@ -91,7 +90,7 @@ function ManageDeploymentPage() {
 			if (res.error) {
 				throw new Error(
 					res.error.value?.message || "Failed to update env vars",
-				)
+				);
 			}
 			return res.data;
 		},
@@ -235,5 +234,86 @@ function ManageDeploymentPage() {
 				</TabsContent>
 			</Tabs>
 		</div>
-	)
+	);
+}
+
+interface DeploymentLogsProps {
+	deployment: SchemaStatic<databaseTypes.databaseTypes["k8sDeployments"]>;
+	clusterId: string;
+	isActive: boolean;
+}
+
+export function DeploymentLogs({
+	deployment,
+	clusterId,
+	isActive,
+}: DeploymentLogsProps) {
+	const [logs, setLogs] = useState<string>("");
+	const [autoScroll, setAutoScroll] = useState(true);
+	const logsRef = useRef<HTMLPreElement>(null);
+	const wsRef = useRef<WebSocket | null>(null);
+
+	useEffect(() => {
+		if (!isActive) {
+			wsRef.current?.close();
+			wsRef.current = null;
+			return;
+		}
+
+		const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+		const ws = new WebSocket(
+			`${protocol}//${window.location.host}/api/deployments/${clusterId}/logs/${deployment.id}`,
+		);
+		wsRef.current = ws;
+
+		ws.onmessage = (event) => {
+			if (event.data instanceof Blob) {
+				event.data.text().then((text) => {
+					setLogs((prev) => prev + text);
+				});
+			} else {
+				setLogs((prev) => prev + event.data);
+			}
+		};
+
+		ws.onerror = (error) => {
+			console.error("WebSocket error:", error);
+			toast.error("Failed to connect to log stream");
+		};
+
+		return () => {
+			ws.close();
+			wsRef.current = null;
+		};
+	}, [isActive, deployment.id, clusterId]);
+
+	// biome-ignore lint/correctness/useExhaustiveDependencies: reason
+	useEffect(() => {
+		if (autoScroll && logsRef.current) {
+			logsRef.current.scrollTop = logsRef.current.scrollHeight;
+		}
+	}, [logs, autoScroll]);
+
+	return (
+		<div className="h-full flex flex-col">
+			<div className="flex items-center justify-between mb-2">
+				<p className="text-sm font-medium">
+					Live Logs (from a pod in deployment)
+				</p>
+				<Button
+					variant={autoScroll ? "default" : "outline"}
+					size="sm"
+					onClick={() => setAutoScroll(!autoScroll)}
+				>
+					{autoScroll ? "Auto-scroll ON" : "Auto-scroll OFF"}
+				</Button>
+			</div>
+			<pre
+				ref={logsRef}
+				className="flex-1 bg-black text-green-400 p-4 rounded-lg overflow-auto font-mono text-xs"
+			>
+				{logs || "Waiting for logs..."}
+			</pre>
+		</div>
+	);
 }
