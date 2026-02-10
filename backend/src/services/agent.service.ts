@@ -52,6 +52,7 @@ export class AgentService {
 					ramUsage: Number(heartbeat.clusterResource.ramUsage),
 					cpuCapacity: Number(heartbeat.clusterResource.cpuCapacity),
 					ramCapacity: Number(heartbeat.clusterResource.ramCapacity),
+					internalClusterDomain: heartbeat.clusterResource.clusterDomain,
 					updatedAt: new Date(),
 					status: "active",
 				})

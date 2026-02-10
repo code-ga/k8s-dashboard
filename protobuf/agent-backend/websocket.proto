@@ -72,6 +72,8 @@ message ClusterResource {
   int64 cpu_usage = 3;
   // Current Memory usage (MiB)
   int64 ram_usage = 4;
+  // Cluster domain
+  string cluster_domain = 5;
 }
 
 message ContainerPort {

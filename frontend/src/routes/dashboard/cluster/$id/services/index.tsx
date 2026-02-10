@@ -38,6 +38,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import {
 	ArrowLeft,
+	Eye,
 	Network,
 	ShieldAlert,
 	ShieldCheck,
@@ -361,6 +362,15 @@ function ClusterServices() {
 									<TableCell className="text-right">
 										<div className="flex justify-end gap-2">
 											<ExposureDialog service={svc} clusterId={id} />
+											{/* Link to service details */}
+											<Link
+												to="/dashboard/cluster/$id/services/$serviceId" params={{ id, serviceId: svc.id.toString() }}
+												className="text-blue-500 hover:underline"
+											>
+												<Button variant="ghost" size="icon">
+													<Eye className="h-4 w-4" />
+												</Button>
+											</Link>
 											<Button
 												variant="ghost"
 												size="icon"

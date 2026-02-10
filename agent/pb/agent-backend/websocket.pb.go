@@ -599,7 +599,9 @@ type ClusterResource struct {
 	// Current CPU usage (millicores)
 	CpuUsage int64 `protobuf:"varint,3,opt,name=cpu_usage,json=cpuUsage,proto3" json:"cpu_usage,omitempty"`
 	// Current Memory usage (MiB)
-	RamUsage      int64 `protobuf:"varint,4,opt,name=ram_usage,json=ramUsage,proto3" json:"ram_usage,omitempty"`
+	RamUsage int64 `protobuf:"varint,4,opt,name=ram_usage,json=ramUsage,proto3" json:"ram_usage,omitempty"`
+	// Cluster domain
+	ClusterDomain string `protobuf:"bytes,5,opt,name=cluster_domain,json=clusterDomain,proto3" json:"cluster_domain,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -660,6 +662,13 @@ func (x *ClusterResource) GetRamUsage() int64 {
 		return x.RamUsage
 	}
 	return 0
+}
+
+func (x *ClusterResource) GetClusterDomain() string {
+	if x != nil {
+		return x.ClusterDomain
+	}
+	return ""
 }
 
 type ContainerPort struct {
@@ -1572,12 +1581,13 @@ const file_agent_backend_websocket_proto_rawDesc = "" +
 	"\x04pods\x18\x03 \x03(\v2\b.api.PodR\x04pods\x12(\n" +
 	"\bservices\x18\x04 \x03(\v2\f.api.ServiceR\bservices\x121\n" +
 	"\vdeployments\x18\x06 \x03(\v2\x0f.api.DeploymentR\vdeployments\x12\x1c\n" +
-	"\ttimestamp\x18\x05 \x01(\x03R\ttimestamp\"\x91\x01\n" +
+	"\ttimestamp\x18\x05 \x01(\x03R\ttimestamp\"\xb8\x01\n" +
 	"\x0fClusterResource\x12!\n" +
 	"\fcpu_capacity\x18\x01 \x01(\x03R\vcpuCapacity\x12!\n" +
 	"\fram_capacity\x18\x02 \x01(\x03R\vramCapacity\x12\x1b\n" +
 	"\tcpu_usage\x18\x03 \x01(\x03R\bcpuUsage\x12\x1b\n" +
-	"\tram_usage\x18\x04 \x01(\x03R\bramUsage\"f\n" +
+	"\tram_usage\x18\x04 \x01(\x03R\bramUsage\x12%\n" +
+	"\x0ecluster_domain\x18\x05 \x01(\tR\rclusterDomain\"f\n" +
 	"\rContainerPort\x12%\n" +
 	"\x0econtainer_port\x18\x01 \x01(\x05R\rcontainerPort\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x1a\n" +

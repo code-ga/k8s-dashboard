@@ -377,12 +377,18 @@ func (kc *K8sClient) GetFullClusterState() (*pb.Heartbeat, error) {
 
 	}
 
+	clusterDomain, err := kc.GetClusterDomain()
+	if err != nil {
+		clusterDomain = "cluster.local" // default
+	}
+
 	heartbeat := &pb.Heartbeat{
 		ClusterResource: &pb.ClusterResource{
-			CpuCapacity: totalCPUCap,
-			RamCapacity: totalMemCap,
-			CpuUsage:    totalCPUUsage,
-			RamUsage:    totalMemUsage,
+			CpuCapacity:   totalCPUCap,
+			RamCapacity:   totalMemCap,
+			CpuUsage:      totalCPUUsage,
+			RamUsage:      totalMemUsage,
+			ClusterDomain: clusterDomain,
 		},
 		Nodes:       pbNodes,
 		Pods:        pbPods,

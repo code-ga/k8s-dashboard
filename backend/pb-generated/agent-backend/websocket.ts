@@ -101,6 +101,8 @@ export interface ClusterResource {
   cpuUsage: number;
   /** Current Memory usage (MiB) */
   ramUsage: number;
+  /** Cluster domain */
+  clusterDomain: string;
 }
 
 export interface ContainerPort {
@@ -979,7 +981,7 @@ export const Heartbeat: MessageFns<Heartbeat> = {
 };
 
 function createBaseClusterResource(): ClusterResource {
-  return { cpuCapacity: 0, ramCapacity: 0, cpuUsage: 0, ramUsage: 0 };
+  return { cpuCapacity: 0, ramCapacity: 0, cpuUsage: 0, ramUsage: 0, clusterDomain: "" };
 }
 
 export const ClusterResource: MessageFns<ClusterResource> = {
@@ -995,6 +997,9 @@ export const ClusterResource: MessageFns<ClusterResource> = {
     }
     if (message.ramUsage !== 0) {
       writer.uint32(32).int64(message.ramUsage);
+    }
+    if (message.clusterDomain !== "") {
+      writer.uint32(42).string(message.clusterDomain);
     }
     return writer;
   },
@@ -1038,6 +1043,14 @@ export const ClusterResource: MessageFns<ClusterResource> = {
           message.ramUsage = longToNumber(reader.int64());
           continue;
         }
+        case 5: {
+          if (tag !== 42) {
+            break;
+          }
+
+          message.clusterDomain = reader.string();
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -1069,6 +1082,11 @@ export const ClusterResource: MessageFns<ClusterResource> = {
         : isSet(object.ram_usage)
         ? globalThis.Number(object.ram_usage)
         : 0,
+      clusterDomain: isSet(object.clusterDomain)
+        ? globalThis.String(object.clusterDomain)
+        : isSet(object.cluster_domain)
+        ? globalThis.String(object.cluster_domain)
+        : "",
     };
   },
 
@@ -1086,6 +1104,9 @@ export const ClusterResource: MessageFns<ClusterResource> = {
     if (message.ramUsage !== 0) {
       obj.ramUsage = Math.round(message.ramUsage);
     }
+    if (message.clusterDomain !== "") {
+      obj.clusterDomain = message.clusterDomain;
+    }
     return obj;
   },
 
@@ -1098,6 +1119,7 @@ export const ClusterResource: MessageFns<ClusterResource> = {
     message.ramCapacity = object.ramCapacity ?? 0;
     message.cpuUsage = object.cpuUsage ?? 0;
     message.ramUsage = object.ramUsage ?? 0;
+    message.clusterDomain = object.clusterDomain ?? "";
     return message;
   },
 };

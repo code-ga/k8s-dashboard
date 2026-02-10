@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/discovery/cached/memory"
@@ -13,6 +14,7 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
 	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/version"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/restmapper"
@@ -124,4 +126,32 @@ func (kc *K8sClient) ClientInfo() (*version.Info, error) {
 		return nil, err
 	}
 	return versionInfo, nil
+}
+
+func (kc *K8sClient) GetClusterDomain() (string, error) {
+	// Attempt to get the cluster domain from the API server
+	corefile, err := kc.Clientset.CoreV1().ConfigMaps("kube-system").Get(kc.Context, "coredns", metav1.GetOptions{})
+	if err != nil {
+		return "", err
+	}
+
+	// Extract cluster domain from Corefile data
+	if corefile.Data != nil {
+		if corefile.Data["Corefile"] != "" {
+			// Parse Corefile to extract cluster domain
+			lines := strings.Split(corefile.Data["Corefile"], "\n")
+			for _, line := range lines {
+				if strings.Contains(line, "kubernetes") && strings.Contains(line, "cluster.local") {
+					// Example line: "kubernetes cluster.local in-addr.arpa ip6.arpa { ... }"
+					parts := strings.Fields(line)
+					for i, part := range parts {
+						if part == "kubernetes" && i+1 < len(parts) {
+							return parts[i+1], nil
+						}
+					}
+				}
+			}
+		}
+	}
+	return "cluster.local", nil // default fallback
 }

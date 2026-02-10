@@ -163,6 +163,7 @@ export const k8sCluster = pgTable("k8sCluster", {
 	cpuCapacity: integer("cpu_capacity").notNull().default(1000000000),
 	cpuUsage: integer("cpu_usage").notNull().default(0),
 	ramUsage: integer("ram_usage").notNull().default(0),
+	internalClusterDomain: text("internal_cluster_domain").notNull().default("cluster.local"),
 	createdAt: timestamp("created_at").defaultNow().notNull(),
 	updatedAt: timestamp("updated_at")
 		.$onUpdate(() => /* @__PURE__ */ new Date())
@@ -471,7 +472,10 @@ export const schemaRelations = defineRelations(schema, (r) => ({
 			from: r.k8sServices.ownerId,
 			to: r.profile.id,
 		}),
-		ingresses: r.many.k8sIngresses(),
+		ingresses: r.many.k8sIngresses({
+			from: r.k8sIngresses.serviceId,
+			to: r.k8sServices.id,
+		}),
 	},
 	k8sIngresses: {
 		cluster: r.one.k8sCluster({
