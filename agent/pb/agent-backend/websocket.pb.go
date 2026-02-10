@@ -155,7 +155,7 @@ func (x Command_CommandType) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use Command_CommandType.Descriptor instead.
 func (Command_CommandType) EnumDescriptor() ([]byte, []int) {
-	return file_agent_backend_websocket_proto_rawDescGZIP(), []int{11, 0}
+	return file_agent_backend_websocket_proto_rawDescGZIP(), []int{12, 0}
 }
 
 // Wrapper for all messages sent from Agent to Server
@@ -662,6 +662,66 @@ func (x *ClusterResource) GetRamUsage() int64 {
 	return 0
 }
 
+type ContainerPort struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ContainerPort int32                  `protobuf:"varint,1,opt,name=container_port,json=containerPort,proto3" json:"container_port,omitempty"`
+	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Protocol      string                 `protobuf:"bytes,3,opt,name=protocol,proto3" json:"protocol,omitempty"` // TCP, UDP
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ContainerPort) Reset() {
+	*x = ContainerPort{}
+	mi := &file_agent_backend_websocket_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ContainerPort) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ContainerPort) ProtoMessage() {}
+
+func (x *ContainerPort) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_backend_websocket_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ContainerPort.ProtoReflect.Descriptor instead.
+func (*ContainerPort) Descriptor() ([]byte, []int) {
+	return file_agent_backend_websocket_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *ContainerPort) GetContainerPort() int32 {
+	if x != nil {
+		return x.ContainerPort
+	}
+	return 0
+}
+
+func (x *ContainerPort) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *ContainerPort) GetProtocol() string {
+	if x != nil {
+		return x.Protocol
+	}
+	return ""
+}
+
 type Node struct {
 	state       protoimpl.MessageState `protogen:"open.v1"`
 	Name        string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
@@ -680,7 +740,7 @@ type Node struct {
 
 func (x *Node) Reset() {
 	*x = Node{}
-	mi := &file_agent_backend_websocket_proto_msgTypes[6]
+	mi := &file_agent_backend_websocket_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -692,7 +752,7 @@ func (x *Node) String() string {
 func (*Node) ProtoMessage() {}
 
 func (x *Node) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_backend_websocket_proto_msgTypes[6]
+	mi := &file_agent_backend_websocket_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -705,7 +765,7 @@ func (x *Node) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Node.ProtoReflect.Descriptor instead.
 func (*Node) Descriptor() ([]byte, []int) {
-	return file_agent_backend_websocket_proto_rawDescGZIP(), []int{6}
+	return file_agent_backend_websocket_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *Node) GetName() string {
@@ -783,15 +843,24 @@ type Deployment struct {
 	// JSON string or key=value pairs for selector
 	Selector map[string]string `protobuf:"bytes,7,rep,name=selector,proto3" json:"selector,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	// Image used in the first container of the template (simplified)
-	DockerImage   string `protobuf:"bytes,8,opt,name=docker_image,json=dockerImage,proto3" json:"docker_image,omitempty"`
-	Uid           string `protobuf:"bytes,9,opt,name=uid,proto3" json:"uid,omitempty"`
+	DockerImage string `protobuf:"bytes,8,opt,name=docker_image,json=dockerImage,proto3" json:"docker_image,omitempty"`
+	Uid         string `protobuf:"bytes,9,opt,name=uid,proto3" json:"uid,omitempty"`
+	// New fields for full parity
+	Command       string           `protobuf:"bytes,10,opt,name=command,proto3" json:"command,omitempty"`
+	Args          string           `protobuf:"bytes,11,opt,name=args,proto3" json:"args,omitempty"`
+	EnvVariables  string           `protobuf:"bytes,12,opt,name=env_variables,json=envVariables,proto3" json:"env_variables,omitempty"`
+	CpuRequest    int64            `protobuf:"varint,13,opt,name=cpu_request,json=cpuRequest,proto3" json:"cpu_request,omitempty"`
+	CpuLimit      int64            `protobuf:"varint,14,opt,name=cpu_limit,json=cpuLimit,proto3" json:"cpu_limit,omitempty"`
+	MemoryRequest int64            `protobuf:"varint,15,opt,name=memory_request,json=memoryRequest,proto3" json:"memory_request,omitempty"`
+	MemoryLimit   int64            `protobuf:"varint,16,opt,name=memory_limit,json=memoryLimit,proto3" json:"memory_limit,omitempty"`
+	Ports         []*ContainerPort `protobuf:"bytes,17,rep,name=ports,proto3" json:"ports,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Deployment) Reset() {
 	*x = Deployment{}
-	mi := &file_agent_backend_websocket_proto_msgTypes[7]
+	mi := &file_agent_backend_websocket_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -803,7 +872,7 @@ func (x *Deployment) String() string {
 func (*Deployment) ProtoMessage() {}
 
 func (x *Deployment) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_backend_websocket_proto_msgTypes[7]
+	mi := &file_agent_backend_websocket_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -816,7 +885,7 @@ func (x *Deployment) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Deployment.ProtoReflect.Descriptor instead.
 func (*Deployment) Descriptor() ([]byte, []int) {
-	return file_agent_backend_websocket_proto_rawDescGZIP(), []int{7}
+	return file_agent_backend_websocket_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *Deployment) GetName() string {
@@ -882,6 +951,62 @@ func (x *Deployment) GetUid() string {
 	return ""
 }
 
+func (x *Deployment) GetCommand() string {
+	if x != nil {
+		return x.Command
+	}
+	return ""
+}
+
+func (x *Deployment) GetArgs() string {
+	if x != nil {
+		return x.Args
+	}
+	return ""
+}
+
+func (x *Deployment) GetEnvVariables() string {
+	if x != nil {
+		return x.EnvVariables
+	}
+	return ""
+}
+
+func (x *Deployment) GetCpuRequest() int64 {
+	if x != nil {
+		return x.CpuRequest
+	}
+	return 0
+}
+
+func (x *Deployment) GetCpuLimit() int64 {
+	if x != nil {
+		return x.CpuLimit
+	}
+	return 0
+}
+
+func (x *Deployment) GetMemoryRequest() int64 {
+	if x != nil {
+		return x.MemoryRequest
+	}
+	return 0
+}
+
+func (x *Deployment) GetMemoryLimit() int64 {
+	if x != nil {
+		return x.MemoryLimit
+	}
+	return 0
+}
+
+func (x *Deployment) GetPorts() []*ContainerPort {
+	if x != nil {
+		return x.Ports
+	}
+	return nil
+}
+
 type Pod struct {
 	state     protoimpl.MessageState `protogen:"open.v1"`
 	Name      string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
@@ -899,18 +1024,22 @@ type Pod struct {
 	MemoryLimit   int64  `protobuf:"varint,10,opt,name=memory_limit,json=memoryLimit,proto3" json:"memory_limit,omitempty"`
 	Command       string `protobuf:"bytes,11,opt,name=command,proto3" json:"command,omitempty"`
 	// JSON string or sensitive data masked
-	EnvVariables  string `protobuf:"bytes,12,opt,name=env_variables,json=envVariables,proto3" json:"env_variables,omitempty"`
-	InternalPort  int32  `protobuf:"varint,13,opt,name=internal_port,json=internalPort,proto3" json:"internal_port,omitempty"`
-	Uid           string `protobuf:"bytes,14,opt,name=uid,proto3" json:"uid,omitempty"`
-	CpuUsage      int64  `protobuf:"varint,15,opt,name=cpu_usage,json=cpuUsage,proto3" json:"cpu_usage,omitempty"`
-	RamUsage      int64  `protobuf:"varint,16,opt,name=ram_usage,json=ramUsage,proto3" json:"ram_usage,omitempty"`
+	EnvVariables string `protobuf:"bytes,12,opt,name=env_variables,json=envVariables,proto3" json:"env_variables,omitempty"`
+	// Changed to support multiple ports
+	Ports    []*ContainerPort `protobuf:"bytes,13,rep,name=ports,proto3" json:"ports,omitempty"`
+	Uid      string           `protobuf:"bytes,14,opt,name=uid,proto3" json:"uid,omitempty"`
+	CpuUsage int64            `protobuf:"varint,15,opt,name=cpu_usage,json=cpuUsage,proto3" json:"cpu_usage,omitempty"`
+	RamUsage int64            `protobuf:"varint,16,opt,name=ram_usage,json=ramUsage,proto3" json:"ram_usage,omitempty"`
+	// New field for parity
+	Labels        map[string]string `protobuf:"bytes,17,rep,name=labels,proto3" json:"labels,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Args          string            `protobuf:"bytes,18,opt,name=args,proto3" json:"args,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Pod) Reset() {
 	*x = Pod{}
-	mi := &file_agent_backend_websocket_proto_msgTypes[8]
+	mi := &file_agent_backend_websocket_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -922,7 +1051,7 @@ func (x *Pod) String() string {
 func (*Pod) ProtoMessage() {}
 
 func (x *Pod) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_backend_websocket_proto_msgTypes[8]
+	mi := &file_agent_backend_websocket_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -935,7 +1064,7 @@ func (x *Pod) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Pod.ProtoReflect.Descriptor instead.
 func (*Pod) Descriptor() ([]byte, []int) {
-	return file_agent_backend_websocket_proto_rawDescGZIP(), []int{8}
+	return file_agent_backend_websocket_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *Pod) GetName() string {
@@ -1022,11 +1151,11 @@ func (x *Pod) GetEnvVariables() string {
 	return ""
 }
 
-func (x *Pod) GetInternalPort() int32 {
+func (x *Pod) GetPorts() []*ContainerPort {
 	if x != nil {
-		return x.InternalPort
+		return x.Ports
 	}
-	return 0
+	return nil
 }
 
 func (x *Pod) GetUid() string {
@@ -1050,6 +1179,20 @@ func (x *Pod) GetRamUsage() int64 {
 	return 0
 }
 
+func (x *Pod) GetLabels() map[string]string {
+	if x != nil {
+		return x.Labels
+	}
+	return nil
+}
+
+func (x *Pod) GetArgs() string {
+	if x != nil {
+		return x.Args
+	}
+	return ""
+}
+
 type ServicePort struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
@@ -1063,7 +1206,7 @@ type ServicePort struct {
 
 func (x *ServicePort) Reset() {
 	*x = ServicePort{}
-	mi := &file_agent_backend_websocket_proto_msgTypes[9]
+	mi := &file_agent_backend_websocket_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1075,7 +1218,7 @@ func (x *ServicePort) String() string {
 func (*ServicePort) ProtoMessage() {}
 
 func (x *ServicePort) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_backend_websocket_proto_msgTypes[9]
+	mi := &file_agent_backend_websocket_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1088,7 +1231,7 @@ func (x *ServicePort) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ServicePort.ProtoReflect.Descriptor instead.
 func (*ServicePort) Descriptor() ([]byte, []int) {
-	return file_agent_backend_websocket_proto_rawDescGZIP(), []int{9}
+	return file_agent_backend_websocket_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *ServicePort) GetName() string {
@@ -1144,7 +1287,7 @@ type Service struct {
 
 func (x *Service) Reset() {
 	*x = Service{}
-	mi := &file_agent_backend_websocket_proto_msgTypes[10]
+	mi := &file_agent_backend_websocket_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1156,7 +1299,7 @@ func (x *Service) String() string {
 func (*Service) ProtoMessage() {}
 
 func (x *Service) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_backend_websocket_proto_msgTypes[10]
+	mi := &file_agent_backend_websocket_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1169,7 +1312,7 @@ func (x *Service) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Service.ProtoReflect.Descriptor instead.
 func (*Service) Descriptor() ([]byte, []int) {
-	return file_agent_backend_websocket_proto_rawDescGZIP(), []int{10}
+	return file_agent_backend_websocket_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *Service) GetName() string {
@@ -1250,7 +1393,7 @@ type Command struct {
 
 func (x *Command) Reset() {
 	*x = Command{}
-	mi := &file_agent_backend_websocket_proto_msgTypes[11]
+	mi := &file_agent_backend_websocket_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1262,7 +1405,7 @@ func (x *Command) String() string {
 func (*Command) ProtoMessage() {}
 
 func (x *Command) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_backend_websocket_proto_msgTypes[11]
+	mi := &file_agent_backend_websocket_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1275,7 +1418,7 @@ func (x *Command) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Command.ProtoReflect.Descriptor instead.
 func (*Command) Descriptor() ([]byte, []int) {
-	return file_agent_backend_websocket_proto_rawDescGZIP(), []int{11}
+	return file_agent_backend_websocket_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *Command) GetId() string {
@@ -1326,7 +1469,7 @@ type JoinTokenData struct {
 
 func (x *JoinTokenData) Reset() {
 	*x = JoinTokenData{}
-	mi := &file_agent_backend_websocket_proto_msgTypes[12]
+	mi := &file_agent_backend_websocket_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1338,7 +1481,7 @@ func (x *JoinTokenData) String() string {
 func (*JoinTokenData) ProtoMessage() {}
 
 func (x *JoinTokenData) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_backend_websocket_proto_msgTypes[12]
+	mi := &file_agent_backend_websocket_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1351,7 +1494,7 @@ func (x *JoinTokenData) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use JoinTokenData.ProtoReflect.Descriptor instead.
 func (*JoinTokenData) Descriptor() ([]byte, []int) {
-	return file_agent_backend_websocket_proto_rawDescGZIP(), []int{12}
+	return file_agent_backend_websocket_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *JoinTokenData) GetCommand() string {
@@ -1434,7 +1577,11 @@ const file_agent_backend_websocket_proto_rawDesc = "" +
 	"\fcpu_capacity\x18\x01 \x01(\x03R\vcpuCapacity\x12!\n" +
 	"\fram_capacity\x18\x02 \x01(\x03R\vramCapacity\x12\x1b\n" +
 	"\tcpu_usage\x18\x03 \x01(\x03R\bcpuUsage\x12\x1b\n" +
-	"\tram_usage\x18\x04 \x01(\x03R\bramUsage\"\xc4\x02\n" +
+	"\tram_usage\x18\x04 \x01(\x03R\bramUsage\"f\n" +
+	"\rContainerPort\x12%\n" +
+	"\x0econtainer_port\x18\x01 \x01(\x05R\rcontainerPort\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12\x1a\n" +
+	"\bprotocol\x18\x03 \x01(\tR\bprotocol\"\xc4\x02\n" +
 	"\x04Node\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1b\n" +
 	"\tcpu_usage\x18\x02 \x01(\x03R\bcpuUsage\x12\x1b\n" +
@@ -1447,7 +1594,7 @@ const file_agent_backend_websocket_proto_rawDesc = "" +
 	"\x05roles\x18\t \x03(\tR\x05roles\x1a9\n" +
 	"\vLabelsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xd9\x03\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xde\x05\n" +
 	"\n" +
 	"Deployment\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1c\n" +
@@ -1458,13 +1605,23 @@ const file_agent_backend_websocket_proto_rawDesc = "" +
 	"\x06labels\x18\x06 \x03(\v2\x1b.api.Deployment.LabelsEntryR\x06labels\x129\n" +
 	"\bselector\x18\a \x03(\v2\x1d.api.Deployment.SelectorEntryR\bselector\x12!\n" +
 	"\fdocker_image\x18\b \x01(\tR\vdockerImage\x12\x10\n" +
-	"\x03uid\x18\t \x01(\tR\x03uid\x1a9\n" +
+	"\x03uid\x18\t \x01(\tR\x03uid\x12\x18\n" +
+	"\acommand\x18\n" +
+	" \x01(\tR\acommand\x12\x12\n" +
+	"\x04args\x18\v \x01(\tR\x04args\x12#\n" +
+	"\renv_variables\x18\f \x01(\tR\fenvVariables\x12\x1f\n" +
+	"\vcpu_request\x18\r \x01(\x03R\n" +
+	"cpuRequest\x12\x1b\n" +
+	"\tcpu_limit\x18\x0e \x01(\x03R\bcpuLimit\x12%\n" +
+	"\x0ememory_request\x18\x0f \x01(\x03R\rmemoryRequest\x12!\n" +
+	"\fmemory_limit\x18\x10 \x01(\x03R\vmemoryLimit\x12(\n" +
+	"\x05ports\x18\x11 \x03(\v2\x12.api.ContainerPortR\x05ports\x1a9\n" +
 	"\vLabelsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1a;\n" +
 	"\rSelectorEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xe3\x03\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xe5\x04\n" +
 	"\x03Pod\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1c\n" +
 	"\tnamespace\x18\x02 \x01(\tR\tnamespace\x12\x1b\n" +
@@ -1479,11 +1636,16 @@ const file_agent_backend_websocket_proto_rawDesc = "" +
 	"\fmemory_limit\x18\n" +
 	" \x01(\x03R\vmemoryLimit\x12\x18\n" +
 	"\acommand\x18\v \x01(\tR\acommand\x12#\n" +
-	"\renv_variables\x18\f \x01(\tR\fenvVariables\x12#\n" +
-	"\rinternal_port\x18\r \x01(\x05R\finternalPort\x12\x10\n" +
+	"\renv_variables\x18\f \x01(\tR\fenvVariables\x12(\n" +
+	"\x05ports\x18\r \x03(\v2\x12.api.ContainerPortR\x05ports\x12\x10\n" +
 	"\x03uid\x18\x0e \x01(\tR\x03uid\x12\x1b\n" +
 	"\tcpu_usage\x18\x0f \x01(\x03R\bcpuUsage\x12\x1b\n" +
-	"\tram_usage\x18\x10 \x01(\x03R\bramUsage\"\x8f\x01\n" +
+	"\tram_usage\x18\x10 \x01(\x03R\bramUsage\x12,\n" +
+	"\x06labels\x18\x11 \x03(\v2\x14.api.Pod.LabelsEntryR\x06labels\x12\x12\n" +
+	"\x04args\x18\x12 \x01(\tR\x04args\x1a9\n" +
+	"\vLabelsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x8f\x01\n" +
 	"\vServicePort\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1a\n" +
 	"\bprotocol\x18\x02 \x01(\tR\bprotocol\x12\x12\n" +
@@ -1558,7 +1720,7 @@ func file_agent_backend_websocket_proto_rawDescGZIP() []byte {
 }
 
 var file_agent_backend_websocket_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_agent_backend_websocket_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
+var file_agent_backend_websocket_proto_msgTypes = make([]protoimpl.MessageInfo, 20)
 var file_agent_backend_websocket_proto_goTypes = []any{
 	(StreamData_StreamDataType)(0), // 0: api.StreamData.StreamDataType
 	(Command_CommandType)(0),       // 1: api.Command.CommandType
@@ -1568,43 +1730,48 @@ var file_agent_backend_websocket_proto_goTypes = []any{
 	(*ServerPayload)(nil),          // 5: api.ServerPayload
 	(*Heartbeat)(nil),              // 6: api.Heartbeat
 	(*ClusterResource)(nil),        // 7: api.ClusterResource
-	(*Node)(nil),                   // 8: api.Node
-	(*Deployment)(nil),             // 9: api.Deployment
-	(*Pod)(nil),                    // 10: api.Pod
-	(*ServicePort)(nil),            // 11: api.ServicePort
-	(*Service)(nil),                // 12: api.Service
-	(*Command)(nil),                // 13: api.Command
-	(*JoinTokenData)(nil),          // 14: api.JoinTokenData
-	nil,                            // 15: api.Node.LabelsEntry
-	nil,                            // 16: api.Deployment.LabelsEntry
-	nil,                            // 17: api.Deployment.SelectorEntry
-	nil,                            // 18: api.Service.SelectorEntry
-	nil,                            // 19: api.Service.LabelsEntry
+	(*ContainerPort)(nil),          // 8: api.ContainerPort
+	(*Node)(nil),                   // 9: api.Node
+	(*Deployment)(nil),             // 10: api.Deployment
+	(*Pod)(nil),                    // 11: api.Pod
+	(*ServicePort)(nil),            // 12: api.ServicePort
+	(*Service)(nil),                // 13: api.Service
+	(*Command)(nil),                // 14: api.Command
+	(*JoinTokenData)(nil),          // 15: api.JoinTokenData
+	nil,                            // 16: api.Node.LabelsEntry
+	nil,                            // 17: api.Deployment.LabelsEntry
+	nil,                            // 18: api.Deployment.SelectorEntry
+	nil,                            // 19: api.Pod.LabelsEntry
+	nil,                            // 20: api.Service.SelectorEntry
+	nil,                            // 21: api.Service.LabelsEntry
 }
 var file_agent_backend_websocket_proto_depIdxs = []int32{
 	6,  // 0: api.AgentPayload.heartbeat:type_name -> api.Heartbeat
 	4,  // 1: api.AgentPayload.command_response:type_name -> api.CommandResponse
 	3,  // 2: api.AgentPayload.stream_data:type_name -> api.StreamData
 	0,  // 3: api.StreamData.type:type_name -> api.StreamData.StreamDataType
-	13, // 4: api.ServerPayload.command:type_name -> api.Command
+	14, // 4: api.ServerPayload.command:type_name -> api.Command
 	3,  // 5: api.ServerPayload.stream_data:type_name -> api.StreamData
 	7,  // 6: api.Heartbeat.cluster_resource:type_name -> api.ClusterResource
-	8,  // 7: api.Heartbeat.nodes:type_name -> api.Node
-	10, // 8: api.Heartbeat.pods:type_name -> api.Pod
-	12, // 9: api.Heartbeat.services:type_name -> api.Service
-	9,  // 10: api.Heartbeat.deployments:type_name -> api.Deployment
-	15, // 11: api.Node.labels:type_name -> api.Node.LabelsEntry
-	16, // 12: api.Deployment.labels:type_name -> api.Deployment.LabelsEntry
-	17, // 13: api.Deployment.selector:type_name -> api.Deployment.SelectorEntry
-	18, // 14: api.Service.selector:type_name -> api.Service.SelectorEntry
-	19, // 15: api.Service.labels:type_name -> api.Service.LabelsEntry
-	11, // 16: api.Service.ports:type_name -> api.ServicePort
-	1,  // 17: api.Command.type:type_name -> api.Command.CommandType
-	18, // [18:18] is the sub-list for method output_type
-	18, // [18:18] is the sub-list for method input_type
-	18, // [18:18] is the sub-list for extension type_name
-	18, // [18:18] is the sub-list for extension extendee
-	0,  // [0:18] is the sub-list for field type_name
+	9,  // 7: api.Heartbeat.nodes:type_name -> api.Node
+	11, // 8: api.Heartbeat.pods:type_name -> api.Pod
+	13, // 9: api.Heartbeat.services:type_name -> api.Service
+	10, // 10: api.Heartbeat.deployments:type_name -> api.Deployment
+	16, // 11: api.Node.labels:type_name -> api.Node.LabelsEntry
+	17, // 12: api.Deployment.labels:type_name -> api.Deployment.LabelsEntry
+	18, // 13: api.Deployment.selector:type_name -> api.Deployment.SelectorEntry
+	8,  // 14: api.Deployment.ports:type_name -> api.ContainerPort
+	8,  // 15: api.Pod.ports:type_name -> api.ContainerPort
+	19, // 16: api.Pod.labels:type_name -> api.Pod.LabelsEntry
+	20, // 17: api.Service.selector:type_name -> api.Service.SelectorEntry
+	21, // 18: api.Service.labels:type_name -> api.Service.LabelsEntry
+	12, // 19: api.Service.ports:type_name -> api.ServicePort
+	1,  // 20: api.Command.type:type_name -> api.Command.CommandType
+	21, // [21:21] is the sub-list for method output_type
+	21, // [21:21] is the sub-list for method input_type
+	21, // [21:21] is the sub-list for extension type_name
+	21, // [21:21] is the sub-list for extension extendee
+	0,  // [0:21] is the sub-list for field type_name
 }
 
 func init() { file_agent_backend_websocket_proto_init() }
@@ -1627,7 +1794,7 @@ func file_agent_backend_websocket_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agent_backend_websocket_proto_rawDesc), len(file_agent_backend_websocket_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   18,
+			NumMessages:   20,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

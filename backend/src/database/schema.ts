@@ -215,7 +215,7 @@ export const k8sDeployments = pgTable(
 		replicas: integer("replicas").notNull(),
 		availableReplicas: integer("available_replicas").notNull(),
 		unavailableReplicas: integer("unavailable_replicas").notNull(),
-		dockerImage: text("docker_image"),
+		dockerImage: text("docker_image").notNull(),
 		labels: text("labels"), // JSON string
 		selector: text("selector"), // JSON string
 
@@ -225,8 +225,9 @@ export const k8sDeployments = pgTable(
 		memoryRequest: integer("memory_request").default(0).notNull(),
 		memoryLimit: integer("memory_limit").default(0).notNull(),
 		command: text("command").default("").notNull(),
+		args: text("args").default("").notNull(),
 		envVariables: text("env_variables").default("").notNull(),
-		internalPort: integer("internal_port").default(0).notNull(),
+		ports: jsonb("ports").$type<any>().default([]).notNull(),
 
 		createdAt: timestamp("created_at").defaultNow().notNull(),
 		updatedAt: timestamp("updated_at")
@@ -280,7 +281,7 @@ export const k8sPods = pgTable(
 		envVariables: text("env_variables").notNull(),
 		labels: text("labels").default("").notNull(), // JSON string
 
-		internalPort: integer("internal_port").notNull(),
+		ports: jsonb("ports").$type<any>().default([]).notNull(),
 
 		createdAt: timestamp("created_at").defaultNow().notNull(),
 		updatedAt: timestamp("updated_at")

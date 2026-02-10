@@ -64,16 +64,19 @@ function ManagePodPage() {
 			setCommand(pod.command ? pod.command.split(" ") : []);
 			setArgs(pod.args ? pod.args.split(" ") : []);
 			try {
-				setEnvVars(pod.envVariables ? JSON.parse(pod.envVariables) : []);
+				const parsed = (JSON.parse(pod.envVariables) || {}) as Record<
+					string,
+					string
+				>;
+				setEnvVars(
+					Object.entries(parsed).map(([name, value]) => ({ name, value })),
+				);
 			} catch (_e) {
 				console.error("Failed to parse env variables", _e);
 				setEnvVars([]);
 			}
-			setPorts(
-				pod.internalPort
-					? [{ containerPort: pod.internalPort, name: "main" }]
-					: [],
-			);
+			setPorts(pod.ports || []);
+
 			setCpuRequest(`${pod.cpuRequest}m`);
 			setCpuLimit(`${pod.cpuLimit}m`);
 			setMemoryRequest(`${pod.memoryRequest}Mi`);
@@ -267,7 +270,11 @@ function ManagePodPage() {
 							clusterId={clusterId}
 							defaultName={pod.name}
 							defaultNamespace={pod.namespace}
-							defaultInternalPort={pod.internalPort}
+							defaultInternalPort={
+								pod.ports && pod.ports.length > 0
+									? pod.ports[0].containerPort
+									: 80
+							}
 							selector={{ app: pod.name }}
 						/>
 						<Button

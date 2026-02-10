@@ -152,6 +152,14 @@ export class AgentService {
 					labels: JSON.stringify(dep.labels),
 					selector: JSON.stringify(dep.selector),
 					k8sUid: dep.uid,
+					command: dep.command,
+					args: dep.args,
+					envVariables: dep.envVariables,
+					cpuRequest: Number(dep.cpuRequest),
+					cpuLimit: Number(dep.cpuLimit),
+					memoryRequest: Number(dep.memoryRequest),
+					memoryLimit: Number(dep.memoryLimit),
+					ports: dep.ports,
 					updatedAt: new Date(),
 				};
 
@@ -255,9 +263,12 @@ export class AgentService {
 						memoryRequest: Number(pod.memoryRequest),
 						memoryLimit: Number(pod.memoryLimit),
 						command: pod.command,
-						envVariables: pod.envVariables || "",
-						internalPort: pod.internalPort,
+						args: pod.args,
+						envVariables: pod.envVariables,
+						labels: JSON.stringify(pod.labels),
+						ports: pod.ports,
 						k8sUid: pod.uid,
+
 						status: pod.status || "Unknown",
 						cpuUsage: Number(pod.cpuUsage),
 						memoryUsage: Number(pod.ramUsage),
@@ -395,9 +406,20 @@ export class AgentService {
 					replicas: dbDep.replicas,
 					labels: dbDep.labels ? JSON.parse(dbDep.labels) : undefined,
 					selector: dbDep.selector ? JSON.parse(dbDep.selector) : undefined,
-					// internalPort conversion. DB has int, DTO has ports[{containerPort}]
-					ports: [{ containerPort: dbDep.internalPort }],
+					ports: dbDep.ports,
 					env: envVars,
+					command: dbDep.command ? dbDep.command.split(" ") : undefined,
+					args: dbDep.args ? dbDep.args.split(" ") : undefined,
+					resources: {
+						requests: {
+							cpu: `${dbDep.cpuRequest}m`,
+							memory: `${dbDep.memoryRequest}Mi`,
+						},
+						limits: {
+							cpu: `${dbDep.cpuLimit}m`,
+							memory: `${dbDep.memoryLimit}Mi`,
+						},
+					},
 				});
 
 				// Send CREATE (ApplyManifest) Command
@@ -438,8 +460,20 @@ export class AgentService {
 					replicas: dbDep.replicas,
 					labels: dbDep.labels ? JSON.parse(dbDep.labels) : undefined,
 					selector: dbDep.selector ? JSON.parse(dbDep.selector) : undefined,
-					ports: [{ containerPort: dbDep.internalPort }],
+					ports: dbDep.ports,
 					env: envVars,
+					command: dbDep.command ? dbDep.command.split(" ") : undefined,
+					args: dbDep.args ? dbDep.args.split(" ") : undefined,
+					resources: {
+						requests: {
+							cpu: `${dbDep.cpuRequest}m`,
+							memory: `${dbDep.memoryRequest}Mi`,
+						},
+						limits: {
+							cpu: `${dbDep.cpuLimit}m`,
+							memory: `${dbDep.memoryLimit}Mi`,
+						},
+					},
 				});
 
 				await agentManager.sendCommand(agentId, cluster.id, {
@@ -501,7 +535,7 @@ export class AgentService {
 						dbPod.labels && dbPod.labels !== ""
 							? JSON.parse(dbPod.labels)
 							: undefined,
-					ports: [{ containerPort: dbPod.internalPort }],
+					ports: dbPod.ports,
 					resources: {
 						requests: {
 							cpu: `${dbPod.cpuRequest}m`,
@@ -550,7 +584,7 @@ export class AgentService {
 						dbPod.labels && dbPod.labels !== ""
 							? JSON.parse(dbPod.labels)
 							: undefined,
-					ports: [{ containerPort: dbPod.internalPort }],
+					ports: dbPod.ports,
 					env: envVars,
 					resources: {
 						requests: {

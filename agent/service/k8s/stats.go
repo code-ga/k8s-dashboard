@@ -208,9 +208,16 @@ func (kc *K8sClient) GetFullClusterState() (*pb.Heartbeat, error) {
 			}
 		}
 
-		var validPort int32
-		if len(pod.Spec.Containers) > 0 && len(pod.Spec.Containers[0].Ports) > 0 {
-			validPort = pod.Spec.Containers[0].Ports[0].ContainerPort
+		// Ports
+		var pbPorts []*pb.ContainerPort
+		if len(pod.Spec.Containers) > 0 {
+			for _, p := range pod.Spec.Containers[0].Ports {
+				pbPorts = append(pbPorts, &pb.ContainerPort{
+					ContainerPort: p.ContainerPort,
+					Name:          p.Name,
+					Protocol:      string(p.Protocol),
+				})
+			}
 		}
 
 		// EnvVariables
@@ -225,10 +232,14 @@ func (kc *K8sClient) GetFullClusterState() (*pb.Heartbeat, error) {
 				if enc, err := crypto.Encrypt(string(jsonBytes), kc.ClusterKey); err == nil {
 					envEncrypted = enc
 				} else {
-					// Log error but continue?
 					fmt.Printf("Error encrypting env vars for pod %s: %v\n", pod.Name, err)
 				}
 			}
+		}
+
+		argsStr := ""
+		if len(pod.Spec.Containers) > 0 {
+			argsStr = strings.Join(pod.Spec.Containers[0].Args, " ")
 		}
 
 		pbPods = append(pbPods, &pb.Pod{
@@ -243,12 +254,15 @@ func (kc *K8sClient) GetFullClusterState() (*pb.Heartbeat, error) {
 			MemoryRequest: memReq,
 			MemoryLimit:   memLim,
 			Command:       cmdStr,
+			Args:          argsStr,
 			Uid:           string(pod.UID),
 			EnvVariables:  envEncrypted,
-			InternalPort:  validPort, // Assuming validPort was calculated previously or 0
+			Ports:         pbPorts,
 			CpuUsage:      podMetricsMap[fmt.Sprintf("%s/%s", pod.Namespace, pod.Name)]["cpu"],
 			RamUsage:      podMetricsMap[fmt.Sprintf("%s/%s", pod.Namespace, pod.Name)]["memory"],
+			Labels:        pod.Labels,
 		})
+
 	}
 
 	services, err := kc.GetServices("")
@@ -291,8 +305,54 @@ func (kc *K8sClient) GetFullClusterState() (*pb.Heartbeat, error) {
 		}
 
 		image := ""
+		var cpuReq, memReq, cpuLim, memLim int64
+		var pbPorts []*pb.ContainerPort
+		var envEncrypted string
+		cmdStr := ""
+		argsStr := ""
+
 		if len(dep.Spec.Template.Spec.Containers) > 0 {
-			image = dep.Spec.Template.Spec.Containers[0].Image
+			container := dep.Spec.Template.Spec.Containers[0]
+			image = container.Image
+
+			// Resources
+			if q, ok := container.Resources.Requests[corev1.ResourceCPU]; ok {
+				cpuReq = q.MilliValue()
+			}
+			if q, ok := container.Resources.Requests[corev1.ResourceMemory]; ok {
+				memReq = q.Value() / (1024 * 1024)
+			}
+			if q, ok := container.Resources.Limits[corev1.ResourceCPU]; ok {
+				cpuLim = q.MilliValue()
+			}
+			if q, ok := container.Resources.Limits[corev1.ResourceMemory]; ok {
+				memLim = q.Value() / (1024 * 1024)
+			}
+
+			// Command & Args
+			cmdStr = strings.Join(container.Command, " ")
+			argsStr = strings.Join(container.Args, " ")
+
+			// Ports
+			for _, p := range container.Ports {
+				pbPorts = append(pbPorts, &pb.ContainerPort{
+					ContainerPort: p.ContainerPort,
+					Name:          p.Name,
+					Protocol:      string(p.Protocol),
+				})
+			}
+
+			// Env
+			envConf := map[string]string{}
+			for _, env := range container.Env {
+				envConf[env.Name] = env.Value
+			}
+			if len(envConf) > 0 {
+				jsonBytes, _ := json.Marshal(envConf)
+				if enc, err := crypto.Encrypt(string(jsonBytes), kc.ClusterKey); err == nil {
+					envEncrypted = enc
+				}
+			}
 		}
 
 		pbDeployments = append(pbDeployments, &pb.Deployment{
@@ -305,7 +365,16 @@ func (kc *K8sClient) GetFullClusterState() (*pb.Heartbeat, error) {
 			Selector:            dep.Spec.Selector.MatchLabels,
 			DockerImage:         image,
 			Uid:                 string(dep.UID),
+			Command:             cmdStr,
+			Args:                argsStr,
+			EnvVariables:        envEncrypted,
+			CpuRequest:          cpuReq,
+			CpuLimit:            cpuLim,
+			MemoryRequest:       memReq,
+			MemoryLimit:         memLim,
+			Ports:               pbPorts,
 		})
+
 	}
 
 	heartbeat := &pb.Heartbeat{

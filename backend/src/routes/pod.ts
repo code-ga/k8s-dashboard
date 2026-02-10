@@ -300,18 +300,17 @@ export const podRoute = new Elysia({
 								namespace: body.namespace,
 								dockerImage: body.image,
 								command: body.command ? body.command.join(" ") : "",
+								args: body.args ? body.args.join(" ") : "",
 								envVariables: envEncrypted,
 								status: "Pending",
-								internalPort:
-									body.ports && body.ports.length > 0
-										? (body.ports[0]?.containerPort ?? 0)
-										: 0,
+								ports: body.ports || [],
 								cpuRequest: 0,
 								cpuLimit: 0,
 								memoryRequest: 0,
 								memoryLimit: 0,
 								updatedAt: new Date(),
 							})
+
 							.returning();
 					} catch (dbError: any) {
 						console.error("DB Insert Failed:", dbError);
@@ -554,8 +553,8 @@ export const podRoute = new Elysia({
 					if (body.args) updateData.args = body.args.join(" ");
 					if (body.env)
 						updateData.envVariables = encrypt(JSON.stringify(body.env));
-					if (body.ports && body.ports.length > 0) {
-						updateData.internalPort = body.ports[0]?.containerPort ?? 0;
+					if (body.ports) {
+						updateData.ports = body.ports;
 					}
 					if (body.labels) updateData.labels = JSON.stringify(body.labels);
 

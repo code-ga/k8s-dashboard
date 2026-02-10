@@ -1,6 +1,6 @@
 /** biome-ignore-all lint/suspicious/noExplicitAny: <explanation> */
 import { Type } from "@sinclair/typebox";
-import { eq } from "drizzle-orm";
+import { eq, type InferSelectModel } from "drizzle-orm";
 import { Elysia } from "elysia";
 import { Command_CommandType } from "../../pb-generated/agent-backend/websocket";
 import { db } from "../database";
@@ -11,6 +11,18 @@ import { agentManagerService } from "../services/agentManager";
 import { baseResponseSchema, errorResponseSchema } from "../types";
 import { decrypt, encrypt } from "../utils/crypto";
 import { generateDeploymentManifest } from "../utils/k8s-manifest";
+const parseCpuStr = (cpu: string): number => {
+	if (cpu.endsWith("m")) return parseInt(cpu);
+	return parseFloat(cpu) * 1000;
+};
+
+const parseMemoryStr = (mem: string): number => {
+	if (mem.endsWith("Ki")) return Math.ceil(parseInt(mem) / 1024);
+	if (mem.endsWith("Mi")) return parseInt(mem);
+	if (mem.endsWith("Gi")) return parseInt(mem) * 1024;
+	if (mem.endsWith("Ti")) return parseInt(mem) * 1024 * 1024;
+	return parseInt(mem);
+};
 
 export const deploymentRoute = new Elysia({
 	prefix: "/deployments/:clusterId",
@@ -219,18 +231,24 @@ export const deploymentRoute = new Elysia({
 								labels: body.labels ? JSON.stringify(body.labels) : null,
 								selector: body.selector ? JSON.stringify(body.selector) : null,
 								envVariables: envEncrypted,
-								// internalPort? Schema has it?
-								// Looking at agent.service.ts earlier: `internalPort: dep.internalPort`.
-								// DeploymentDTO has ports[].
-								// Schema logic for deployments usually involves internalPort for service/gateway logic?
-								// If schema requires it, we should set it.
-								// Let's use first port if available, or 0.
-								internalPort:
-									body.ports && body.ports.length > 0
-										? (body.ports[0]?.containerPort ?? 0)
-										: 0,
+								command: body.command ? body.command.join(" ") : "",
+								args: body.args ? body.args.join(" ") : "",
+								ports: body.ports || [],
+								cpuRequest: body.resources?.requests?.cpu
+									? parseCpuStr(body.resources.requests.cpu)
+									: 0,
+								cpuLimit: body.resources?.limits?.cpu
+									? parseCpuStr(body.resources.limits.cpu)
+									: 0,
+								memoryRequest: body.resources?.requests?.memory
+									? parseMemoryStr(body.resources.requests.memory)
+									: 0,
+								memoryLimit: body.resources?.limits?.memory
+									? parseMemoryStr(body.resources.limits.memory)
+									: 0,
 								updatedAt: new Date(),
 							})
+
 							.returning();
 					} catch (dbError: any) {
 						console.error("DB Insert Deployment Failed:", dbError);
@@ -413,7 +431,7 @@ export const deploymentRoute = new Elysia({
 						// Update DB first if env or other fields are changing
 						// Optimization: Only update fields present in body
 						const updateData: Partial<
-							SchemaStatic<typeof dbSchemaTypes.k8sDeployments>
+							InferSelectModel<typeof schema.k8sDeployments>
 						> = {
 							updatedAt: new Date(),
 						};
@@ -427,6 +445,26 @@ export const deploymentRoute = new Elysia({
 						if (body.labels) updateData.labels = JSON.stringify(body.labels);
 						if (body.selector)
 							updateData.selector = JSON.stringify(body.selector);
+						if (body.command) updateData.command = body.command.join(" ");
+						if (body.args) updateData.args = body.args.join(" ");
+						if (body.ports) updateData.ports = body.ports;
+						if (body.resources) {
+							if (body.resources.requests?.cpu)
+								updateData.cpuRequest = parseCpuStr(
+									body.resources.requests.cpu,
+								);
+							if (body.resources.requests?.memory)
+								updateData.memoryRequest = parseMemoryStr(
+									body.resources.requests.memory,
+								);
+							if (body.resources.limits?.cpu)
+								updateData.cpuLimit = parseCpuStr(body.resources.limits.cpu);
+							if (body.resources.limits?.memory)
+								updateData.memoryLimit = parseMemoryStr(
+									body.resources.limits.memory,
+								);
+						}
+
 						if (body.isAutoScaling !== undefined)
 							updateData.isAutoScaling = body.isAutoScaling;
 						if (body.isAlwaysRunning !== undefined)
@@ -564,13 +602,31 @@ export const deploymentRoute = new Elysia({
 						// Adding other fields effectively means replacing them if provided
 						resources: Type.Optional(
 							Type.Object({
-								cpuRequest: Type.Optional(Type.String()),
-								cpuLimit: Type.Optional(Type.String()),
-								memoryRequest: Type.Optional(Type.String()),
-								memoryLimit: Type.Optional(Type.String()),
+								requests: Type.Optional(
+									Type.Object({
+										cpu: Type.Optional(Type.String()),
+										memory: Type.Optional(Type.String()),
+									}),
+								),
+								limits: Type.Optional(
+									Type.Object({
+										cpu: Type.Optional(Type.String()),
+										memory: Type.Optional(Type.String()),
+									}),
+								),
 							}),
 						),
 						env: Type.Optional(Type.Record(Type.String(), Type.String())),
+						command: Type.Optional(Type.Array(Type.String())),
+						args: Type.Optional(Type.Array(Type.String())),
+						ports: Type.Optional(
+							Type.Array(
+								Type.Object({
+									containerPort: Type.Number(),
+									name: Type.Optional(Type.String()),
+								}),
+							),
+						),
 						isAutoScaling: Type.Optional(Type.Boolean()),
 						isAlwaysRunning: Type.Optional(Type.Boolean()),
 						idleTimeoutSeconds: Type.Optional(Type.Number()),

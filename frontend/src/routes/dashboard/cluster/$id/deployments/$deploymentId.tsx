@@ -13,6 +13,9 @@ import {
 	useNavigate,
 	useParams,
 } from "@tanstack/react-router";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { AlertTriangle, Plus, X } from "lucide-react";
 
 export const Route = createFileRoute(
 	"/dashboard/cluster/$id/deployments/$deploymentId",
@@ -41,17 +44,110 @@ function ManageDeploymentPage() {
 		},
 	});
 
+	const [image, setImage] = useState("");
+	const [command, setCommand] = useState<string[]>([]);
+	const [args, setArgs] = useState<string[]>([]);
 	const [envVars, setEnvVars] = useState<EnvVar[]>([]);
+	const [ports, setPorts] = useState<
+		{ containerPort: number; name?: string }[]
+	>([]);
+	const [cpuRequest, setCpuRequest] = useState("");
+	const [cpuLimit, setCpuLimit] = useState("");
+	const [memoryRequest, setMemoryRequest] = useState("");
+	const [memoryLimit, setMemoryLimit] = useState("");
+	const [labels, setLabels] = useState<EnvVar[]>([]);
+	const [replicas, setReplicas] = useState(1);
 
 	useEffect(() => {
-		if (deployment?.envVariables) {
+		if (deployment) {
+			setImage(deployment.dockerImage);
+			setReplicas(deployment.replicas);
+			setCommand(deployment.command ? deployment.command.split(" ") : []);
+			setArgs(deployment.args ? deployment.args.split(" ") : []);
 			try {
-				setEnvVars(JSON.parse(deployment.envVariables));
+				if (deployment.envVariables) {
+					const parsed = (JSON.parse(deployment.envVariables) || {}) as Record<
+						string,
+						string
+					>;
+					setEnvVars(
+						Object.entries(parsed).map(([name, value]) => ({ name, value })),
+					);
+				} else {
+					setEnvVars([]);
+				}
 			} catch (_e) {
 				console.error("Failed to parse env variables", _e);
+				setEnvVars([]);
+			}
+			setPorts(deployment.ports || []);
+			setCpuRequest(`${deployment.cpuRequest}m`);
+			setCpuLimit(`${deployment.cpuLimit}m`);
+			setMemoryRequest(`${deployment.memoryRequest}Mi`);
+			setMemoryLimit(`${deployment.memoryLimit}Mi`);
+			try {
+				if (deployment.labels) {
+					const parsed = JSON.parse(deployment.labels);
+					setLabels(
+						Object.entries(parsed).map(([name, value]) => ({
+							name,
+							value: String(value),
+						})),
+					);
+				} else {
+					setLabels([]);
+				}
+			} catch (_e) {
+				setLabels([]);
 			}
 		}
 	}, [deployment]);
+
+	const saveDeploymentMutation = useMutation({
+		mutationFn: async () => {
+			const envMap: Record<string, string> = {};
+			for (const v of envVars) {
+				if (v.name) envMap[v.name] = v.value;
+			}
+
+			const labelsMap: Record<string, string> = {};
+			for (const l of labels) {
+				if (l.name) labelsMap[l.name] = l.value;
+			}
+
+			const res = await api.api
+				.deployments({ clusterId })({ id: deploymentId.toString() })
+				.patch({
+					image,
+					replicas,
+					command: command.length > 0 ? command : undefined,
+					args: args.length > 0 ? args : undefined,
+					env: envMap,
+					labels: labelsMap,
+					resources: {
+						requests: { cpu: cpuRequest, memory: memoryRequest },
+						limits: { cpu: cpuLimit, memory: memoryLimit },
+					},
+					ports: ports.length > 0 ? ports : undefined,
+				});
+			if (res.error) {
+				throw new Error(
+					res.error.value?.message || "Failed to update deployment",
+				);
+			}
+			return res.data;
+		},
+		onSuccess: () => {
+			toast.success("Deployment update initiated");
+			queryClient.invalidateQueries({ queryKey: ["deployments", clusterId] });
+			queryClient.invalidateQueries({
+				queryKey: ["deployment", clusterId, deploymentId],
+			});
+		},
+		onError: (error: Error) => {
+			toast.error(error.message);
+		},
+	});
 
 	const deleteMutation = useMutation({
 		mutationFn: async () => {
@@ -78,30 +174,16 @@ function ManageDeploymentPage() {
 		},
 	});
 
-	const saveEnvMutation = useMutation({
-		mutationFn: async (variables: EnvVar[]) => {
-			const envMap: Record<string, string> = {};
-			for (const v of variables) {
-				if (v.name) envMap[v.name] = v.value;
-			}
-			const res = await api.api
-				.deployments({ clusterId })({ id: deploymentId.toString() })
-				.patch({ env: envMap });
-			if (res.error) {
-				throw new Error(
-					res.error.value?.message || "Failed to update env vars",
-				);
-			}
-			return res.data;
-		},
-		onSuccess: () => {
-			toast.success("Environment variables updated");
-			queryClient.invalidateQueries({ queryKey: ["deployments", clusterId] });
-		},
-		onError: (error: Error) => {
-			toast.error(error.message);
-		},
-	});
+	const RecreationWarning = () => (
+		<div className="bg-yellow-500/10 border border-yellow-500/50 rounded-lg p-3 flex gap-3 items-start mb-4">
+			<AlertTriangle className="h-5 w-5 text-yellow-500 shrink-0 mt-0.5" />
+			<div className="text-sm text-yellow-200">
+				<span className="font-bold text-yellow-500">Warning:</span> Saving
+				certain changes (image, env, resources) will cause the deployment pods
+				to be restarted.
+			</div>
+		</div>
+	);
 
 	if (isLoading) return <div>Loading deployment details...</div>;
 	if (!deployment) return <div>Deployment not found</div>;
@@ -138,9 +220,12 @@ function ManageDeploymentPage() {
 				onValueChange={setActiveTab}
 				className="flex-1 flex flex-col h-[calc(100vh-250px)]"
 			>
-				<TabsList className="grid w-full grid-cols-3 max-w-xl">
+				<TabsList className="grid w-full grid-cols-6 max-w-2xl">
 					<TabsTrigger value="overview">Overview</TabsTrigger>
-					<TabsTrigger value="env">Environment</TabsTrigger>
+					<TabsTrigger value="config">Config</TabsTrigger>
+					<TabsTrigger value="env">Env</TabsTrigger>
+					<TabsTrigger value="resources">Resources</TabsTrigger>
+					<TabsTrigger value="labels">Labels</TabsTrigger>
 					<TabsTrigger value="logs">Logs</TabsTrigger>
 				</TabsList>
 
@@ -182,6 +267,14 @@ function ManageDeploymentPage() {
 								{deployment.dockerImage}
 							</p>
 						</div>
+						<div className="col-span-2">
+							<div className="text-sm font-medium text-muted-foreground">
+								Command / Args
+							</div>
+							<p className="font-mono text-sm break-all">
+								{deployment.command || "(default)"} {deployment.args}
+							</p>
+						</div>
 					</div>
 
 					<div className="flex gap-4">
@@ -189,7 +282,7 @@ function ManageDeploymentPage() {
 							clusterId={clusterId}
 							defaultName={deployment.name}
 							defaultNamespace={deployment.namespace}
-							defaultInternalPort={deployment.internalPort}
+							defaultInternalPort={deployment.ports?.[0]?.containerPort || 80}
 							selector={selector}
 						/>
 						<Button
@@ -204,16 +297,192 @@ function ManageDeploymentPage() {
 				</TabsContent>
 
 				<TabsContent
+					value="config"
+					className="flex-1 overflow-auto pt-4 space-y-4"
+				>
+					<RecreationWarning />
+					<div className="space-y-4 max-w-2xl">
+						<div className="grid gap-2">
+							<Label>Image</Label>
+							<Input value={image} onChange={(e) => setImage(e.target.value)} />
+						</div>
+						<div className="grid gap-2">
+							<Label>Replicas</Label>
+							<Input
+								type="number"
+								value={replicas}
+								onChange={(e) => setReplicas(Number(e.target.value))}
+							/>
+						</div>
+						<div className="grid gap-2">
+							<Label>Command (space-separated)</Label>
+							<Input
+								value={command.join(" ")}
+								onChange={(e) => setCommand(e.target.value.split(" "))}
+							/>
+						</div>
+						<div className="grid gap-2">
+							<Label>Arguments (space-separated)</Label>
+							<Input
+								value={args.join(" ")}
+								onChange={(e) => setArgs(e.target.value.split(" "))}
+							/>
+						</div>
+						<div className="space-y-2">
+							<div className="flex items-center justify-between">
+								<Label>Ports</Label>
+								<Button
+									variant="outline"
+									size="sm"
+									onClick={() =>
+										setPorts([...ports, { containerPort: 80, name: "" }])
+									}
+								>
+									<Plus className="h-4 w-4 mr-1" /> Add Port
+								</Button>
+							</div>
+							{ports.map((p, i) => (
+								<div
+									key={`${p.containerPort}-${i}`}
+									className="flex gap-2 items-end"
+								>
+									<div className="flex-1">
+										<Label className="text-[10px] text-muted-foreground uppercase">
+											Port
+										</Label>
+										<Input
+											type="number"
+											value={p.containerPort}
+											onChange={(e) => {
+												const newPorts = [...ports];
+												newPorts[i].containerPort = Number(e.target.value);
+												setPorts(newPorts);
+											}}
+										/>
+									</div>
+									<div className="flex-1">
+										<Label className="text-[10px] text-muted-foreground uppercase">
+											Name
+										</Label>
+										<Input
+											value={p.name}
+											onChange={(e) => {
+												const newPorts = [...ports];
+												newPorts[i].name = e.target.value;
+												setPorts(newPorts);
+											}}
+										/>
+									</div>
+									<Button
+										variant="ghost"
+										size="icon"
+										onClick={() =>
+											setPorts(ports.filter((_, idx) => idx !== i))
+										}
+									>
+										<X className="h-4 w-4" />
+									</Button>
+								</div>
+							))}
+						</div>
+					</div>
+					<div className="flex justify-end pt-4">
+						<Button
+							onClick={() => saveDeploymentMutation.mutate()}
+							disabled={saveDeploymentMutation.isPending}
+						>
+							{saveDeploymentMutation.isPending
+								? "Updating..."
+								: "Update Deployment"}
+						</Button>
+					</div>
+				</TabsContent>
+
+				<TabsContent
 					value="env"
 					className="flex-1 overflow-auto pt-4 space-y-4"
 				>
+					<RecreationWarning />
 					<EnvEditor variables={envVars} onChange={setEnvVars} />
-					<div className="flex justify-end">
+					<div className="flex justify-end pt-4">
 						<Button
-							onClick={() => saveEnvMutation.mutate(envVars)}
-							disabled={saveEnvMutation.isPending}
+							onClick={() => saveDeploymentMutation.mutate()}
+							disabled={saveDeploymentMutation.isPending}
 						>
-							{saveEnvMutation.isPending ? "Saving..." : "Save Environment"}
+							{saveDeploymentMutation.isPending
+								? "Updating..."
+								: "Update Deployment"}
+						</Button>
+					</div>
+				</TabsContent>
+
+				<TabsContent
+					value="resources"
+					className="flex-1 overflow-auto pt-4 space-y-4"
+				>
+					<RecreationWarning />
+					<div className="grid grid-cols-2 gap-8 max-w-2xl">
+						<div className="space-y-4">
+							<h3 className="text-sm font-semibold border-b pb-1">Requests</h3>
+							<div className="grid gap-2">
+								<Label>CPU (m)</Label>
+								<Input
+									value={cpuRequest}
+									onChange={(e) => setCpuRequest(e.target.value)}
+								/>
+							</div>
+							<div className="grid gap-2">
+								<Label>Memory (Mi)</Label>
+								<Input
+									value={memoryRequest}
+									onChange={(e) => setMemoryRequest(e.target.value)}
+								/>
+							</div>
+						</div>
+						<div className="space-y-4">
+							<h3 className="text-sm font-semibold border-b pb-1">Limits</h3>
+							<div className="grid gap-2">
+								<Label>CPU (m)</Label>
+								<Input
+									value={cpuLimit}
+									onChange={(e) => setCpuLimit(e.target.value)}
+								/>
+							</div>
+							<div className="grid gap-2">
+								<Label>Memory (Mi)</Label>
+								<Input
+									value={memoryLimit}
+									onChange={(e) => setMemoryLimit(e.target.value)}
+								/>
+							</div>
+						</div>
+					</div>
+					<div className="flex justify-end pt-4">
+						<Button
+							onClick={() => saveDeploymentMutation.mutate()}
+							disabled={saveDeploymentMutation.isPending}
+						>
+							{saveDeploymentMutation.isPending
+								? "Updating..."
+								: "Update Deployment"}
+						</Button>
+					</div>
+				</TabsContent>
+
+				<TabsContent
+					value="labels"
+					className="flex-1 overflow-auto pt-4 space-y-4"
+				>
+					<RecreationWarning />
+					<EnvEditor variables={labels} onChange={setLabels} />
+					<div className="flex justify-end pt-4">
+						<Button
+							onClick={() => saveDeploymentMutation.mutate()}
+							disabled={saveDeploymentMutation.isPending}
+						>
+							{saveDeploymentMutation.isPending
+								? "Updating..."
+								: "Update Deployment"}
 						</Button>
 					</div>
 				</TabsContent>

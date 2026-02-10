@@ -103,6 +103,13 @@ export interface ClusterResource {
   ramUsage: number;
 }
 
+export interface ContainerPort {
+  containerPort: number;
+  name: string;
+  /** TCP, UDP */
+  protocol: string;
+}
+
 export interface Node {
   name: string;
   cpuUsage: number;
@@ -134,6 +141,15 @@ export interface Deployment {
   /** Image used in the first container of the template (simplified) */
   dockerImage: string;
   uid: string;
+  /** New fields for full parity */
+  command: string;
+  args: string;
+  envVariables: string;
+  cpuRequest: number;
+  cpuLimit: number;
+  memoryRequest: number;
+  memoryLimit: number;
+  ports: ContainerPort[];
 }
 
 export interface Deployment_LabelsEntry {
@@ -163,10 +179,19 @@ export interface Pod {
   command: string;
   /** JSON string or sensitive data masked */
   envVariables: string;
-  internalPort: number;
+  /** Changed to support multiple ports */
+  ports: ContainerPort[];
   uid: string;
   cpuUsage: number;
   ramUsage: number;
+  /** New field for parity */
+  labels: { [key: string]: string };
+  args: string;
+}
+
+export interface Pod_LabelsEntry {
+  key: string;
+  value: string;
 }
 
 export interface ServicePort {
@@ -1077,6 +1102,102 @@ export const ClusterResource: MessageFns<ClusterResource> = {
   },
 };
 
+function createBaseContainerPort(): ContainerPort {
+  return { containerPort: 0, name: "", protocol: "" };
+}
+
+export const ContainerPort: MessageFns<ContainerPort> = {
+  encode(message: ContainerPort, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.containerPort !== 0) {
+      writer.uint32(8).int32(message.containerPort);
+    }
+    if (message.name !== "") {
+      writer.uint32(18).string(message.name);
+    }
+    if (message.protocol !== "") {
+      writer.uint32(26).string(message.protocol);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ContainerPort {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseContainerPort();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 8) {
+            break;
+          }
+
+          message.containerPort = reader.int32();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.name = reader.string();
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.protocol = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): ContainerPort {
+    return {
+      containerPort: isSet(object.containerPort)
+        ? globalThis.Number(object.containerPort)
+        : isSet(object.container_port)
+        ? globalThis.Number(object.container_port)
+        : 0,
+      name: isSet(object.name) ? globalThis.String(object.name) : "",
+      protocol: isSet(object.protocol) ? globalThis.String(object.protocol) : "",
+    };
+  },
+
+  toJSON(message: ContainerPort): unknown {
+    const obj: any = {};
+    if (message.containerPort !== 0) {
+      obj.containerPort = Math.round(message.containerPort);
+    }
+    if (message.name !== "") {
+      obj.name = message.name;
+    }
+    if (message.protocol !== "") {
+      obj.protocol = message.protocol;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<ContainerPort>, I>>(base?: I): ContainerPort {
+    return ContainerPort.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<ContainerPort>, I>>(object: I): ContainerPort {
+    const message = createBaseContainerPort();
+    message.containerPort = object.containerPort ?? 0;
+    message.name = object.name ?? "";
+    message.protocol = object.protocol ?? "";
+    return message;
+  },
+};
+
 function createBaseNode(): Node {
   return {
     name: "",
@@ -1405,6 +1526,14 @@ function createBaseDeployment(): Deployment {
     selector: {},
     dockerImage: "",
     uid: "",
+    command: "",
+    args: "",
+    envVariables: "",
+    cpuRequest: 0,
+    cpuLimit: 0,
+    memoryRequest: 0,
+    memoryLimit: 0,
+    ports: [],
   };
 }
 
@@ -1436,6 +1565,30 @@ export const Deployment: MessageFns<Deployment> = {
     }
     if (message.uid !== "") {
       writer.uint32(74).string(message.uid);
+    }
+    if (message.command !== "") {
+      writer.uint32(82).string(message.command);
+    }
+    if (message.args !== "") {
+      writer.uint32(90).string(message.args);
+    }
+    if (message.envVariables !== "") {
+      writer.uint32(98).string(message.envVariables);
+    }
+    if (message.cpuRequest !== 0) {
+      writer.uint32(104).int64(message.cpuRequest);
+    }
+    if (message.cpuLimit !== 0) {
+      writer.uint32(112).int64(message.cpuLimit);
+    }
+    if (message.memoryRequest !== 0) {
+      writer.uint32(120).int64(message.memoryRequest);
+    }
+    if (message.memoryLimit !== 0) {
+      writer.uint32(128).int64(message.memoryLimit);
+    }
+    for (const v of message.ports) {
+      ContainerPort.encode(v!, writer.uint32(138).fork()).join();
     }
     return writer;
   },
@@ -1525,6 +1678,70 @@ export const Deployment: MessageFns<Deployment> = {
           message.uid = reader.string();
           continue;
         }
+        case 10: {
+          if (tag !== 82) {
+            break;
+          }
+
+          message.command = reader.string();
+          continue;
+        }
+        case 11: {
+          if (tag !== 90) {
+            break;
+          }
+
+          message.args = reader.string();
+          continue;
+        }
+        case 12: {
+          if (tag !== 98) {
+            break;
+          }
+
+          message.envVariables = reader.string();
+          continue;
+        }
+        case 13: {
+          if (tag !== 104) {
+            break;
+          }
+
+          message.cpuRequest = longToNumber(reader.int64());
+          continue;
+        }
+        case 14: {
+          if (tag !== 112) {
+            break;
+          }
+
+          message.cpuLimit = longToNumber(reader.int64());
+          continue;
+        }
+        case 15: {
+          if (tag !== 120) {
+            break;
+          }
+
+          message.memoryRequest = longToNumber(reader.int64());
+          continue;
+        }
+        case 16: {
+          if (tag !== 128) {
+            break;
+          }
+
+          message.memoryLimit = longToNumber(reader.int64());
+          continue;
+        }
+        case 17: {
+          if (tag !== 138) {
+            break;
+          }
+
+          message.ports.push(ContainerPort.decode(reader, reader.uint32()));
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -1573,6 +1790,36 @@ export const Deployment: MessageFns<Deployment> = {
         ? globalThis.String(object.docker_image)
         : "",
       uid: isSet(object.uid) ? globalThis.String(object.uid) : "",
+      command: isSet(object.command) ? globalThis.String(object.command) : "",
+      args: isSet(object.args) ? globalThis.String(object.args) : "",
+      envVariables: isSet(object.envVariables)
+        ? globalThis.String(object.envVariables)
+        : isSet(object.env_variables)
+        ? globalThis.String(object.env_variables)
+        : "",
+      cpuRequest: isSet(object.cpuRequest)
+        ? globalThis.Number(object.cpuRequest)
+        : isSet(object.cpu_request)
+        ? globalThis.Number(object.cpu_request)
+        : 0,
+      cpuLimit: isSet(object.cpuLimit)
+        ? globalThis.Number(object.cpuLimit)
+        : isSet(object.cpu_limit)
+        ? globalThis.Number(object.cpu_limit)
+        : 0,
+      memoryRequest: isSet(object.memoryRequest)
+        ? globalThis.Number(object.memoryRequest)
+        : isSet(object.memory_request)
+        ? globalThis.Number(object.memory_request)
+        : 0,
+      memoryLimit: isSet(object.memoryLimit)
+        ? globalThis.Number(object.memoryLimit)
+        : isSet(object.memory_limit)
+        ? globalThis.Number(object.memory_limit)
+        : 0,
+      ports: globalThis.Array.isArray(object?.ports)
+        ? object.ports.map((e: any) => ContainerPort.fromJSON(e))
+        : [],
     };
   },
 
@@ -1617,6 +1864,30 @@ export const Deployment: MessageFns<Deployment> = {
     if (message.uid !== "") {
       obj.uid = message.uid;
     }
+    if (message.command !== "") {
+      obj.command = message.command;
+    }
+    if (message.args !== "") {
+      obj.args = message.args;
+    }
+    if (message.envVariables !== "") {
+      obj.envVariables = message.envVariables;
+    }
+    if (message.cpuRequest !== 0) {
+      obj.cpuRequest = Math.round(message.cpuRequest);
+    }
+    if (message.cpuLimit !== 0) {
+      obj.cpuLimit = Math.round(message.cpuLimit);
+    }
+    if (message.memoryRequest !== 0) {
+      obj.memoryRequest = Math.round(message.memoryRequest);
+    }
+    if (message.memoryLimit !== 0) {
+      obj.memoryLimit = Math.round(message.memoryLimit);
+    }
+    if (message.ports?.length) {
+      obj.ports = message.ports.map((e) => ContainerPort.toJSON(e));
+    }
     return obj;
   },
 
@@ -1650,6 +1921,14 @@ export const Deployment: MessageFns<Deployment> = {
     );
     message.dockerImage = object.dockerImage ?? "";
     message.uid = object.uid ?? "";
+    message.command = object.command ?? "";
+    message.args = object.args ?? "";
+    message.envVariables = object.envVariables ?? "";
+    message.cpuRequest = object.cpuRequest ?? 0;
+    message.cpuLimit = object.cpuLimit ?? 0;
+    message.memoryRequest = object.memoryRequest ?? 0;
+    message.memoryLimit = object.memoryLimit ?? 0;
+    message.ports = object.ports?.map((e) => ContainerPort.fromPartial(e)) || [];
     return message;
   },
 };
@@ -1820,10 +2099,12 @@ function createBasePod(): Pod {
     memoryLimit: 0,
     command: "",
     envVariables: "",
-    internalPort: 0,
+    ports: [],
     uid: "",
     cpuUsage: 0,
     ramUsage: 0,
+    labels: {},
+    args: "",
   };
 }
 
@@ -1865,8 +2146,8 @@ export const Pod: MessageFns<Pod> = {
     if (message.envVariables !== "") {
       writer.uint32(98).string(message.envVariables);
     }
-    if (message.internalPort !== 0) {
-      writer.uint32(104).int32(message.internalPort);
+    for (const v of message.ports) {
+      ContainerPort.encode(v!, writer.uint32(106).fork()).join();
     }
     if (message.uid !== "") {
       writer.uint32(114).string(message.uid);
@@ -1876,6 +2157,12 @@ export const Pod: MessageFns<Pod> = {
     }
     if (message.ramUsage !== 0) {
       writer.uint32(128).int64(message.ramUsage);
+    }
+    globalThis.Object.entries(message.labels).forEach(([key, value]: [string, string]) => {
+      Pod_LabelsEntry.encode({ key: key as any, value }, writer.uint32(138).fork()).join();
+    });
+    if (message.args !== "") {
+      writer.uint32(146).string(message.args);
     }
     return writer;
   },
@@ -1984,11 +2271,11 @@ export const Pod: MessageFns<Pod> = {
           continue;
         }
         case 13: {
-          if (tag !== 104) {
+          if (tag !== 106) {
             break;
           }
 
-          message.internalPort = reader.int32();
+          message.ports.push(ContainerPort.decode(reader, reader.uint32()));
           continue;
         }
         case 14: {
@@ -2013,6 +2300,25 @@ export const Pod: MessageFns<Pod> = {
           }
 
           message.ramUsage = longToNumber(reader.int64());
+          continue;
+        }
+        case 17: {
+          if (tag !== 138) {
+            break;
+          }
+
+          const entry17 = Pod_LabelsEntry.decode(reader, reader.uint32());
+          if (entry17.value !== undefined) {
+            message.labels[entry17.key] = entry17.value;
+          }
+          continue;
+        }
+        case 18: {
+          if (tag !== 146) {
+            break;
+          }
+
+          message.args = reader.string();
           continue;
         }
       }
@@ -2066,11 +2372,9 @@ export const Pod: MessageFns<Pod> = {
         : isSet(object.env_variables)
         ? globalThis.String(object.env_variables)
         : "",
-      internalPort: isSet(object.internalPort)
-        ? globalThis.Number(object.internalPort)
-        : isSet(object.internal_port)
-        ? globalThis.Number(object.internal_port)
-        : 0,
+      ports: globalThis.Array.isArray(object?.ports)
+        ? object.ports.map((e: any) => ContainerPort.fromJSON(e))
+        : [],
       uid: isSet(object.uid) ? globalThis.String(object.uid) : "",
       cpuUsage: isSet(object.cpuUsage)
         ? globalThis.Number(object.cpuUsage)
@@ -2082,6 +2386,16 @@ export const Pod: MessageFns<Pod> = {
         : isSet(object.ram_usage)
         ? globalThis.Number(object.ram_usage)
         : 0,
+      labels: isObject(object.labels)
+        ? (globalThis.Object.entries(object.labels) as [string, any][]).reduce(
+          (acc: { [key: string]: string }, [key, value]: [string, any]) => {
+            acc[key] = globalThis.String(value);
+            return acc;
+          },
+          {},
+        )
+        : {},
+      args: isSet(object.args) ? globalThis.String(object.args) : "",
     };
   },
 
@@ -2123,8 +2437,8 @@ export const Pod: MessageFns<Pod> = {
     if (message.envVariables !== "") {
       obj.envVariables = message.envVariables;
     }
-    if (message.internalPort !== 0) {
-      obj.internalPort = Math.round(message.internalPort);
+    if (message.ports?.length) {
+      obj.ports = message.ports.map((e) => ContainerPort.toJSON(e));
     }
     if (message.uid !== "") {
       obj.uid = message.uid;
@@ -2134,6 +2448,18 @@ export const Pod: MessageFns<Pod> = {
     }
     if (message.ramUsage !== 0) {
       obj.ramUsage = Math.round(message.ramUsage);
+    }
+    if (message.labels) {
+      const entries = globalThis.Object.entries(message.labels) as [string, string][];
+      if (entries.length > 0) {
+        obj.labels = {};
+        entries.forEach(([k, v]) => {
+          obj.labels[k] = v;
+        });
+      }
+    }
+    if (message.args !== "") {
+      obj.args = message.args;
     }
     return obj;
   },
@@ -2155,10 +2481,96 @@ export const Pod: MessageFns<Pod> = {
     message.memoryLimit = object.memoryLimit ?? 0;
     message.command = object.command ?? "";
     message.envVariables = object.envVariables ?? "";
-    message.internalPort = object.internalPort ?? 0;
+    message.ports = object.ports?.map((e) => ContainerPort.fromPartial(e)) || [];
     message.uid = object.uid ?? "";
     message.cpuUsage = object.cpuUsage ?? 0;
     message.ramUsage = object.ramUsage ?? 0;
+    message.labels = (globalThis.Object.entries(object.labels ?? {}) as [string, string][]).reduce(
+      (acc: { [key: string]: string }, [key, value]: [string, string]) => {
+        if (value !== undefined) {
+          acc[key] = globalThis.String(value);
+        }
+        return acc;
+      },
+      {},
+    );
+    message.args = object.args ?? "";
+    return message;
+  },
+};
+
+function createBasePod_LabelsEntry(): Pod_LabelsEntry {
+  return { key: "", value: "" };
+}
+
+export const Pod_LabelsEntry: MessageFns<Pod_LabelsEntry> = {
+  encode(message: Pod_LabelsEntry, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.key !== "") {
+      writer.uint32(10).string(message.key);
+    }
+    if (message.value !== "") {
+      writer.uint32(18).string(message.value);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): Pod_LabelsEntry {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBasePod_LabelsEntry();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.key = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.value = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): Pod_LabelsEntry {
+    return {
+      key: isSet(object.key) ? globalThis.String(object.key) : "",
+      value: isSet(object.value) ? globalThis.String(object.value) : "",
+    };
+  },
+
+  toJSON(message: Pod_LabelsEntry): unknown {
+    const obj: any = {};
+    if (message.key !== "") {
+      obj.key = message.key;
+    }
+    if (message.value !== "") {
+      obj.value = message.value;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<Pod_LabelsEntry>, I>>(base?: I): Pod_LabelsEntry {
+    return Pod_LabelsEntry.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<Pod_LabelsEntry>, I>>(object: I): Pod_LabelsEntry {
+    const message = createBasePod_LabelsEntry();
+    message.key = object.key ?? "";
+    message.value = object.value ?? "";
     return message;
   },
 };

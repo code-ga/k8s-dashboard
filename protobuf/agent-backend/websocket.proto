@@ -74,6 +74,12 @@ message ClusterResource {
   int64 ram_usage = 4;
 }
 
+message ContainerPort {
+  int32 container_port = 1;
+  string name = 2;
+  string protocol = 3; // TCP, UDP
+}
+
 message Node {
   string name = 1;
   int64 cpu_usage = 2;
@@ -100,6 +106,16 @@ message Deployment {
   // Image used in the first container of the template (simplified)
   string docker_image = 8;
   string uid = 9;
+
+  // New fields for full parity
+  string command = 10;
+  string args = 11;
+  string env_variables = 12;
+  int64 cpu_request = 13;
+  int64 cpu_limit = 14;
+  int64 memory_request = 15;
+  int64 memory_limit = 16;
+  repeated ContainerPort ports = 17;
 }
 
 message Pod {
@@ -122,10 +138,15 @@ message Pod {
   // JSON string or sensitive data masked
   string env_variables = 12;
   
-  int32 internal_port = 13;
+  // Changed to support multiple ports
+  repeated ContainerPort ports = 13;
   string uid = 14;
   int64 cpu_usage = 15;
   int64 ram_usage = 16;
+  
+  // New field for parity
+  map<string, string> labels = 17;
+  string args = 18;
 }
 
 message ServicePort {
