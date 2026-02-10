@@ -37,8 +37,21 @@ function ServiceDetailPage() {
 		},
 	});
 
+	// Get cluster domain from cluster data
+	const { data: cluster } = useQuery({
+		queryKey: ["cluster", id],
+		queryFn: async () => {
+			const res = await api.api.cluster({ id }).get();
+			if (res.error) throw res.error;
+			if (!res.data.data)
+				throw new Error(res.data.message || "Failed to fetch cluster");
+			return res.data.data;
+		},
+	});
+
 	if (isLoading) return <div>Loading service details...</div>;
 	if (!service) return <div>Service not found</div>;
+	const serviceDomain = `${service.name}.${service.namespace}.svc.${cluster?.internalClusterDomain || "cluster.local"}`;
 
 	return (
 		<div className="space-y-6">
@@ -77,6 +90,11 @@ function ServiceDetailPage() {
 								Cluster IP
 							</div>
 							<div className="text-sm font-mono">{service.clusterIp}</div>
+
+							<div className="text-sm font-medium text-muted-foreground">
+								Service Domain
+							</div>
+							<div className="text-sm font-mono">{serviceDomain}</div>
 
 							<div className="text-sm font-medium text-muted-foreground">
 								Created At

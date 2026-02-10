@@ -163,7 +163,9 @@ export const k8sCluster = pgTable("k8sCluster", {
 	cpuCapacity: integer("cpu_capacity").notNull().default(1000000000),
 	cpuUsage: integer("cpu_usage").notNull().default(0),
 	ramUsage: integer("ram_usage").notNull().default(0),
-	internalClusterDomain: text("internal_cluster_domain").notNull().default("cluster.local"),
+	internalClusterDomain: text("internal_cluster_domain")
+		.notNull()
+		.default("cluster.local"),
 	createdAt: timestamp("created_at").defaultNow().notNull(),
 	updatedAt: timestamp("updated_at")
 		.$onUpdate(() => /* @__PURE__ */ new Date())
@@ -317,6 +319,7 @@ export const k8sServices = pgTable(
 		ownerId: text("owner_id").references(() => profile.id, {
 			onDelete: "set null",
 		}),
+		
 		name: text("name").notNull(),
 		namespace: text("namespace").notNull(),
 		type: text("type"),
@@ -473,8 +476,8 @@ export const schemaRelations = defineRelations(schema, (r) => ({
 			to: r.profile.id,
 		}),
 		ingresses: r.many.k8sIngresses({
-			from: r.k8sIngresses.serviceId,
-			to: r.k8sServices.id,
+			from: r.k8sServices.id,
+			to: r.k8sIngresses.serviceId,
 		}),
 	},
 	k8sIngresses: {
