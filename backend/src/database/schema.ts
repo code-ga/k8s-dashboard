@@ -319,7 +319,7 @@ export const k8sServices = pgTable(
 		ownerId: text("owner_id").references(() => profile.id, {
 			onDelete: "set null",
 		}),
-		
+
 		name: text("name").notNull(),
 		namespace: text("namespace").notNull(),
 		type: text("type"),
@@ -353,7 +353,7 @@ export const k8sIngresses = pgTable(
 		namespace: text("namespace").notNull(),
 		serviceId: integer("service_id").references(() => k8sServices.id, {
 			onDelete: "set null",
-		}),
+		}).notNull(),
 		serviceName: text("service_name"),
 		domain: text("domain"),
 		port: integer("port"), // gateway port

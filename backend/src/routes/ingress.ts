@@ -164,6 +164,7 @@ export const ingressRoute = new Elysia({
 
 					// --- SERVICE CREATION LOGIC ---
 					// If selector is provided, we ensure the service exists or create it
+					let serviceId: number;
 					if (body.selector) {
 						const existingSvc = await db.query.k8sServices.findFirst({
 							where: {
@@ -181,7 +182,7 @@ export const ingressRoute = new Elysia({
 							) as "TCP" | "UDP";
 							console.log(svcProtocol);
 							// Create Service in DB
-							await db
+							const [svc] = await db
 								.insert(schema.k8sServices)
 								.values({
 									clusterId,
@@ -201,6 +202,14 @@ export const ingressRoute = new Elysia({
 									updatedAt: new Date(),
 								})
 								.returning();
+							if (!svc) {
+								return ctx.status(500, {
+									success: false,
+									message: "Failed to create service",
+									timestamp: Date.now(),
+								});
+							}
+							serviceId = svc.id;
 
 							// Send Create Service command to Agent
 							const svcManifest = generateServiceManifest({
@@ -225,7 +234,26 @@ export const ingressRoute = new Elysia({
 								targetNamespace: body.namespace,
 								targetName: body.serviceName,
 							});
+						} else {
+							serviceId = existingSvc.id;
 						}
+					} else {
+						// Try to find existing service by name and namespace
+						const existingSvc = await db.query.k8sServices.findFirst({
+							where: {
+								clusterId,
+								name: body.serviceName,
+								namespace: body.namespace,
+							},
+						});
+						if (!existingSvc) {
+							return ctx.status(404, {
+								success: false,
+								message: "Service not found",
+								timestamp: Date.now(),
+							});
+						}
+						serviceId = existingSvc.id;
 					}
 					// ------------------------------
 
@@ -249,6 +277,7 @@ export const ingressRoute = new Elysia({
 								port: externalPort,
 								protocol: body.protocol,
 								updatedAt: new Date(),
+								serviceId: serviceId,
 							})
 							.returning();
 						if (!newIngress) {
