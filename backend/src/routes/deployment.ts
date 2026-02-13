@@ -1,6 +1,6 @@
 /** biome-ignore-all lint/suspicious/noExplicitAny: <explanation> */
 import { Type } from "@sinclair/typebox";
-import { eq, type InferSelectModel } from "drizzle-orm";
+import { eq, type InferInsertModel, type InferSelectModel } from "drizzle-orm";
 import { Elysia } from "elysia";
 import { Command_CommandType } from "../../pb-generated/agent-backend/websocket";
 import { db } from "../database";
@@ -180,7 +180,7 @@ export const deploymentRoute = new Elysia({
 				"/",
 				async (ctx) => {
 					const clusterId = Number(ctx.params.clusterId);
-					const body = ctx.body;
+					const bodyAny = ctx.body as any;
 
 					const cluster = await db.query.k8sCluster.findFirst({
 						where: {
@@ -200,9 +200,14 @@ export const deploymentRoute = new Elysia({
 					}
 
 					// 1. Prepare Data
-					const envEncrypted = body.env
-						? encrypt(JSON.stringify(body.env))
+					const envEncrypted = bodyAny.env
+						? encrypt(JSON.stringify(bodyAny.env))
 						: "";
+
+					const configMapRefs = bodyAny.configMapRefs
+						? bodyAny.configMapRefs
+						: null;
+					const secretRefs = bodyAny.secretRefs ? bodyAny.secretRefs : null;
 
 					let newDeployment:
 						| SchemaStatic<typeof dbSchemaTypes.k8sDeployments>
@@ -217,37 +222,43 @@ export const deploymentRoute = new Elysia({
 							throw new Error("Unauthorized");
 						}
 
+						const createData: InferInsertModel<typeof schema.k8sDeployments> = {
+							clusterId: cluster.id,
+							ownerId: ctx.profile.id,
+							name: bodyAny.name,
+							namespace: bodyAny.namespace,
+							replicas: bodyAny.replicas,
+							availableReplicas: 0,
+							unavailableReplicas: bodyAny.replicas,
+							dockerImage: bodyAny.image,
+							labels: bodyAny.labels ? JSON.stringify(bodyAny.labels) : null,
+							selector: bodyAny.selector
+								? JSON.stringify(bodyAny.selector)
+								: null,
+							envVariables: envEncrypted,
+							command: bodyAny.command ? bodyAny.command.join(" ") : "",
+							args: bodyAny.args ? bodyAny.args.join(" ") : "",
+							ports: bodyAny.ports || [],
+							configMapRefs,
+							secretRefs,
+							cpuRequest: bodyAny.resources?.requests?.cpu
+								? parseCpuStr(bodyAny.resources.requests.cpu)
+								: 0,
+							cpuLimit: bodyAny.resources?.limits?.cpu
+								? parseCpuStr(bodyAny.resources.limits.cpu)
+								: 0,
+							memoryRequest: bodyAny.resources?.requests?.memory
+								? parseMemoryStr(bodyAny.resources.requests.memory)
+								: 0,
+							memoryLimit: bodyAny.resources?.limits?.memory
+								? parseMemoryStr(bodyAny.resources.limits.memory)
+								: 0,
+							updatedAt: new Date(),
+						};
+
 						[newDeployment] = await db
 							.insert(schema.k8sDeployments)
-							.values({
-								clusterId: cluster.id,
-								ownerId: ctx.profile.id,
-								name: body.name,
-								namespace: body.namespace,
-								replicas: body.replicas,
-								availableReplicas: 0,
-								unavailableReplicas: body.replicas,
-								dockerImage: body.image,
-								labels: body.labels ? JSON.stringify(body.labels) : null,
-								selector: body.selector ? JSON.stringify(body.selector) : null,
-								envVariables: envEncrypted,
-								command: body.command ? body.command.join(" ") : "",
-								args: body.args ? body.args.join(" ") : "",
-								ports: body.ports || [],
-								cpuRequest: body.resources?.requests?.cpu
-									? parseCpuStr(body.resources.requests.cpu)
-									: 0,
-								cpuLimit: body.resources?.limits?.cpu
-									? parseCpuStr(body.resources.limits.cpu)
-									: 0,
-								memoryRequest: body.resources?.requests?.memory
-									? parseMemoryStr(body.resources.requests.memory)
-									: 0,
-								memoryLimit: body.resources?.limits?.memory
-									? parseMemoryStr(body.resources.limits.memory)
-									: 0,
-								updatedAt: new Date(),
-							})
+							.values(createData)
 
 							.returning();
 					} catch (dbError: any) {
@@ -263,18 +274,38 @@ export const deploymentRoute = new Elysia({
 						if (!newDeployment) {
 							throw new Error("Deployment not created");
 						}
+
+						let configMapRefsObj: any = undefined;
+						let secretRefsObj: any = undefined;
+						if (configMapRefs) {
+							try {
+								configMapRefsObj = JSON.parse(configMapRefs);
+							} catch (e) {
+								console.error("Failed to parse configMapRefs", e);
+							}
+						}
+						if (secretRefs) {
+							try {
+								secretRefsObj = JSON.parse(secretRefs);
+							} catch (e) {
+								console.error("Failed to parse secretRefs", e);
+							}
+						}
+
 						const manifest = generateDeploymentManifest({
-							name: body.name,
-							namespace: body.namespace,
-							image: body.image,
-							replicas: body.replicas,
-							command: body.command,
-							args: body.args,
-							env: body.env, // Plaintext
-							ports: body.ports,
-							resources: body.resources,
-							labels: body.labels,
-							selector: body.selector,
+							name: bodyAny.name,
+							namespace: bodyAny.namespace,
+							image: bodyAny.image,
+							replicas: bodyAny.replicas,
+							command: bodyAny.command,
+							args: bodyAny.args,
+							env: bodyAny.env, // Plaintext
+							ports: bodyAny.ports,
+							resources: bodyAny.resources,
+							labels: bodyAny.labels,
+							selector: bodyAny.selector,
+							configMapRefs: configMapRefsObj,
+							secretRefs: secretRefsObj,
 						});
 
 						const response = await ctx.agentManager.sendCommand(
@@ -284,8 +315,8 @@ export const deploymentRoute = new Elysia({
 								id: globalThis.crypto.randomUUID(),
 								type: Command_CommandType.CREATE_DEPLOYMENT,
 								payload: manifest,
-								targetNamespace: body.namespace,
-								targetName: body.name,
+								targetNamespace: bodyAny.namespace,
+								targetName: bodyAny.name,
 							},
 						);
 
@@ -315,6 +346,66 @@ export const deploymentRoute = new Elysia({
 						command: Type.Optional(Type.Array(Type.String())),
 						args: Type.Optional(Type.Array(Type.String())),
 						env: Type.Optional(Type.Record(Type.String(), Type.String())),
+						configMapRefs: Type.Optional(
+							Type.Object({
+								env: Type.Optional(
+									Type.Array(
+										Type.Object({
+											name: Type.String(),
+											configMapName: Type.String(),
+											key: Type.String(),
+										}),
+									),
+								),
+								envFrom: Type.Optional(
+									Type.Array(
+										Type.Object({
+											configMapName: Type.String(),
+										}),
+									),
+								),
+								volumes: Type.Optional(
+									Type.Array(
+										Type.Object({
+											name: Type.String(),
+											configMapName: Type.String(),
+											mountPath: Type.String(),
+											items: Type.Optional(Type.Array(Type.String())),
+										}),
+									),
+								),
+							}),
+						),
+						secretRefs: Type.Optional(
+							Type.Object({
+								env: Type.Optional(
+									Type.Array(
+										Type.Object({
+											name: Type.String(),
+											secretName: Type.String(),
+											key: Type.String(),
+										}),
+									),
+								),
+								envFrom: Type.Optional(
+									Type.Array(
+										Type.Object({
+											secretName: Type.String(),
+										}),
+									),
+								),
+								volumes: Type.Optional(
+									Type.Array(
+										Type.Object({
+											name: Type.String(),
+											secretName: Type.String(),
+											mountPath: Type.String(),
+											items: Type.Optional(Type.Array(Type.String())),
+										}),
+									),
+								),
+							}),
+						),
 						ports: Type.Optional(
 							Type.Array(
 								Type.Object({
@@ -365,7 +456,7 @@ export const deploymentRoute = new Elysia({
 				async (ctx) => {
 					const clusterId = Number(ctx.params.clusterId);
 					const depId = Number(ctx.params.id);
-					const body = ctx.body;
+					const bodyAny = ctx.body as any;
 
 					const cluster = await db.query.k8sCluster.findFirst({
 						where: {
@@ -411,10 +502,16 @@ export const deploymentRoute = new Elysia({
 						Command_CommandType.EDIT_RESOURCE;
 					let payload = "";
 
-					if (body.replicas !== undefined && !body.image && !body.resources) {
+					if (
+						bodyAny.replicas !== undefined &&
+						!bodyAny.image &&
+						!bodyAny.resources &&
+						!bodyAny.configMapRefs &&
+						!bodyAny.secretRefs
+					) {
 						// User intends to scale
 						commandType = Command_CommandType.SCALE_DEPLOYMENT;
-						payload = String(body.replicas);
+						payload = String(bodyAny.replicas);
 					} else {
 						// User intends to update spec
 						// We need to reconstruct the manifest.
@@ -435,42 +532,49 @@ export const deploymentRoute = new Elysia({
 						> = {
 							updatedAt: new Date(),
 						};
-						if (body.image) updateData.dockerImage = body.image;
-						if (body.replicas !== undefined)
-							updateData.replicas = body.replicas;
-						if (body.env) {
-							updateData.envVariables = encrypt(JSON.stringify(body.env));
+						if (bodyAny.image) updateData.dockerImage = bodyAny.image;
+						if (bodyAny.replicas !== undefined)
+							updateData.replicas = bodyAny.replicas;
+						if (bodyAny.env) {
+							updateData.envVariables = encrypt(JSON.stringify(bodyAny.env));
+						}
+						if (bodyAny.configMapRefs) {
+							updateData.configMapRefs = bodyAny.configMapRefs;
+						}
+						if (bodyAny.secretRefs) {
+							updateData.secretRefs = bodyAny.secretRefs;
 						}
 						// labels, selector updates? Schema stores stringified.
-						if (body.labels) updateData.labels = JSON.stringify(body.labels);
-						if (body.selector)
-							updateData.selector = JSON.stringify(body.selector);
-						if (body.command) updateData.command = body.command.join(" ");
-						if (body.args) updateData.args = body.args.join(" ");
-						if (body.ports) updateData.ports = body.ports;
-						if (body.resources) {
-							if (body.resources.requests?.cpu)
+						if (bodyAny.labels)
+							updateData.labels = JSON.stringify(bodyAny.labels);
+						if (bodyAny.selector)
+							updateData.selector = JSON.stringify(bodyAny.selector);
+						if (bodyAny.command) updateData.command = bodyAny.command.join(" ");
+						if (bodyAny.args) updateData.args = bodyAny.args.join(" ");
+						if (bodyAny.ports) updateData.ports = bodyAny.ports;
+						if (bodyAny.resources) {
+							if (bodyAny.resources.requests?.cpu)
 								updateData.cpuRequest = parseCpuStr(
-									body.resources.requests.cpu,
+									bodyAny.resources.requests.cpu,
 								);
-							if (body.resources.requests?.memory)
+							if (bodyAny.resources.requests?.memory)
 								updateData.memoryRequest = parseMemoryStr(
-									body.resources.requests.memory,
+									bodyAny.resources.requests.memory,
 								);
-							if (body.resources.limits?.cpu)
-								updateData.cpuLimit = parseCpuStr(body.resources.limits.cpu);
-							if (body.resources.limits?.memory)
+							if (bodyAny.resources.limits?.cpu)
+								updateData.cpuLimit = parseCpuStr(bodyAny.resources.limits.cpu);
+							if (bodyAny.resources.limits?.memory)
 								updateData.memoryLimit = parseMemoryStr(
-									body.resources.limits.memory,
+									bodyAny.resources.limits.memory,
 								);
 						}
 
-						if (body.isAutoScaling !== undefined)
-							updateData.isAutoScaling = body.isAutoScaling;
-						if (body.isAlwaysRunning !== undefined)
-							updateData.isAlwaysRunning = body.isAlwaysRunning;
-						if (body.idleTimeoutSeconds !== undefined)
-							updateData.idleTimeoutSeconds = body.idleTimeoutSeconds;
+						if (bodyAny.isAutoScaling !== undefined)
+							updateData.isAutoScaling = bodyAny.isAutoScaling;
+						if (bodyAny.isAlwaysRunning !== undefined)
+							updateData.isAlwaysRunning = bodyAny.isAlwaysRunning;
+						if (bodyAny.idleTimeoutSeconds !== undefined)
+							updateData.idleTimeoutSeconds = bodyAny.idleTimeoutSeconds;
 
 						try {
 							await db
@@ -486,53 +590,31 @@ export const deploymentRoute = new Elysia({
 							});
 						}
 
-						payload = generateDeploymentManifest({
-							name: deployment.name,
-							namespace: deployment.namespace,
-							// if body.image is undefined, fallback to DB
-							image: body.image || deployment.dockerImage || "",
-							replicas: body.replicas ?? deployment.replicas,
-
-							// Command/Args: Not in DB schema easily? We might lose them if we don't track them.
-							// Limitation: If user didn't send them, we can't reconstruct them from just DB (unless DB has them).
-							// Assuming DB schema.k8sDeployments doesn't have command/args columns (based on agent.service.ts insert not showing them).
-							// Effectively this means updates might RESET command/args if not provided?
-							// Or we rely on `env` if provided.
-							// Current compromise: We only send what we know.
-
-							env: body.env, // Use new env if provided. If not... should we use old?
-							// If body.env is undefined, and we are generating a manifest...
-							// If we generate manifest without env, it might clear it?
-							// K8s 'apply' usually merges? No, Apply on a field replaces the field.
-							// So if we omit 'env', it might keep existing (if not managed) or clear it?
-							// Actually `generateDeploymentManifest` puts `env` in the spec.
-							// If `env` is undefined, `generate` sends `undefined` (which YAML.stringify omits).
-							// So K8s should keep existing envs?
-							// Yes, if we don't specify it, K8s shouldn't touch it.
-							// BUT: if we want to UPDATE env, we send it.
-							// What if we want to keep it but update image?
-							// We should ideally decrypt existing env and send it along?
-							// Yes, to be safe for "Source of Truth" concept, the Manifest we send SHOULD represent the Desired State.
-							// If we omit it, we are saying "I don't care about this", but we DO care (DB is truth).
-							// So we should:
-							// 1. Get Decrypted DB Env (merged with body.env if provided)
-							// 2. Send that.
-
-							// Fix logic:
-							// const combinedEnv = body.env || (deployment.envVariables ? JSON.parse(decrypt(deployment.envVariables)) : undefined);
-							// But `deployment` variable is stale if we just updated DB?
-							// Actually we updated DB with `updateData`.
-							// So `body.env` is the new truth if present.
-							// If `body.env` is missing, `deployment.envVariables` (old) is truth.
-						});
-
-						// Re-calculate payload with correct Env preservation
-						let finalEnv = body.env;
+						// Re-calculate payload with correct Env/ConfigMap/Secret preservation
+						let finalEnv = bodyAny.env;
 						if (!finalEnv && deployment.envVariables) {
 							try {
 								finalEnv = JSON.parse(decrypt(deployment.envVariables));
 							} catch (e) {
 								console.error("Decrypt fail", e);
+							}
+						}
+
+						let finalConfigMapRefs = bodyAny.configMapRefs;
+						if (!finalConfigMapRefs && deployment.configMapRefs) {
+							try {
+								finalConfigMapRefs = deployment.configMapRefs;
+							} catch (e) {
+								console.error("Failed to parse configMapRefs", e);
+							}
+						}
+
+						let finalSecretRefs = bodyAny.secretRefs;
+						if (!finalSecretRefs && deployment.secretRefs) {
+							try {
+								finalSecretRefs = deployment.secretRefs;
+							} catch (e) {
+								console.error("Failed to parse secretRefs", e);
 							}
 						}
 
@@ -545,16 +627,18 @@ export const deploymentRoute = new Elysia({
 							payload = generateDeploymentManifest({
 								name: deployment.name,
 								namespace: deployment.namespace,
-								image: body.image || deployment.dockerImage || "",
-								replicas: body.replicas ?? deployment.replicas,
+								image: bodyAny.image || deployment.dockerImage || "",
+								replicas: bodyAny.replicas ?? deployment.replicas,
 								env: finalEnv,
+								configMapRefs: finalConfigMapRefs,
+								secretRefs: finalSecretRefs,
 								labels:
-									body.labels ||
+									bodyAny.labels ||
 									(deployment.labels
 										? JSON.parse(deployment.labels)
 										: undefined),
 								selector:
-									body.selector ||
+									bodyAny.selector ||
 									(deployment.selector
 										? JSON.parse(deployment.selector)
 										: undefined),
@@ -617,6 +701,66 @@ export const deploymentRoute = new Elysia({
 							}),
 						),
 						env: Type.Optional(Type.Record(Type.String(), Type.String())),
+						configMapRefs: Type.Optional(
+							Type.Object({
+								env: Type.Optional(
+									Type.Array(
+										Type.Object({
+											name: Type.String(),
+											configMapName: Type.String(),
+											key: Type.String(),
+										}),
+									),
+								),
+								envFrom: Type.Optional(
+									Type.Array(
+										Type.Object({
+											configMapName: Type.String(),
+										}),
+									),
+								),
+								volumes: Type.Optional(
+									Type.Array(
+										Type.Object({
+											name: Type.String(),
+											configMapName: Type.String(),
+											mountPath: Type.String(),
+											items: Type.Optional(Type.Array(Type.String())),
+										}),
+									),
+								),
+							}),
+						),
+						secretRefs: Type.Optional(
+							Type.Object({
+								env: Type.Optional(
+									Type.Array(
+										Type.Object({
+											name: Type.String(),
+											secretName: Type.String(),
+											key: Type.String(),
+										}),
+									),
+								),
+								envFrom: Type.Optional(
+									Type.Array(
+										Type.Object({
+											secretName: Type.String(),
+										}),
+									),
+								),
+								volumes: Type.Optional(
+									Type.Array(
+										Type.Object({
+											name: Type.String(),
+											secretName: Type.String(),
+											mountPath: Type.String(),
+											items: Type.Optional(Type.Array(Type.String())),
+										}),
+									),
+								),
+							}),
+						),
 						command: Type.Optional(Type.Array(Type.String())),
 						args: Type.Optional(Type.Array(Type.String())),
 						ports: Type.Optional(

@@ -827,6 +827,121 @@ export class AgentService {
 			}
 		}
 
+		// 5. Validate ConfigMaps (Source of Truth: k8sConfigMaps in DB)
+		const configuredConfigMaps = await db.query.k8sConfigMaps.findMany({
+			where: {
+				clusterId: cluster.id,
+			},
+		});
+
+		const activeConfigMaps = heartbeat.configMaps || [];
+
+		for (const dbCm of configuredConfigMaps) {
+			const matchingCm = activeConfigMaps.find(
+				(cm) => cm.name === dbCm.name && cm.namespace === dbCm.namespace,
+			);
+
+			if (!matchingCm) {
+				console.log(
+					`Missing ConfigMap: ${dbCm.name} in ${dbCm.namespace}. Restoring...`,
+				);
+
+				let data: Record<string, string> | undefined;
+				if (dbCm.data) {
+					try {
+						data = JSON.parse(decrypt(dbCm.data));
+					} catch (e) {
+						console.error("Failed to decrypt configmap data", dbCm.name, e);
+					}
+				}
+
+				let binaryData: Record<string, string> | undefined;
+				if (dbCm.binaryData) {
+					try {
+						binaryData = JSON.parse(decrypt(dbCm.binaryData));
+					} catch (e) {
+						console.error(
+							"Failed to decrypt configmap binaryData",
+							dbCm.name,
+							e,
+						);
+					}
+				}
+
+				const manifest = {
+					apiVersion: "v1",
+					kind: "ConfigMap",
+					metadata: {
+						name: dbCm.name,
+						namespace: dbCm.namespace,
+						labels: dbCm.labels ? JSON.parse(dbCm.labels) : {},
+					},
+					data: data,
+					binaryData: binaryData,
+				};
+
+				await agentManager.sendCommand(agentId, cluster.id, {
+					id: "",
+					type: Command_CommandType.CREATE_CONFIGMAP,
+					payload: YAML.stringify(manifest),
+					targetNamespace: dbCm.namespace,
+					targetName: dbCm.name,
+				});
+				return;
+			}
+		}
+
+		// 6. Validate Secrets (Source of Truth: k8sSecrets in DB)
+		const configuredSecrets = await db.query.k8sSecrets.findMany({
+			where: {
+				clusterId: cluster.id,
+			},
+		});
+
+		const activeSecrets = heartbeat.secrets || [];
+
+		for (const dbSecret of configuredSecrets) {
+			const matchingSecret = activeSecrets.find(
+				(s) => s.name === dbSecret.name && s.namespace === dbSecret.namespace,
+			);
+
+			if (!matchingSecret) {
+				console.log(
+					`Missing Secret: ${dbSecret.name} in ${dbSecret.namespace}. Restoring...`,
+				);
+
+				let data: Record<string, string> | undefined;
+				if (dbSecret.data) {
+					try {
+						data = JSON.parse(decrypt(dbSecret.data));
+					} catch (e) {
+						console.error("Failed to decrypt secret data", dbSecret.name, e);
+					}
+				}
+
+				const manifest = {
+					apiVersion: "v1",
+					kind: "Secret",
+					type: dbSecret.type || "Opaque",
+					metadata: {
+						name: dbSecret.name,
+						namespace: dbSecret.namespace,
+						labels: dbSecret.labels ? JSON.parse(dbSecret.labels) : {},
+					},
+					data: data,
+				};
+
+				await agentManager.sendCommand(agentId, cluster.id, {
+					id: "",
+					type: Command_CommandType.CREATE_SECRET,
+					payload: YAML.stringify(manifest),
+					targetNamespace: dbSecret.namespace,
+					targetName: dbSecret.name,
+				});
+				return;
+			}
+		}
+
 		return;
 	}
 

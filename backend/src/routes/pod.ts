@@ -308,6 +308,16 @@ export const podRoute = new Elysia({
 								cpuLimit: 0,
 								memoryRequest: 0,
 								memoryLimit: 0,
+								configMapRefs: body.configMapRefs || {
+									env: [],
+									envFrom: [],
+									volumes: [],
+								},
+								secretRefs: body.secretRefs || {
+									env: [],
+									envFrom: [],
+									volumes: [],
+								},
 								updatedAt: new Date(),
 							})
 
@@ -326,6 +336,7 @@ export const podRoute = new Elysia({
 						if (!newPod) {
 							throw new Error("Pod not created");
 						}
+						const bodyAny = body as any;
 						const manifest = generatePodManifest({
 							name: body.name,
 							namespace: body.namespace,
@@ -336,6 +347,8 @@ export const podRoute = new Elysia({
 							ports: body.ports,
 							resources: body.resources,
 							labels: body.labels,
+							configMapRefs: bodyAny.configMapRefs,
+							secretRefs: bodyAny.secretRefs,
 						});
 
 						const response = await ctx.agentManager.sendCommand(
@@ -385,10 +398,6 @@ export const podRoute = new Elysia({
 						),
 						resources: Type.Optional(
 							Type.Object({
-								// cpuRequest: Type.Optional(Type.String()),
-								// cpuLimit: Type.Optional(Type.String()),
-								// memoryRequest: Type.Optional(Type.String()),
-								// memoryLimit: Type.Optional(Type.String()),
 								requests: Type.Optional(
 									Type.Object({
 										cpu: Type.Optional(Type.String()),
@@ -404,6 +413,82 @@ export const podRoute = new Elysia({
 							}),
 						),
 						labels: Type.Optional(Type.Record(Type.String(), Type.String())),
+						configMapRefs: Type.Optional(
+							Type.Object({
+								env: Type.Optional(
+									Type.Array(
+										Type.Object({
+											name: Type.String(),
+											configMapName: Type.String(),
+											key: Type.String(),
+										}),
+									),
+								),
+								envFrom: Type.Optional(
+									Type.Array(
+										Type.Object({
+											configMapName: Type.String(),
+											prefix: Type.Optional(Type.String()),
+										}),
+									),
+								),
+								volumes: Type.Optional(
+									Type.Array(
+										Type.Object({
+											name: Type.String(),
+											configMapName: Type.String(),
+											mountPath: Type.String(),
+											items: Type.Optional(
+												Type.Array(
+													Type.Object({
+														key: Type.String(),
+														path: Type.String(),
+													}),
+												),
+											),
+										}),
+									),
+								),
+							}),
+						),
+						secretRefs: Type.Optional(
+							Type.Object({
+								env: Type.Optional(
+									Type.Array(
+										Type.Object({
+											name: Type.String(),
+											secretName: Type.String(),
+											key: Type.String(),
+										}),
+									),
+								),
+								envFrom: Type.Optional(
+									Type.Array(
+										Type.Object({
+											secretName: Type.String(),
+											prefix: Type.Optional(Type.String()),
+										}),
+									),
+								),
+								volumes: Type.Optional(
+									Type.Array(
+										Type.Object({
+											name: Type.String(),
+											secretName: Type.String(),
+											mountPath: Type.String(),
+											items: Type.Optional(
+												Type.Array(
+													Type.Object({
+														key: Type.String(),
+														path: Type.String(),
+													}),
+												),
+											),
+										}),
+									),
+								),
+							}),
+						),
 					}),
 					response: {
 						201: baseResponseSchema(
@@ -545,6 +630,7 @@ export const podRoute = new Elysia({
 					}
 
 					// Update DB record
+					const bodyAny = body as any;
 					const updateData: any = {
 						updatedAt: new Date(),
 					};
@@ -557,6 +643,9 @@ export const podRoute = new Elysia({
 						updateData.ports = body.ports;
 					}
 					if (body.labels) updateData.labels = JSON.stringify(body.labels);
+					if (bodyAny.configMapRefs)
+						updateData.configMapRefs = bodyAny.configMapRefs;
+					if (bodyAny.secretRefs) updateData.secretRefs = bodyAny.secretRefs;
 
 					// Parse resources if provided
 					if (body.resources) {

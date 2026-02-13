@@ -233,6 +233,32 @@ export const k8sDeployments = pgTable(
 		envVariables: text("env_variables").default("").notNull(),
 		ports: jsonb("ports").$type<any>().default([]).notNull(),
 
+		// ConfigMap and Secret references
+		configMapRefs: jsonb("configmap_refs")
+			.$type<{
+				env?: Array<{ name: string; configMapName: string; key: string }>;
+				envFrom?: Array<{ configMapName: string; prefix?: string }>;
+				volumes?: Array<{
+					name: string;
+					configMapName: string;
+					mountPath: string;
+					items?: Array<{ key: string; path: string }>;
+				}>;
+			}>()
+			.default({ env: [], envFrom: [], volumes: [] }),
+		secretRefs: jsonb("secret_refs")
+			.$type<{
+				env?: Array<{ name: string; secretName: string; key: string }>;
+				envFrom?: Array<{ secretName: string; prefix?: string }>;
+				volumes?: Array<{
+					name: string;
+					secretName: string;
+					mountPath: string;
+					items?: Array<{ key: string; path: string }>;
+				}>;
+			}>()
+			.default({ env: [], envFrom: [], volumes: [] }),
+
 		createdAt: timestamp("created_at").defaultNow().notNull(),
 		updatedAt: timestamp("updated_at")
 			.$onUpdate(() => /* @__PURE__ */ new Date())
@@ -288,6 +314,32 @@ export const k8sPods = pgTable(
 		labels: text("labels").default("").notNull(), // JSON string
 
 		ports: jsonb("ports").$type<any>().default([]).notNull(),
+
+		// ConfigMap and Secret references
+		configMapRefs: jsonb("configmap_refs")
+			.$type<{
+				env?: Array<{ name: string; configMapName: string; key: string }>;
+				envFrom?: Array<{ configMapName: string; prefix?: string }>;
+				volumes?: Array<{
+					name: string;
+					configMapName: string;
+					mountPath: string;
+					items?: Array<{ key: string; path: string }>;
+				}>;
+			}>()
+			.default({ env: [], envFrom: [], volumes: [] }),
+		secretRefs: jsonb("secret_refs")
+			.$type<{
+				env?: Array<{ name: string; secretName: string; key: string }>;
+				envFrom?: Array<{ secretName: string; prefix?: string }>;
+				volumes?: Array<{
+					name: string;
+					secretName: string;
+					mountPath: string;
+					items?: Array<{ key: string; path: string }>;
+				}>;
+			}>()
+			.default({ env: [], envFrom: [], volumes: [] }),
 
 		createdAt: timestamp("created_at").defaultNow().notNull(),
 		updatedAt: timestamp("updated_at")

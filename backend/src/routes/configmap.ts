@@ -219,6 +219,123 @@ export const configmapRoute = new Elysia({
 					},
 				},
 			)
+			.put(
+				"/:id",
+				async (ctx) => {
+					const id = Number(ctx.params.id);
+					const clusterId = Number(ctx.params.clusterId);
+					const body = ctx.body;
+
+					const cm = await db.query.k8sConfigMaps.findFirst({
+						where: {
+							id: id,
+							clusterId: clusterId,
+						},
+					});
+
+					if (!cm) {
+						return ctx.status(404, {
+							success: false,
+							message: "ConfigMap not found",
+							timestamp: Date.now(),
+						});
+					}
+
+					const cluster = await db.query.k8sCluster.findFirst({
+						where: { id: clusterId },
+						with: { agent: true },
+					});
+
+					if (!cluster || !cluster.agent) {
+						return ctx.status(404, {
+							success: false,
+							message: "Cluster not found",
+							timestamp: Date.now(),
+						});
+					}
+
+					const encryptedData = body.data
+						? encrypt(JSON.stringify(body.data))
+						: "";
+					let encryptedBinaryData = "";
+					if (body.binaryData) {
+						encryptedBinaryData = encrypt(JSON.stringify(body.binaryData));
+					}
+
+					const [updatedCm] = await db
+						.update(schema.k8sConfigMaps)
+						.set({
+							data: encryptedData,
+							binaryData: encryptedBinaryData,
+							labels: JSON.stringify(body.labels || {}),
+							updatedAt: new Date(),
+						})
+						.where(eq(schema.k8sConfigMaps.id, id))
+						.returning();
+
+					if (!updatedCm) {
+						return ctx.status(500, {
+							success: false,
+							message: "Failed to update ConfigMap",
+							timestamp: Date.now(),
+						});
+					}
+
+					try {
+						const response = await ctx.agentManager.sendCommand(
+							cluster.agent.id,
+							cluster.id,
+							{
+								id: globalThis.crypto.randomUUID(),
+								type: Command_CommandType.CREATE_CONFIGMAP, // Will replace existing
+								payload: generateConfigMapManifest({
+									name: cm.name,
+									namespace: cm.namespace,
+									data: body.data,
+									binaryData: body.binaryData,
+									labels: body.labels,
+								}),
+								targetNamespace: cm.namespace,
+								targetName: cm.name,
+							},
+						);
+
+						return ctx.status(200, {
+							success: true,
+							message: "ConfigMap updated successfully",
+							data: { ...updatedCm, agentResponse: response.data },
+							timestamp: Date.now(),
+						});
+					} catch (_agentError) {
+						return ctx.status(200, {
+							success: true,
+							message: "ConfigMap updated in DB but agent unreachable",
+							data: updatedCm,
+							timestamp: Date.now(),
+						});
+					}
+				},
+				{
+					detail: { tags: ["ConfigMaps"] },
+					body: Type.Object({
+						data: Type.Optional(Type.Record(Type.String(), Type.String())),
+						binaryData: Type.Optional(
+							Type.Record(Type.String(), Type.String()),
+						),
+						labels: Type.Optional(Type.Record(Type.String(), Type.String())),
+					}),
+					response: {
+						200: baseResponseSchema(
+							Type.Object({
+								...dbSchemaTypes.k8sConfigMaps,
+								agentResponse: Type.Optional(Type.String()),
+							}),
+						),
+						404: errorResponseSchema,
+						500: errorResponseSchema,
+					},
+				},
+			)
 			.delete(
 				"/:id",
 				async (ctx) => {
