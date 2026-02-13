@@ -1,8 +1,18 @@
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
 import { api } from "@/lib/api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Trash2, Eye, EyeOff, Lock } from "lucide-react";
+import {
+	ArrowLeft,
+	Trash2,
+	Eye,
+	EyeOff,
+	Lock,
+	Edit2,
+	Save,
+	X,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { type EnvVar } from "@/components/shared/env-editor";
@@ -27,6 +37,9 @@ function ManageSecretPage() {
 	const queryClient = useQueryClient();
 	const [activeTab, setActiveTab] = useState("overview");
 	const [revealAll, setRevealAll] = useState(false);
+	const [isEditing, setIsEditing] = useState(false);
+	const [editDataVars, setEditDataVars] = useState<EnvVar[]>([]);
+	const [editLabels, setEditLabels] = useState<EnvVar[]>([]);
 
 	const { data: secret, isLoading } = useQuery({
 		queryKey: ["secret", clusterId, secretId],
@@ -41,6 +54,58 @@ function ManageSecretPage() {
 
 	const [dataVars, setDataVars] = useState<EnvVar[]>([]);
 	const [labels, setLabels] = useState<EnvVar[]>([]);
+
+	const startEdit = () => {
+		setEditDataVars([...dataVars]);
+		setEditLabels([...labels]);
+		setIsEditing(true);
+	};
+
+	const cancelEdit = () => {
+		setIsEditing(false);
+		setEditDataVars([]);
+		setEditLabels([]);
+	};
+
+	const saveEdit = () => {
+		updateMutation.mutate();
+	};
+
+	const updateMutation = useMutation({
+		mutationFn: async () => {
+			const data: Record<string, string> = {};
+			editDataVars.forEach((v) => {
+				if (v.name && v.value) {
+					// Encode value to base64 for Kubernetes secret
+					data[v.name] = btoa(v.value);
+				}
+			});
+
+			const labelData: Record<string, string> = {};
+			editLabels.forEach((v) => {
+				if (v.name && v.value) labelData[v.name] = v.value;
+			});
+
+			const res = await api.api.secrets({ clusterId })({ id: secretId }).put({
+				data,
+				labels: labelData,
+			});
+			if (res.error) {
+				throw new Error(res.error.value?.message || "Failed to update secret");
+			}
+			return res.data;
+		},
+		onSuccess: () => {
+			toast.success("Secret updated successfully");
+			queryClient.invalidateQueries({
+				queryKey: ["secret", clusterId, secretId],
+			});
+			setIsEditing(false);
+		},
+		onError: (error) => {
+			toast.error(error.message);
+		},
+	});
 
 	useEffect(() => {
 		if (secret) {
@@ -118,18 +183,41 @@ function ManageSecretPage() {
 						</p>
 					</div>
 				</div>
-				<Button
-					variant="destructive"
-					onClick={() => {
-						if (confirm("Are you sure you want to delete this Secret?")) {
-							deleteMutation.mutate();
-						}
-					}}
-					disabled={deleteMutation.isPending}
-				>
-					<Trash2 className="h-4 w-4 mr-2" />
-					{deleteMutation.isPending ? "Deleting..." : "Delete Secret"}
-				</Button>
+				<div className="flex gap-2">
+					{isEditing ? (
+						<>
+							<Button
+								variant="outline"
+								onClick={cancelEdit}
+								disabled={updateMutation.isPending}
+							>
+								<X className="h-4 w-4 mr-2" />
+								Cancel
+							</Button>
+							<Button onClick={saveEdit} disabled={updateMutation.isPending}>
+								<Save className="h-4 w-4 mr-2" />
+								{updateMutation.isPending ? "Saving..." : "Save Changes"}
+							</Button>
+						</>
+					) : (
+						<Button variant="outline" onClick={startEdit}>
+							<Edit2 className="h-4 w-4 mr-2" />
+							Edit Secret
+						</Button>
+					)}
+					<Button
+						variant="destructive"
+						onClick={() => {
+							if (confirm("Are you sure you want to delete this Secret?")) {
+								deleteMutation.mutate();
+							}
+						}}
+						disabled={deleteMutation.isPending}
+					>
+						<Trash2 className="h-4 w-4 mr-2" />
+						{deleteMutation.isPending ? "Deleting..." : "Delete Secret"}
+					</Button>
+				</div>
 			</div>
 
 			<Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -180,21 +268,78 @@ function ManageSecretPage() {
 					<div className="bg-muted p-4 rounded-lg border">
 						<div className="flex items-center justify-between mb-4">
 							<h3 className="text-lg font-medium">Decrypted Values</h3>
-							<Button
-								variant="ghost"
-								size="sm"
-								onClick={() => setRevealAll(!revealAll)}
-							>
-								{revealAll ? (
-									<EyeOff className="h-4 w-4 mr-2" />
-								) : (
-									<Eye className="h-4 w-4 mr-2" />
-								)}
-								{revealAll ? "Hide Values" : "Reveal All"}
-							</Button>
+							{!isEditing && (
+								<Button
+									variant="ghost"
+									size="sm"
+									onClick={() => setRevealAll(!revealAll)}
+								>
+									{revealAll ? (
+										<EyeOff className="h-4 w-4 mr-2" />
+									) : (
+										<Eye className="h-4 w-4 mr-2" />
+									)}
+									{revealAll ? "Hide Values" : "Reveal All"}
+								</Button>
+							)}
 						</div>
 						<div className="space-y-4">
-							{dataVars.length > 0 ? (
+							{isEditing ? (
+								<>
+									{editDataVars.map((v: any, idx: number) => (
+										<div
+											key={`edit-data-${idx}`}
+											className="flex gap-2 items-start"
+										>
+											<Input
+												placeholder="Key"
+												value={v.name}
+												onChange={(e) => {
+													const newVars = [...editDataVars];
+													newVars[idx].name = e.target.value;
+													setEditDataVars(newVars);
+												}}
+												className="w-1/3"
+											/>
+											<Input
+												placeholder="Value (plaintext)"
+												value={v.value}
+												onChange={(e) => {
+													const newVars = [...editDataVars];
+													newVars[idx].value = e.target.value;
+													setEditDataVars(newVars);
+												}}
+												className="flex-1"
+												type="text"
+											/>
+											<Button
+												variant="ghost"
+												size="icon"
+												onClick={() => {
+													const newVars = editDataVars.filter(
+														(_, i) => i !== idx,
+													);
+													setEditDataVars(newVars);
+												}}
+											>
+												<X className="h-4 w-4" />
+											</Button>
+										</div>
+									))}
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={() => {
+											setEditDataVars([
+												...editDataVars,
+												{ name: "", value: "" },
+											]);
+										}}
+									>
+										Add Secret Key
+									</Button>
+								</>
+							) : dataVars.length > 0 ? (
 								dataVars.map((v: any) => (
 									<SecretValueRow
 										key={v.name}
@@ -216,7 +361,58 @@ function ManageSecretPage() {
 					<div className="bg-muted p-4 rounded-lg border">
 						<h3 className="text-lg font-medium mb-4">Labels</h3>
 						<div className="space-y-2">
-							{labels.length > 0 ? (
+							{isEditing ? (
+								<>
+									{editLabels.map((l: any, idx: number) => (
+										<div
+											key={`edit-label-${idx}`}
+											className="flex gap-2 items-start"
+										>
+											<Input
+												placeholder="Key"
+												value={l.name}
+												onChange={(e) => {
+													const newLabels = [...editLabels];
+													newLabels[idx].name = e.target.value;
+													setEditLabels(newLabels);
+												}}
+												className="w-1/3"
+											/>
+											<Input
+												placeholder="Value"
+												value={l.value}
+												onChange={(e) => {
+													const newLabels = [...editLabels];
+													newLabels[idx].value = e.target.value;
+													setEditLabels(newLabels);
+												}}
+												className="flex-1"
+											/>
+											<Button
+												variant="ghost"
+												size="icon"
+												onClick={() => {
+													const newLabels = editLabels.filter(
+														(_, i) => i !== idx,
+													);
+													setEditLabels(newLabels);
+												}}
+											>
+												<X className="h-4 w-4" />
+											</Button>
+										</div>
+									))}
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={() => {
+											setEditLabels([...editLabels, { name: "", value: "" }]);
+										}}
+									>
+										Add Label
+									</Button>
+								</>
+							) : labels.length > 0 ? (
 								labels.map((l: any) => (
 									<div key={l.name} className="flex gap-2">
 										<span className="font-bold text-xs bg-secondary px-2 py-1 rounded">
