@@ -430,6 +430,8 @@ func handleCommand(kc *k8s.K8sClient, cmd *pb.Command) (string, error) {
 		pb.Command_CREATE_POD,
 		pb.Command_CREATE_SERVICE,
 		pb.Command_CREATE_RESOURCE,
+		pb.Command_CREATE_SECRET,
+		pb.Command_CREATE_CONFIGMAP,
 		pb.Command_CREATE_INGRESS:
 		if cmd.Payload != "" {
 			err = kc.ApplyManifest(cmd.Payload)

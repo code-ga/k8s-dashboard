@@ -10,6 +10,8 @@ import { podRoute } from "./pod";
 import { deploymentRoute } from "./deployment";
 import { serviceRoute } from "./service";
 import { ingressRoute } from "./ingress";
+import { configmapRoute } from "./configmap";
+import { secretRoute } from "./secret";
 
 const apiRouter = new Elysia({ prefix: "/api" })
 	.use(agentManagerService)
@@ -19,10 +21,11 @@ const apiRouter = new Elysia({ prefix: "/api" })
 	.use(agentRoute)
 	.use(nodesRoute)
 	.use(profileRouter)
-	.use(profileRouter)
 	.use(podRoute)
 	.use(deploymentRoute)
 	.use(serviceRoute)
-	.use(ingressRoute);
+	.use(ingressRoute)
+	.use(configmapRoute)
+	.use(secretRoute);
 
 export { apiRouter };

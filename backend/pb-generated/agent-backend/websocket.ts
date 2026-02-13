@@ -88,6 +88,10 @@ export interface Heartbeat {
   services: Service[];
   /** List of deployments */
   deployments: Deployment[];
+  /** List of config maps */
+  configMaps: ConfigMap[];
+  /** List of secrets */
+  secrets: Secret[];
   /** Timestamp of the heartbeat */
   timestamp: number;
 }
@@ -229,6 +233,51 @@ export interface Service_LabelsEntry {
   value: string;
 }
 
+export interface ConfigMap {
+  name: string;
+  namespace: string;
+  data: { [key: string]: string };
+  binaryData: { [key: string]: Uint8Array };
+  uid: string;
+  labels: { [key: string]: string };
+  immutable: boolean;
+}
+
+export interface ConfigMap_DataEntry {
+  key: string;
+  value: string;
+}
+
+export interface ConfigMap_BinaryDataEntry {
+  key: string;
+  value: Uint8Array;
+}
+
+export interface ConfigMap_LabelsEntry {
+  key: string;
+  value: string;
+}
+
+export interface Secret {
+  name: string;
+  namespace: string;
+  data: { [key: string]: Uint8Array };
+  type: string;
+  uid: string;
+  labels: { [key: string]: string };
+  immutable: boolean;
+}
+
+export interface Secret_DataEntry {
+  key: string;
+  value: Uint8Array;
+}
+
+export interface Secret_LabelsEntry {
+  key: string;
+  value: string;
+}
+
 export interface Command {
   id: string;
   type: Command_CommandType;
@@ -257,6 +306,10 @@ export enum Command_CommandType {
   CREATE_RESOURCE = 14,
   CREATE_INGRESS = 15,
   DELETE_INGRESS = 16,
+  CREATE_CONFIGMAP = 17,
+  DELETE_CONFIGMAP = 18,
+  CREATE_SECRET = 19,
+  DELETE_SECRET = 20,
   UNRECOGNIZED = -1,
 }
 
@@ -313,6 +366,18 @@ export function command_CommandTypeFromJSON(object: any): Command_CommandType {
     case 16:
     case "DELETE_INGRESS":
       return Command_CommandType.DELETE_INGRESS;
+    case 17:
+    case "CREATE_CONFIGMAP":
+      return Command_CommandType.CREATE_CONFIGMAP;
+    case 18:
+    case "DELETE_CONFIGMAP":
+      return Command_CommandType.DELETE_CONFIGMAP;
+    case 19:
+    case "CREATE_SECRET":
+      return Command_CommandType.CREATE_SECRET;
+    case 20:
+    case "DELETE_SECRET":
+      return Command_CommandType.DELETE_SECRET;
     case -1:
     case "UNRECOGNIZED":
     default:
@@ -356,6 +421,14 @@ export function command_CommandTypeToJSON(object: Command_CommandType): string {
       return "CREATE_INGRESS";
     case Command_CommandType.DELETE_INGRESS:
       return "DELETE_INGRESS";
+    case Command_CommandType.CREATE_CONFIGMAP:
+      return "CREATE_CONFIGMAP";
+    case Command_CommandType.DELETE_CONFIGMAP:
+      return "DELETE_CONFIGMAP";
+    case Command_CommandType.CREATE_SECRET:
+      return "CREATE_SECRET";
+    case Command_CommandType.DELETE_SECRET:
+      return "DELETE_SECRET";
     case Command_CommandType.UNRECOGNIZED:
     default:
       return "UNRECOGNIZED";
@@ -833,7 +906,16 @@ export const ServerPayload: MessageFns<ServerPayload> = {
 };
 
 function createBaseHeartbeat(): Heartbeat {
-  return { clusterResource: undefined, nodes: [], pods: [], services: [], deployments: [], timestamp: 0 };
+  return {
+    clusterResource: undefined,
+    nodes: [],
+    pods: [],
+    services: [],
+    deployments: [],
+    configMaps: [],
+    secrets: [],
+    timestamp: 0,
+  };
 }
 
 export const Heartbeat: MessageFns<Heartbeat> = {
@@ -852,6 +934,12 @@ export const Heartbeat: MessageFns<Heartbeat> = {
     }
     for (const v of message.deployments) {
       Deployment.encode(v!, writer.uint32(50).fork()).join();
+    }
+    for (const v of message.configMaps) {
+      ConfigMap.encode(v!, writer.uint32(58).fork()).join();
+    }
+    for (const v of message.secrets) {
+      Secret.encode(v!, writer.uint32(66).fork()).join();
     }
     if (message.timestamp !== 0) {
       writer.uint32(40).int64(message.timestamp);
@@ -906,6 +994,22 @@ export const Heartbeat: MessageFns<Heartbeat> = {
           message.deployments.push(Deployment.decode(reader, reader.uint32()));
           continue;
         }
+        case 7: {
+          if (tag !== 58) {
+            break;
+          }
+
+          message.configMaps.push(ConfigMap.decode(reader, reader.uint32()));
+          continue;
+        }
+        case 8: {
+          if (tag !== 66) {
+            break;
+          }
+
+          message.secrets.push(Secret.decode(reader, reader.uint32()));
+          continue;
+        }
         case 5: {
           if (tag !== 40) {
             break;
@@ -936,6 +1040,12 @@ export const Heartbeat: MessageFns<Heartbeat> = {
       deployments: globalThis.Array.isArray(object?.deployments)
         ? object.deployments.map((e: any) => Deployment.fromJSON(e))
         : [],
+      configMaps: globalThis.Array.isArray(object?.configMaps)
+        ? object.configMaps.map((e: any) => ConfigMap.fromJSON(e))
+        : globalThis.Array.isArray(object?.config_maps)
+        ? object.config_maps.map((e: any) => ConfigMap.fromJSON(e))
+        : [],
+      secrets: globalThis.Array.isArray(object?.secrets) ? object.secrets.map((e: any) => Secret.fromJSON(e)) : [],
       timestamp: isSet(object.timestamp) ? globalThis.Number(object.timestamp) : 0,
     };
   },
@@ -957,6 +1067,12 @@ export const Heartbeat: MessageFns<Heartbeat> = {
     if (message.deployments?.length) {
       obj.deployments = message.deployments.map((e) => Deployment.toJSON(e));
     }
+    if (message.configMaps?.length) {
+      obj.configMaps = message.configMaps.map((e) => ConfigMap.toJSON(e));
+    }
+    if (message.secrets?.length) {
+      obj.secrets = message.secrets.map((e) => Secret.toJSON(e));
+    }
     if (message.timestamp !== 0) {
       obj.timestamp = Math.round(message.timestamp);
     }
@@ -975,6 +1091,8 @@ export const Heartbeat: MessageFns<Heartbeat> = {
     message.pods = object.pods?.map((e) => Pod.fromPartial(e)) || [];
     message.services = object.services?.map((e) => Service.fromPartial(e)) || [];
     message.deployments = object.deployments?.map((e) => Deployment.fromPartial(e)) || [];
+    message.configMaps = object.configMaps?.map((e) => ConfigMap.fromPartial(e)) || [];
+    message.secrets = object.secrets?.map((e) => Secret.fromPartial(e)) || [];
     message.timestamp = object.timestamp ?? 0;
     return message;
   },
@@ -3119,6 +3237,831 @@ export const Service_LabelsEntry: MessageFns<Service_LabelsEntry> = {
   },
   fromPartial<I extends Exact<DeepPartial<Service_LabelsEntry>, I>>(object: I): Service_LabelsEntry {
     const message = createBaseService_LabelsEntry();
+    message.key = object.key ?? "";
+    message.value = object.value ?? "";
+    return message;
+  },
+};
+
+function createBaseConfigMap(): ConfigMap {
+  return { name: "", namespace: "", data: {}, binaryData: {}, uid: "", labels: {}, immutable: false };
+}
+
+export const ConfigMap: MessageFns<ConfigMap> = {
+  encode(message: ConfigMap, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.name !== "") {
+      writer.uint32(10).string(message.name);
+    }
+    if (message.namespace !== "") {
+      writer.uint32(18).string(message.namespace);
+    }
+    globalThis.Object.entries(message.data).forEach(([key, value]: [string, string]) => {
+      ConfigMap_DataEntry.encode({ key: key as any, value }, writer.uint32(26).fork()).join();
+    });
+    globalThis.Object.entries(message.binaryData).forEach(([key, value]: [string, Uint8Array]) => {
+      ConfigMap_BinaryDataEntry.encode({ key: key as any, value }, writer.uint32(34).fork()).join();
+    });
+    if (message.uid !== "") {
+      writer.uint32(42).string(message.uid);
+    }
+    globalThis.Object.entries(message.labels).forEach(([key, value]: [string, string]) => {
+      ConfigMap_LabelsEntry.encode({ key: key as any, value }, writer.uint32(50).fork()).join();
+    });
+    if (message.immutable !== false) {
+      writer.uint32(56).bool(message.immutable);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ConfigMap {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseConfigMap();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.name = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.namespace = reader.string();
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          const entry3 = ConfigMap_DataEntry.decode(reader, reader.uint32());
+          if (entry3.value !== undefined) {
+            message.data[entry3.key] = entry3.value;
+          }
+          continue;
+        }
+        case 4: {
+          if (tag !== 34) {
+            break;
+          }
+
+          const entry4 = ConfigMap_BinaryDataEntry.decode(reader, reader.uint32());
+          if (entry4.value !== undefined) {
+            message.binaryData[entry4.key] = entry4.value;
+          }
+          continue;
+        }
+        case 5: {
+          if (tag !== 42) {
+            break;
+          }
+
+          message.uid = reader.string();
+          continue;
+        }
+        case 6: {
+          if (tag !== 50) {
+            break;
+          }
+
+          const entry6 = ConfigMap_LabelsEntry.decode(reader, reader.uint32());
+          if (entry6.value !== undefined) {
+            message.labels[entry6.key] = entry6.value;
+          }
+          continue;
+        }
+        case 7: {
+          if (tag !== 56) {
+            break;
+          }
+
+          message.immutable = reader.bool();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): ConfigMap {
+    return {
+      name: isSet(object.name) ? globalThis.String(object.name) : "",
+      namespace: isSet(object.namespace) ? globalThis.String(object.namespace) : "",
+      data: isObject(object.data)
+        ? (globalThis.Object.entries(object.data) as [string, any][]).reduce(
+          (acc: { [key: string]: string }, [key, value]: [string, any]) => {
+            acc[key] = globalThis.String(value);
+            return acc;
+          },
+          {},
+        )
+        : {},
+      binaryData: isObject(object.binaryData)
+        ? (globalThis.Object.entries(object.binaryData) as [string, any][]).reduce(
+          (acc: { [key: string]: Uint8Array }, [key, value]: [string, any]) => {
+            acc[key] = bytesFromBase64(value as string);
+            return acc;
+          },
+          {},
+        )
+        : isObject(object.binary_data)
+        ? (globalThis.Object.entries(object.binary_data) as [string, any][]).reduce(
+          (acc: { [key: string]: Uint8Array }, [key, value]: [string, any]) => {
+            acc[key] = bytesFromBase64(value as string);
+            return acc;
+          },
+          {},
+        )
+        : {},
+      uid: isSet(object.uid) ? globalThis.String(object.uid) : "",
+      labels: isObject(object.labels)
+        ? (globalThis.Object.entries(object.labels) as [string, any][]).reduce(
+          (acc: { [key: string]: string }, [key, value]: [string, any]) => {
+            acc[key] = globalThis.String(value);
+            return acc;
+          },
+          {},
+        )
+        : {},
+      immutable: isSet(object.immutable) ? globalThis.Boolean(object.immutable) : false,
+    };
+  },
+
+  toJSON(message: ConfigMap): unknown {
+    const obj: any = {};
+    if (message.name !== "") {
+      obj.name = message.name;
+    }
+    if (message.namespace !== "") {
+      obj.namespace = message.namespace;
+    }
+    if (message.data) {
+      const entries = globalThis.Object.entries(message.data) as [string, string][];
+      if (entries.length > 0) {
+        obj.data = {};
+        entries.forEach(([k, v]) => {
+          obj.data[k] = v;
+        });
+      }
+    }
+    if (message.binaryData) {
+      const entries = globalThis.Object.entries(message.binaryData) as [string, Uint8Array][];
+      if (entries.length > 0) {
+        obj.binaryData = {};
+        entries.forEach(([k, v]) => {
+          obj.binaryData[k] = base64FromBytes(v);
+        });
+      }
+    }
+    if (message.uid !== "") {
+      obj.uid = message.uid;
+    }
+    if (message.labels) {
+      const entries = globalThis.Object.entries(message.labels) as [string, string][];
+      if (entries.length > 0) {
+        obj.labels = {};
+        entries.forEach(([k, v]) => {
+          obj.labels[k] = v;
+        });
+      }
+    }
+    if (message.immutable !== false) {
+      obj.immutable = message.immutable;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<ConfigMap>, I>>(base?: I): ConfigMap {
+    return ConfigMap.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<ConfigMap>, I>>(object: I): ConfigMap {
+    const message = createBaseConfigMap();
+    message.name = object.name ?? "";
+    message.namespace = object.namespace ?? "";
+    message.data = (globalThis.Object.entries(object.data ?? {}) as [string, string][]).reduce(
+      (acc: { [key: string]: string }, [key, value]: [string, string]) => {
+        if (value !== undefined) {
+          acc[key] = globalThis.String(value);
+        }
+        return acc;
+      },
+      {},
+    );
+    message.binaryData = (globalThis.Object.entries(object.binaryData ?? {}) as [string, Uint8Array][]).reduce(
+      (acc: { [key: string]: Uint8Array }, [key, value]: [string, Uint8Array]) => {
+        if (value !== undefined) {
+          acc[key] = value;
+        }
+        return acc;
+      },
+      {},
+    );
+    message.uid = object.uid ?? "";
+    message.labels = (globalThis.Object.entries(object.labels ?? {}) as [string, string][]).reduce(
+      (acc: { [key: string]: string }, [key, value]: [string, string]) => {
+        if (value !== undefined) {
+          acc[key] = globalThis.String(value);
+        }
+        return acc;
+      },
+      {},
+    );
+    message.immutable = object.immutable ?? false;
+    return message;
+  },
+};
+
+function createBaseConfigMap_DataEntry(): ConfigMap_DataEntry {
+  return { key: "", value: "" };
+}
+
+export const ConfigMap_DataEntry: MessageFns<ConfigMap_DataEntry> = {
+  encode(message: ConfigMap_DataEntry, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.key !== "") {
+      writer.uint32(10).string(message.key);
+    }
+    if (message.value !== "") {
+      writer.uint32(18).string(message.value);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ConfigMap_DataEntry {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseConfigMap_DataEntry();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.key = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.value = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): ConfigMap_DataEntry {
+    return {
+      key: isSet(object.key) ? globalThis.String(object.key) : "",
+      value: isSet(object.value) ? globalThis.String(object.value) : "",
+    };
+  },
+
+  toJSON(message: ConfigMap_DataEntry): unknown {
+    const obj: any = {};
+    if (message.key !== "") {
+      obj.key = message.key;
+    }
+    if (message.value !== "") {
+      obj.value = message.value;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<ConfigMap_DataEntry>, I>>(base?: I): ConfigMap_DataEntry {
+    return ConfigMap_DataEntry.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<ConfigMap_DataEntry>, I>>(object: I): ConfigMap_DataEntry {
+    const message = createBaseConfigMap_DataEntry();
+    message.key = object.key ?? "";
+    message.value = object.value ?? "";
+    return message;
+  },
+};
+
+function createBaseConfigMap_BinaryDataEntry(): ConfigMap_BinaryDataEntry {
+  return { key: "", value: new Uint8Array(0) };
+}
+
+export const ConfigMap_BinaryDataEntry: MessageFns<ConfigMap_BinaryDataEntry> = {
+  encode(message: ConfigMap_BinaryDataEntry, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.key !== "") {
+      writer.uint32(10).string(message.key);
+    }
+    if (message.value.length !== 0) {
+      writer.uint32(18).bytes(message.value);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ConfigMap_BinaryDataEntry {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseConfigMap_BinaryDataEntry();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.key = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.value = reader.bytes();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): ConfigMap_BinaryDataEntry {
+    return {
+      key: isSet(object.key) ? globalThis.String(object.key) : "",
+      value: isSet(object.value) ? bytesFromBase64(object.value) : new Uint8Array(0),
+    };
+  },
+
+  toJSON(message: ConfigMap_BinaryDataEntry): unknown {
+    const obj: any = {};
+    if (message.key !== "") {
+      obj.key = message.key;
+    }
+    if (message.value.length !== 0) {
+      obj.value = base64FromBytes(message.value);
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<ConfigMap_BinaryDataEntry>, I>>(base?: I): ConfigMap_BinaryDataEntry {
+    return ConfigMap_BinaryDataEntry.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<ConfigMap_BinaryDataEntry>, I>>(object: I): ConfigMap_BinaryDataEntry {
+    const message = createBaseConfigMap_BinaryDataEntry();
+    message.key = object.key ?? "";
+    message.value = object.value ?? new Uint8Array(0);
+    return message;
+  },
+};
+
+function createBaseConfigMap_LabelsEntry(): ConfigMap_LabelsEntry {
+  return { key: "", value: "" };
+}
+
+export const ConfigMap_LabelsEntry: MessageFns<ConfigMap_LabelsEntry> = {
+  encode(message: ConfigMap_LabelsEntry, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.key !== "") {
+      writer.uint32(10).string(message.key);
+    }
+    if (message.value !== "") {
+      writer.uint32(18).string(message.value);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ConfigMap_LabelsEntry {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseConfigMap_LabelsEntry();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.key = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.value = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): ConfigMap_LabelsEntry {
+    return {
+      key: isSet(object.key) ? globalThis.String(object.key) : "",
+      value: isSet(object.value) ? globalThis.String(object.value) : "",
+    };
+  },
+
+  toJSON(message: ConfigMap_LabelsEntry): unknown {
+    const obj: any = {};
+    if (message.key !== "") {
+      obj.key = message.key;
+    }
+    if (message.value !== "") {
+      obj.value = message.value;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<ConfigMap_LabelsEntry>, I>>(base?: I): ConfigMap_LabelsEntry {
+    return ConfigMap_LabelsEntry.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<ConfigMap_LabelsEntry>, I>>(object: I): ConfigMap_LabelsEntry {
+    const message = createBaseConfigMap_LabelsEntry();
+    message.key = object.key ?? "";
+    message.value = object.value ?? "";
+    return message;
+  },
+};
+
+function createBaseSecret(): Secret {
+  return { name: "", namespace: "", data: {}, type: "", uid: "", labels: {}, immutable: false };
+}
+
+export const Secret: MessageFns<Secret> = {
+  encode(message: Secret, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.name !== "") {
+      writer.uint32(10).string(message.name);
+    }
+    if (message.namespace !== "") {
+      writer.uint32(18).string(message.namespace);
+    }
+    globalThis.Object.entries(message.data).forEach(([key, value]: [string, Uint8Array]) => {
+      Secret_DataEntry.encode({ key: key as any, value }, writer.uint32(26).fork()).join();
+    });
+    if (message.type !== "") {
+      writer.uint32(34).string(message.type);
+    }
+    if (message.uid !== "") {
+      writer.uint32(42).string(message.uid);
+    }
+    globalThis.Object.entries(message.labels).forEach(([key, value]: [string, string]) => {
+      Secret_LabelsEntry.encode({ key: key as any, value }, writer.uint32(50).fork()).join();
+    });
+    if (message.immutable !== false) {
+      writer.uint32(56).bool(message.immutable);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): Secret {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseSecret();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.name = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.namespace = reader.string();
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          const entry3 = Secret_DataEntry.decode(reader, reader.uint32());
+          if (entry3.value !== undefined) {
+            message.data[entry3.key] = entry3.value;
+          }
+          continue;
+        }
+        case 4: {
+          if (tag !== 34) {
+            break;
+          }
+
+          message.type = reader.string();
+          continue;
+        }
+        case 5: {
+          if (tag !== 42) {
+            break;
+          }
+
+          message.uid = reader.string();
+          continue;
+        }
+        case 6: {
+          if (tag !== 50) {
+            break;
+          }
+
+          const entry6 = Secret_LabelsEntry.decode(reader, reader.uint32());
+          if (entry6.value !== undefined) {
+            message.labels[entry6.key] = entry6.value;
+          }
+          continue;
+        }
+        case 7: {
+          if (tag !== 56) {
+            break;
+          }
+
+          message.immutable = reader.bool();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): Secret {
+    return {
+      name: isSet(object.name) ? globalThis.String(object.name) : "",
+      namespace: isSet(object.namespace) ? globalThis.String(object.namespace) : "",
+      data: isObject(object.data)
+        ? (globalThis.Object.entries(object.data) as [string, any][]).reduce(
+          (acc: { [key: string]: Uint8Array }, [key, value]: [string, any]) => {
+            acc[key] = bytesFromBase64(value as string);
+            return acc;
+          },
+          {},
+        )
+        : {},
+      type: isSet(object.type) ? globalThis.String(object.type) : "",
+      uid: isSet(object.uid) ? globalThis.String(object.uid) : "",
+      labels: isObject(object.labels)
+        ? (globalThis.Object.entries(object.labels) as [string, any][]).reduce(
+          (acc: { [key: string]: string }, [key, value]: [string, any]) => {
+            acc[key] = globalThis.String(value);
+            return acc;
+          },
+          {},
+        )
+        : {},
+      immutable: isSet(object.immutable) ? globalThis.Boolean(object.immutable) : false,
+    };
+  },
+
+  toJSON(message: Secret): unknown {
+    const obj: any = {};
+    if (message.name !== "") {
+      obj.name = message.name;
+    }
+    if (message.namespace !== "") {
+      obj.namespace = message.namespace;
+    }
+    if (message.data) {
+      const entries = globalThis.Object.entries(message.data) as [string, Uint8Array][];
+      if (entries.length > 0) {
+        obj.data = {};
+        entries.forEach(([k, v]) => {
+          obj.data[k] = base64FromBytes(v);
+        });
+      }
+    }
+    if (message.type !== "") {
+      obj.type = message.type;
+    }
+    if (message.uid !== "") {
+      obj.uid = message.uid;
+    }
+    if (message.labels) {
+      const entries = globalThis.Object.entries(message.labels) as [string, string][];
+      if (entries.length > 0) {
+        obj.labels = {};
+        entries.forEach(([k, v]) => {
+          obj.labels[k] = v;
+        });
+      }
+    }
+    if (message.immutable !== false) {
+      obj.immutable = message.immutable;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<Secret>, I>>(base?: I): Secret {
+    return Secret.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<Secret>, I>>(object: I): Secret {
+    const message = createBaseSecret();
+    message.name = object.name ?? "";
+    message.namespace = object.namespace ?? "";
+    message.data = (globalThis.Object.entries(object.data ?? {}) as [string, Uint8Array][]).reduce(
+      (acc: { [key: string]: Uint8Array }, [key, value]: [string, Uint8Array]) => {
+        if (value !== undefined) {
+          acc[key] = value;
+        }
+        return acc;
+      },
+      {},
+    );
+    message.type = object.type ?? "";
+    message.uid = object.uid ?? "";
+    message.labels = (globalThis.Object.entries(object.labels ?? {}) as [string, string][]).reduce(
+      (acc: { [key: string]: string }, [key, value]: [string, string]) => {
+        if (value !== undefined) {
+          acc[key] = globalThis.String(value);
+        }
+        return acc;
+      },
+      {},
+    );
+    message.immutable = object.immutable ?? false;
+    return message;
+  },
+};
+
+function createBaseSecret_DataEntry(): Secret_DataEntry {
+  return { key: "", value: new Uint8Array(0) };
+}
+
+export const Secret_DataEntry: MessageFns<Secret_DataEntry> = {
+  encode(message: Secret_DataEntry, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.key !== "") {
+      writer.uint32(10).string(message.key);
+    }
+    if (message.value.length !== 0) {
+      writer.uint32(18).bytes(message.value);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): Secret_DataEntry {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseSecret_DataEntry();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.key = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.value = reader.bytes();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): Secret_DataEntry {
+    return {
+      key: isSet(object.key) ? globalThis.String(object.key) : "",
+      value: isSet(object.value) ? bytesFromBase64(object.value) : new Uint8Array(0),
+    };
+  },
+
+  toJSON(message: Secret_DataEntry): unknown {
+    const obj: any = {};
+    if (message.key !== "") {
+      obj.key = message.key;
+    }
+    if (message.value.length !== 0) {
+      obj.value = base64FromBytes(message.value);
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<Secret_DataEntry>, I>>(base?: I): Secret_DataEntry {
+    return Secret_DataEntry.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<Secret_DataEntry>, I>>(object: I): Secret_DataEntry {
+    const message = createBaseSecret_DataEntry();
+    message.key = object.key ?? "";
+    message.value = object.value ?? new Uint8Array(0);
+    return message;
+  },
+};
+
+function createBaseSecret_LabelsEntry(): Secret_LabelsEntry {
+  return { key: "", value: "" };
+}
+
+export const Secret_LabelsEntry: MessageFns<Secret_LabelsEntry> = {
+  encode(message: Secret_LabelsEntry, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.key !== "") {
+      writer.uint32(10).string(message.key);
+    }
+    if (message.value !== "") {
+      writer.uint32(18).string(message.value);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): Secret_LabelsEntry {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseSecret_LabelsEntry();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.key = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.value = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): Secret_LabelsEntry {
+    return {
+      key: isSet(object.key) ? globalThis.String(object.key) : "",
+      value: isSet(object.value) ? globalThis.String(object.value) : "",
+    };
+  },
+
+  toJSON(message: Secret_LabelsEntry): unknown {
+    const obj: any = {};
+    if (message.key !== "") {
+      obj.key = message.key;
+    }
+    if (message.value !== "") {
+      obj.value = message.value;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<Secret_LabelsEntry>, I>>(base?: I): Secret_LabelsEntry {
+    return Secret_LabelsEntry.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<Secret_LabelsEntry>, I>>(object: I): Secret_LabelsEntry {
+    const message = createBaseSecret_LabelsEntry();
     message.key = object.key ?? "";
     message.value = object.value ?? "";
     return message;

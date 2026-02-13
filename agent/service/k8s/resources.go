@@ -49,6 +49,22 @@ func (kc *K8sClient) GetDeployments(namespace string) (*appsv1.DeploymentList, e
 	return deployments, nil
 }
 
+func (kc *K8sClient) GetConfigMaps(namespace string) (*corev1.ConfigMapList, error) {
+	configMaps, err := kc.Clientset.CoreV1().ConfigMaps(namespace).List(kc.Context, metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+	return configMaps, nil
+}
+
+func (kc *K8sClient) GetSecrets(namespace string) (*corev1.SecretList, error) {
+	secrets, err := kc.Clientset.CoreV1().Secrets(namespace).List(kc.Context, metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+	return secrets, nil
+}
+
 func (k *K8sClient) WaitForDeployment(namespace, name string, timeout time.Duration) error {
 	startTime := time.Now()
 	for {

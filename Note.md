@@ -5,8 +5,8 @@
 - [x] Update frontend/src/routes/dashboard/cluster/$id/nodes.tsx (Display join token command)
 - [x] show node role in k8s cluster
 - [x] batch lazy command (sending batch message to agent and save to db the stage of command (pending, sent, success, failed) )
-- [ ] pod can open many ports
-- [ ] each service deal with one port of pods
+- [x] pod can open many ports
+- [x] each service deal with one (many) port of pods
 - [ ] service run on different node have different ip and port
 - [ ] deployment hold the pod id
 ```

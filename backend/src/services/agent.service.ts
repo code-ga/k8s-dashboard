@@ -5,6 +5,8 @@ import {
 	k8sPods,
 	k8sDeployments,
 	k8sClusterNode,
+	k8sConfigMaps,
+	k8sSecrets,
 	gatewayPorts,
 	schema,
 } from "../database/schema";
@@ -16,7 +18,7 @@ import type {
 import { Command_CommandType } from "../../pb-generated/agent-backend/websocket";
 import YAML from "yaml";
 import type { AgentManager } from "./agentManager";
-import { decrypt } from "../utils/crypto";
+import { encrypt, decrypt } from "../utils/crypto";
 import {
 	generateDeploymentManifest,
 	generatePodManifest,
@@ -106,7 +108,10 @@ export class AgentService {
 						.set(nodeData)
 						.where(eq(k8sClusterNode.id, existingNode[0].id));
 				} else {
-					await db.insert(k8sClusterNode).values(nodeData);
+					await db.insert(k8sClusterNode).values({
+						...nodeData,
+						autoCreated: true,
+					});
 				}
 			}
 		}
@@ -188,6 +193,7 @@ export class AgentService {
 					await db.insert(k8sDeployments).values({
 						...depData,
 						ownerId: defaultOwner.id,
+						autoCreated: true, // created by agent when it detects a deployment not in DB
 					});
 				}
 			}
@@ -297,7 +303,10 @@ export class AgentService {
 							})
 							.where(eq(k8sPods.id, existingPod.id));
 					} else {
-						await db.insert(k8sPods).values(podData); // Fix lint: removed createdAt
+						await db.insert(k8sPods).values({
+							...podData,
+							autoCreated: true,
+						}); // Fix lint: removed createdAt
 					}
 				}
 			}
@@ -362,7 +371,10 @@ export class AgentService {
 					} else {
 						svcData.ownerId = defaultOwner.id;
 					}
-					await db.insert(schema.k8sServices).values(svcData);
+					await db.insert(schema.k8sServices).values({
+						...svcData,
+						autoCreated: true, // created by agent when it detects a service not in DB
+					});
 				}
 			}
 		}
@@ -668,6 +680,150 @@ export class AgentService {
 					targetName: dbSvc.name,
 				});
 				return;
+			}
+		}
+
+		// Sync ConfigMaps
+		if (heartbeat.configMaps) {
+			const defaultOwner = await db.query.profile.findFirst({
+				where: {
+					permission: {
+						arrayContains: ["default-account"],
+					},
+				},
+			});
+
+			for (const cm of heartbeat.configMaps) {
+				// 1. Try Find by UID
+				let existing = await db
+					.select()
+					.from(k8sConfigMaps)
+					.where(
+						and(
+							eq(k8sConfigMaps.clusterId, cluster.id),
+							eq(k8sConfigMaps.k8sUid, cm.uid),
+						),
+					);
+
+				// 2. Fallback to Name/Namespace
+				if (existing.length === 0) {
+					existing = await db
+						.select()
+						.from(k8sConfigMaps)
+						.where(
+							and(
+								eq(k8sConfigMaps.clusterId, cluster.id),
+								eq(k8sConfigMaps.name, cm.name),
+								eq(k8sConfigMaps.namespace, cm.namespace),
+							),
+						);
+				}
+
+				// Prepare data
+				const dataStr = JSON.stringify(cm.data);
+				const encryptedData = encrypt(dataStr);
+
+				let encryptedBinaryData = null;
+				if (cm.binaryData && Object.keys(cm.binaryData).length > 0) {
+					const binData: Record<string, string> = {};
+					for (const [key, val] of Object.entries(cm.binaryData)) {
+						binData[key] = Buffer.from(val).toString("base64");
+					}
+					encryptedBinaryData = encrypt(JSON.stringify(binData));
+				}
+
+				const cmData: InferInsertModel<typeof k8sConfigMaps> = {
+					clusterId: cluster.id,
+					name: cm.name,
+					namespace: cm.namespace,
+					data: encryptedData,
+					binaryData: encryptedBinaryData,
+					labels: JSON.stringify(cm.labels),
+					k8sUid: cm.uid,
+					updatedAt: new Date(),
+				};
+
+				if (existing.length > 0 && existing[0]?.k8sUid) {
+					await db
+						.update(k8sConfigMaps)
+						.set(cmData)
+						.where(eq(k8sConfigMaps.id, existing[0].id));
+				} else if (defaultOwner) {
+					await db.insert(k8sConfigMaps).values({
+						...cmData,
+						ownerId: defaultOwner.id,
+						autoCreated: true, // created by agent when it detects a configmap not in DB
+					});
+				}
+			}
+		}
+
+		// Sync Secrets
+		if (heartbeat.secrets) {
+			const defaultOwner = await db.query.profile.findFirst({
+				where: {
+					permission: {
+						arrayContains: ["default-account"],
+					},
+				},
+			});
+
+			for (const sec of heartbeat.secrets) {
+				// 1. Try Find by UID
+				let existing = await db
+					.select()
+					.from(k8sSecrets)
+					.where(
+						and(
+							eq(k8sSecrets.clusterId, cluster.id),
+							eq(k8sSecrets.k8sUid, sec.uid),
+						),
+					);
+
+				// 2. Fallback to Name/Namespace
+				if (existing.length === 0) {
+					existing = await db
+						.select()
+						.from(k8sSecrets)
+						.where(
+							and(
+								eq(k8sSecrets.clusterId, cluster.id),
+								eq(k8sSecrets.name, sec.name),
+								eq(k8sSecrets.namespace, sec.namespace),
+							),
+						);
+				}
+
+				// Prepare data
+				const binData: Record<string, string> = {};
+				for (const [key, val] of Object.entries(sec.data)) {
+					binData[key] = Buffer.from(val).toString("base64");
+				}
+				const encryptedData = encrypt(JSON.stringify(binData));
+
+				const secData: InferInsertModel<typeof k8sSecrets> = {
+					clusterId: cluster.id,
+					name: sec.name,
+					namespace: sec.namespace,
+					type: sec.type,
+					data: encryptedData,
+					labels: JSON.stringify(sec.labels),
+					k8sUid: sec.uid,
+					updatedAt: new Date(),
+				};
+
+				if (existing.length > 0 && existing[0]?.k8sUid) {
+					await db
+						.update(k8sSecrets)
+						.set(secData)
+						.where(eq(k8sSecrets.id, existing[0].id));
+				} else if (defaultOwner) {
+					await db.insert(k8sSecrets).values({
+						...secData,
+						ownerId: defaultOwner.id,
+						autoCreated: true, // created by agent when it detects a secret not in DB
+					});
+				}
 			}
 		}
 

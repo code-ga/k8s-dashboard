@@ -174,7 +174,11 @@ function ClusterNodes() {
 									</TableCell>
 									<TableCell>
 										<span className="bg-secondary px-2 py-1 rounded text-xs">
-											{node.labels}
+											{Object.entries(JSON.parse(node.labels || "{}")).map(([key, value]) => (
+												<span key={key} className="block">
+													{key}: {new String(value)}
+												</span>
+											))}
 										</span>
 									</TableCell>
 									<TableCell>

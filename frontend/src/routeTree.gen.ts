@@ -18,15 +18,21 @@ import { Route as DashboardSettingsRouteImport } from './routes/dashboard/settin
 import { Route as DashboardClusterIdIndexRouteImport } from './routes/dashboard/cluster/$id/index'
 import { Route as DashboardClusterIdNodesRouteImport } from './routes/dashboard/cluster/$id/nodes'
 import { Route as DashboardClusterIdServicesIndexRouteImport } from './routes/dashboard/cluster/$id/services/index'
+import { Route as DashboardClusterIdSecretsIndexRouteImport } from './routes/dashboard/cluster/$id/secrets/index'
 import { Route as DashboardClusterIdPodsIndexRouteImport } from './routes/dashboard/cluster/$id/pods/index'
 import { Route as DashboardClusterIdIngressesIndexRouteImport } from './routes/dashboard/cluster/$id/ingresses/index'
 import { Route as DashboardClusterIdDeploymentsIndexRouteImport } from './routes/dashboard/cluster/$id/deployments/index'
+import { Route as DashboardClusterIdConfigmapsIndexRouteImport } from './routes/dashboard/cluster/$id/configmaps/index'
 import { Route as DashboardClusterIdServicesServiceIdRouteImport } from './routes/dashboard/cluster/$id/services/$serviceId'
+import { Route as DashboardClusterIdSecretsCreateRouteImport } from './routes/dashboard/cluster/$id/secrets/create'
+import { Route as DashboardClusterIdSecretsSecretIdRouteImport } from './routes/dashboard/cluster/$id/secrets/$secretId'
 import { Route as DashboardClusterIdPodsCreateRouteImport } from './routes/dashboard/cluster/$id/pods/create'
 import { Route as DashboardClusterIdPodsPodIdRouteImport } from './routes/dashboard/cluster/$id/pods/$podId'
 import { Route as DashboardClusterIdIngressesIngressIdRouteImport } from './routes/dashboard/cluster/$id/ingresses/$ingressId'
 import { Route as DashboardClusterIdDeploymentsCreateRouteImport } from './routes/dashboard/cluster/$id/deployments/create'
 import { Route as DashboardClusterIdDeploymentsDeploymentIdRouteImport } from './routes/dashboard/cluster/$id/deployments/$deploymentId'
+import { Route as DashboardClusterIdConfigmapsCreateRouteImport } from './routes/dashboard/cluster/$id/configmaps/create'
+import { Route as DashboardClusterIdConfigmapsConfigmapIdRouteImport } from './routes/dashboard/cluster/$id/configmaps/$configmapId'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -74,6 +80,12 @@ const DashboardClusterIdServicesIndexRoute =
     path: '/dashboard/cluster/$id/services/',
     getParentRoute: () => rootRouteImport,
   } as any)
+const DashboardClusterIdSecretsIndexRoute =
+  DashboardClusterIdSecretsIndexRouteImport.update({
+    id: '/dashboard/cluster/$id/secrets/',
+    path: '/dashboard/cluster/$id/secrets/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const DashboardClusterIdPodsIndexRoute =
   DashboardClusterIdPodsIndexRouteImport.update({
     id: '/dashboard/cluster/$id/pods/',
@@ -92,10 +104,28 @@ const DashboardClusterIdDeploymentsIndexRoute =
     path: '/dashboard/cluster/$id/deployments/',
     getParentRoute: () => rootRouteImport,
   } as any)
+const DashboardClusterIdConfigmapsIndexRoute =
+  DashboardClusterIdConfigmapsIndexRouteImport.update({
+    id: '/dashboard/cluster/$id/configmaps/',
+    path: '/dashboard/cluster/$id/configmaps/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const DashboardClusterIdServicesServiceIdRoute =
   DashboardClusterIdServicesServiceIdRouteImport.update({
     id: '/dashboard/cluster/$id/services/$serviceId',
     path: '/dashboard/cluster/$id/services/$serviceId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const DashboardClusterIdSecretsCreateRoute =
+  DashboardClusterIdSecretsCreateRouteImport.update({
+    id: '/dashboard/cluster/$id/secrets/create',
+    path: '/dashboard/cluster/$id/secrets/create',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const DashboardClusterIdSecretsSecretIdRoute =
+  DashboardClusterIdSecretsSecretIdRouteImport.update({
+    id: '/dashboard/cluster/$id/secrets/$secretId',
+    path: '/dashboard/cluster/$id/secrets/$secretId',
     getParentRoute: () => rootRouteImport,
   } as any)
 const DashboardClusterIdPodsCreateRoute =
@@ -128,6 +158,18 @@ const DashboardClusterIdDeploymentsDeploymentIdRoute =
     path: '/dashboard/cluster/$id/deployments/$deploymentId',
     getParentRoute: () => rootRouteImport,
   } as any)
+const DashboardClusterIdConfigmapsCreateRoute =
+  DashboardClusterIdConfigmapsCreateRouteImport.update({
+    id: '/dashboard/cluster/$id/configmaps/create',
+    path: '/dashboard/cluster/$id/configmaps/create',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const DashboardClusterIdConfigmapsConfigmapIdRoute =
+  DashboardClusterIdConfigmapsConfigmapIdRouteImport.update({
+    id: '/dashboard/cluster/$id/configmaps/$configmapId',
+    path: '/dashboard/cluster/$id/configmaps/$configmapId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -138,15 +180,21 @@ export interface FileRoutesByFullPath {
   '/dashboard/': typeof DashboardIndexRoute
   '/dashboard/cluster/$id/nodes': typeof DashboardClusterIdNodesRoute
   '/dashboard/cluster/$id/': typeof DashboardClusterIdIndexRoute
+  '/dashboard/cluster/$id/configmaps/$configmapId': typeof DashboardClusterIdConfigmapsConfigmapIdRoute
+  '/dashboard/cluster/$id/configmaps/create': typeof DashboardClusterIdConfigmapsCreateRoute
   '/dashboard/cluster/$id/deployments/$deploymentId': typeof DashboardClusterIdDeploymentsDeploymentIdRoute
   '/dashboard/cluster/$id/deployments/create': typeof DashboardClusterIdDeploymentsCreateRoute
   '/dashboard/cluster/$id/ingresses/$ingressId': typeof DashboardClusterIdIngressesIngressIdRoute
   '/dashboard/cluster/$id/pods/$podId': typeof DashboardClusterIdPodsPodIdRoute
   '/dashboard/cluster/$id/pods/create': typeof DashboardClusterIdPodsCreateRoute
+  '/dashboard/cluster/$id/secrets/$secretId': typeof DashboardClusterIdSecretsSecretIdRoute
+  '/dashboard/cluster/$id/secrets/create': typeof DashboardClusterIdSecretsCreateRoute
   '/dashboard/cluster/$id/services/$serviceId': typeof DashboardClusterIdServicesServiceIdRoute
+  '/dashboard/cluster/$id/configmaps/': typeof DashboardClusterIdConfigmapsIndexRoute
   '/dashboard/cluster/$id/deployments/': typeof DashboardClusterIdDeploymentsIndexRoute
   '/dashboard/cluster/$id/ingresses/': typeof DashboardClusterIdIngressesIndexRoute
   '/dashboard/cluster/$id/pods/': typeof DashboardClusterIdPodsIndexRoute
+  '/dashboard/cluster/$id/secrets/': typeof DashboardClusterIdSecretsIndexRoute
   '/dashboard/cluster/$id/services/': typeof DashboardClusterIdServicesIndexRoute
 }
 export interface FileRoutesByTo {
@@ -158,15 +206,21 @@ export interface FileRoutesByTo {
   '/dashboard': typeof DashboardIndexRoute
   '/dashboard/cluster/$id/nodes': typeof DashboardClusterIdNodesRoute
   '/dashboard/cluster/$id': typeof DashboardClusterIdIndexRoute
+  '/dashboard/cluster/$id/configmaps/$configmapId': typeof DashboardClusterIdConfigmapsConfigmapIdRoute
+  '/dashboard/cluster/$id/configmaps/create': typeof DashboardClusterIdConfigmapsCreateRoute
   '/dashboard/cluster/$id/deployments/$deploymentId': typeof DashboardClusterIdDeploymentsDeploymentIdRoute
   '/dashboard/cluster/$id/deployments/create': typeof DashboardClusterIdDeploymentsCreateRoute
   '/dashboard/cluster/$id/ingresses/$ingressId': typeof DashboardClusterIdIngressesIngressIdRoute
   '/dashboard/cluster/$id/pods/$podId': typeof DashboardClusterIdPodsPodIdRoute
   '/dashboard/cluster/$id/pods/create': typeof DashboardClusterIdPodsCreateRoute
+  '/dashboard/cluster/$id/secrets/$secretId': typeof DashboardClusterIdSecretsSecretIdRoute
+  '/dashboard/cluster/$id/secrets/create': typeof DashboardClusterIdSecretsCreateRoute
   '/dashboard/cluster/$id/services/$serviceId': typeof DashboardClusterIdServicesServiceIdRoute
+  '/dashboard/cluster/$id/configmaps': typeof DashboardClusterIdConfigmapsIndexRoute
   '/dashboard/cluster/$id/deployments': typeof DashboardClusterIdDeploymentsIndexRoute
   '/dashboard/cluster/$id/ingresses': typeof DashboardClusterIdIngressesIndexRoute
   '/dashboard/cluster/$id/pods': typeof DashboardClusterIdPodsIndexRoute
+  '/dashboard/cluster/$id/secrets': typeof DashboardClusterIdSecretsIndexRoute
   '/dashboard/cluster/$id/services': typeof DashboardClusterIdServicesIndexRoute
 }
 export interface FileRoutesById {
@@ -179,15 +233,21 @@ export interface FileRoutesById {
   '/dashboard/': typeof DashboardIndexRoute
   '/dashboard/cluster/$id/nodes': typeof DashboardClusterIdNodesRoute
   '/dashboard/cluster/$id/': typeof DashboardClusterIdIndexRoute
+  '/dashboard/cluster/$id/configmaps/$configmapId': typeof DashboardClusterIdConfigmapsConfigmapIdRoute
+  '/dashboard/cluster/$id/configmaps/create': typeof DashboardClusterIdConfigmapsCreateRoute
   '/dashboard/cluster/$id/deployments/$deploymentId': typeof DashboardClusterIdDeploymentsDeploymentIdRoute
   '/dashboard/cluster/$id/deployments/create': typeof DashboardClusterIdDeploymentsCreateRoute
   '/dashboard/cluster/$id/ingresses/$ingressId': typeof DashboardClusterIdIngressesIngressIdRoute
   '/dashboard/cluster/$id/pods/$podId': typeof DashboardClusterIdPodsPodIdRoute
   '/dashboard/cluster/$id/pods/create': typeof DashboardClusterIdPodsCreateRoute
+  '/dashboard/cluster/$id/secrets/$secretId': typeof DashboardClusterIdSecretsSecretIdRoute
+  '/dashboard/cluster/$id/secrets/create': typeof DashboardClusterIdSecretsCreateRoute
   '/dashboard/cluster/$id/services/$serviceId': typeof DashboardClusterIdServicesServiceIdRoute
+  '/dashboard/cluster/$id/configmaps/': typeof DashboardClusterIdConfigmapsIndexRoute
   '/dashboard/cluster/$id/deployments/': typeof DashboardClusterIdDeploymentsIndexRoute
   '/dashboard/cluster/$id/ingresses/': typeof DashboardClusterIdIngressesIndexRoute
   '/dashboard/cluster/$id/pods/': typeof DashboardClusterIdPodsIndexRoute
+  '/dashboard/cluster/$id/secrets/': typeof DashboardClusterIdSecretsIndexRoute
   '/dashboard/cluster/$id/services/': typeof DashboardClusterIdServicesIndexRoute
 }
 export interface FileRouteTypes {
@@ -201,15 +261,21 @@ export interface FileRouteTypes {
     | '/dashboard/'
     | '/dashboard/cluster/$id/nodes'
     | '/dashboard/cluster/$id/'
+    | '/dashboard/cluster/$id/configmaps/$configmapId'
+    | '/dashboard/cluster/$id/configmaps/create'
     | '/dashboard/cluster/$id/deployments/$deploymentId'
     | '/dashboard/cluster/$id/deployments/create'
     | '/dashboard/cluster/$id/ingresses/$ingressId'
     | '/dashboard/cluster/$id/pods/$podId'
     | '/dashboard/cluster/$id/pods/create'
+    | '/dashboard/cluster/$id/secrets/$secretId'
+    | '/dashboard/cluster/$id/secrets/create'
     | '/dashboard/cluster/$id/services/$serviceId'
+    | '/dashboard/cluster/$id/configmaps/'
     | '/dashboard/cluster/$id/deployments/'
     | '/dashboard/cluster/$id/ingresses/'
     | '/dashboard/cluster/$id/pods/'
+    | '/dashboard/cluster/$id/secrets/'
     | '/dashboard/cluster/$id/services/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -221,15 +287,21 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/dashboard/cluster/$id/nodes'
     | '/dashboard/cluster/$id'
+    | '/dashboard/cluster/$id/configmaps/$configmapId'
+    | '/dashboard/cluster/$id/configmaps/create'
     | '/dashboard/cluster/$id/deployments/$deploymentId'
     | '/dashboard/cluster/$id/deployments/create'
     | '/dashboard/cluster/$id/ingresses/$ingressId'
     | '/dashboard/cluster/$id/pods/$podId'
     | '/dashboard/cluster/$id/pods/create'
+    | '/dashboard/cluster/$id/secrets/$secretId'
+    | '/dashboard/cluster/$id/secrets/create'
     | '/dashboard/cluster/$id/services/$serviceId'
+    | '/dashboard/cluster/$id/configmaps'
     | '/dashboard/cluster/$id/deployments'
     | '/dashboard/cluster/$id/ingresses'
     | '/dashboard/cluster/$id/pods'
+    | '/dashboard/cluster/$id/secrets'
     | '/dashboard/cluster/$id/services'
   id:
     | '__root__'
@@ -241,15 +313,21 @@ export interface FileRouteTypes {
     | '/dashboard/'
     | '/dashboard/cluster/$id/nodes'
     | '/dashboard/cluster/$id/'
+    | '/dashboard/cluster/$id/configmaps/$configmapId'
+    | '/dashboard/cluster/$id/configmaps/create'
     | '/dashboard/cluster/$id/deployments/$deploymentId'
     | '/dashboard/cluster/$id/deployments/create'
     | '/dashboard/cluster/$id/ingresses/$ingressId'
     | '/dashboard/cluster/$id/pods/$podId'
     | '/dashboard/cluster/$id/pods/create'
+    | '/dashboard/cluster/$id/secrets/$secretId'
+    | '/dashboard/cluster/$id/secrets/create'
     | '/dashboard/cluster/$id/services/$serviceId'
+    | '/dashboard/cluster/$id/configmaps/'
     | '/dashboard/cluster/$id/deployments/'
     | '/dashboard/cluster/$id/ingresses/'
     | '/dashboard/cluster/$id/pods/'
+    | '/dashboard/cluster/$id/secrets/'
     | '/dashboard/cluster/$id/services/'
   fileRoutesById: FileRoutesById
 }
@@ -262,15 +340,21 @@ export interface RootRouteChildren {
   DashboardIndexRoute: typeof DashboardIndexRoute
   DashboardClusterIdNodesRoute: typeof DashboardClusterIdNodesRoute
   DashboardClusterIdIndexRoute: typeof DashboardClusterIdIndexRoute
+  DashboardClusterIdConfigmapsConfigmapIdRoute: typeof DashboardClusterIdConfigmapsConfigmapIdRoute
+  DashboardClusterIdConfigmapsCreateRoute: typeof DashboardClusterIdConfigmapsCreateRoute
   DashboardClusterIdDeploymentsDeploymentIdRoute: typeof DashboardClusterIdDeploymentsDeploymentIdRoute
   DashboardClusterIdDeploymentsCreateRoute: typeof DashboardClusterIdDeploymentsCreateRoute
   DashboardClusterIdIngressesIngressIdRoute: typeof DashboardClusterIdIngressesIngressIdRoute
   DashboardClusterIdPodsPodIdRoute: typeof DashboardClusterIdPodsPodIdRoute
   DashboardClusterIdPodsCreateRoute: typeof DashboardClusterIdPodsCreateRoute
+  DashboardClusterIdSecretsSecretIdRoute: typeof DashboardClusterIdSecretsSecretIdRoute
+  DashboardClusterIdSecretsCreateRoute: typeof DashboardClusterIdSecretsCreateRoute
   DashboardClusterIdServicesServiceIdRoute: typeof DashboardClusterIdServicesServiceIdRoute
+  DashboardClusterIdConfigmapsIndexRoute: typeof DashboardClusterIdConfigmapsIndexRoute
   DashboardClusterIdDeploymentsIndexRoute: typeof DashboardClusterIdDeploymentsIndexRoute
   DashboardClusterIdIngressesIndexRoute: typeof DashboardClusterIdIngressesIndexRoute
   DashboardClusterIdPodsIndexRoute: typeof DashboardClusterIdPodsIndexRoute
+  DashboardClusterIdSecretsIndexRoute: typeof DashboardClusterIdSecretsIndexRoute
   DashboardClusterIdServicesIndexRoute: typeof DashboardClusterIdServicesIndexRoute
 }
 
@@ -339,6 +423,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardClusterIdServicesIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dashboard/cluster/$id/secrets/': {
+      id: '/dashboard/cluster/$id/secrets/'
+      path: '/dashboard/cluster/$id/secrets'
+      fullPath: '/dashboard/cluster/$id/secrets/'
+      preLoaderRoute: typeof DashboardClusterIdSecretsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/dashboard/cluster/$id/pods/': {
       id: '/dashboard/cluster/$id/pods/'
       path: '/dashboard/cluster/$id/pods'
@@ -360,11 +451,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardClusterIdDeploymentsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dashboard/cluster/$id/configmaps/': {
+      id: '/dashboard/cluster/$id/configmaps/'
+      path: '/dashboard/cluster/$id/configmaps'
+      fullPath: '/dashboard/cluster/$id/configmaps/'
+      preLoaderRoute: typeof DashboardClusterIdConfigmapsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/dashboard/cluster/$id/services/$serviceId': {
       id: '/dashboard/cluster/$id/services/$serviceId'
       path: '/dashboard/cluster/$id/services/$serviceId'
       fullPath: '/dashboard/cluster/$id/services/$serviceId'
       preLoaderRoute: typeof DashboardClusterIdServicesServiceIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard/cluster/$id/secrets/create': {
+      id: '/dashboard/cluster/$id/secrets/create'
+      path: '/dashboard/cluster/$id/secrets/create'
+      fullPath: '/dashboard/cluster/$id/secrets/create'
+      preLoaderRoute: typeof DashboardClusterIdSecretsCreateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard/cluster/$id/secrets/$secretId': {
+      id: '/dashboard/cluster/$id/secrets/$secretId'
+      path: '/dashboard/cluster/$id/secrets/$secretId'
+      fullPath: '/dashboard/cluster/$id/secrets/$secretId'
+      preLoaderRoute: typeof DashboardClusterIdSecretsSecretIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard/cluster/$id/pods/create': {
@@ -402,6 +514,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardClusterIdDeploymentsDeploymentIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dashboard/cluster/$id/configmaps/create': {
+      id: '/dashboard/cluster/$id/configmaps/create'
+      path: '/dashboard/cluster/$id/configmaps/create'
+      fullPath: '/dashboard/cluster/$id/configmaps/create'
+      preLoaderRoute: typeof DashboardClusterIdConfigmapsCreateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard/cluster/$id/configmaps/$configmapId': {
+      id: '/dashboard/cluster/$id/configmaps/$configmapId'
+      path: '/dashboard/cluster/$id/configmaps/$configmapId'
+      fullPath: '/dashboard/cluster/$id/configmaps/$configmapId'
+      preLoaderRoute: typeof DashboardClusterIdConfigmapsConfigmapIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -414,6 +540,10 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardIndexRoute: DashboardIndexRoute,
   DashboardClusterIdNodesRoute: DashboardClusterIdNodesRoute,
   DashboardClusterIdIndexRoute: DashboardClusterIdIndexRoute,
+  DashboardClusterIdConfigmapsConfigmapIdRoute:
+    DashboardClusterIdConfigmapsConfigmapIdRoute,
+  DashboardClusterIdConfigmapsCreateRoute:
+    DashboardClusterIdConfigmapsCreateRoute,
   DashboardClusterIdDeploymentsDeploymentIdRoute:
     DashboardClusterIdDeploymentsDeploymentIdRoute,
   DashboardClusterIdDeploymentsCreateRoute:
@@ -422,12 +552,18 @@ const rootRouteChildren: RootRouteChildren = {
     DashboardClusterIdIngressesIngressIdRoute,
   DashboardClusterIdPodsPodIdRoute: DashboardClusterIdPodsPodIdRoute,
   DashboardClusterIdPodsCreateRoute: DashboardClusterIdPodsCreateRoute,
+  DashboardClusterIdSecretsSecretIdRoute:
+    DashboardClusterIdSecretsSecretIdRoute,
+  DashboardClusterIdSecretsCreateRoute: DashboardClusterIdSecretsCreateRoute,
   DashboardClusterIdServicesServiceIdRoute:
     DashboardClusterIdServicesServiceIdRoute,
+  DashboardClusterIdConfigmapsIndexRoute:
+    DashboardClusterIdConfigmapsIndexRoute,
   DashboardClusterIdDeploymentsIndexRoute:
     DashboardClusterIdDeploymentsIndexRoute,
   DashboardClusterIdIngressesIndexRoute: DashboardClusterIdIngressesIndexRoute,
   DashboardClusterIdPodsIndexRoute: DashboardClusterIdPodsIndexRoute,
+  DashboardClusterIdSecretsIndexRoute: DashboardClusterIdSecretsIndexRoute,
   DashboardClusterIdServicesIndexRoute: DashboardClusterIdServicesIndexRoute,
 }
 export const routeTree = rootRouteImport

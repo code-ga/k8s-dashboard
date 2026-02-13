@@ -11,6 +11,8 @@ import {
 	Activity,
 	Layers,
 	Network,
+	FileJson,
+	Lock,
 } from "lucide-react";
 
 export const Route = createFileRoute("/dashboard/cluster/$id/")({
@@ -144,6 +146,26 @@ function ClusterOverview() {
 								<Layers className="h-5 w-5" /> Ingresses
 							</CardTitle>
 							<CardContent>Manage service exposure</CardContent>
+						</CardHeader>
+					</Card>
+				</Link>
+				<Link to={`/dashboard/cluster/$id/configmaps`} params={{ id }}>
+					<Card className="hover:bg-muted/50 transition-colors cursor-pointer">
+						<CardHeader>
+							<CardTitle className="flex items-center gap-2">
+								<FileJson className="h-5 w-5" /> ConfigMaps
+							</CardTitle>
+							<CardContent>Manage configuration data</CardContent>
+						</CardHeader>
+					</Card>
+				</Link>
+				<Link to={`/dashboard/cluster/$id/secrets`} params={{ id }}>
+					<Card className="hover:bg-muted/50 transition-colors cursor-pointer">
+						<CardHeader>
+							<CardTitle className="flex items-center gap-2">
+								<Lock className="h-5 w-5" /> Secrets
+							</CardTitle>
+							<CardContent>Manage sensitive information</CardContent>
 						</CardHeader>
 					</Card>
 				</Link>

@@ -69,6 +69,22 @@ export interface IngressRouteDTO {
 	labels?: Record<string, string>;
 }
 
+export interface ConfigMapDTO {
+	name: string;
+	namespace: string;
+	data?: Record<string, string>;
+	binaryData?: Record<string, string>;
+	labels?: Record<string, string>;
+}
+
+export interface SecretDTO {
+	name: string;
+	namespace: string;
+	type?: string;
+	data?: Record<string, string>;
+	labels?: Record<string, string>;
+}
+
 export const generatePodManifest = (dto: PodDTO): string => {
 	const manifest = {
 		apiVersion: "v1",
@@ -270,4 +286,34 @@ export const generateIngressRouteManifest = (dto: IngressRouteDTO): string => {
 	}
 
 	throw new Error(`Unsupported protocol: ${dto.protocol}`);
+};
+
+export const generateConfigMapManifest = (dto: ConfigMapDTO): string => {
+	const manifest = {
+		apiVersion: "v1",
+		kind: "ConfigMap",
+		metadata: {
+			name: dto.name,
+			namespace: dto.namespace,
+			labels: dto.labels,
+		},
+		data: dto.data,
+		binaryData: dto.binaryData,
+	};
+	return YAML.stringify(manifest);
+};
+
+export const generateSecretManifest = (dto: SecretDTO): string => {
+	const manifest = {
+		apiVersion: "v1",
+		kind: "Secret",
+		type: dto.type || "Opaque",
+		metadata: {
+			name: dto.name,
+			namespace: dto.namespace,
+			labels: dto.labels,
+		},
+		data: dto.data || {}, // Already base64 encoded
+	};
+	return YAML.stringify(manifest);
 };

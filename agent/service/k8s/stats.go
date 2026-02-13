@@ -377,6 +377,46 @@ func (kc *K8sClient) GetFullClusterState() (*pb.Heartbeat, error) {
 
 	}
 
+	// Fetch ConfigMaps
+	cms, err := kc.GetConfigMaps("")
+	if err != nil {
+		fmt.Printf("Warning: Failed to fetch config maps: %v\n", err)
+	}
+	var pbConfigMaps []*pb.ConfigMap
+	if cms != nil {
+		for _, cm := range cms.Items {
+			pbConfigMaps = append(pbConfigMaps, &pb.ConfigMap{
+				Name:       cm.Name,
+				Namespace:  cm.Namespace,
+				Data:       cm.Data,
+				BinaryData: cm.BinaryData,
+				Uid:        string(cm.UID),
+				Labels:     cm.Labels,
+				Immutable:  cm.Immutable != nil && *cm.Immutable,
+			})
+		}
+	}
+
+	// Fetch Secrets
+	secs, err := kc.GetSecrets("")
+	if err != nil {
+		fmt.Printf("Warning: Failed to fetch secrets: %v\n", err)
+	}
+	var pbSecrets []*pb.Secret
+	if secs != nil {
+		for _, sec := range secs.Items {
+			pbSecrets = append(pbSecrets, &pb.Secret{
+				Name:      sec.Name,
+				Namespace: sec.Namespace,
+				Data:      sec.Data,
+				Type:      string(sec.Type),
+				Uid:       string(sec.UID),
+				Labels:    sec.Labels,
+				Immutable: sec.Immutable != nil && *sec.Immutable,
+			})
+		}
+	}
+
 	clusterDomain, err := kc.GetClusterDomain()
 	if err != nil {
 		clusterDomain = "cluster.local" // default
@@ -394,6 +434,8 @@ func (kc *K8sClient) GetFullClusterState() (*pb.Heartbeat, error) {
 		Pods:        pbPods,
 		Services:    pbServices,
 		Deployments: pbDeployments,
+		ConfigMaps:  pbConfigMaps,
+		Secrets:     pbSecrets,
 		Timestamp:   time.Now().Unix(),
 	}
 

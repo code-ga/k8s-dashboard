@@ -98,3 +98,17 @@ When a user deploys via `docker-compose.yml`, the agent parses it and automatica
 
 ## 📝 License
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+### 📌 Note
+This is a work-in-progress. Expect breaking changes and incomplete features. Contributions welcome!
+
+## 📦 Roadmap
+- [ ] Add support for `docker-compose.yml` parsing and injection
+- [ ] ConfigMap and Secret management
+- [ ] Add more infrastructure components (Redis, Kafka, etc.)
+- [ ] Implement the frontend UI for cluster management
+
+## 🤝 Contributing
+Contributions are welcome! Please open an issue or submit a pull request. 
+
+(I am extreme noob so i hope you can help me to make this project better and production ready)

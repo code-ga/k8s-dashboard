@@ -193,6 +193,7 @@ export const k8sClusterNode = pgTable(
 			.$onUpdate(() => /* @__PURE__ */ new Date())
 			.notNull(),
 		k8sUid: text("k8s_uid"),
+		autoCreated: boolean("auto_created").default(false).notNull(), // whether this node is auto created by agent when it reports a new node name
 	},
 	(table) => ({
 		clusterUidIdx: uniqueIndex("node_cluster_uid_idx").on(
@@ -241,6 +242,8 @@ export const k8sDeployments = pgTable(
 		lastAccessedAt: timestamp("last_accessed_at"),
 		isAutoScaling: boolean("is_auto_scaling").default(false).notNull(),
 		isAlwaysRunning: boolean("is_always_running").default(false).notNull(),
+
+		autoCreated: boolean("is_auto_created").default(false).notNull(), // create by agent when it detects a deployment not in DB
 	},
 	(table) => ({
 		clusterUidIdx: uniqueIndex("dep_cluster_uid_idx").on(
@@ -294,6 +297,7 @@ export const k8sPods = pgTable(
 		status: text("status").notNull().default("Unknown"),
 		cpuUsage: integer("cpu_usage").default(0).notNull(),
 		memoryUsage: integer("memory_usage").default(0).notNull(),
+		autoCreated: boolean("is_auto_created").default(false).notNull(), // created by agent when it detects a pod not in DB
 	},
 	(table) => ({
 		clusterUidIdx: uniqueIndex("pod_cluster_uid_idx").on(
@@ -333,6 +337,9 @@ export const k8sServices = pgTable(
 			.$onUpdate(() => /* @__PURE__ */ new Date())
 			.notNull(),
 		k8sUid: text("k8s_uid"),
+		status: text("status").notNull().default("Unknown"),
+
+		autoCreated: boolean("is_auto_created").default(false).notNull(), // created by agent when it detects a service not in DB
 	},
 	(table) => ({
 		clusterUidIdx: uniqueIndex("svc_cluster_uid_idx").on(
@@ -351,9 +358,11 @@ export const k8sIngresses = pgTable(
 			.references(() => k8sCluster.id, { onDelete: "cascade" }),
 		name: text("name").notNull(),
 		namespace: text("namespace").notNull(),
-		serviceId: integer("service_id").references(() => k8sServices.id, {
-			onDelete: "set null",
-		}).notNull(),
+		serviceId: integer("service_id")
+			.references(() => k8sServices.id, {
+				onDelete: "set null",
+			})
+			.notNull(),
 		serviceName: text("service_name"),
 		domain: text("domain"),
 		port: integer("port"), // gateway port
@@ -364,9 +373,73 @@ export const k8sIngresses = pgTable(
 		updatedAt: timestamp("updated_at")
 			.$onUpdate(() => /* @__PURE__ */ new Date())
 			.notNull(),
+
+		autoCreated: boolean("is_auto_created").default(false).notNull(), // created by agent when it detects an ingress not in DB
 	},
 	(table) => ({
 		clusterUidIdx: uniqueIndex("ing_cluster_uid_idx").on(
+			table.clusterId,
+			table.k8sUid,
+		),
+	}),
+);
+
+export const k8sConfigMaps = pgTable(
+	"k8sConfigMaps",
+	{
+		id: serial("id").primaryKey(),
+		clusterId: integer("cluster_id")
+			.notNull()
+			.references(() => k8sCluster.id, { onDelete: "cascade" }),
+		ownerId: text("owner_id").references(() => profile.id, {
+			onDelete: "set null",
+		}),
+		name: text("name").notNull(),
+		namespace: text("namespace").notNull(),
+		data: text("data"), // Encrypted JSON string
+		binaryData: text("binary_data"), // Encrypted JSON string of base64
+		labels: text("labels"), // JSON string
+		k8sUid: text("k8s_uid"),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+		updatedAt: timestamp("updated_at")
+			.$onUpdate(() => /* @__PURE__ */ new Date())
+			.notNull(),
+
+		autoCreated: boolean("is_auto_created").default(false).notNull(), // created by agent when it detects a configmap not in DB
+	},
+	(table) => ({
+		clusterUidIdx: uniqueIndex("cm_cluster_uid_idx").on(
+			table.clusterId,
+			table.k8sUid,
+		),
+	}),
+);
+
+export const k8sSecrets = pgTable(
+	"k8sSecrets",
+	{
+		id: serial("id").primaryKey(),
+		clusterId: integer("cluster_id")
+			.notNull()
+			.references(() => k8sCluster.id, { onDelete: "cascade" }),
+		ownerId: text("owner_id").references(() => profile.id, {
+			onDelete: "set null",
+		}),
+		name: text("name").notNull(),
+		namespace: text("namespace").notNull(),
+		type: text("type"),
+		data: text("data"), // Encrypted JSON string
+		labels: text("labels"), // JSON string
+		k8sUid: text("k8s_uid"),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+		updatedAt: timestamp("updated_at")
+			.$onUpdate(() => /* @__PURE__ */ new Date())
+			.notNull(),
+
+		autoCreated: boolean("is_auto_created").default(false).notNull(), // created by agent when it detects a secret not in DB
+	},
+	(table) => ({
+		clusterUidIdx: uniqueIndex("sec_cluster_uid_idx").on(
 			table.clusterId,
 			table.k8sUid,
 		),
@@ -416,6 +489,8 @@ export const schema = {
 	k8sServices,
 	k8sIngresses,
 	k8sDeployments,
+	k8sConfigMaps,
+	k8sSecrets,
 	agentCommands,
 	gatewayPorts,
 	AppState,
@@ -431,6 +506,8 @@ export const schemaRelations = defineRelations(schema, (r) => ({
 		deployments: r.many.k8sDeployments(),
 		services: r.many.k8sServices(),
 		ingresses: r.many.k8sIngresses(),
+		configMaps: r.many.k8sConfigMaps(),
+		secrets: r.many.k8sSecrets(),
 		agentCommands: r.many.agentCommands(),
 	},
 	clusterAgent: {
@@ -539,6 +616,26 @@ export const schemaRelations = defineRelations(schema, (r) => ({
 		service: r.one.k8sServices({
 			from: r.gatewayPorts.serviceId,
 			to: r.k8sServices.id,
+		}),
+	},
+	k8sConfigMaps: {
+		cluster: r.one.k8sCluster({
+			from: r.k8sConfigMaps.clusterId,
+			to: r.k8sCluster.id,
+		}),
+		owner: r.one.profile({
+			from: r.k8sConfigMaps.ownerId,
+			to: r.profile.id,
+		}),
+	},
+	k8sSecrets: {
+		cluster: r.one.k8sCluster({
+			from: r.k8sSecrets.clusterId,
+			to: r.k8sCluster.id,
+		}),
+		owner: r.one.profile({
+			from: r.k8sSecrets.ownerId,
+			to: r.profile.id,
 		}),
 	},
 }));

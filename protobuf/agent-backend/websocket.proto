@@ -59,6 +59,12 @@ message Heartbeat {
   // List of deployments
   repeated Deployment deployments = 6;
 
+  // List of config maps
+  repeated ConfigMap config_maps = 7;
+
+  // List of secrets
+  repeated Secret secrets = 8;
+
   // Timestamp of the heartbeat
   int64 timestamp = 5;
 }
@@ -172,6 +178,26 @@ message Service {
   repeated ServicePort ports = 9;
 }
 
+message ConfigMap {
+  string name = 1;
+  string namespace = 2;
+  map<string, string> data = 3;
+  map<string, bytes> binary_data = 4;
+  string uid = 5;
+  map<string, string> labels = 6;
+  bool immutable = 7;
+}
+
+message Secret {
+  string name = 1;
+  string namespace = 2;
+  map<string, bytes> data = 3;
+  string type = 4;
+  string uid = 5;
+  map<string, string> labels = 6;
+  bool immutable = 7;
+}
+
 message Command {
   string id = 1;
   enum CommandType {
@@ -192,6 +218,10 @@ message Command {
     CREATE_RESOURCE = 14;
     CREATE_INGRESS = 15;
     DELETE_INGRESS = 16;
+    CREATE_CONFIGMAP = 17;
+    DELETE_CONFIGMAP = 18;
+    CREATE_SECRET = 19;
+    DELETE_SECRET = 20;
   }
   CommandType type = 2;
   
