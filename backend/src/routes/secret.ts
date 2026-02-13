@@ -8,7 +8,6 @@ import { agentManagerService } from "../services/agentManager";
 import { baseResponseSchema, errorResponseSchema } from "../types";
 import { decrypt, encrypt } from "../utils/crypto";
 import { eq } from "drizzle-orm";
-import YAML from "yaml";
 import { generateSecretManifest } from "../utils/k8s-manifest";
 import { Command_CommandType } from "../../pb-generated/agent-backend/websocket";
 

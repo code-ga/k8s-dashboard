@@ -1,7 +1,6 @@
 import { Type } from "@sinclair/typebox";
 import { eq } from "drizzle-orm";
 import { Elysia } from "elysia";
-import YAML from "yaml";
 import { Command_CommandType } from "../../pb-generated/agent-backend/websocket";
 import { db } from "../database";
 import { schema } from "../database/schema";
