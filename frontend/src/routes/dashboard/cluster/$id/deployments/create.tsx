@@ -15,6 +15,7 @@ import { useForm } from "@tanstack/react-form";
 import { EnvEditor, type EnvVar } from "@/components/shared/env-editor";
 import { z } from "zod";
 import { useMutation } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
 import {
 	createFileRoute,
@@ -23,6 +24,13 @@ import {
 	useParams,
 } from "@tanstack/react-router";
 import { useState } from "react";
+import {
+	Select,
+	SelectTrigger,
+	SelectContent,
+	SelectItem,
+	SelectValue,
+} from "@/components/ui/select";
 
 export const Route = createFileRoute(
 	"/dashboard/cluster/$id/deployments/create",
@@ -60,7 +68,32 @@ function CreateDeploymentPage() {
 	});
 	const navigate = useNavigate();
 	const [envVars, setEnvVars] = useState<EnvVar[]>([]);
+	const [configMapEnvRefs, setConfigMapEnvRefs] = useState<any[]>([]);
+	const [configMapEnvFromRefs, setConfigMapEnvFromRefs] = useState<any[]>([]);
+	const [secretEnvRefs, setSecretEnvRefs] = useState<any[]>([]);
+	const [secretEnvFromRefs, setSecretEnvFromRefs] = useState<any[]>([]);
 
+	// temp inputs
+
+	const { data: configMaps } = useQuery({
+		queryKey: ["configmaps", clusterId],
+		queryFn: async () => {
+			const res = await api.api.configmaps({ clusterId }).get();
+			if (res.error) throw res.error;
+			return res.data.data as any[];
+		},
+	});
+
+	const { data: secrets } = useQuery({
+		queryKey: ["secrets", clusterId],
+		queryFn: async () => {
+			const res = await api.api.secrets({ clusterId }).get();
+			if (res.error) throw res.error;
+			return res.data.data as any[];
+		},
+	});
+
+	// refs state for RefsEditor
 	const mutation = useMutation({
 		mutationFn: async (values: z.infer<typeof deploymentSchema>) => {
 			const parseLabels = (str: string | undefined) => {
@@ -69,9 +102,9 @@ function CreateDeploymentPage() {
 				str.split(",").forEach((pair) => {
 					const [key, value] = pair.split("=").map((s) => s.trim());
 					if (key && value) result[key] = value;
-				})
+				});
 				return Object.keys(result).length > 0 ? result : undefined;
-			}
+			};
 
 			const res = await api.api.deployments({ clusterId }).post({
 				name: values.name,
@@ -95,19 +128,37 @@ function CreateDeploymentPage() {
 						? envVars.reduce(
 								(acc, curr) => {
 									if (curr.name) acc[curr.name] = curr.value;
-									return acc
+									return acc;
 								},
 								{} as Record<string, string>,
 							)
 						: undefined,
+				configMapRefs:
+					configMapEnvRefs.length > 0 || configMapEnvFromRefs.length > 0
+						? {
+								env: configMapEnvRefs.length > 0 ? configMapEnvRefs : undefined,
+								envFrom:
+									configMapEnvFromRefs.length > 0
+										? configMapEnvFromRefs
+										: undefined,
+							}
+						: undefined,
+				secretRefs:
+					secretEnvRefs.length > 0 || secretEnvFromRefs.length > 0
+						? {
+								env: secretEnvRefs.length > 0 ? secretEnvRefs : undefined,
+								envFrom:
+									secretEnvFromRefs.length > 0 ? secretEnvFromRefs : undefined,
+							}
+						: undefined,
 				labels: parseLabels(values.labels),
 				selector: parseLabels(values.selector),
-			})
+			});
 
 			if (res.error) {
 				throw new Error(
 					res.error.value?.message || "Failed to create deployment",
-				)
+				);
 			}
 
 			return res.data;
@@ -117,7 +168,7 @@ function CreateDeploymentPage() {
 			navigate({
 				to: `/dashboard/cluster/$id/deployments`,
 				params: { id: clusterId },
-			})
+			});
 		},
 		onError: (error) => {
 			toast.error(error.message);
@@ -176,9 +227,9 @@ function CreateDeploymentPage() {
 				<CardContent>
 					<form
 						onSubmit={(e) => {
-							e.preventDefault()
-							e.stopPropagation()
-							form.handleSubmit()
+							e.preventDefault();
+							e.stopPropagation();
+							form.handleSubmit();
 						}}
 						className="space-y-6"
 					>
@@ -385,6 +436,25 @@ function CreateDeploymentPage() {
 						<div className="space-y-4">
 							<h3 className="text-lg font-medium">Environment Variables</h3>
 							<EnvEditor variables={envVars} onChange={setEnvVars} />
+							<div className="pt-4">
+								<RefsEditor
+									clusterId={clusterId}
+									configMapRefs={{
+										env: configMapEnvRefs,
+										envFrom: configMapEnvFromRefs,
+									}}
+									secretRefs={{
+										env: secretEnvRefs,
+										envFrom: secretEnvFromRefs,
+									}}
+									onChange={(r: any) => {
+										setConfigMapEnvRefs(r.configMapRefs?.env || []);
+										setConfigMapEnvFromRefs(r.configMapRefs?.envFrom || []);
+										setSecretEnvRefs(r.secretRefs?.env || []);
+										setSecretEnvFromRefs(r.secretRefs?.envFrom || []);
+									}}
+								/>
+							</div>
 						</div>
 
 						<div className="flex justify-end gap-4">
@@ -404,5 +474,5 @@ function CreateDeploymentPage() {
 				</CardContent>
 			</Card>
 		</div>
-	)
+	);
 }

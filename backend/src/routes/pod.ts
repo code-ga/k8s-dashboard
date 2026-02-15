@@ -9,6 +9,12 @@ import { agentManagerService } from "../services/agentManager";
 import { baseResponseSchema, errorResponseSchema } from "../types";
 import { decrypt, encrypt } from "../utils/crypto";
 import { generatePodManifest } from "../utils/k8s-manifest";
+import {
+	insertAllPodResourceRefs,
+	fetchAllPodResourceRefs,
+	updateAllPodResourceRefs,
+	transformToJsonbFormat,
+} from "../utils/resource-refs";
 const parseCpuStr = (cpu: string): number => {
 	if (cpu.endsWith("m")) return parseInt(cpu);
 	return parseFloat(cpu) * 1000;
@@ -21,7 +27,7 @@ const parseMemoryStr = (mem: string): number => {
 	if (mem.endsWith("Ti")) return parseInt(mem) * 1024 * 1024;
 	return parseInt(mem);
 };
-import { eq } from "drizzle-orm";
+import { eq, type InferInsertModel } from "drizzle-orm";
 
 export interface WebSocketData {
 	// ws: WebSocket;
@@ -215,7 +221,25 @@ export const podRoute = new Elysia({
 							timestamp: Date.now(),
 						});
 					}
-					const podData = { ...pod };
+
+					// Fetch resource refs from normalized tables
+					const { ports, refs } = await fetchAllPodResourceRefs(pod.id);
+
+					const podData = {
+						...pod,
+						ports,
+						configMapRefs: refs.configMapRefs || {
+							env: [],
+							envFrom: [],
+							volumes: [],
+						},
+						secretRefs: refs.secretRefs || {
+							env: [],
+							envFrom: [],
+							volumes: [],
+						},
+					};
+
 					if (podData.envVariables) {
 						// Only decrypt if user is owner or manager
 						const isManager = checkPermission(ctx.profile?.permission || [], [
@@ -289,39 +313,41 @@ export const podRoute = new Elysia({
 
 					let newPod: SchemaStatic<typeof dbSchemaTypes.k8sPods> | undefined =
 						undefined;
-
+					const createData: InferInsertModel<typeof schema.k8sPods> = {
+						clusterId: cluster.id,
+						ownerId: ctx.profile.id,
+						name: body.name,
+						namespace: body.namespace,
+						dockerImage: body.image,
+						command: body.command ? body.command.join(" ") : "",
+						args: body.args ? body.args.join(" ") : "",
+						envVariables: envEncrypted,
+						status: "Pending",
+						cpuRequest: 0,
+						cpuLimit: 0,
+						memoryRequest: 0,
+						memoryLimit: 0,
+						updatedAt: new Date(),
+					};
 					try {
 						[newPod] = await db
 							.insert(schema.k8sPods)
-							.values({
-								clusterId: cluster.id,
-								ownerId: ctx.profile.id,
-								name: body.name,
-								namespace: body.namespace,
-								dockerImage: body.image,
-								command: body.command ? body.command.join(" ") : "",
-								args: body.args ? body.args.join(" ") : "",
-								envVariables: envEncrypted,
-								status: "Pending",
-								ports: body.ports || [],
-								cpuRequest: 0,
-								cpuLimit: 0,
-								memoryRequest: 0,
-								memoryLimit: 0,
-								configMapRefs: body.configMapRefs || {
-									env: [],
-									envFrom: [],
-									volumes: [],
-								},
-								secretRefs: body.secretRefs || {
-									env: [],
-									envFrom: [],
-									volumes: [],
-								},
-								updatedAt: new Date(),
-							})
-
+							.values(createData)
 							.returning();
+
+						if (!newPod) {
+							return ctx.status(500, {
+								success: false,
+								message: "Failed to create pod",
+								timestamp: Date.now(),
+							});
+						}
+
+						// Insert refs into normalized tables
+						await insertAllPodResourceRefs(newPod.id, body.ports || [], {
+							configMapRefs: body.configMapRefs,
+							secretRefs: body.secretRefs,
+						});
 					} catch (dbError: any) {
 						console.error("DB Insert Failed:", dbError);
 						return ctx.status(500, {
@@ -336,7 +362,7 @@ export const podRoute = new Elysia({
 						if (!newPod) {
 							throw new Error("Pod not created");
 						}
-						const bodyAny = body as any;
+						const bodyAny = body;
 						const manifest = generatePodManifest({
 							name: body.name,
 							namespace: body.namespace,
@@ -639,13 +665,7 @@ export const podRoute = new Elysia({
 					if (body.args) updateData.args = body.args.join(" ");
 					if (body.env)
 						updateData.envVariables = encrypt(JSON.stringify(body.env));
-					if (body.ports) {
-						updateData.ports = body.ports;
-					}
 					if (body.labels) updateData.labels = JSON.stringify(body.labels);
-					if (bodyAny.configMapRefs)
-						updateData.configMapRefs = bodyAny.configMapRefs;
-					if (bodyAny.secretRefs) updateData.secretRefs = bodyAny.secretRefs;
 
 					// Parse resources if provided
 					if (body.resources) {
@@ -668,6 +688,14 @@ export const podRoute = new Elysia({
 							.update(schema.k8sPods)
 							.set(updateData)
 							.where(eq(schema.k8sPods.id, podId));
+
+						// Update resource refs in normalized tables if provided
+						if (body.ports || bodyAny.configMapRefs || bodyAny.secretRefs) {
+							await updateAllPodResourceRefs(podId, body.ports || [], {
+								configMapRefs: bodyAny.configMapRefs,
+								secretRefs: bodyAny.secretRefs,
+							});
+						}
 					} catch (dbError: any) {
 						console.error("DB Update Failed:", dbError);
 						return ctx.status(500, {
@@ -752,6 +780,82 @@ export const podRoute = new Elysia({
 							}),
 						),
 						labels: Type.Optional(Type.Record(Type.String(), Type.String())),
+						configMapRefs: Type.Optional(
+							Type.Object({
+								env: Type.Optional(
+									Type.Array(
+										Type.Object({
+											name: Type.String(),
+											configMapName: Type.String(),
+											key: Type.String(),
+										}),
+									),
+								),
+								envFrom: Type.Optional(
+									Type.Array(
+										Type.Object({
+											configMapName: Type.String(),
+											prefix: Type.Optional(Type.String()),
+										}),
+									),
+								),
+								volumes: Type.Optional(
+									Type.Array(
+										Type.Object({
+											name: Type.String(),
+											configMapName: Type.String(),
+											mountPath: Type.String(),
+											items: Type.Optional(
+												Type.Array(
+													Type.Object({
+														key: Type.String(),
+														path: Type.String(),
+													}),
+												),
+											),
+										}),
+									),
+								),
+							}),
+						),
+						secretRefs: Type.Optional(
+							Type.Object({
+								env: Type.Optional(
+									Type.Array(
+										Type.Object({
+											name: Type.String(),
+											secretName: Type.String(),
+											key: Type.String(),
+										}),
+									),
+								),
+								envFrom: Type.Optional(
+									Type.Array(
+										Type.Object({
+											secretName: Type.String(),
+											prefix: Type.Optional(Type.String()),
+										}),
+									),
+								),
+								volumes: Type.Optional(
+									Type.Array(
+										Type.Object({
+											name: Type.String(),
+											secretName: Type.String(),
+											mountPath: Type.String(),
+											items: Type.Optional(
+												Type.Array(
+													Type.Object({
+														key: Type.String(),
+														path: Type.String(),
+													}),
+												),
+											),
+										}),
+									),
+								),
+							}),
+						),
 					}),
 					response: {
 						200: baseResponseSchema(Type.Optional(Type.String())),

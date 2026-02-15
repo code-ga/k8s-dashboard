@@ -23,6 +23,7 @@ import {
 	useParams,
 } from "@tanstack/react-router";
 import { useState } from "react";
+import RefsEditor from "@/components/shared/refs-editor";
 
 export const Route = createFileRoute("/dashboard/cluster/$id/pods/create")({
 	component: CreatePodPage,
@@ -55,6 +56,12 @@ function CreatePodPage() {
 	});
 	const navigate = useNavigate();
 	const [envVars, setEnvVars] = useState<EnvVar[]>([]);
+	const [configMapEnvRefs, setConfigMapEnvRefs] = useState<any[]>([]);
+	const [configMapEnvFromRefs, setConfigMapEnvFromRefs] = useState<any[]>([]);
+	const [secretEnvRefs, setSecretEnvRefs] = useState<any[]>([]);
+	const [secretEnvFromRefs, setSecretEnvFromRefs] = useState<any[]>([]);
+
+	// refs state for RefsEditor
 
 	const mutation = useMutation({
 		mutationFn: async (values: z.infer<typeof podSchema>) => {
@@ -79,12 +86,30 @@ function CreatePodPage() {
 						? envVars.reduce(
 								(acc, curr) => {
 									if (curr.name) acc[curr.name] = curr.value;
-									return acc
+									return acc;
 								},
 								{} as Record<string, string>,
 							)
 						: undefined,
-			})
+				configMapRefs:
+					configMapEnvRefs.length > 0 || configMapEnvFromRefs.length > 0
+						? {
+								env: configMapEnvRefs.length > 0 ? configMapEnvRefs : undefined,
+								envFrom:
+									configMapEnvFromRefs.length > 0
+										? configMapEnvFromRefs
+										: undefined,
+							}
+						: undefined,
+				secretRefs:
+					secretEnvRefs.length > 0 || secretEnvFromRefs.length > 0
+						? {
+								env: secretEnvRefs.length > 0 ? secretEnvRefs : undefined,
+								envFrom:
+									secretEnvFromRefs.length > 0 ? secretEnvFromRefs : undefined,
+							}
+						: undefined,
+			});
 
 			if (res.error) {
 				throw new Error(res.error.value?.message || "Failed to create pod");
@@ -97,7 +122,7 @@ function CreatePodPage() {
 			navigate({
 				to: `/dashboard/cluster/$id/pods`,
 				params: { id: clusterId },
-			})
+			});
 		},
 		onError: (error) => {
 			toast.error(error.message);
@@ -148,9 +173,9 @@ function CreatePodPage() {
 				<CardContent>
 					<form
 						onSubmit={(e) => {
-							e.preventDefault()
-							e.stopPropagation()
-							form.handleSubmit()
+							e.preventDefault();
+							e.stopPropagation();
+							form.handleSubmit();
 						}}
 						className="space-y-6"
 					>
@@ -313,6 +338,23 @@ function CreatePodPage() {
 							<EnvEditor variables={envVars} onChange={setEnvVars} />
 						</div>
 
+						<div className="pt-4">
+							<RefsEditor
+								clusterId={clusterId}
+								configMapRefs={{
+									env: configMapEnvRefs,
+									envFrom: configMapEnvFromRefs,
+								}}
+								secretRefs={{ env: secretEnvRefs, envFrom: secretEnvFromRefs }}
+								onChange={(r: any) => {
+									setConfigMapEnvRefs(r.configMapRefs?.env || []);
+									setConfigMapEnvFromRefs(r.configMapRefs?.envFrom || []);
+									setSecretEnvRefs(r.secretRefs?.env || []);
+									setSecretEnvFromRefs(r.secretRefs?.envFrom || []);
+								}}
+							/>
+						</div>
+
 						<div className="flex justify-end gap-4">
 							<Link
 								to={`/dashboard/cluster/$id/pods`}
@@ -330,5 +372,5 @@ function CreatePodPage() {
 				</CardContent>
 			</Card>
 		</div>
-	)
+	);
 }

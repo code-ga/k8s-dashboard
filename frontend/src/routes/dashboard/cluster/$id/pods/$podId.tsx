@@ -6,6 +6,7 @@ import { ArrowLeft, Trash2, AlertTriangle, Plus, X } from "lucide-react";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { toast } from "sonner";
 import { EnvEditor, type EnvVar } from "@/components/shared/env-editor";
+import RefsEditor from "@/components/shared/refs-editor";
 import { ExposeDialog } from "@/components/service/expose-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -49,6 +50,10 @@ function ManagePodPage() {
 	const [command, setCommand] = useState<string[]>([]);
 	const [args, setArgs] = useState<string[]>([]);
 	const [envVars, setEnvVars] = useState<EnvVar[]>([]);
+	const [configMapEnvRefs, setConfigMapEnvRefs] = useState<any[]>([]);
+	const [configMapEnvFromRefs, setConfigMapEnvFromRefs] = useState<any[]>([]);
+	const [secretEnvRefs, setSecretEnvRefs] = useState<any[]>([]);
+	const [secretEnvFromRefs, setSecretEnvFromRefs] = useState<any[]>([]);
 	const [ports, setPorts] = useState<
 		{ containerPort: number; name?: string }[]
 	>([]);
@@ -96,6 +101,27 @@ function ManagePodPage() {
 			} catch (_e) {
 				setLabels([]);
 			}
+
+			// load refs if present
+			try {
+				if (pod.configMapRefs) {
+					setConfigMapEnvRefs(pod.configMapRefs.env || []);
+					setConfigMapEnvFromRefs(pod.configMapRefs.envFrom || []);
+				}
+			} catch {
+				setConfigMapEnvRefs([]);
+				setConfigMapEnvFromRefs([]);
+			}
+
+			try {
+				if (pod.secretRefs) {
+					setSecretEnvRefs(pod.secretRefs.env || []);
+					setSecretEnvFromRefs(pod.secretRefs.envFrom || []);
+				}
+			} catch {
+				setSecretEnvRefs([]);
+				setSecretEnvFromRefs([]);
+			}
 		}
 	}, [pod]);
 
@@ -141,13 +167,34 @@ function ManagePodPage() {
 					command: command.length > 0 ? command : undefined,
 					args: args.length > 0 ? args : undefined,
 					env: envMap,
+					configMapRefs:
+						configMapEnvRefs.length > 0 || configMapEnvFromRefs.length > 0
+							? {
+									env:
+										configMapEnvRefs.length > 0 ? configMapEnvRefs : undefined,
+									envFrom:
+										configMapEnvFromRefs.length > 0
+											? configMapEnvFromRefs
+											: undefined,
+								}
+							: undefined,
+					secretRefs:
+						secretEnvRefs.length > 0 || secretEnvFromRefs.length > 0
+							? {
+									env: secretEnvRefs.length > 0 ? secretEnvRefs : undefined,
+									envFrom:
+										secretEnvFromRefs.length > 0
+											? secretEnvFromRefs
+											: undefined,
+								}
+							: undefined,
 					labels: labelsMap,
 					resources: {
 						requests: { cpu: cpuRequest, memory: memoryRequest },
 						limits: { cpu: cpuLimit, memory: memoryLimit },
 					},
 					ports: ports.length > 0 ? ports : undefined,
-				});
+				} as any);
 			if (res.error) {
 				throw new Error(res.error.value?.message || "Failed to update pod");
 			}
@@ -386,6 +433,22 @@ function ManagePodPage() {
 				>
 					<RecreationWarning />
 					<EnvEditor variables={envVars} onChange={setEnvVars} />
+					<div className="pt-4">
+						<RefsEditor
+							clusterId={clusterId}
+							configMapRefs={{
+								env: configMapEnvRefs,
+								envFrom: configMapEnvFromRefs,
+							}}
+							secretRefs={{ env: secretEnvRefs, envFrom: secretEnvFromRefs }}
+							onChange={(r) => {
+								setConfigMapEnvRefs(r.configMapRefs?.env || []);
+								setConfigMapEnvFromRefs(r.configMapRefs?.envFrom || []);
+								setSecretEnvRefs(r.secretRefs?.env || []);
+								setSecretEnvFromRefs(r.secretRefs?.envFrom || []);
+							}}
+						/>
+					</div>
 					<div className="flex justify-end pt-4">
 						<Button
 							onClick={() => savePodMutation.mutate()}

@@ -6,6 +6,7 @@ import { ArrowLeft, Trash2 } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 import { toast } from "sonner";
 import { EnvEditor, type EnvVar } from "@/components/shared/env-editor";
+import RefsEditor from "@/components/shared/refs-editor";
 import { ExposeDialog } from "@/components/service/expose-dialog";
 import {
 	createFileRoute,
@@ -48,6 +49,10 @@ function ManageDeploymentPage() {
 	const [command, setCommand] = useState<string[]>([]);
 	const [args, setArgs] = useState<string[]>([]);
 	const [envVars, setEnvVars] = useState<EnvVar[]>([]);
+	const [configMapEnvRefs, setConfigMapEnvRefs] = useState<any[]>([]);
+	const [configMapEnvFromRefs, setConfigMapEnvFromRefs] = useState<any[]>([]);
+	const [secretEnvRefs, setSecretEnvRefs] = useState<any[]>([]);
+	const [secretEnvFromRefs, setSecretEnvFromRefs] = useState<any[]>([]);
 	const [ports, setPorts] = useState<
 		{ containerPort: number; name?: string }[]
 	>([]);
@@ -100,6 +105,27 @@ function ManageDeploymentPage() {
 			} catch (_e) {
 				setLabels([]);
 			}
+
+			// load refs
+			try {
+				if (deployment.configMapRefs) {
+					setConfigMapEnvRefs(deployment.configMapRefs.env || []);
+					setConfigMapEnvFromRefs(deployment.configMapRefs.envFrom || []);
+				}
+			} catch {
+				setConfigMapEnvRefs([]);
+				setConfigMapEnvFromRefs([]);
+			}
+
+			try {
+				if (deployment.secretRefs) {
+					setSecretEnvRefs(deployment.secretRefs.env || []);
+					setSecretEnvFromRefs(deployment.secretRefs.envFrom || []);
+				}
+			} catch {
+				setSecretEnvRefs([]);
+				setSecretEnvFromRefs([]);
+			}
 		}
 	}, [deployment]);
 
@@ -123,6 +149,27 @@ function ManageDeploymentPage() {
 					command: command.length > 0 ? command : undefined,
 					args: args.length > 0 ? args : undefined,
 					env: envMap,
+					configMapRefs:
+						configMapEnvRefs.length > 0 || configMapEnvFromRefs.length > 0
+							? {
+									env:
+										configMapEnvRefs.length > 0 ? configMapEnvRefs : undefined,
+									envFrom:
+										configMapEnvFromRefs.length > 0
+											? configMapEnvFromRefs
+											: undefined,
+								}
+							: undefined,
+					secretRefs:
+						secretEnvRefs.length > 0 || secretEnvFromRefs.length > 0
+							? {
+									env: secretEnvRefs.length > 0 ? secretEnvRefs : undefined,
+									envFrom:
+										secretEnvFromRefs.length > 0
+											? secretEnvFromRefs
+											: undefined,
+								}
+							: undefined,
 					labels: labelsMap,
 					resources: {
 						requests: { cpu: cpuRequest, memory: memoryRequest },
@@ -404,6 +451,22 @@ function ManageDeploymentPage() {
 				>
 					<RecreationWarning />
 					<EnvEditor variables={envVars} onChange={setEnvVars} />
+					<div className="pt-4">
+						<RefsEditor
+							clusterId={clusterId}
+							configMapRefs={{
+								env: configMapEnvRefs,
+								envFrom: configMapEnvFromRefs,
+							}}
+							secretRefs={{ env: secretEnvRefs, envFrom: secretEnvFromRefs }}
+							onChange={(r) => {
+								setConfigMapEnvRefs(r.configMapRefs?.env || []);
+								setConfigMapEnvFromRefs(r.configMapRefs?.envFrom || []);
+								setSecretEnvRefs(r.secretRefs?.env || []);
+								setSecretEnvFromRefs(r.secretRefs?.envFrom || []);
+							}}
+						/>
+					</div>
 					<div className="flex justify-end pt-4">
 						<Button
 							onClick={() => saveDeploymentMutation.mutate()}

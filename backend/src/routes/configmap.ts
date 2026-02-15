@@ -40,7 +40,7 @@ export const configmapRoute = new Elysia({
 					detail: { tags: ["ConfigMaps"] },
 					response: {
 						200: baseResponseSchema(
-							Type.Array(Type.Object(dbSchemaTypes.k8sConfigMaps as any)),
+							Type.Array(Type.Object(dbSchemaTypes.k8sConfigMaps)),
 						),
 						401: errorResponseSchema,
 						404: errorResponseSchema,

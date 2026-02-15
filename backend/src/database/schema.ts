@@ -1,5 +1,7 @@
 // ALERT: user table only for auth, profile table for user data
 
+import { Type, type Static } from "@sinclair/typebox";
+import { config } from "dotenv";
 import { defineRelations } from "drizzle-orm";
 import {
 	boolean,
@@ -313,33 +315,34 @@ export const k8sPods = pgTable(
 		envVariables: text("env_variables").notNull(),
 		labels: text("labels").default("").notNull(), // JSON string
 
-		ports: jsonb("ports").$type<any>().default([]).notNull(),
+		// ports: jsonb("ports").$type<any>().default([]).notNull(),
 
+		// this definitely needs to be refactored into separate tables for env and volume refs, but for now we can keep it as jsonb
 		// ConfigMap and Secret references
-		configMapRefs: jsonb("configmap_refs")
-			.$type<{
-				env?: Array<{ name: string; configMapName: string; key: string }>;
-				envFrom?: Array<{ configMapName: string; prefix?: string }>;
-				volumes?: Array<{
-					name: string;
-					configMapName: string;
-					mountPath: string;
-					items?: Array<{ key: string; path: string }>;
-				}>;
-			}>()
-			.default({ env: [], envFrom: [], volumes: [] }),
-		secretRefs: jsonb("secret_refs")
-			.$type<{
-				env?: Array<{ name: string; secretName: string; key: string }>;
-				envFrom?: Array<{ secretName: string; prefix?: string }>;
-				volumes?: Array<{
-					name: string;
-					secretName: string;
-					mountPath: string;
-					items?: Array<{ key: string; path: string }>;
-				}>;
-			}>()
-			.default({ env: [], envFrom: [], volumes: [] }),
+		// configMapRefs: jsonb("configmap_refs")
+		// 	.$type<{
+		// 		env?: Array<{ name: string; configMapName: string; key: string }>;
+		// 		envFrom?: Array<{ configMapName: string; prefix?: string }>;
+		// 		volumes?: Array<{
+		// 			name: string;
+		// 			configMapName: string;
+		// 			mountPath: string;
+		// 			items?: Array<{ key: string; path: string }>;
+		// 		}>;
+		// 	}>()
+		// 	.default({ env: [], envFrom: [], volumes: [] }),
+		// secretRefs: jsonb("secret_refs")
+		// 	.$type<{
+		// 		env?: Array<{ name: string; secretName: string; key: string }>;
+		// 		envFrom?: Array<{ secretName: string; prefix?: string }>;
+		// 		volumes?: Array<{
+		// 			name: string;
+		// 			secretName: string;
+		// 			mountPath: string;
+		// 			items?: Array<{ key: string; path: string }>;
+		// 		}>;
+		// 	}>()
+		// 	.default({ env: [], envFrom: [], volumes: [] }),
 
 		createdAt: timestamp("created_at").defaultNow().notNull(),
 		updatedAt: timestamp("updated_at")
@@ -382,7 +385,7 @@ export const k8sServices = pgTable(
 		clusterIp: text("cluster_ip"),
 		selector: text("selector"), // JSON string
 		labels: text("labels").notNull(),
-		ports: jsonb("ports").$type<any[]>().notNull(), // Array of ServicePortDTO
+		// ports: jsonb("ports").$type<any[]>().notNull(), // Array of ServicePortDTO
 
 		createdAt: timestamp("created_at").defaultNow().notNull(),
 		updatedAt: timestamp("updated_at")
@@ -526,7 +529,239 @@ export const gatewayPorts = pgTable("gateway_ports", {
 	}),
 });
 
-// Restoration of missing relations and services table
+// ==================== Normalized Reference Tables ====================
+// These tables replace the JSONB columns for ports, configMapRefs, and secretRefs
+
+// Pod Ports
+export const podPorts = pgTable("pod_ports", {
+	id: serial("id").primaryKey(),
+	podId: integer("pod_id")
+		.notNull()
+		.references(() => k8sPods.id, { onDelete: "cascade" }),
+	containerPort: integer("container_port").notNull(),
+	name: text("name"),
+	createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Deployment Ports
+export const deploymentPorts = pgTable("deployment_ports", {
+	id: serial("id").primaryKey(),
+	deploymentId: integer("deployment_id")
+		.notNull()
+		.references(() => k8sDeployments.id, { onDelete: "cascade" }),
+	containerPort: integer("container_port").notNull(),
+	name: text("name"),
+	createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Pod ConfigMap References - Env
+export const podConfigMapEnvRefs = pgTable("pod_configmap_env_refs", {
+	id: serial("id").primaryKey(),
+	podId: integer("pod_id")
+		.notNull()
+		.references(() => k8sPods.id, { onDelete: "cascade" }),
+	envName: text("env_name").notNull(),
+	configMapName: text("configmap_name").notNull(),
+	configMapKey: text("configmap_key").notNull(),
+	createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Pod ConfigMap References - EnvFrom
+export const podConfigMapEnvFromRefs = pgTable("pod_configmap_envfrom_refs", {
+	id: serial("id").primaryKey(),
+	podId: integer("pod_id")
+		.notNull()
+		.references(() => k8sPods.id, { onDelete: "cascade" }),
+	configMapName: text("configmap_name").notNull(),
+	prefix: text("prefix"),
+	createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Pod ConfigMap References - Volume
+export const podConfigMapVolumeRefs = pgTable("pod_configmap_volume_refs", {
+	id: serial("id").primaryKey(),
+	podId: integer("pod_id")
+		.notNull()
+		.references(() => k8sPods.id, { onDelete: "cascade" }),
+	volumeName: text("volume_name").notNull(),
+	configMapName: text("configmap_name").notNull(),
+	mountPath: text("mount_path").notNull(),
+	createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Pod ConfigMap Volume Items
+export const podConfigMapVolumeItems = pgTable("pod_configmap_volume_items", {
+	id: serial("id").primaryKey(),
+	volumeRefId: integer("volume_ref_id")
+		.notNull()
+		.references(() => podConfigMapVolumeRefs.id, { onDelete: "cascade" }),
+	key: text("key").notNull(),
+	path: text("path").notNull(),
+	createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Pod Secret References - Env
+export const podSecretEnvRefs = pgTable("pod_secret_env_refs", {
+	id: serial("id").primaryKey(),
+	podId: integer("pod_id")
+		.notNull()
+		.references(() => k8sPods.id, { onDelete: "cascade" }),
+	envName: text("env_name").notNull(),
+	secretName: text("secret_name").notNull(),
+	secretKey: text("secret_key").notNull(),
+	createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Pod Secret References - EnvFrom
+export const podSecretEnvFromRefs = pgTable("pod_secret_envfrom_refs", {
+	id: serial("id").primaryKey(),
+	podId: integer("pod_id")
+		.notNull()
+		.references(() => k8sPods.id, { onDelete: "cascade" }),
+	secretName: text("secret_name").notNull(),
+	prefix: text("prefix"),
+	createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Pod Secret References - Volume
+export const podSecretVolumeRefs = pgTable("pod_secret_volume_refs", {
+	id: serial("id").primaryKey(),
+	podId: integer("pod_id")
+		.notNull()
+		.references(() => k8sPods.id, { onDelete: "cascade" }),
+	volumeName: text("volume_name").notNull(),
+	secretName: text("secret_name").notNull(),
+	mountPath: text("mount_path").notNull(),
+	createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Pod Secret Volume Items
+export const podSecretVolumeItems = pgTable("pod_secret_volume_items", {
+	id: serial("id").primaryKey(),
+	volumeRefId: integer("volume_ref_id")
+		.notNull()
+		.references(() => podSecretVolumeRefs.id, { onDelete: "cascade" }),
+	key: text("key").notNull(),
+	path: text("path").notNull(),
+	createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Deployment ConfigMap References - Env
+export const deploymentConfigMapEnvRefs = pgTable(
+	"deployment_configmap_env_refs",
+	{
+		id: serial("id").primaryKey(),
+		deploymentId: integer("deployment_id")
+			.notNull()
+			.references(() => k8sDeployments.id, { onDelete: "cascade" }),
+		envName: text("env_name").notNull(),
+		configMapName: text("configmap_name").notNull(),
+		configMapKey: text("configmap_key").notNull(),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+	},
+);
+
+// Deployment ConfigMap References - EnvFrom
+export const deploymentConfigMapEnvFromRefs = pgTable(
+	"deployment_configmap_envfrom_refs",
+	{
+		id: serial("id").primaryKey(),
+		deploymentId: integer("deployment_id")
+			.notNull()
+			.references(() => k8sDeployments.id, { onDelete: "cascade" }),
+		configMapName: text("configmap_name").notNull(),
+		prefix: text("prefix"),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+	},
+);
+
+// Deployment ConfigMap References - Volume
+export const deploymentConfigMapVolumeRefs = pgTable(
+	"deployment_configmap_volume_refs",
+	{
+		id: serial("id").primaryKey(),
+		deploymentId: integer("deployment_id")
+			.notNull()
+			.references(() => k8sDeployments.id, { onDelete: "cascade" }),
+		volumeName: text("volume_name").notNull(),
+		configMapName: text("configmap_name").notNull(),
+		mountPath: text("mount_path").notNull(),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+	},
+);
+
+// Deployment ConfigMap Volume Items
+export const deploymentConfigMapVolumeItems = pgTable(
+	"deployment_configmap_volume_items",
+	{
+		id: serial("id").primaryKey(),
+		volumeRefId: integer("volume_ref_id")
+			.notNull()
+			.references(() => deploymentConfigMapVolumeRefs.id, {
+				onDelete: "cascade",
+			}),
+		key: text("key").notNull(),
+		path: text("path").notNull(),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+	},
+);
+
+// Deployment Secret References - Env
+export const deploymentSecretEnvRefs = pgTable("deployment_secret_env_refs", {
+	id: serial("id").primaryKey(),
+	deploymentId: integer("deployment_id")
+		.notNull()
+		.references(() => k8sDeployments.id, { onDelete: "cascade" }),
+	envName: text("env_name").notNull(),
+	secretName: text("secret_name").notNull(),
+	secretKey: text("secret_key").notNull(),
+	createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Deployment Secret References - EnvFrom
+export const deploymentSecretEnvFromRefs = pgTable(
+	"deployment_secret_envfrom_refs",
+	{
+		id: serial("id").primaryKey(),
+		deploymentId: integer("deployment_id")
+			.notNull()
+			.references(() => k8sDeployments.id, { onDelete: "cascade" }),
+		secretName: text("secret_name").notNull(),
+		prefix: text("prefix"),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+	},
+);
+
+// Deployment Secret References - Volume
+export const deploymentSecretVolumeRefs = pgTable(
+	"deployment_secret_volume_refs",
+	{
+		id: serial("id").primaryKey(),
+		deploymentId: integer("deployment_id")
+			.notNull()
+			.references(() => k8sDeployments.id, { onDelete: "cascade" }),
+		volumeName: text("volume_name").notNull(),
+		secretName: text("secret_name").notNull(),
+		mountPath: text("mount_path").notNull(),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+	},
+);
+
+// Deployment Secret Volume Items
+export const deploymentSecretVolumeItems = pgTable(
+	"deployment_secret_volume_items",
+	{
+		id: serial("id").primaryKey(),
+		volumeRefId: integer("volume_ref_id")
+			.notNull()
+			.references(() => deploymentSecretVolumeRefs.id, { onDelete: "cascade" }),
+		key: text("key").notNull(),
+		path: text("path").notNull(),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+	},
+);
+
+// ==================== End of Normalized Reference Tables ====================
 
 export const schema = {
 	user,
@@ -546,6 +781,25 @@ export const schema = {
 	agentCommands,
 	gatewayPorts,
 	AppState,
+	// Normalized reference tables
+	podPorts,
+	deploymentPorts,
+	podConfigMapEnvRefs,
+	podConfigMapEnvFromRefs,
+	podConfigMapVolumeRefs,
+	podConfigMapVolumeItems,
+	podSecretEnvRefs,
+	podSecretEnvFromRefs,
+	podSecretVolumeRefs,
+	podSecretVolumeItems,
+	deploymentConfigMapEnvRefs,
+	deploymentConfigMapEnvFromRefs,
+	deploymentConfigMapVolumeRefs,
+	deploymentConfigMapVolumeItems,
+	deploymentSecretEnvRefs,
+	deploymentSecretEnvFromRefs,
+	deploymentSecretVolumeRefs,
+	deploymentSecretVolumeItems,
 } as const;
 
 export const schemaRelations = defineRelations(schema, (r) => ({
@@ -586,6 +840,14 @@ export const schemaRelations = defineRelations(schema, (r) => ({
 			from: r.k8sPods.ownerId,
 			to: r.profile.id,
 		}),
+		// Normalized reference relations
+		portRefs: r.many.podPorts(),
+		configMapEnvRefs: r.many.podConfigMapEnvRefs(),
+		configMapEnvFromRefs: r.many.podConfigMapEnvFromRefs(),
+		configMapVolumeRefs: r.many.podConfigMapVolumeRefs(),
+		secretEnvRefs: r.many.podSecretEnvRefs(),
+		secretEnvFromRefs: r.many.podSecretEnvFromRefs(),
+		secretVolumeRefs: r.many.podSecretVolumeRefs(),
 	},
 	k8sServices: {
 		node: r.one.k8sClusterNode({
@@ -637,6 +899,14 @@ export const schemaRelations = defineRelations(schema, (r) => ({
 			from: r.k8sDeployments.ownerId,
 			to: r.profile.id,
 		}),
+		// Normalized reference relations
+		portRefs: r.many.deploymentPorts(),
+		configMapEnvRefs: r.many.deploymentConfigMapEnvRefs(),
+		configMapEnvFromRefs: r.many.deploymentConfigMapEnvFromRefs(),
+		configMapVolumeRefs: r.many.deploymentConfigMapVolumeRefs(),
+		secretEnvRefs: r.many.deploymentSecretEnvRefs(),
+		secretEnvFromRefs: r.many.deploymentSecretEnvFromRefs(),
+		secretVolumeRefs: r.many.deploymentSecretVolumeRefs(),
 	},
 	profile: {
 		user: r.one.user({
@@ -688,6 +958,119 @@ export const schemaRelations = defineRelations(schema, (r) => ({
 		owner: r.one.profile({
 			from: r.k8sSecrets.ownerId,
 			to: r.profile.id,
+		}),
+	},
+	// Reverse relations for normalized reference tables
+	podPorts: {
+		pod: r.one.k8sPods({
+			from: r.podPorts.podId,
+			to: r.k8sPods.id,
+		}),
+	},
+	deploymentPorts: {
+		deployment: r.one.k8sDeployments({
+			from: r.deploymentPorts.deploymentId,
+			to: r.k8sDeployments.id,
+		}),
+	},
+	podConfigMapEnvRefs: {
+		pod: r.one.k8sPods({
+			from: r.podConfigMapEnvRefs.podId,
+			to: r.k8sPods.id,
+		}),
+	},
+	podConfigMapEnvFromRefs: {
+		pod: r.one.k8sPods({
+			from: r.podConfigMapEnvFromRefs.podId,
+			to: r.k8sPods.id,
+		}),
+	},
+	podConfigMapVolumeRefs: {
+		pod: r.one.k8sPods({
+			from: r.podConfigMapVolumeRefs.podId,
+			to: r.k8sPods.id,
+		}),
+		items: r.many.podConfigMapVolumeItems(),
+	},
+	podConfigMapVolumeItems: {
+		volumeRef: r.one.podConfigMapVolumeRefs({
+			from: r.podConfigMapVolumeItems.volumeRefId,
+			to: r.podConfigMapVolumeRefs.id,
+		}),
+	},
+	podSecretEnvRefs: {
+		pod: r.one.k8sPods({
+			from: r.podSecretEnvRefs.podId,
+			to: r.k8sPods.id,
+		}),
+	},
+	podSecretEnvFromRefs: {
+		pod: r.one.k8sPods({
+			from: r.podSecretEnvFromRefs.podId,
+			to: r.k8sPods.id,
+		}),
+	},
+	podSecretVolumeRefs: {
+		pod: r.one.k8sPods({
+			from: r.podSecretVolumeRefs.podId,
+			to: r.k8sPods.id,
+		}),
+		items: r.many.podSecretVolumeItems(),
+	},
+	podSecretVolumeItems: {
+		volumeRef: r.one.podSecretVolumeRefs({
+			from: r.podSecretVolumeItems.volumeRefId,
+			to: r.podSecretVolumeRefs.id,
+		}),
+	},
+	deploymentConfigMapEnvRefs: {
+		deployment: r.one.k8sDeployments({
+			from: r.deploymentConfigMapEnvRefs.deploymentId,
+			to: r.k8sDeployments.id,
+		}),
+	},
+	deploymentConfigMapEnvFromRefs: {
+		deployment: r.one.k8sDeployments({
+			from: r.deploymentConfigMapEnvFromRefs.deploymentId,
+			to: r.k8sDeployments.id,
+		}),
+	},
+	deploymentConfigMapVolumeRefs: {
+		deployment: r.one.k8sDeployments({
+			from: r.deploymentConfigMapVolumeRefs.deploymentId,
+			to: r.k8sDeployments.id,
+		}),
+		items: r.many.deploymentConfigMapVolumeItems(),
+	},
+	deploymentConfigMapVolumeItems: {
+		volumeRef: r.one.deploymentConfigMapVolumeRefs({
+			from: r.deploymentConfigMapVolumeItems.volumeRefId,
+			to: r.deploymentConfigMapVolumeRefs.id,
+		}),
+	},
+	deploymentSecretEnvRefs: {
+		deployment: r.one.k8sDeployments({
+			from: r.deploymentSecretEnvRefs.deploymentId,
+			to: r.k8sDeployments.id,
+		}),
+	},
+	deploymentSecretEnvFromRefs: {
+		deployment: r.one.k8sDeployments({
+			from: r.deploymentSecretEnvFromRefs.deploymentId,
+			to: r.k8sDeployments.id,
+		}),
+	},
+	deploymentSecretVolumeRefs: {
+		deployment: r.one.k8sDeployments({
+			from: r.deploymentSecretVolumeRefs.deploymentId,
+			to: r.k8sDeployments.id,
+		}),
+		items: r.many.deploymentSecretVolumeItems(),
+	},
+	deploymentSecretVolumeItems: {
+		volumeRef: r.one.deploymentSecretVolumeRefs({
+			from: r.deploymentSecretVolumeItems.volumeRefId,
+			to: r.deploymentSecretVolumeRefs.id,
 		}),
 	},
 }));

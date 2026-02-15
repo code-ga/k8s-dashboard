@@ -11,6 +11,12 @@ import { agentManagerService } from "../services/agentManager";
 import { baseResponseSchema, errorResponseSchema } from "../types";
 import { decrypt, encrypt } from "../utils/crypto";
 import { generateDeploymentManifest } from "../utils/k8s-manifest";
+import {
+	insertAllDeploymentResourceRefs,
+	fetchAllDeploymentResourceRefs,
+	updateAllDeploymentResourceRefs,
+	transformToJsonbFormat,
+} from "../utils/resource-refs";
 const parseCpuStr = (cpu: string): number => {
 	if (cpu.endsWith("m")) return parseInt(cpu);
 	return parseFloat(cpu) * 1000;
@@ -137,7 +143,27 @@ export const deploymentRoute = new Elysia({
 							timestamp: Date.now(),
 						});
 					}
-					const depData = { ...deployment };
+
+					// Fetch resource refs from normalized tables
+					const { ports, refs } = await fetchAllDeploymentResourceRefs(
+						deployment.id,
+					);
+
+					const depData = {
+						...deployment,
+						ports,
+						configMapRefs: refs.configMapRefs || {
+							env: [],
+							envFrom: [],
+							volumes: [],
+						},
+						secretRefs: refs.secretRefs || {
+							env: [],
+							envFrom: [],
+							volumes: [],
+						},
+					};
+
 					if (depData.envVariables) {
 						// Only decrypt if user is owner or manager
 						const isManager = checkPermission(ctx.profile?.permission || [], [
@@ -180,7 +206,7 @@ export const deploymentRoute = new Elysia({
 				"/",
 				async (ctx) => {
 					const clusterId = Number(ctx.params.clusterId);
-					const bodyAny = ctx.body as any;
+					const bodyAny = ctx.body;
 
 					const cluster = await db.query.k8sCluster.findFirst({
 						where: {
@@ -238,9 +264,9 @@ export const deploymentRoute = new Elysia({
 							envVariables: envEncrypted,
 							command: bodyAny.command ? bodyAny.command.join(" ") : "",
 							args: bodyAny.args ? bodyAny.args.join(" ") : "",
-							ports: bodyAny.ports || [],
-							configMapRefs,
-							secretRefs,
+							ports: [], // Now stored in normalized tables
+							configMapRefs: { env: [], envFrom: [], volumes: [] }, // Legacy field
+							secretRefs: { env: [], envFrom: [], volumes: [] }, // Legacy field
 							cpuRequest: bodyAny.resources?.requests?.cpu
 								? parseCpuStr(bodyAny.resources.requests.cpu)
 								: 0,
@@ -259,8 +285,24 @@ export const deploymentRoute = new Elysia({
 						[newDeployment] = await db
 							.insert(schema.k8sDeployments)
 							.values(createData)
-
 							.returning();
+						if (!newDeployment) {
+							return ctx.status(500, {
+								success: false,
+								message: "Failed to create deployment",
+								timestamp: Date.now(),
+							});
+						}
+
+						// Insert resource refs into normalized tables
+						await insertAllDeploymentResourceRefs(
+							newDeployment.id,
+							bodyAny.ports || [],
+							{
+								configMapRefs: bodyAny.configMapRefs,
+								secretRefs: bodyAny.secretRefs,
+							},
+						);
 					} catch (dbError: any) {
 						console.error("DB Insert Deployment Failed:", dbError);
 						return ctx.status(500, {
@@ -279,14 +321,14 @@ export const deploymentRoute = new Elysia({
 						let secretRefsObj: any = undefined;
 						if (configMapRefs) {
 							try {
-								configMapRefsObj = JSON.parse(configMapRefs);
+								configMapRefsObj = configMapRefs;
 							} catch (e) {
 								console.error("Failed to parse configMapRefs", e);
 							}
 						}
 						if (secretRefs) {
 							try {
-								secretRefsObj = JSON.parse(secretRefs);
+								secretRefsObj = secretRefs;
 							} catch (e) {
 								console.error("Failed to parse secretRefs", e);
 							}
@@ -370,7 +412,14 @@ export const deploymentRoute = new Elysia({
 											name: Type.String(),
 											configMapName: Type.String(),
 											mountPath: Type.String(),
-											items: Type.Optional(Type.Array(Type.String())),
+											items: Type.Optional(
+												Type.Array(
+													Type.Object({
+														key: Type.String(),
+														path: Type.String(),
+													}),
+												),
+											),
 										}),
 									),
 								),
@@ -400,7 +449,14 @@ export const deploymentRoute = new Elysia({
 											name: Type.String(),
 											secretName: Type.String(),
 											mountPath: Type.String(),
-											items: Type.Optional(Type.Array(Type.String())),
+											items: Type.Optional(
+												Type.Array(
+													Type.Object({
+														key: Type.String(),
+														path: Type.String(),
+													}),
+												),
+											),
 										}),
 									),
 								),
@@ -456,7 +512,7 @@ export const deploymentRoute = new Elysia({
 				async (ctx) => {
 					const clusterId = Number(ctx.params.clusterId);
 					const depId = Number(ctx.params.id);
-					const bodyAny = ctx.body as any;
+					const bodyAny = ctx.body;
 
 					const cluster = await db.query.k8sCluster.findFirst({
 						where: {
@@ -538,12 +594,6 @@ export const deploymentRoute = new Elysia({
 						if (bodyAny.env) {
 							updateData.envVariables = encrypt(JSON.stringify(bodyAny.env));
 						}
-						if (bodyAny.configMapRefs) {
-							updateData.configMapRefs = bodyAny.configMapRefs;
-						}
-						if (bodyAny.secretRefs) {
-							updateData.secretRefs = bodyAny.secretRefs;
-						}
 						// labels, selector updates? Schema stores stringified.
 						if (bodyAny.labels)
 							updateData.labels = JSON.stringify(bodyAny.labels);
@@ -551,7 +601,6 @@ export const deploymentRoute = new Elysia({
 							updateData.selector = JSON.stringify(bodyAny.selector);
 						if (bodyAny.command) updateData.command = bodyAny.command.join(" ");
 						if (bodyAny.args) updateData.args = bodyAny.args.join(" ");
-						if (bodyAny.ports) updateData.ports = bodyAny.ports;
 						if (bodyAny.resources) {
 							if (bodyAny.resources.requests?.cpu)
 								updateData.cpuRequest = parseCpuStr(
@@ -581,6 +630,22 @@ export const deploymentRoute = new Elysia({
 								.update(schema.k8sDeployments)
 								.set(updateData)
 								.where(eq(schema.k8sDeployments.id, depId));
+
+							// Update resource refs in normalized tables if provided
+							if (
+								bodyAny.ports ||
+								bodyAny.configMapRefs ||
+								bodyAny.secretRefs
+							) {
+								await updateAllDeploymentResourceRefs(
+									depId,
+									bodyAny.ports || [],
+									{
+										configMapRefs: bodyAny.configMapRefs,
+										secretRefs: bodyAny.secretRefs,
+									},
+								);
+							}
 						} catch (dbError: any) {
 							console.error("DB Update Failed", dbError);
 							return ctx.status(500, {
@@ -725,7 +790,14 @@ export const deploymentRoute = new Elysia({
 											name: Type.String(),
 											configMapName: Type.String(),
 											mountPath: Type.String(),
-											items: Type.Optional(Type.Array(Type.String())),
+											items: Type.Optional(
+												Type.Array(
+													Type.Object({
+														key: Type.String(),
+														path: Type.String(),
+													}),
+												),
+											),
 										}),
 									),
 								),
@@ -755,7 +827,14 @@ export const deploymentRoute = new Elysia({
 											name: Type.String(),
 											secretName: Type.String(),
 											mountPath: Type.String(),
-											items: Type.Optional(Type.Array(Type.String())),
+											items: Type.Optional(
+												Type.Array(
+													Type.Object({
+														key: Type.String(),
+														path: Type.String(),
+													}),
+												),
+											),
 										}),
 									),
 								),
