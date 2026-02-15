@@ -385,7 +385,7 @@ export const k8sServices = pgTable(
 		clusterIp: text("cluster_ip"),
 		selector: text("selector"), // JSON string
 		labels: text("labels").notNull(),
-		// ports: jsonb("ports").$type<any[]>().notNull(), // Array of ServicePortDTO
+		ports: jsonb("ports").$type<any[]>().notNull(), // Array of ServicePortDTO
 
 		createdAt: timestamp("created_at").defaultNow().notNull(),
 		updatedAt: timestamp("updated_at")

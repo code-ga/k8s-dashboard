@@ -23,6 +23,13 @@ import {
 	generateDeploymentManifest,
 	generatePodManifest,
 } from "../utils/k8s-manifest";
+import {
+	type PortRef,
+	deleteDeploymentPorts,
+	deletePodPorts,
+	insertDeploymentPorts,
+	insertPodPorts,
+} from "../utils/resource-refs";
 export class AgentService {
 	// Process incoming heartbeat
 	async handleHeartbeat(
@@ -165,7 +172,7 @@ export class AgentService {
 					cpuLimit: Number(dep.cpuLimit),
 					memoryRequest: Number(dep.memoryRequest),
 					memoryLimit: Number(dep.memoryLimit),
-					ports: dep.ports,
+					// ports: dep.ports, // Removed in favor of normalized tables
 					updatedAt: new Date(),
 				};
 
@@ -179,6 +186,17 @@ export class AgentService {
 							updatedAt: new Date(),
 						})
 						.where(eq(k8sDeployments.id, existing[0].id));
+
+					// Sync Ports
+					const deploymentId = existing[0].id;
+					await deleteDeploymentPorts(deploymentId);
+					if (dep.ports && dep.ports.length > 0) {
+						const ports: PortRef[] = dep.ports.map((p) => ({
+							containerPort: p.containerPort,
+							name: p.name,
+						}));
+						await insertDeploymentPorts(ports, deploymentId);
+					}
 				} else {
 					const defaultOwner = await db.query.profile.findFirst({
 						where: {
@@ -190,11 +208,23 @@ export class AgentService {
 					if (!defaultOwner) {
 						throw new Error("Default account not found");
 					}
-					await db.insert(k8sDeployments).values({
-						...depData,
-						ownerId: defaultOwner.id,
-						autoCreated: true, // created by agent when it detects a deployment not in DB
-					});
+					const [newDep] = await db
+						.insert(k8sDeployments)
+						.values({
+							...depData,
+							ownerId: defaultOwner.id,
+							autoCreated: true, // created by agent when it detects a deployment not in DB
+						})
+						.returning();
+
+					// Sync Ports for new deployment
+					if (newDep && dep.ports && dep.ports.length > 0) {
+						const ports: PortRef[] = dep.ports.map((p) => ({
+							containerPort: p.containerPort,
+							name: p.name,
+						}));
+						await insertDeploymentPorts(ports, newDep.id);
+					}
 				}
 			}
 		}
@@ -273,7 +303,7 @@ export class AgentService {
 						args: pod.args,
 						envVariables: pod.envVariables,
 						labels: JSON.stringify(pod.labels),
-						ports: pod.ports,
+						// ports: pod.ports, // Removed in favor of normalized tables
 						k8sUid: pod.uid,
 
 						status: pod.status || "Unknown",
@@ -302,11 +332,34 @@ export class AgentService {
 								updatedAt: new Date(),
 							})
 							.where(eq(k8sPods.id, existingPod.id));
+
+						// Sync Ports
+						const podId = existingPod.id;
+						await deletePodPorts(podId);
+						if (pod.ports && pod.ports.length > 0) {
+							const ports: PortRef[] = pod.ports.map((p) => ({
+								containerPort: p.containerPort,
+								name: p.name,
+							}));
+							await insertPodPorts(ports, podId);
+						}
 					} else {
-						await db.insert(k8sPods).values({
-							...podData,
-							autoCreated: true,
-						}); // Fix lint: removed createdAt
+						const [newPod] = await db
+							.insert(k8sPods)
+							.values({
+								...podData,
+								autoCreated: true,
+							})
+							.returning(); // Fix lint: removed createdAt
+
+						// Sync Ports for new pod
+						if (newPod && pod.ports && pod.ports.length > 0) {
+							const ports: PortRef[] = pod.ports.map((p) => ({
+								containerPort: p.containerPort,
+								name: p.name,
+							}));
+							await insertPodPorts(ports, newPod.id);
+						}
 					}
 				}
 			}
@@ -548,7 +601,7 @@ export class AgentService {
 						dbPod.labels && dbPod.labels !== ""
 							? JSON.parse(dbPod.labels)
 							: undefined,
-					ports: dbPod.ports,
+					// ports: dbPod.ports,
 					resources: {
 						requests: {
 							cpu: `${dbPod.cpuRequest}m`,
@@ -597,7 +650,7 @@ export class AgentService {
 						dbPod.labels && dbPod.labels !== ""
 							? JSON.parse(dbPod.labels)
 							: undefined,
-					ports: dbPod.ports,
+					// ports: dbPod.ports,
 					env: envVars,
 					resources: {
 						requests: {
