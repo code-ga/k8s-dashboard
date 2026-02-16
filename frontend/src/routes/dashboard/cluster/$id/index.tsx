@@ -1,7 +1,13 @@
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { api } from "@/lib/api";
 import { useQuery } from "@tanstack/react-query";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import {
+	Card,
+	CardHeader,
+	CardTitle,
+	CardContent,
+	CardDescription,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
 	ArrowLeft,
@@ -14,6 +20,7 @@ import {
 	FileJson,
 	Lock,
 } from "lucide-react";
+import { BACKEND_URL } from "../../../../constants";
 
 export const Route = createFileRoute("/dashboard/cluster/$id/")({
 	component: ClusterOverview,
@@ -180,7 +187,33 @@ function ClusterOverview() {
 						<pre className="bg-secondary p-4 rounded-md overflow-x-auto text-xs">
 							{`Token: ${agentConfig.clusterToken}`}
 						</pre>
+						<CardDescription>
+							To install the agent, run the following command:
+							<pre className="bg-secondary p-4 rounded-md overflow-x-auto text-xs">
+								{`agent --addr ${BACKEND_URL} --token ${agentConfig.clusterToken}`}
+							</pre>
+							And download agent from
+							<a
+								href="https://github.com/code-ga/k8s-dashboard/releases/latest"
+								download
+							>
+								Download Agent (You need to update agent manually by
+								redownloading this file)
+							</a>
+						</CardDescription>
+						<p className="text-xs text-muted-foreground">
+							This agent need to run at node have master permission
+						</p>
 					</CardContent>
+					<Button
+						variant="outline"
+						className="mt-4"
+						onClick={() =>
+							navigator.clipboard.writeText(agentConfig.clusterToken)
+						}
+					>
+						Copy Token
+					</Button>
 				</Card>
 			)}
 		</div>
