@@ -40,7 +40,11 @@ export const configmapRoute = new Elysia({
 					detail: { tags: ["ConfigMaps"] },
 					response: {
 						200: baseResponseSchema(
-							Type.Array(Type.Object(dbSchemaTypes.k8sConfigMaps)),
+							Type.Array(
+								Type.Object({
+									...dbSchemaTypes.k8sConfigMaps,
+								}),
+							),
 						),
 						401: errorResponseSchema,
 						404: errorResponseSchema,
@@ -92,14 +96,22 @@ export const configmapRoute = new Elysia({
 					return ctx.status(200, {
 						success: true,
 						message: "ConfigMap fetched successfully",
-						data: cmData,
+						data: cmData as any,
 						timestamp: Date.now(),
 					});
 				},
 				{
 					detail: { tags: ["ConfigMaps"] },
 					response: {
-						200: baseResponseSchema(Type.Object(dbSchemaTypes.k8sConfigMaps)),
+						200: baseResponseSchema(
+							Type.Object({
+								...dbSchemaTypes.k8sConfigMaps,
+								data: Type.Optional(Type.Record(Type.String(), Type.String())),
+								binaryData: Type.Optional(
+									Type.Record(Type.String(), Type.String()),
+								),
+							}),
+						),
 						401: errorResponseSchema,
 						404: errorResponseSchema,
 					},

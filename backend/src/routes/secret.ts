@@ -44,7 +44,7 @@ export const secretRoute = new Elysia({
 					detail: { tags: ["Secrets"] },
 					response: {
 						200: baseResponseSchema(
-							Type.Array(Type.Object(dbSchemaTypes.k8sSecrets as any)),
+							Type.Array(Type.Object(dbSchemaTypes.k8sSecrets)),
 						),
 						401: errorResponseSchema,
 						404: errorResponseSchema,
@@ -88,7 +88,7 @@ export const secretRoute = new Elysia({
 					return ctx.status(200, {
 						success: true,
 						message: "Secret fetched successfully",
-						data: secretData,
+						data: secretData as any,
 						timestamp: Date.now(),
 					});
 				},
@@ -96,7 +96,10 @@ export const secretRoute = new Elysia({
 					detail: { tags: ["Secrets"] },
 					response: {
 						200: baseResponseSchema(
-							Type.Object(dbSchemaTypes.k8sSecrets as any),
+							Type.Object({
+								...dbSchemaTypes.k8sSecrets,
+								data: Type.Optional(Type.Record(Type.String(), Type.String())),
+							}),
 						),
 						401: errorResponseSchema,
 						404: errorResponseSchema,
