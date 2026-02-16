@@ -63,157 +63,207 @@ function ClusterOverview() {
 					</Button>
 				</Link>
 				<div>
-					<h2 className="text-3xl font-bold tracking-tight">{cluster.name}</h2>
-					<p className="text-muted-foreground">{cluster.clusterDomain}</p>
+					<h1 className="text-4xl font-bold tracking-tight">{cluster.name}</h1>
+					<p className="text-sm text-muted-foreground mt-1">
+						{cluster.clusterDomain}
+					</p>
 				</div>
 			</div>
 
+			{/* Metrics Cards */}
 			<div className="grid gap-4 md:grid-cols-3">
-				<Card>
+				<Card className="border-l-4 border-l-blue-500">
 					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
 						<CardTitle className="text-sm font-medium">Status</CardTitle>
-						<Activity className="h-4 w-4 text-muted-foreground" />
+						<Activity className="h-4 w-4 text-blue-500" />
 					</CardHeader>
 					<CardContent>
 						<div className="text-2xl font-bold capitalize">
 							{cluster.status}
 						</div>
+						<p className="text-xs text-muted-foreground mt-1">Cluster status</p>
 					</CardContent>
 				</Card>
-				<Card>
+				<Card className="border-l-4 border-l-green-500">
 					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
 						<CardTitle className="text-sm font-medium">CPU Usage</CardTitle>
-						<Cpu className="h-4 w-4 text-muted-foreground" />
+						<Cpu className="h-4 w-4 text-green-500" />
 					</CardHeader>
 					<CardContent>
 						<div className="text-2xl font-bold">
 							{cluster.cpuUsage} / {cluster.cpuCapacity}
 						</div>
+						<p className="text-xs text-muted-foreground mt-1">Cores</p>
 					</CardContent>
 				</Card>
-				<Card>
+				<Card className="border-l-4 border-l-purple-500">
 					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-						<CardTitle className="text-sm font-medium">RAM Usage</CardTitle>
-						<HardDrive className="h-4 w-4 text-muted-foreground" />
+						<CardTitle className="text-sm font-medium">Memory Usage</CardTitle>
+						<HardDrive className="h-4 w-4 text-purple-500" />
 					</CardHeader>
 					<CardContent>
 						<div className="text-2xl font-bold">
 							{cluster.ramUsage} / {cluster.ramCapacity}
 						</div>
+						<p className="text-xs text-muted-foreground mt-1">RAM</p>
 					</CardContent>
 				</Card>
 			</div>
 
-			{/* Navigation to Resources */}
-			<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mt-8">
-				<Link to={`/dashboard/cluster/$id/nodes`} params={{ id }}>
-					<Card className="hover:bg-muted/50 transition-colors cursor-pointer">
-						<CardHeader>
-							<CardTitle className="flex items-center gap-2">
-								<HardDrive className="h-5 w-5" /> Nodes
-							</CardTitle>
-							<CardContent>Manage cluster nodes</CardContent>
-						</CardHeader>
-					</Card>
-				</Link>
-				<Link to={`/dashboard/cluster/$id/pods`} params={{ id }}>
-					<Card className="hover:bg-muted/50 transition-colors cursor-pointer">
-						<CardHeader>
-							<CardTitle className="flex items-center gap-2">
-								<Box className="h-5 w-5" /> Pods
-							</CardTitle>
-							<CardContent>View and manage pods</CardContent>
-						</CardHeader>
-					</Card>
-				</Link>
-				<Link to={`/dashboard/cluster/$id/deployments`} params={{ id }}>
-					<Card className="hover:bg-muted/50 transition-colors cursor-pointer">
-						<CardHeader>
-							<CardTitle className="flex items-center gap-2">
-								<Layers className="h-5 w-5" /> Deployments
-							</CardTitle>
-							<CardContent>Manage application deployments</CardContent>
-						</CardHeader>
-					</Card>
-				</Link>
-				<Link to={`/dashboard/cluster/$id/services`} params={{ id }}>
-					<Card className="hover:bg-muted/50 transition-colors cursor-pointer">
-						<CardHeader>
-							<CardTitle className="flex items-center gap-2">
-								<Network className="h-5 w-5" /> Services
-							</CardTitle>
-							<CardContent>Manage network services</CardContent>
-						</CardHeader>
-					</Card>
-				</Link>
-				<Link to={`/dashboard/cluster/$id/ingresses`} params={{ id }}>
-					<Card className="hover:bg-muted/50 transition-colors cursor-pointer">
-						<CardHeader>
-							<CardTitle className="flex items-center gap-2">
-								<Layers className="h-5 w-5" /> Ingresses
-							</CardTitle>
-							<CardContent>Manage service exposure</CardContent>
-						</CardHeader>
-					</Card>
-				</Link>
-				<Link to={`/dashboard/cluster/$id/configmaps`} params={{ id }}>
-					<Card className="hover:bg-muted/50 transition-colors cursor-pointer">
-						<CardHeader>
-							<CardTitle className="flex items-center gap-2">
-								<FileJson className="h-5 w-5" /> ConfigMaps
-							</CardTitle>
-							<CardContent>Manage configuration data</CardContent>
-						</CardHeader>
-					</Card>
-				</Link>
-				<Link to={`/dashboard/cluster/$id/secrets`} params={{ id }}>
-					<Card className="hover:bg-muted/50 transition-colors cursor-pointer">
-						<CardHeader>
-							<CardTitle className="flex items-center gap-2">
-								<Lock className="h-5 w-5" /> Secrets
-							</CardTitle>
-							<CardContent>Manage sensitive information</CardContent>
-						</CardHeader>
-					</Card>
-				</Link>
+			{/* Navigation Grid */}
+			<div>
+				<h3 className="text-lg font-semibold mb-4">Resources</h3>
+				<div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+					<Link to={`/dashboard/cluster/$id/nodes`} params={{ id }}>
+						<Card className="h-full hover:shadow-md hover:border-primary/50 transition-all cursor-pointer group">
+							<CardHeader className="pb-3">
+								<CardTitle className="text-base flex items-center gap-2 group-hover:text-primary transition-colors">
+									<HardDrive className="h-5 w-5" /> Nodes
+								</CardTitle>
+							</CardHeader>
+							<CardContent>
+								<p className="text-xs text-muted-foreground">
+									Manage cluster nodes
+								</p>
+							</CardContent>
+						</Card>
+					</Link>
+					<Link to={`/dashboard/cluster/$id/pods`} params={{ id }}>
+						<Card className="h-full hover:shadow-md hover:border-primary/50 transition-all cursor-pointer group">
+							<CardHeader className="pb-3">
+								<CardTitle className="text-base flex items-center gap-2 group-hover:text-primary transition-colors">
+									<Box className="h-5 w-5" /> Pods
+								</CardTitle>
+							</CardHeader>
+							<CardContent>
+								<p className="text-xs text-muted-foreground">
+									View and manage pods
+								</p>
+							</CardContent>
+						</Card>
+					</Link>
+					<Link to={`/dashboard/cluster/$id/deployments`} params={{ id }}>
+						<Card className="h-full hover:shadow-md hover:border-primary/50 transition-all cursor-pointer group">
+							<CardHeader className="pb-3">
+								<CardTitle className="text-base flex items-center gap-2 group-hover:text-primary transition-colors">
+									<Layers className="h-5 w-5" /> Deployments
+								</CardTitle>
+							</CardHeader>
+							<CardContent>
+								<p className="text-xs text-muted-foreground">
+									Manage deployments
+								</p>
+							</CardContent>
+						</Card>
+					</Link>
+					<Link to={`/dashboard/cluster/$id/services`} params={{ id }}>
+						<Card className="h-full hover:shadow-md hover:border-primary/50 transition-all cursor-pointer group">
+							<CardHeader className="pb-3">
+								<CardTitle className="text-base flex items-center gap-2 group-hover:text-primary transition-colors">
+									<Network className="h-5 w-5" /> Services
+								</CardTitle>
+							</CardHeader>
+							<CardContent>
+								<p className="text-xs text-muted-foreground">Manage services</p>
+							</CardContent>
+						</Card>
+					</Link>
+					<Link to={`/dashboard/cluster/$id/ingresses`} params={{ id }}>
+						<Card className="h-full hover:shadow-md hover:border-primary/50 transition-all cursor-pointer group">
+							<CardHeader className="pb-3">
+								<CardTitle className="text-base flex items-center gap-2 group-hover:text-primary transition-colors">
+									<Layers className="h-5 w-5" /> Ingresses
+								</CardTitle>
+							</CardHeader>
+							<CardContent>
+								<p className="text-xs text-muted-foreground">
+									Service exposure
+								</p>
+							</CardContent>
+						</Card>
+					</Link>
+					<Link to={`/dashboard/cluster/$id/configmaps`} params={{ id }}>
+						<Card className="h-full hover:shadow-md hover:border-primary/50 transition-all cursor-pointer group">
+							<CardHeader className="pb-3">
+								<CardTitle className="text-base flex items-center gap-2 group-hover:text-primary transition-colors">
+									<FileJson className="h-5 w-5" /> ConfigMaps
+								</CardTitle>
+							</CardHeader>
+							<CardContent>
+								<p className="text-xs text-muted-foreground">
+									Configuration data
+								</p>
+							</CardContent>
+						</Card>
+					</Link>
+					<Link to={`/dashboard/cluster/$id/secrets`} params={{ id }}>
+						<Card className="h-full hover:shadow-md hover:border-primary/50 transition-all cursor-pointer group">
+							<CardHeader className="pb-3">
+								<CardTitle className="text-base flex items-center gap-2 group-hover:text-primary transition-colors">
+									<Lock className="h-5 w-5" /> Secrets
+								</CardTitle>
+							</CardHeader>
+							<CardContent>
+								<p className="text-xs text-muted-foreground">Sensitive data</p>
+							</CardContent>
+						</Card>
+					</Link>
+				</div>
 			</div>
 
+			{/* Agent Configuration */}
 			{agentConfig && (
-				<Card className="mt-8 border-yellow-500/50 bg-yellow-500/10">
+				<Card className="border-2 border-amber-500/30 bg-linear-to-br from-amber-50/50 to-transparent dark:from-amber-950/20">
 					<CardHeader>
-						<CardTitle>Agent Configuration</CardTitle>
-					</CardHeader>
-					<CardContent>
-						<pre className="bg-secondary p-4 rounded-md overflow-x-auto text-xs">
-							{`Token: ${agentConfig.clusterToken}`}
-						</pre>
+						<CardTitle className="flex items-center gap-2">
+							<Lock className="h-5 w-5 text-amber-600" />
+							Agent Setup
+						</CardTitle>
 						<CardDescription>
-							To install the agent, run the following command:
-							<pre className="bg-secondary p-4 rounded-md overflow-x-auto text-xs">
+							Install and configure the K8s agent
+						</CardDescription>
+					</CardHeader>
+					<CardContent className="space-y-4">
+						<div className="space-y-2">
+							<label className="text-sm font-medium">Cluster Token</label>
+							<div className="flex gap-2">
+								<code className="flex-1 bg-secondary px-3 py-2 rounded-md text-xs font-mono overflow-x-auto">
+									{agentConfig.clusterToken}
+								</code>
+								<Button
+									variant="outline"
+									size="sm"
+									onClick={() =>
+										navigator.clipboard.writeText(agentConfig.clusterToken)
+									}
+								>
+									Copy
+								</Button>
+							</div>
+						</div>
+
+						<div className="bg-secondary/50 p-3 rounded-md space-y-2">
+							<p className="text-xs font-medium">Installation Command</p>
+							<code className="block bg-background px-3 py-2 rounded text-xs font-mono overflow-x-auto">
 								{`agent --addr ${BACKEND_URL} --token ${agentConfig.clusterToken}`}
-							</pre>
-							And download agent from
+							</code>
+						</div>
+
+						<div className="flex flex-col gap-2">
 							<a
 								href="https://github.com/code-ga/k8s-dashboard/releases/latest"
-								download
+								target="_blank"
+								rel="noopener noreferrer"
 							>
-								Download Agent (You need to update agent manually by
-								redownloading this file)
+								<Button variant="default" className="w-full" size="sm">
+									Download Agent
+								</Button>
 							</a>
-						</CardDescription>
-						<p className="text-xs text-muted-foreground">
-							This agent need to run at node have master permission
-						</p>
+							<p className="text-xs text-muted-foreground">
+								Requires node master/root permissions
+							</p>
+						</div>
 					</CardContent>
-					<Button
-						variant="outline"
-						className="mt-4"
-						onClick={() =>
-							navigator.clipboard.writeText(agentConfig.clusterToken)
-						}
-					>
-						Copy Token
-					</Button>
 				</Card>
 			)}
 		</div>
