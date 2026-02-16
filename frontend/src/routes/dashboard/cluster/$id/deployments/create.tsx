@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
 import { useForm } from "@tanstack/react-form";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import {
 	createFileRoute,
 	Link,
@@ -68,6 +68,7 @@ function CreateDeploymentPage() {
 
 	// temp inputs
 
+	// TODO: fetch configmaps and secrets for refs editor
 	// const { data: configMaps } = useQuery({
 	// 	queryKey: ["configmaps", clusterId],
 	// 	queryFn: async () => {
