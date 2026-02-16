@@ -108,10 +108,18 @@ export const configmapRoute = new Elysia({
 						200: baseResponseSchema(
 							Type.Object({
 								...dbSchemaTypes.k8sConfigMaps,
-								data: Type.Optional(Type.Record(Type.String(), Type.String())),
-								binaryData: Type.Optional(
+								data: Type.Union([
 									Type.Record(Type.String(), Type.String()),
-								),
+									Type.String(),
+									Type.Null(),
+									Type.Undefined(),
+								]),
+								binaryData: Type.Union([
+									Type.Record(Type.String(), Type.String()),
+									Type.String(),
+									Type.Null(),
+									Type.Undefined(),
+								]),
 							}),
 						),
 						401: errorResponseSchema,
