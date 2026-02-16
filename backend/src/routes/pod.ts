@@ -1,5 +1,6 @@
 /** biome-ignore-all lint/suspicious/noExplicitAny: <explanation> */
 import { Type } from "@sinclair/typebox";
+import { eq, type InferInsertModel } from "drizzle-orm";
 import { Elysia } from "elysia";
 import { db } from "../database";
 import { schema } from "../database/schema";
@@ -10,10 +11,16 @@ import { baseResponseSchema, errorResponseSchema } from "../types";
 import { decrypt, encrypt } from "../utils/crypto";
 import { generatePodManifest } from "../utils/k8s-manifest";
 import {
-	insertAllPodResourceRefs,
+	ConfigMapEnvFromRefSchema,
+	ConfigMapEnvRefSchema,
+	ConfigMapVolumeRefSchema,
 	fetchAllPodResourceRefs,
-	updateAllPodResourceRefs,
-	transformToJsonbFormat,
+	insertAllPodResourceRefs,
+	PortRefSchema,
+	SecretEnvFromRefSchema,
+	SecretEnvRefSchema,
+	SecretVolumeRefSchema,
+	updateAllPodResourceRefs
 } from "../utils/resource-refs";
 const parseCpuStr = (cpu: string): number => {
 	if (cpu.endsWith("m")) return parseInt(cpu);
@@ -27,7 +34,6 @@ const parseMemoryStr = (mem: string): number => {
 	if (mem.endsWith("Ti")) return parseInt(mem) * 1024 * 1024;
 	return parseInt(mem);
 };
-import { eq, type InferInsertModel } from "drizzle-orm";
 
 export interface WebSocketData {
 	// ws: WebSocket;
@@ -269,7 +275,20 @@ export const podRoute = new Elysia({
 				{
 					detail: { tags: ["Pods"] },
 					response: {
-						200: baseResponseSchema(Type.Object(dbSchemaTypes.k8sPods)),
+						200: baseResponseSchema(Type.Object({
+							...dbSchemaTypes.k8sPods,
+							ports: Type.Array(PortRefSchema),
+							configMapRefs: Type.Object({
+								env: Type.Optional(Type.Array(ConfigMapEnvRefSchema)),
+								envFrom: Type.Optional(Type.Array(ConfigMapEnvFromRefSchema)),
+								volumes: Type.Optional(Type.Array(ConfigMapVolumeRefSchema)),
+							}),
+							secretRefs: Type.Object({
+								env: Type.Optional(Type.Array(SecretEnvRefSchema)),
+								envFrom: Type.Optional(Type.Array(SecretEnvFromRefSchema)),
+								volumes: Type.Optional(Type.Array(SecretVolumeRefSchema)),
+							}),
+						})),
 						404: errorResponseSchema,
 						400: errorResponseSchema,
 					},

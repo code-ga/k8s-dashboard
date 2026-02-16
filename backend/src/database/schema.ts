@@ -1,7 +1,5 @@
 // ALERT: user table only for auth, profile table for user data
 
-import { Type, type Static } from "@sinclair/typebox";
-import { config } from "dotenv";
 import { defineRelations } from "drizzle-orm";
 import {
 	boolean,

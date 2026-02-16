@@ -1,36 +1,29 @@
+import { EnvEditor, type EnvVar } from "@/components/shared/env-editor";
 import { Button } from "@/components/ui/button";
 import {
 	Card,
 	CardContent,
+	CardDescription,
 	CardHeader,
 	CardTitle,
-	CardDescription,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
-import { toast } from "sonner";
 import { useForm } from "@tanstack/react-form";
-import { EnvEditor, type EnvVar } from "@/components/shared/env-editor";
-import { z } from "zod";
-import { useMutation } from "@tanstack/react-query";
-import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft } from "lucide-react";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import {
 	createFileRoute,
 	Link,
 	useNavigate,
 	useParams,
 } from "@tanstack/react-router";
+import { ArrowLeft } from "lucide-react";
 import { useState } from "react";
-import {
-	Select,
-	SelectTrigger,
-	SelectContent,
-	SelectItem,
-	SelectValue,
-} from "@/components/ui/select";
+import { toast } from "sonner";
+import { z } from "zod";
+import RefsEditor from "../../../../../components/shared/refs-editor";
 
 export const Route = createFileRoute(
 	"/dashboard/cluster/$id/deployments/create",
@@ -75,23 +68,23 @@ function CreateDeploymentPage() {
 
 	// temp inputs
 
-	const { data: configMaps } = useQuery({
-		queryKey: ["configmaps", clusterId],
-		queryFn: async () => {
-			const res = await api.api.configmaps({ clusterId }).get();
-			if (res.error) throw res.error;
-			return res.data.data as any[];
-		},
-	});
+	// const { data: configMaps } = useQuery({
+	// 	queryKey: ["configmaps", clusterId],
+	// 	queryFn: async () => {
+	// 		const res = await api.api.configmaps({ clusterId }).get();
+	// 		if (res.error) throw res.error;
+	// 		return res.data.data as any[];
+	// 	},
+	// });
 
-	const { data: secrets } = useQuery({
-		queryKey: ["secrets", clusterId],
-		queryFn: async () => {
-			const res = await api.api.secrets({ clusterId }).get();
-			if (res.error) throw res.error;
-			return res.data.data as any[];
-		},
-	});
+	// const { data: secrets } = useQuery({
+	// 	queryKey: ["secrets", clusterId],
+	// 	queryFn: async () => {
+	// 		const res = await api.api.secrets({ clusterId }).get();
+	// 		if (res.error) throw res.error;
+	// 		return res.data.data as any[];
+	// 	},
+	// });
 
 	// refs state for RefsEditor
 	const mutation = useMutation({

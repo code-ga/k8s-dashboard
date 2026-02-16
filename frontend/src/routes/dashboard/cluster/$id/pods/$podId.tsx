@@ -1,26 +1,26 @@
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { type databaseTypes, type SchemaStatic, api } from "@/lib/api";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Trash2, AlertTriangle, Plus, X } from "lucide-react";
-import { useEffect, useState, useRef, useCallback } from "react";
-import { toast } from "sonner";
+import { ExposeDialog } from "@/components/service/expose-dialog";
 import { EnvEditor, type EnvVar } from "@/components/shared/env-editor";
 import RefsEditor from "@/components/shared/refs-editor";
-import { ExposeDialog } from "@/components/service/expose-dialog";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Terminal } from "xterm";
-import { FitAddon } from "@xterm/addon-fit";
-import { WebLinksAddon } from "@xterm/addon-web-links";
-import "xterm/css/xterm.css";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BACKEND_URL } from "@/constants";
+import { api, type databaseTypes, type SchemaStatic } from "@/lib/api";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
 	createFileRoute,
 	Link,
 	useNavigate,
 	useParams,
 } from "@tanstack/react-router";
+import { FitAddon } from "@xterm/addon-fit";
+import { WebLinksAddon } from "@xterm/addon-web-links";
+import { AlertTriangle, ArrowLeft, Plus, Trash2, X } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
+import { Terminal } from "xterm";
+import "xterm/css/xterm.css";
 
 export const Route = createFileRoute("/dashboard/cluster/$id/pods/$podId")({
 	component: ManagePodPage,

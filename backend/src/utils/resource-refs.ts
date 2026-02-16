@@ -1,73 +1,137 @@
-import { eq, and } from "drizzle-orm";
+import { Type, type Static } from "@sinclair/typebox";
+import { eq } from "drizzle-orm";
 import { db } from "../database";
 import { schema } from "../database/schema";
-import type { PgTableWithColumns } from "drizzle-orm/pg-core";
 
 // ==================== Type Definitions ====================
 
-export interface PortRef {
-	containerPort: number;
-	name?: string;
-}
+export const PortRefSchema = Type.Object({
+	containerPort: Type.Number(),
+	name: Type.Optional(Type.String()),
+});
+export type PortRef = Static<typeof PortRefSchema>;
 
-export interface ConfigMapEnvRef {
-	name: string;
-	configMapName: string;
-	key: string;
-}
+export const ConfigMapEnvRefSchema = Type.Object({
+	name: Type.String(),
+	configMapName: Type.String(),
+	key: Type.String(),
+});
+export type ConfigMapEnvRef = Static<typeof ConfigMapEnvRefSchema>;
+// export interface ConfigMapEnvRef {
+// 	name: string;
+// 	configMapName: string;
+// 	key: string;
+// }
 
-export interface ConfigMapEnvFromRef {
-	configMapName: string;
-	prefix?: string;
-}
+export const ConfigMapEnvFromRefSchema = Type.Object({
+	configMapName: Type.String(),
+	prefix: Type.Optional(Type.String()),
+});
+export type ConfigMapEnvFromRef = Static<typeof ConfigMapEnvFromRefSchema>;
+// export interface ConfigMapEnvFromRef {
+// 	configMapName: string;
+// 	prefix?: string;
+// }
 
-export interface ConfigMapVolumeItem {
-	key: string;
-	path: string;
-}
+export const ConfigMapVolumeItemSchema = Type.Object({
+	key: Type.String(),
+	path: Type.String(),
+});
+export type ConfigMapVolumeItem = Static<typeof ConfigMapVolumeItemSchema>;
+// export interface ConfigMapVolumeItem {
+// 	key: string;
+// 	path: string;
+// }
 
-export interface ConfigMapVolumeRef {
-	name: string;
-	configMapName: string;
-	mountPath: string;
-	items?: ConfigMapVolumeItem[];
-}
+export const ConfigMapVolumeRefSchema = Type.Object({
+	name: Type.String(),
+	configMapName: Type.String(),
+	mountPath: Type.String(),
+	items: Type.Optional(Type.Array(ConfigMapVolumeItemSchema)),
+});
+export type ConfigMapVolumeRef = Static<typeof ConfigMapVolumeRefSchema>;
+// export interface ConfigMapVolumeRef {
+// 	name: string;
+// 	configMapName: string;
+// 	mountPath: string;
+// 	items?: ConfigMapVolumeItem[];
+// }
 
-export interface SecretEnvRef {
-	name: string;
-	secretName: string;
-	key: string;
-}
+export const SecretEnvRefSchema = Type.Object({
+	name: Type.String(),
+	secretName: Type.String(),
+	key: Type.String(),
+});
+export type SecretEnvRef = Static<typeof SecretEnvRefSchema>;
+// export interface SecretEnvRef {
+// 	name: string;
+// 	secretName: string;
+// 	key: string;
+// }
 
-export interface SecretEnvFromRef {
-	secretName: string;
-	prefix?: string;
-}
+export const SecretEnvFromRefSchema = Type.Object({
+	secretName: Type.String(),
+	prefix: Type.Optional(Type.String()),
+});
+export type SecretEnvFromRef = Static<typeof SecretEnvFromRefSchema>;
+// export interface SecretEnvFromRef {
+// 	secretName: string;
+// 	prefix?: string;
+// }
 
-export interface SecretVolumeItem {
-	key: string;
-	path: string;
-}
+export const SecretVolumeItemSchema = Type.Object({
+	key: Type.String(),
+	path: Type.String(),
+});
+export type SecretVolumeItem = Static<typeof SecretVolumeItemSchema>;
+// export interface SecretVolumeItem {
+// 	key: string;
+// 	path: string;
+// }
 
-export interface SecretVolumeRef {
-	name: string;
-	secretName: string;
-	mountPath: string;
-	items?: SecretVolumeItem[];
-}
+export const SecretVolumeRefSchema = Type.Object({
+	name: Type.String(),
+	secretName: Type.String(),
+	mountPath: Type.String(),
+	items: Type.Optional(Type.Array(SecretVolumeItemSchema)),
+});
+export type SecretVolumeRef = Static<typeof SecretVolumeRefSchema>;
+// export interface SecretVolumeRef {
+// 	name: string;
+// 	secretName: string;
+// 	mountPath: string;
+// 	items?: SecretVolumeItem[];
+// }
 
-export interface ResourceRefs {
-	configMapRefs?: {
-		env?: ConfigMapEnvRef[] | undefined;
-		envFrom?: ConfigMapEnvFromRef[] | undefined;
-		volumes?: ConfigMapVolumeRef[] | undefined;
-	};
-	secretRefs?: {
-		env?: SecretEnvRef[] | undefined;
-		envFrom?: SecretEnvFromRef[] | undefined;
-		volumes?: SecretVolumeRef[] | undefined;
-	};
-}
+export const ResourceRefsSchema = Type.Object({
+	configMapRefs: Type.Optional(
+		Type.Object({
+			env: Type.Optional(Type.Array(ConfigMapEnvRefSchema)),
+			envFrom: Type.Optional(Type.Array(ConfigMapEnvFromRefSchema)),
+			volumes: Type.Optional(Type.Array(ConfigMapVolumeRefSchema)),
+		}),
+	),
+	secretRefs: Type.Optional(
+		Type.Object({
+			env: Type.Optional(Type.Array(SecretEnvRefSchema)),
+			envFrom: Type.Optional(Type.Array(SecretEnvFromRefSchema)),
+			volumes: Type.Optional(Type.Array(SecretVolumeRefSchema)),
+		}),
+	),
+});
+export type ResourceRefs = Static<typeof ResourceRefsSchema>;
+// export interface ResourceRefs {
+// 	configMapRefs?: {
+// 		env?: ConfigMapEnvRef[] | undefined;
+// 		envFrom?: ConfigMapEnvFromRef[] | undefined;
+// 		volumes?: ConfigMapVolumeRef[] | undefined;
+// 	};
+// 	secretRefs?: {
+// 		env?: SecretEnvRef[] | undefined;
+// 		envFrom?: SecretEnvFromRef[] | undefined;
+// 		volumes?: SecretVolumeRef[] | undefined;
+// 	};
+// }
 
 // ==================== Pod Port Operations ====================
 
@@ -100,7 +164,7 @@ export async function fetchPodPorts(podId: number): Promise<PortRef[]> {
 
 	return results.map((row) => ({
 		containerPort: row.containerPort,
-		name: row.name || undefined,
+		name: row.name ?? undefined,
 	}));
 }
 
@@ -144,7 +208,7 @@ export async function fetchDeploymentPorts(
 
 	return results.map((row) => ({
 		containerPort: row.containerPort,
-		name: row.name || undefined,
+		name: row.name ?? undefined,
 	}));
 }
 

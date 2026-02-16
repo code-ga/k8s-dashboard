@@ -12,10 +12,9 @@ import { baseResponseSchema, errorResponseSchema } from "../types";
 import { decrypt, encrypt } from "../utils/crypto";
 import { generateDeploymentManifest } from "../utils/k8s-manifest";
 import {
-	insertAllDeploymentResourceRefs,
 	fetchAllDeploymentResourceRefs,
-	updateAllDeploymentResourceRefs,
-	transformToJsonbFormat,
+	insertAllDeploymentResourceRefs,
+	updateAllDeploymentResourceRefs
 } from "../utils/resource-refs";
 const parseCpuStr = (cpu: string): number => {
 	if (cpu.endsWith("m")) return parseInt(cpu);
