@@ -85,6 +85,8 @@ export const secretRoute = new Elysia({
 						}
 					}
 
+					console.log(secretData);
+
 					return ctx.status(200, {
 						success: true,
 						message: "Secret fetched successfully",

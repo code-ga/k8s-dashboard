@@ -93,10 +93,12 @@ export const configmapRoute = new Elysia({
 						}
 					}
 
+					console.log(cmData);
+
 					return ctx.status(200, {
 						success: true,
 						message: "ConfigMap fetched successfully",
-						data: cmData as any,
+						data: cmData,
 						timestamp: Date.now(),
 					});
 				},
