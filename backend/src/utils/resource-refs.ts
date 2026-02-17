@@ -1,4 +1,4 @@
-import { Type, type Static } from "@sinclair/typebox";
+import { type Static, Type } from "@sinclair/typebox";
 import { eq } from "drizzle-orm";
 import { db } from "../database";
 import { schema } from "../database/schema";

@@ -1,5 +1,26 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { createFileRoute, Link, useParams } from "@tanstack/react-router";
+import {
+	ArrowLeft,
+	CheckCircle2,
+	Copy,
+	HardDrive,
+	Plus,
+	Trash2,
+	XCircle,
+} from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogHeader,
+	DialogTitle,
+} from "@/components/ui/dialog";
 import {
 	Table,
 	TableBody,
@@ -9,27 +30,6 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { api } from "@/lib/api";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, Link, useParams } from "@tanstack/react-router";
-import {
-	ArrowLeft,
-	HardDrive,
-	Plus,
-	Trash2,
-	Copy,
-	CheckCircle2,
-	XCircle,
-} from "lucide-react";
-import { useState } from "react";
-import {
-	Dialog,
-	DialogContent,
-	DialogHeader,
-	DialogTitle,
-	DialogDescription,
-} from "@/components/ui/dialog";
-import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
 
 export const Route = createFileRoute("/dashboard/cluster/$id/nodes")({
 	component: ClusterNodes,
@@ -174,11 +174,13 @@ function ClusterNodes() {
 									</TableCell>
 									<TableCell>
 										<span className="bg-secondary px-2 py-1 rounded text-xs">
-											{Object.entries(JSON.parse(node.labels || "{}")).map(([key, value]) => (
-												<span key={key} className="block">
-													{key}: {new String(value)}
-												</span>
-											))}
+											{Object.entries(JSON.parse(node.labels || "{}")).map(
+												([key, value]) => (
+													<span key={key} className="block">
+														{key}: {new String(value)}
+													</span>
+												),
+											)}
 										</span>
 									</TableCell>
 									<TableCell>

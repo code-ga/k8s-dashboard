@@ -1,22 +1,59 @@
-import { useEffect, useState } from "react";
-import { api } from "@/lib/api";
 import { useQuery } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
 	Select,
-	SelectTrigger,
 	SelectContent,
 	SelectItem,
+	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { api } from "@/lib/api";
+
+export interface IConfigMapEnvRef {
+	name: string;
+	configMapName: string;
+	key: string;
+}
+
+export interface IConfigMapEnvFromRef {
+	configMapName: string;
+	prefix?: string;
+}
+
+export interface ISecretEnvRef {
+	name: string;
+	secretName: string;
+	key: string;
+}
+
+export interface ISecretEnvFromRef {
+	secretName: string;
+	prefix?: string;
+}
 
 interface RefsEditorProps {
 	clusterId: string;
-	configMapRefs?: any;
-	secretRefs?: any;
-	onChange?: (refs: { configMapRefs: any; secretRefs: any }) => void;
+	configMapRefs?: {
+		env?: IConfigMapEnvRef[];
+		envFrom?: IConfigMapEnvFromRef[];
+	};
+	secretRefs?: {
+		env?: ISecretEnvRef[];
+		envFrom?: ISecretEnvFromRef[];
+	};
+	onChange?: (refs: {
+		configMapRefs: {
+			env?: IConfigMapEnvRef[];
+			envFrom?: IConfigMapEnvFromRef[];
+		};
+		secretRefs: {
+			env?: ISecretEnvRef[];
+			envFrom?: ISecretEnvFromRef[];
+		};
+	}) => void;
 }
 
 export default function RefsEditor({
@@ -30,7 +67,7 @@ export default function RefsEditor({
 		queryFn: async () => {
 			const res = await api.api.configmaps({ clusterId }).get();
 			if (res.error) throw res.error;
-			return res.data.data as any[];
+			return res.data.data;
 		},
 	});
 
@@ -39,16 +76,20 @@ export default function RefsEditor({
 		queryFn: async () => {
 			const res = await api.api.secrets({ clusterId }).get();
 			if (res.error) throw res.error;
-			return res.data.data as any[];
+			return res.data.data;
 		},
 	});
 
-	const [cmEnv, setCmEnv] = useState<any[]>(configMapRefs?.env || []);
-	const [cmEnvFrom, setCmEnvFrom] = useState<any[]>(
+	const [cmEnv, setCmEnv] = useState<IConfigMapEnvRef[]>(
+		configMapRefs?.env || [],
+	);
+	const [cmEnvFrom, setCmEnvFrom] = useState<IConfigMapEnvFromRef[]>(
 		configMapRefs?.envFrom || [],
 	);
-	const [sEnv, setSEnv] = useState<any[]>(secretRefs?.env || []);
-	const [sEnvFrom, setSEnvFrom] = useState<any[]>(secretRefs?.envFrom || []);
+	const [sEnv, setSEnv] = useState<ISecretEnvRef[]>(secretRefs?.env || []);
+	const [sEnvFrom, setSEnvFrom] = useState<ISecretEnvFromRef[]>(
+		secretRefs?.envFrom || [],
+	);
 
 	// temp inputs
 	const [cmName, setCmName] = useState("");
@@ -80,8 +121,11 @@ export default function RefsEditor({
 		<div className="space-y-4">
 			<div>
 				<h4 className="text-sm font-medium">ConfigMap - Env</h4>
-				{cmEnv.map((r: any, i: number) => (
-					<div key={i} className="flex items-center justify-between gap-2">
+				{cmEnv.map((r, i: number) => (
+					<div
+						key={`${r.name}-${r.configMapName}-${r.key}-${i}`}
+						className="flex items-center justify-between gap-2"
+					>
 						<div className="text-sm">
 							{r.name} ← {r.configMapName}/{r.key}
 						</div>
@@ -107,7 +151,7 @@ export default function RefsEditor({
 								<SelectValue placeholder="Select" />
 							</SelectTrigger>
 							<SelectContent>
-								{configMaps?.map((cm: any) => (
+								{configMaps?.map((cm) => (
 									<SelectItem key={cm.id} value={cm.name}>
 										{cm.name}
 									</SelectItem>
@@ -143,8 +187,11 @@ export default function RefsEditor({
 
 			<div>
 				<h4 className="text-sm font-medium">ConfigMap - EnvFrom</h4>
-				{cmEnvFrom.map((r: any, i: number) => (
-					<div key={i} className="flex items-center justify-between gap-2">
+				{cmEnvFrom.map((r, i: number) => (
+					<div
+						key={`${r.configMapName}-${r.prefix}-${i}`}
+						className="flex items-center justify-between gap-2"
+					>
 						<div className="text-sm">
 							{r.configMapName} {r.prefix ? `(prefix: ${r.prefix})` : ""}
 						</div>
@@ -167,7 +214,7 @@ export default function RefsEditor({
 								<SelectValue placeholder="Select" />
 							</SelectTrigger>
 							<SelectContent>
-								{configMaps?.map((cm: any) => (
+								{configMaps?.map((cm) => (
 									<SelectItem key={cm.id} value={cm.name}>
 										{cm.name}
 									</SelectItem>
@@ -206,8 +253,11 @@ export default function RefsEditor({
 
 			<div>
 				<h4 className="text-sm font-medium">Secret - Env</h4>
-				{sEnv.map((r: any, i: number) => (
-					<div key={i} className="flex items-center justify-between gap-2">
+				{sEnv.map((r, i: number) => (
+					<div
+						key={`${r.name}-${r.secretName}-${r.key}-${i}`}
+						className="flex items-center justify-between gap-2"
+					>
 						<div className="text-sm">
 							{r.name} ← {r.secretName}/{r.key}
 						</div>
@@ -233,7 +283,7 @@ export default function RefsEditor({
 								<SelectValue placeholder="Select" />
 							</SelectTrigger>
 							<SelectContent>
-								{secrets?.map((s: any) => (
+								{secrets?.map((s) => (
 									<SelectItem key={s.id} value={s.name}>
 										{s.name}
 									</SelectItem>
@@ -269,8 +319,11 @@ export default function RefsEditor({
 
 			<div>
 				<h4 className="text-sm font-medium">Secret - EnvFrom</h4>
-				{sEnvFrom.map((r: any, i: number) => (
-					<div key={i} className="flex items-center justify-between gap-2">
+				{sEnvFrom.map((r, i: number) => (
+					<div
+						key={`${r.secretName}-${r.prefix}-${i}`}
+						className="flex items-center justify-between gap-2"
+					>
 						<div className="text-sm">
 							{r.secretName} {r.prefix ? `(prefix: ${r.prefix})` : ""}
 						</div>
@@ -293,7 +346,7 @@ export default function RefsEditor({
 								<SelectValue placeholder="Select" />
 							</SelectTrigger>
 							<SelectContent>
-								{secrets?.map((s: any) => (
+								{secrets?.map((s) => (
 									<SelectItem key={s.id} value={s.name}>
 										{s.name}
 									</SelectItem>

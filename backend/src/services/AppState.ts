@@ -1,8 +1,8 @@
+import { eq } from "drizzle-orm";
 import Elysia from "elysia";
 import { db } from "../database";
-import { schema } from "../database/schema";
 import type { AppState } from "../database/schema";
-import { eq } from "drizzle-orm";
+import { schema } from "../database/schema";
 
 export class AppStateService {
 	instanceId: string;

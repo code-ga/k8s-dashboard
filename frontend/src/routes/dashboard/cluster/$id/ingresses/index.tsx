@@ -1,3 +1,8 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { createFileRoute, Link, useParams } from "@tanstack/react-router";
+import { ArrowLeft, Settings, ShieldCheck, Trash2 } from "lucide-react";
+import { toast } from "sonner";
+import { CreateIngressDialog } from "@/components/ingress/create-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -8,13 +13,8 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import { api } from "@/lib/api";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, Link, useParams } from "@tanstack/react-router";
-import { ArrowLeft, ShieldCheck, Trash2, Settings } from "lucide-react";
-import { toast } from "sonner";
 import type { databaseTypes, SchemaStatic } from "@/lib/api";
-import { CreateIngressDialog } from "@/components/ingress/create-dialog";
+import { api } from "@/lib/api";
 
 export const Route = createFileRoute("/dashboard/cluster/$id/ingresses/")({
 	component: ClusterIngresses,

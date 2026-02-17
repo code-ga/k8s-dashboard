@@ -1,13 +1,13 @@
-import Elysia from "elysia";
-import { authenticationMiddleware } from "../middleware/auth";
-import { schema } from "../database/schema";
-import { eq } from "drizzle-orm";
-import { db } from "../database";
-import { Type } from "@sinclair/typebox";
-import { dbSchemaTypes, type SchemaStatic } from "../database/type";
-import { baseResponseSchema, errorResponseSchema } from "../types";
-import { appStateService } from "../services/AppState";
 import type { Static } from "@sinclair/typebox";
+import { Type } from "@sinclair/typebox";
+import { eq } from "drizzle-orm";
+import Elysia from "elysia";
+import { db } from "../database";
+import { schema } from "../database/schema";
+import { dbSchemaTypes, type SchemaStatic } from "../database/type";
+import { authenticationMiddleware } from "../middleware/auth";
+import { appStateService } from "../services/AppState";
+import { baseResponseSchema, errorResponseSchema } from "../types";
 import { isAllElementsPresent } from "../utils/array";
 
 export const profileRouter = new Elysia({

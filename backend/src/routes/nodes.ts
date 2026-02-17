@@ -1,16 +1,16 @@
-import { Elysia } from "elysia";
-import { authenticationMiddleware } from "../middleware/auth";
-import { db } from "../database";
-import { schema } from "../database/schema";
-import { baseResponseSchema, errorResponseSchema } from "../types";
 import { Type } from "@sinclair/typebox";
-import { dbSchemaTypes } from "../database/type";
 import { eq } from "drizzle-orm";
-import { agentManagerService } from "../services/agentManager";
+import { Elysia } from "elysia";
 import {
 	// Command,
 	Command_CommandType,
 } from "../../pb-generated/agent-backend/websocket";
+import { db } from "../database";
+import { schema } from "../database/schema";
+import { dbSchemaTypes } from "../database/type";
+import { authenticationMiddleware } from "../middleware/auth";
+import { agentManagerService } from "../services/agentManager";
+import { baseResponseSchema, errorResponseSchema } from "../types";
 
 export const nodesRoute = new Elysia({ prefix: "/nodes/:clusterId" })
 	.use(authenticationMiddleware)
@@ -164,7 +164,7 @@ export const nodesRoute = new Elysia({ prefix: "/nodes/:clusterId" })
 
 						try {
 							// Send DELETE command to Agent
-							await ctx.agentManager.sendCommand(cluster.agent.id,cluster.id, {
+							await ctx.agentManager.sendCommand(cluster.agent.id, cluster.id, {
 								id: "", // Will be filled by sendCommand
 								type: 7, // DELETE_NODE (pb.Command_CommandType.DELETE_NODE)
 								targetName: node.name,

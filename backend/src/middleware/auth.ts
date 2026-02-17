@@ -1,9 +1,9 @@
-import Elysia, { type Static } from "elysia";
-import { auth } from "../libs/auths/auth.config";
 import { eq } from "drizzle-orm";
+import Elysia, { type Static } from "elysia";
 import { db } from "../database";
 import { schema } from "../database/schema";
 import type { dbSchemaTypes } from "../database/type";
+import { auth } from "../libs/auths/auth.config";
 import { isAllElementsPresent } from "../utils/array";
 
 export const authenticationMiddleware = new Elysia({

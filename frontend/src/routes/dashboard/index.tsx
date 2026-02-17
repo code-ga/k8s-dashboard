@@ -1,10 +1,10 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { api } from "@/lib/api";
-import { authClient } from "@/lib/auth";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Server } from "lucide-react";
 import { CreateClusterDialog } from "@/components/cluster/create-cluster-dialog";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { api } from "@/lib/api";
+import { authClient } from "@/lib/auth";
 
 export const Route = createFileRoute("/dashboard/")({
 	component: DashboardIndex,

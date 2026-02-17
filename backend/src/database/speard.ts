@@ -5,13 +5,12 @@
 /** biome-ignore-all lint/complexity/noBannedTypes: <explanation> */
 
 import { Kind, type TObject } from "@sinclair/typebox";
+import type { Table } from "drizzle-orm";
 import {
+	type BuildSchema,
 	createInsertSchema,
 	createSelectSchema,
-	type BuildSchema,
 } from "drizzle-typebox";
-
-import type { Table } from "drizzle-orm";
 
 type Spread<
 	T extends TObject | Table,

@@ -1,22 +1,26 @@
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { api, type databaseTypes, type SchemaStatic } from "@/lib/api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Trash2 } from "lucide-react";
-import { useEffect, useState, useRef } from "react";
-import { toast } from "sonner";
-import { EnvEditor, type EnvVar } from "@/components/shared/env-editor";
-import RefsEditor from "@/components/shared/refs-editor";
-import { ExposeDialog } from "@/components/service/expose-dialog";
 import {
 	createFileRoute,
 	Link,
 	useNavigate,
 	useParams,
 } from "@tanstack/react-router";
+import { AlertTriangle, ArrowLeft, Plus, Trash2, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
+import { ExposeDialog } from "@/components/service/expose-dialog";
+import { EnvEditor, type EnvVar } from "@/components/shared/env-editor";
+import RefsEditor, {
+	type IConfigMapEnvFromRef,
+	type IConfigMapEnvRef,
+	type ISecretEnvFromRef,
+	type ISecretEnvRef,
+} from "@/components/shared/refs-editor";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { AlertTriangle, Plus, X } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { api, type databaseTypes, type SchemaStatic } from "@/lib/api";
 
 export const Route = createFileRoute(
 	"/dashboard/cluster/$id/deployments/$deploymentId",
@@ -49,10 +53,16 @@ function ManageDeploymentPage() {
 	const [command, setCommand] = useState<string[]>([]);
 	const [args, setArgs] = useState<string[]>([]);
 	const [envVars, setEnvVars] = useState<EnvVar[]>([]);
-	const [configMapEnvRefs, setConfigMapEnvRefs] = useState<any[]>([]);
-	const [configMapEnvFromRefs, setConfigMapEnvFromRefs] = useState<any[]>([]);
-	const [secretEnvRefs, setSecretEnvRefs] = useState<any[]>([]);
-	const [secretEnvFromRefs, setSecretEnvFromRefs] = useState<any[]>([]);
+	const [configMapEnvRefs, setConfigMapEnvRefs] = useState<IConfigMapEnvRef[]>(
+		[],
+	);
+	const [configMapEnvFromRefs, setConfigMapEnvFromRefs] = useState<
+		IConfigMapEnvFromRef[]
+	>([]);
+	const [secretEnvRefs, setSecretEnvRefs] = useState<ISecretEnvRef[]>([]);
+	const [secretEnvFromRefs, setSecretEnvFromRefs] = useState<
+		ISecretEnvFromRef[]
+	>([]);
 	const [ports, setPorts] = useState<
 		{ containerPort: number; name?: string }[]
 	>([]);

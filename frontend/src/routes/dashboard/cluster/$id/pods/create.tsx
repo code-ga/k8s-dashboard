@@ -1,29 +1,34 @@
-import { Button } from "@/components/ui/button";
-import {
-	Card,
-	CardContent,
-	CardHeader,
-	CardTitle,
-	CardDescription,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { api } from "@/lib/api";
-import { toast } from "sonner";
 import { useForm } from "@tanstack/react-form";
-import { EnvEditor, type EnvVar } from "@/components/shared/env-editor";
-import { z } from "zod";
 import { useMutation } from "@tanstack/react-query";
-import { ArrowLeft } from "lucide-react";
 import {
 	createFileRoute,
 	Link,
 	useNavigate,
 	useParams,
 } from "@tanstack/react-router";
+import { ArrowLeft } from "lucide-react";
 import { useState } from "react";
-import RefsEditor from "@/components/shared/refs-editor";
+import { toast } from "sonner";
+import { z } from "zod";
+import { EnvEditor, type EnvVar } from "@/components/shared/env-editor";
+import RefsEditor, {
+	type IConfigMapEnvFromRef,
+	type IConfigMapEnvRef,
+	type ISecretEnvFromRef,
+	type ISecretEnvRef,
+} from "@/components/shared/refs-editor";
+import { Button } from "@/components/ui/button";
+import {
+	Card,
+	CardContent,
+	CardDescription,
+	CardHeader,
+	CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { api } from "@/lib/api";
 
 export const Route = createFileRoute("/dashboard/cluster/$id/pods/create")({
 	component: CreatePodPage,
@@ -56,10 +61,16 @@ function CreatePodPage() {
 	});
 	const navigate = useNavigate();
 	const [envVars, setEnvVars] = useState<EnvVar[]>([]);
-	const [configMapEnvRefs, setConfigMapEnvRefs] = useState<any[]>([]);
-	const [configMapEnvFromRefs, setConfigMapEnvFromRefs] = useState<any[]>([]);
-	const [secretEnvRefs, setSecretEnvRefs] = useState<any[]>([]);
-	const [secretEnvFromRefs, setSecretEnvFromRefs] = useState<any[]>([]);
+	const [configMapEnvRefs, setConfigMapEnvRefs] = useState<IConfigMapEnvRef[]>(
+		[],
+	);
+	const [configMapEnvFromRefs, setConfigMapEnvFromRefs] = useState<
+		IConfigMapEnvFromRef[]
+	>([]);
+	const [secretEnvRefs, setSecretEnvRefs] = useState<ISecretEnvRef[]>([]);
+	const [secretEnvFromRefs, setSecretEnvFromRefs] = useState<
+		ISecretEnvFromRef[]
+	>([]);
 
 	// refs state for RefsEditor
 
@@ -346,7 +357,7 @@ function CreatePodPage() {
 									envFrom: configMapEnvFromRefs,
 								}}
 								secretRefs={{ env: secretEnvRefs, envFrom: secretEnvFromRefs }}
-								onChange={(r: any) => {
+								onChange={(r) => {
 									setConfigMapEnvRefs(r.configMapRefs?.env || []);
 									setConfigMapEnvFromRefs(r.configMapRefs?.envFrom || []);
 									setSecretEnvRefs(r.secretRefs?.env || []);

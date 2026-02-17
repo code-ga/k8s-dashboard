@@ -1,3 +1,16 @@
+import { useForm } from "@tanstack/react-form";
+import { useMutation } from "@tanstack/react-query";
+import {
+	createFileRoute,
+	Link,
+	useNavigate,
+	useParams,
+} from "@tanstack/react-router";
+import { ArrowLeft } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
+import { z } from "zod";
+import { EnvEditor, type EnvVar } from "@/components/shared/env-editor";
 import { Button } from "@/components/ui/button";
 import {
 	Card,
@@ -16,19 +29,6 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { api } from "@/lib/api";
-import { toast } from "sonner";
-import { useForm } from "@tanstack/react-form";
-import { EnvEditor, type EnvVar } from "@/components/shared/env-editor";
-import { z } from "zod";
-import { useMutation } from "@tanstack/react-query";
-import { ArrowLeft } from "lucide-react";
-import {
-	createFileRoute,
-	Link,
-	useNavigate,
-	useParams,
-} from "@tanstack/react-router";
-import { useState } from "react";
 
 export const Route = createFileRoute("/dashboard/cluster/$id/secrets/create")({
 	component: CreateSecretPage,

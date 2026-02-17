@@ -1,17 +1,17 @@
 import Elysia from "elysia";
-import { betterAuthRouter } from "./auth";
-import { healthRoutes } from "./health";
-import { clusterRoute } from "./cluster";
-import { agentRoute } from "./agent";
 import { agentManagerService } from "../services/agentManager";
-import { profileRouter } from "./profile";
+import { agentRoute } from "./agent";
+import { betterAuthRouter } from "./auth";
+import { clusterRoute } from "./cluster";
+import { configmapRoute } from "./configmap";
+import { deploymentRoute } from "./deployment";
+import { healthRoutes } from "./health";
+import { ingressRoute } from "./ingress";
 import { nodesRoute } from "./nodes";
 import { podRoute } from "./pod";
-import { deploymentRoute } from "./deployment";
-import { serviceRoute } from "./service";
-import { ingressRoute } from "./ingress";
-import { configmapRoute } from "./configmap";
+import { profileRouter } from "./profile";
 import { secretRoute } from "./secret";
+import { serviceRoute } from "./service";
 
 const apiRouter = new Elysia({ prefix: "/api" })
 	.use(agentManagerService)

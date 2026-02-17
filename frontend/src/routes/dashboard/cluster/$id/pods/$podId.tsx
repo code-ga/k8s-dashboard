@@ -1,12 +1,3 @@
-import { ExposeDialog } from "@/components/service/expose-dialog";
-import { EnvEditor, type EnvVar } from "@/components/shared/env-editor";
-import RefsEditor from "@/components/shared/refs-editor";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BACKEND_URL } from "@/constants";
-import { api, type databaseTypes, type SchemaStatic } from "@/lib/api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
 	createFileRoute,
@@ -20,6 +11,20 @@ import { AlertTriangle, ArrowLeft, Plus, Trash2, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Terminal } from "xterm";
+import { ExposeDialog } from "@/components/service/expose-dialog";
+import { EnvEditor, type EnvVar } from "@/components/shared/env-editor";
+import RefsEditor, {
+	type IConfigMapEnvFromRef,
+	type IConfigMapEnvRef,
+	type ISecretEnvFromRef,
+	type ISecretEnvRef,
+} from "@/components/shared/refs-editor";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { BACKEND_URL } from "@/constants";
+import { api, type databaseTypes, type SchemaStatic } from "@/lib/api";
 import "xterm/css/xterm.css";
 
 export const Route = createFileRoute("/dashboard/cluster/$id/pods/$podId")({
@@ -50,10 +55,16 @@ function ManagePodPage() {
 	const [command, setCommand] = useState<string[]>([]);
 	const [args, setArgs] = useState<string[]>([]);
 	const [envVars, setEnvVars] = useState<EnvVar[]>([]);
-	const [configMapEnvRefs, setConfigMapEnvRefs] = useState<any[]>([]);
-	const [configMapEnvFromRefs, setConfigMapEnvFromRefs] = useState<any[]>([]);
-	const [secretEnvRefs, setSecretEnvRefs] = useState<any[]>([]);
-	const [secretEnvFromRefs, setSecretEnvFromRefs] = useState<any[]>([]);
+	const [configMapEnvRefs, setConfigMapEnvRefs] = useState<IConfigMapEnvRef[]>(
+		[],
+	);
+	const [configMapEnvFromRefs, setConfigMapEnvFromRefs] = useState<
+		IConfigMapEnvFromRef[]
+	>([]);
+	const [secretEnvRefs, setSecretEnvRefs] = useState<ISecretEnvRef[]>([]);
+	const [secretEnvFromRefs, setSecretEnvFromRefs] = useState<
+		ISecretEnvFromRef[]
+	>([]);
 	const [ports, setPorts] = useState<
 		{ containerPort: number; name?: string }[]
 	>([]);
@@ -168,22 +179,29 @@ function ManagePodPage() {
 					args: args.length > 0 ? args : undefined,
 					env: envMap,
 					configMapRefs:
-						configMapEnvRefs.length > 0 || configMapEnvFromRefs.length > 0
+						(configMapEnvRefs && configMapEnvRefs?.length > 0) ||
+						(configMapEnvFromRefs && configMapEnvFromRefs?.length > 0)
 							? {
 									env:
-										configMapEnvRefs.length > 0 ? configMapEnvRefs : undefined,
+										configMapEnvRefs && configMapEnvRefs?.length > 0
+											? configMapEnvRefs
+											: undefined,
 									envFrom:
-										configMapEnvFromRefs.length > 0
+										configMapEnvFromRefs && configMapEnvFromRefs?.length > 0
 											? configMapEnvFromRefs
 											: undefined,
 								}
 							: undefined,
 					secretRefs:
-						secretEnvRefs.length > 0 || secretEnvFromRefs.length > 0
+						(secretEnvRefs && secretEnvRefs?.length > 0) ||
+						(secretEnvFromRefs && secretEnvFromRefs?.length > 0)
 							? {
-									env: secretEnvRefs.length > 0 ? secretEnvRefs : undefined,
+									env:
+										secretEnvRefs && secretEnvRefs?.length > 0
+											? secretEnvRefs
+											: undefined,
 									envFrom:
-										secretEnvFromRefs.length > 0
+										secretEnvFromRefs && secretEnvFromRefs?.length > 0
 											? secretEnvFromRefs
 											: undefined,
 								}
@@ -194,7 +212,7 @@ function ManagePodPage() {
 						limits: { cpu: cpuLimit, memory: memoryLimit },
 					},
 					ports: ports.length > 0 ? ports : undefined,
-				} as any);
+				});
 			if (res.error) {
 				throw new Error(res.error.value?.message || "Failed to update pod");
 			}

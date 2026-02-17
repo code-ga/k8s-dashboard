@@ -1,3 +1,18 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { createFileRoute, Link, useParams } from "@tanstack/react-router";
+import {
+	ArrowLeft,
+	Layers,
+	Plus,
+	Settings,
+	Settings2,
+	ShieldCheck,
+	Zap,
+	ZapOff,
+} from "lucide-react";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -19,23 +34,8 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import { api } from "@/lib/api";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import type { databaseTypes, SchemaStatic } from "@/lib/api";
-import {
-	ArrowLeft,
-	Layers,
-	Plus,
-	Settings,
-	Settings2,
-	ShieldCheck,
-	Zap,
-	ZapOff,
-} from "lucide-react";
-import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { toast } from "sonner";
+import { api } from "@/lib/api";
 
 export const Route = createFileRoute("/dashboard/cluster/$id/deployments/")({
 	component: ClusterDeployments,
@@ -128,7 +128,7 @@ function ScaleSettingsDialog({
 											checked={field.value}
 											disabled={isAlwaysRunning}
 											onCheckedChange={(val) => {
-												field.onChange(val)
+												field.onChange(val);
 												if (val) form.setValue("isAlwaysRunning", false);
 											}}
 										/>
@@ -153,7 +153,7 @@ function ScaleSettingsDialog({
 											checked={field.value}
 											disabled={isAutoScaling}
 											onCheckedChange={(val) => {
-												field.onChange(val)
+												field.onChange(val);
 												if (val) form.setValue("isAutoScaling", false);
 											}}
 										/>
@@ -194,7 +194,7 @@ function ScaleSettingsDialog({
 				</Form>
 			</DialogContent>
 		</Dialog>
-	)
+	);
 }
 
 import {
@@ -319,5 +319,5 @@ function ClusterDeployments() {
 				</CardContent>
 			</Card>
 		</div>
-	)
+	);
 }

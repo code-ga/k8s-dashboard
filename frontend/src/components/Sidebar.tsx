@@ -1,8 +1,8 @@
 import { Link, useLocation } from "@tanstack/react-router";
-import { cn } from "@/lib/utils";
-import { LayoutDashboard, Settings, Users, Server } from "lucide-react";
-import { hasPermission, type Role } from "@/config/permissions";
+import { LayoutDashboard, Server, Settings, Users } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { hasPermission, type Role } from "@/config/permissions";
+import { cn } from "@/lib/utils";
 
 interface SidebarProps {
 	role: Role;
@@ -45,7 +45,7 @@ export function Sidebar({ role, className }: SidebarProps) {
 		>
 			<div className="p-6">
 				<h2 className="text-lg font-bold tracking-tight flex items-center gap-2">
-					<LayoutDashboard className="w-6 h-6" />		
+					<LayoutDashboard className="w-6 h-6" />
 					The-bridge (still K8s Dashboard but i think this name more cooler)
 				</h2>
 			</div>

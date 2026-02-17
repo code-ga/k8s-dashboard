@@ -1,8 +1,8 @@
 import { Link } from "@tanstack/react-router";
 import { Home, Menu, Network, X } from "lucide-react";
 import { useState } from "react";
+import logo from "../logo.svg";
 import { ModeToggle } from "./mode-toggle";
-import logo from "../logo.svg"
 
 export default function Header() {
 	const [isOpen, setIsOpen] = useState(false);
@@ -11,6 +11,7 @@ export default function Header() {
 		<>
 			<header className="p-4 flex items-center bg-card text-card-foreground border-b shadow-sm">
 				<button
+					type="button"
 					onClick={() => setIsOpen(true)}
 					className="p-2 hover:bg-accent rounded-lg transition-colors"
 					aria-label="Open menu"
@@ -39,6 +40,7 @@ export default function Header() {
 				<div className="flex items-center justify-between p-4 border-b">
 					<h2 className="text-xl font-bold">Navigation</h2>
 					<button
+						type="button"
 						onClick={() => setIsOpen(false)}
 						className="p-2 hover:bg-accent rounded-lg transition-colors"
 						aria-label="Close menu"

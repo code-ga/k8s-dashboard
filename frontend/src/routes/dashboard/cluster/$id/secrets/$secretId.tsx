@@ -1,27 +1,27 @@
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Input } from "@/components/ui/input";
-import { api } from "@/lib/api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-	ArrowLeft,
-	Trash2,
-	Eye,
-	EyeOff,
-	Lock,
-	Edit2,
-	Save,
-	X,
-} from "lucide-react";
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
-import { type EnvVar } from "@/components/shared/env-editor";
 import {
 	createFileRoute,
 	Link,
 	useNavigate,
 	useParams,
 } from "@tanstack/react-router";
+import {
+	ArrowLeft,
+	Edit2,
+	Eye,
+	EyeOff,
+	Lock,
+	Save,
+	Trash2,
+	X,
+} from "lucide-react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import type { EnvVar } from "@/components/shared/env-editor";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { api } from "@/lib/api";
 
 export const Route = createFileRoute(
 	"/dashboard/cluster/$id/secrets/$secretId",
@@ -48,7 +48,7 @@ function ManageSecretPage() {
 			if (res.error) throw res.error;
 			if (!res.data.data)
 				throw new Error(res.data.message || "Failed to fetch secret");
-			return res.data.data as any;
+			return res.data.data;
 		},
 	});
 
@@ -286,9 +286,9 @@ function ManageSecretPage() {
 						<div className="space-y-4">
 							{isEditing ? (
 								<>
-									{editDataVars.map((v: any, idx: number) => (
+									{editDataVars.map((v, idx: number) => (
 										<div
-											key={`edit-data-${idx}`}
+											key={`edit-data-${v.name}`}
 											className="flex gap-2 items-start"
 										>
 											<Input
@@ -363,9 +363,9 @@ function ManageSecretPage() {
 						<div className="space-y-2">
 							{isEditing ? (
 								<>
-									{editLabels.map((l: any, idx: number) => (
+									{editLabels.map((l, idx: number) => (
 										<div
-											key={`edit-label-${idx}`}
+											key={`edit-label-${l.name}`}
 											className="flex gap-2 items-start"
 										>
 											<Input

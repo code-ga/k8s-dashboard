@@ -1,5 +1,7 @@
 import { Type } from "@sinclair/typebox";
+import { eq } from "drizzle-orm";
 import { Elysia } from "elysia";
+import { Command_CommandType } from "../../pb-generated/agent-backend/websocket";
 import { db } from "../database";
 import { schema } from "../database/schema";
 import { dbSchemaTypes } from "../database/type";
@@ -7,9 +9,7 @@ import { authenticationMiddleware, checkPermission } from "../middleware/auth";
 import { agentManagerService } from "../services/agentManager";
 import { baseResponseSchema, errorResponseSchema } from "../types";
 import { decrypt, encrypt } from "../utils/crypto";
-import { eq } from "drizzle-orm";
 import { generateSecretManifest } from "../utils/k8s-manifest";
-import { Command_CommandType } from "../../pb-generated/agent-backend/websocket";
 
 export const secretRoute = new Elysia({
 	prefix: "/secrets/:clusterId",

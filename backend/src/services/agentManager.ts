@@ -6,8 +6,8 @@ import { EventEmitter } from "events";
 import {
 	type Command,
 	type CommandResponse,
-	type StreamData,
 	ServerPayload,
+	type StreamData,
 } from "../../pb-generated/agent-backend/websocket";
 import { db } from "../database";
 import { agentCommands } from "../database/schema";

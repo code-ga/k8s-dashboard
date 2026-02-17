@@ -1,8 +1,9 @@
 // import { PGlite } from "@electric-sql/pglite";
+
+import path from "node:path";
 import { drizzle as drizzlePostgres } from "drizzle-orm/node-postgres";
 import { drizzle as drizzlePGlite } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
-import path from "path";
 import { schema, schemaRelations } from "./schema";
 
 const isProduction = process.env.NODE_ENV === "production";

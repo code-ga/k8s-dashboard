@@ -1,12 +1,12 @@
+import { Type } from "@sinclair/typebox";
+import { eq } from "drizzle-orm";
 import { Elysia } from "elysia";
-import { authenticationMiddleware } from "../middleware/auth";
 import { db } from "../database";
 import { schema } from "../database/schema";
-import { baseResponseSchema, errorResponseSchema } from "../types";
-import { Type } from "@sinclair/typebox";
 import { dbSchemaTypes } from "../database/type";
-import { eq } from "drizzle-orm";
+import { authenticationMiddleware } from "../middleware/auth";
 import { agentManagerService } from "../services/agentManager";
+import { baseResponseSchema, errorResponseSchema } from "../types";
 
 export const clusterRoute = new Elysia({ prefix: "/cluster" })
 	.use(authenticationMiddleware)

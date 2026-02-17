@@ -1,18 +1,18 @@
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Input } from "@/components/ui/input";
-import { api } from "@/lib/api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Trash2, Edit2, Save, X } from "lucide-react";
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
-import { type EnvVar } from "@/components/shared/env-editor";
 import {
 	createFileRoute,
 	Link,
 	useNavigate,
 	useParams,
 } from "@tanstack/react-router";
+import { ArrowLeft, Edit2, Save, Trash2, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import type { EnvVar } from "@/components/shared/env-editor";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { api } from "@/lib/api";
 
 export const Route = createFileRoute(
 	"/dashboard/cluster/$id/configmaps/$configmapId",
@@ -276,7 +276,10 @@ function ManageConfigMapPage() {
 							{isEditing ? (
 								<>
 									{editDataVars.map((v, idx: number) => (
-										<div key={`data-${idx}`} className="flex gap-2 items-start">
+										<div
+											key={`data-${v.name || idx}`}
+											className="flex gap-2 items-start"
+										>
 											<Input
 												placeholder="Key"
 												value={v.name}
@@ -350,8 +353,11 @@ function ManageConfigMapPage() {
 						<div className="space-y-4">
 							{isEditing ? (
 								<>
-									{editBinaryDataVars.map((v: any, idx: number) => (
-										<div key={`bin-${idx}`} className="flex gap-2 items-start">
+									{editBinaryDataVars.map((v, idx: number) => (
+										<div
+											key={`bin-${v.name || idx}`}
+											className="flex gap-2 items-start"
+										>
 											<Input
 												placeholder="Key"
 												value={v.name}
@@ -425,9 +431,9 @@ function ManageConfigMapPage() {
 						<div className="space-y-2">
 							{isEditing ? (
 								<>
-									{editLabels.map((l: any, idx: number) => (
+									{editLabels.map((l, idx: number) => (
 										<div
-											key={`label-${idx}`}
+											key={`label-${l.name || idx}`}
 											className="flex gap-2 items-start"
 										>
 											<Input

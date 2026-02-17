@@ -1,3 +1,18 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { createFileRoute, Link, useParams } from "@tanstack/react-router";
+import {
+	ArrowLeft,
+	Eye,
+	Network,
+	ShieldAlert,
+	ShieldCheck,
+	Trash2,
+	Unplug,
+} from "lucide-react";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner";
+import { CreateServiceDialog } from "@/components/service/create-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -33,23 +48,8 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import { api } from "@/lib/api";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, Link, useParams } from "@tanstack/react-router";
-import {
-	ArrowLeft,
-	Eye,
-	Network,
-	ShieldAlert,
-	ShieldCheck,
-	Unplug,
-} from "lucide-react";
-import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { toast } from "sonner";
 import type { databaseTypes, SchemaStatic } from "@/lib/api";
-import { CreateServiceDialog } from "@/components/service/create-dialog";
-import { Trash2 } from "lucide-react";
+import { api } from "@/lib/api";
 
 export const Route = createFileRoute("/dashboard/cluster/$id/services/")({
 	component: ClusterServices,
@@ -364,7 +364,8 @@ function ClusterServices() {
 											<ExposureDialog service={svc} clusterId={id} />
 											{/* Link to service details */}
 											<Link
-												to="/dashboard/cluster/$id/services/$serviceId" params={{ id, serviceId: svc.id.toString() }}
+												to="/dashboard/cluster/$id/services/$serviceId"
+												params={{ id, serviceId: svc.id.toString() }}
 												className="text-blue-500 hover:underline"
 											>
 												<Button variant="ghost" size="icon">

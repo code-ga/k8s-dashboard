@@ -1,8 +1,8 @@
-import { db } from "../database";
-import { k8sDeployments, k8sCluster, clusterAgent } from "../database/schema";
-import { eq, and, gt } from "drizzle-orm";
-import { agentManager } from "./agentManager";
+import { and, eq, gt } from "drizzle-orm";
 import { Command_CommandType } from "../../pb-generated/agent-backend/websocket";
+import { db } from "../database";
+import { clusterAgent, k8sCluster, k8sDeployments } from "../database/schema";
+import { agentManager } from "./agentManager";
 
 export class ScalingController {
 	private interval: NodeJS.Timeout | null = null;

@@ -10,126 +10,150 @@ import { BinaryReader, BinaryWriter } from "@bufbuild/protobuf/wire";
 export const protobufPackage = "api";
 
 export interface K8sStatus {
-  enabled: boolean;
-  namespace: string[];
-  clusterName: string;
+	enabled: boolean;
+	namespace: string[];
+	clusterName: string;
 }
 
 function createBaseK8sStatus(): K8sStatus {
-  return { enabled: false, namespace: [], clusterName: "" };
+	return { enabled: false, namespace: [], clusterName: "" };
 }
 
 export const K8sStatus: MessageFns<K8sStatus> = {
-  encode(message: K8sStatus, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-    if (message.enabled !== false) {
-      writer.uint32(8).bool(message.enabled);
-    }
-    for (const v of message.namespace) {
-      writer.uint32(18).string(v!);
-    }
-    if (message.clusterName !== "") {
-      writer.uint32(26).string(message.clusterName);
-    }
-    return writer;
-  },
+	encode(
+		message: K8sStatus,
+		writer: BinaryWriter = new BinaryWriter(),
+	): BinaryWriter {
+		if (message.enabled !== false) {
+			writer.uint32(8).bool(message.enabled);
+		}
+		for (const v of message.namespace) {
+			writer.uint32(18).string(v!);
+		}
+		if (message.clusterName !== "") {
+			writer.uint32(26).string(message.clusterName);
+		}
+		return writer;
+	},
 
-  decode(input: BinaryReader | Uint8Array, length?: number): K8sStatus {
-    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-    const end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseK8sStatus();
-    while (reader.pos < end) {
-      const tag = reader.uint32();
-      switch (tag >>> 3) {
-        case 1: {
-          if (tag !== 8) {
-            break;
-          }
+	decode(input: BinaryReader | Uint8Array, length?: number): K8sStatus {
+		const reader =
+			input instanceof BinaryReader ? input : new BinaryReader(input);
+		const end = length === undefined ? reader.len : reader.pos + length;
+		const message = createBaseK8sStatus();
+		while (reader.pos < end) {
+			const tag = reader.uint32();
+			switch (tag >>> 3) {
+				case 1: {
+					if (tag !== 8) {
+						break;
+					}
 
-          message.enabled = reader.bool();
-          continue;
-        }
-        case 2: {
-          if (tag !== 18) {
-            break;
-          }
+					message.enabled = reader.bool();
+					continue;
+				}
+				case 2: {
+					if (tag !== 18) {
+						break;
+					}
 
-          message.namespace.push(reader.string());
-          continue;
-        }
-        case 3: {
-          if (tag !== 26) {
-            break;
-          }
+					message.namespace.push(reader.string());
+					continue;
+				}
+				case 3: {
+					if (tag !== 26) {
+						break;
+					}
 
-          message.clusterName = reader.string();
-          continue;
-        }
-      }
-      if ((tag & 7) === 4 || tag === 0) {
-        break;
-      }
-      reader.skip(tag & 7);
-    }
-    return message;
-  },
+					message.clusterName = reader.string();
+					continue;
+				}
+			}
+			if ((tag & 7) === 4 || tag === 0) {
+				break;
+			}
+			reader.skip(tag & 7);
+		}
+		return message;
+	},
 
-  fromJSON(object: any): K8sStatus {
-    return {
-      enabled: isSet(object.enabled) ? globalThis.Boolean(object.enabled) : false,
-      namespace: globalThis.Array.isArray(object?.namespace)
-        ? object.namespace.map((e: any) => globalThis.String(e))
-        : [],
-      clusterName: isSet(object.clusterName) ? globalThis.String(object.clusterName) : "",
-    };
-  },
+	fromJSON(object: any): K8sStatus {
+		return {
+			enabled: isSet(object.enabled)
+				? globalThis.Boolean(object.enabled)
+				: false,
+			namespace: globalThis.Array.isArray(object?.namespace)
+				? object.namespace.map((e: any) => globalThis.String(e))
+				: [],
+			clusterName: isSet(object.clusterName)
+				? globalThis.String(object.clusterName)
+				: "",
+		};
+	},
 
-  toJSON(message: K8sStatus): unknown {
-    const obj: any = {};
-    if (message.enabled !== false) {
-      obj.enabled = message.enabled;
-    }
-    if (message.namespace?.length) {
-      obj.namespace = message.namespace;
-    }
-    if (message.clusterName !== "") {
-      obj.clusterName = message.clusterName;
-    }
-    return obj;
-  },
+	toJSON(message: K8sStatus): unknown {
+		const obj: any = {};
+		if (message.enabled !== false) {
+			obj.enabled = message.enabled;
+		}
+		if (message.namespace?.length) {
+			obj.namespace = message.namespace;
+		}
+		if (message.clusterName !== "") {
+			obj.clusterName = message.clusterName;
+		}
+		return obj;
+	},
 
-  create<I extends Exact<DeepPartial<K8sStatus>, I>>(base?: I): K8sStatus {
-    return K8sStatus.fromPartial(base ?? ({} as any));
-  },
-  fromPartial<I extends Exact<DeepPartial<K8sStatus>, I>>(object: I): K8sStatus {
-    const message = createBaseK8sStatus();
-    message.enabled = object.enabled ?? false;
-    message.namespace = object.namespace?.map((e) => e) || [];
-    message.clusterName = object.clusterName ?? "";
-    return message;
-  },
+	create<I extends Exact<DeepPartial<K8sStatus>, I>>(base?: I): K8sStatus {
+		return K8sStatus.fromPartial(base ?? ({} as any));
+	},
+	fromPartial<I extends Exact<DeepPartial<K8sStatus>, I>>(
+		object: I,
+	): K8sStatus {
+		const message = createBaseK8sStatus();
+		message.enabled = object.enabled ?? false;
+		message.namespace = object.namespace?.map((e) => e) || [];
+		message.clusterName = object.clusterName ?? "";
+		return message;
+	},
 };
 
-type Builtin = Date | Function | Uint8Array | string | number | boolean | undefined;
+type Builtin =
+	| Date
+	| Function
+	| Uint8Array
+	| string
+	| number
+	| boolean
+	| undefined;
 
-export type DeepPartial<T> = T extends Builtin ? T
-  : T extends globalThis.Array<infer U> ? globalThis.Array<DeepPartial<U>>
-  : T extends ReadonlyArray<infer U> ? ReadonlyArray<DeepPartial<U>>
-  : T extends {} ? { [K in keyof T]?: DeepPartial<T[K]> }
-  : Partial<T>;
+export type DeepPartial<T> = T extends Builtin
+	? T
+	: T extends globalThis.Array<infer U>
+		? globalThis.Array<DeepPartial<U>>
+		: T extends ReadonlyArray<infer U>
+			? ReadonlyArray<DeepPartial<U>>
+			: T extends {}
+				? { [K in keyof T]?: DeepPartial<T[K]> }
+				: Partial<T>;
 
 type KeysOfUnion<T> = T extends T ? keyof T : never;
-export type Exact<P, I extends P> = P extends Builtin ? P
-  : P & { [K in keyof P]: Exact<P[K], I[K]> } & { [K in Exclude<keyof I, KeysOfUnion<P>>]: never };
+export type Exact<P, I extends P> = P extends Builtin
+	? P
+	: P & { [K in keyof P]: Exact<P[K], I[K]> } & {
+			[K in Exclude<keyof I, KeysOfUnion<P>>]: never;
+		};
 
 function isSet(value: any): boolean {
-  return value !== null && value !== undefined;
+	return value !== null && value !== undefined;
 }
 
 export interface MessageFns<T> {
-  encode(message: T, writer?: BinaryWriter): BinaryWriter;
-  decode(input: BinaryReader | Uint8Array, length?: number): T;
-  fromJSON(object: any): T;
-  toJSON(message: T): unknown;
-  create<I extends Exact<DeepPartial<T>, I>>(base?: I): T;
-  fromPartial<I extends Exact<DeepPartial<T>, I>>(object: I): T;
+	encode(message: T, writer?: BinaryWriter): BinaryWriter;
+	decode(input: BinaryReader | Uint8Array, length?: number): T;
+	fromJSON(object: any): T;
+	toJSON(message: T): unknown;
+	create<I extends Exact<DeepPartial<T>, I>>(base?: I): T;
+	fromPartial<I extends Exact<DeepPartial<T>, I>>(object: I): T;
 }

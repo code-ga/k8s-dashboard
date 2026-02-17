@@ -1,3 +1,6 @@
+import { useQuery } from "@tanstack/react-query";
+import { createFileRoute, Link, useParams } from "@tanstack/react-router";
+import { ArrowLeft, Lock, Plus, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -9,9 +12,6 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { api } from "@/lib/api";
-import { useQuery } from "@tanstack/react-query";
-import { createFileRoute, Link, useParams } from "@tanstack/react-router";
-import { ArrowLeft, Lock, Plus, Settings } from "lucide-react";
 
 export const Route = createFileRoute("/dashboard/cluster/$id/secrets/")({
 	component: ClusterSecrets,

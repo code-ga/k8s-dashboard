@@ -14,8 +14,9 @@ import { generateDeploymentManifest } from "../utils/k8s-manifest";
 import {
 	fetchAllDeploymentResourceRefs,
 	insertAllDeploymentResourceRefs,
-	updateAllDeploymentResourceRefs
+	updateAllDeploymentResourceRefs,
 } from "../utils/resource-refs";
+
 const parseCpuStr = (cpu: string): number => {
 	if (cpu.endsWith("m")) return parseInt(cpu);
 	return parseFloat(cpu) * 1000;
@@ -236,7 +237,7 @@ export const deploymentRoute = new Elysia({
 
 					let newDeployment:
 						| SchemaStatic<typeof dbSchemaTypes.k8sDeployments>
-						| undefined = undefined;
+						| undefined;
 
 					try {
 						// DefaultOwner logic?
@@ -316,8 +317,8 @@ export const deploymentRoute = new Elysia({
 							throw new Error("Deployment not created");
 						}
 
-						let configMapRefsObj: any = undefined;
-						let secretRefsObj: any = undefined;
+						let configMapRefsObj: any;
+						let secretRefsObj: any;
 						if (configMapRefs) {
 							try {
 								configMapRefsObj = configMapRefs;

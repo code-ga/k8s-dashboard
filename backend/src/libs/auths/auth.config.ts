@@ -1,15 +1,15 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { db } from "../../database";
-import {
-	user,
-	session,
-	account,
-	verification,
-	schema,
-} from "../../database/schema";
 import { openAPI } from "better-auth/plugins";
 import { FRONTEND_URLs } from "../../constants";
+import { db } from "../../database";
+import {
+	account,
+	schema,
+	session,
+	user,
+	verification,
+} from "../../database/schema";
 
 export const auth = betterAuth({
 	database: drizzleAdapter(db, {

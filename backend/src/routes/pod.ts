@@ -20,8 +20,9 @@ import {
 	SecretEnvFromRefSchema,
 	SecretEnvRefSchema,
 	SecretVolumeRefSchema,
-	updateAllPodResourceRefs
+	updateAllPodResourceRefs,
 } from "../utils/resource-refs";
+
 const parseCpuStr = (cpu: string): number => {
 	if (cpu.endsWith("m")) return parseInt(cpu);
 	return parseFloat(cpu) * 1000;
@@ -275,20 +276,22 @@ export const podRoute = new Elysia({
 				{
 					detail: { tags: ["Pods"] },
 					response: {
-						200: baseResponseSchema(Type.Object({
-							...dbSchemaTypes.k8sPods,
-							ports: Type.Array(PortRefSchema),
-							configMapRefs: Type.Object({
-								env: Type.Optional(Type.Array(ConfigMapEnvRefSchema)),
-								envFrom: Type.Optional(Type.Array(ConfigMapEnvFromRefSchema)),
-								volumes: Type.Optional(Type.Array(ConfigMapVolumeRefSchema)),
+						200: baseResponseSchema(
+							Type.Object({
+								...dbSchemaTypes.k8sPods,
+								ports: Type.Array(PortRefSchema),
+								configMapRefs: Type.Object({
+									env: Type.Optional(Type.Array(ConfigMapEnvRefSchema)),
+									envFrom: Type.Optional(Type.Array(ConfigMapEnvFromRefSchema)),
+									volumes: Type.Optional(Type.Array(ConfigMapVolumeRefSchema)),
+								}),
+								secretRefs: Type.Object({
+									env: Type.Optional(Type.Array(SecretEnvRefSchema)),
+									envFrom: Type.Optional(Type.Array(SecretEnvFromRefSchema)),
+									volumes: Type.Optional(Type.Array(SecretVolumeRefSchema)),
+								}),
 							}),
-							secretRefs: Type.Object({
-								env: Type.Optional(Type.Array(SecretEnvRefSchema)),
-								envFrom: Type.Optional(Type.Array(SecretEnvFromRefSchema)),
-								volumes: Type.Optional(Type.Array(SecretVolumeRefSchema)),
-							}),
-						})),
+						),
 						404: errorResponseSchema,
 						400: errorResponseSchema,
 					},
@@ -330,8 +333,7 @@ export const podRoute = new Elysia({
 						});
 					}
 
-					let newPod: SchemaStatic<typeof dbSchemaTypes.k8sPods> | undefined =
-						undefined;
+					let newPod: SchemaStatic<typeof dbSchemaTypes.k8sPods> | undefined;
 					const createData: InferInsertModel<typeof schema.k8sPods> = {
 						clusterId: cluster.id,
 						ownerId: ctx.profile.id,

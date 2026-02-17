@@ -1,3 +1,6 @@
+import type { Static } from "@sinclair/typebox";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { createFileRoute } from "@tanstack/react-router";
 import {
 	Card,
 	CardContent,
@@ -13,9 +16,6 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { api, type databaseTypes } from "@/lib/api";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
-import type { Static } from "@sinclair/typebox";
 
 export const Route = createFileRoute("/dashboard/users")({
 	component: UserManagement,

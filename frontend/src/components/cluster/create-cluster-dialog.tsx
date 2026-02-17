@@ -1,3 +1,10 @@
+import { useForm } from "@tanstack/react-form";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Plus } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
+// import { zodValidator } from "@tanstack/zod-form-adapter";
+import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -10,16 +17,9 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus } from "lucide-react";
-import { useState } from "react";
-import { toast } from "sonner";
-import { useForm } from "@tanstack/react-form";
-// import { zodValidator } from "@tanstack/zod-form-adapter";
-import { z } from "zod";
 
 const clusterSchema = z.object({
 	name: z.string().min(3, "Name must be at least 3 characters"),

@@ -6,10 +6,10 @@ import {
 	useLocation,
 } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
-import Header from "../components/Header";
-import TanStackQueryDevtools from "../integrations/tanstack-query/devtools";
-import { ThemeProvider } from "../components/theme-provider";
 import { Toaster } from "sonner";
+import Header from "../components/Header";
+import { ThemeProvider } from "../components/theme-provider";
+import TanStackQueryDevtools from "../integrations/tanstack-query/devtools";
 
 interface MyRouterContext {
 	queryClient: QueryClient;

@@ -1,4 +1,4 @@
-import type { TSchema, Static } from "elysia";
+import type { Static, TSchema } from "elysia";
 import { schema } from "./schema";
 import { spreads } from "./speard";
 

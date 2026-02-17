@@ -1,25 +1,25 @@
-import { createFileRoute, Link, useParams } from "@tanstack/react-router";
-import { api } from "@/lib/api";
 import { useQuery } from "@tanstack/react-query";
+import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import {
-	Card,
-	CardHeader,
-	CardTitle,
-	CardContent,
-	CardDescription,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import {
+	Activity,
 	ArrowLeft,
 	Box,
-	HardDrive,
 	Cpu,
-	Activity,
-	Layers,
-	Network,
 	FileJson,
+	HardDrive,
+	Layers,
 	Lock,
+	Network,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+	Card,
+	CardContent,
+	CardDescription,
+	CardHeader,
+	CardTitle,
+} from "@/components/ui/card";
+import { api } from "@/lib/api";
 import { BACKEND_URL } from "../../../../constants";
 
 export const Route = createFileRoute("/dashboard/cluster/$id/")({
@@ -225,9 +225,14 @@ function ClusterOverview() {
 					</CardHeader>
 					<CardContent className="space-y-4">
 						<div className="space-y-2">
-							<label className="text-sm font-medium">Cluster Token</label>
+							<label className="text-sm font-medium" htmlFor="cluster-token">
+								Cluster Token
+							</label>
 							<div className="flex gap-2">
-								<code className="flex-1 bg-secondary px-3 py-2 rounded-md text-xs font-mono overflow-x-auto">
+								<code
+									className="flex-1 bg-secondary px-3 py-2 rounded-md text-xs font-mono overflow-x-auto"
+									id="cluster-token"
+								>
 									{agentConfig.clusterToken}
 								</code>
 								<Button

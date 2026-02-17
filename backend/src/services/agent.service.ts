@@ -1,35 +1,35 @@
-import { db } from "../database";
-import {
-	clusterAgent,
-	k8sCluster,
-	k8sPods,
-	k8sDeployments,
-	k8sClusterNode,
-	k8sConfigMaps,
-	k8sSecrets,
-	gatewayPorts,
-	schema,
-} from "../database/schema";
-import { eq, and, isNull, type InferInsertModel } from "drizzle-orm";
+import { and, eq, type InferInsertModel, isNull } from "drizzle-orm";
+import YAML from "yaml";
 import type {
 	Heartbeat,
 	// Command,
 } from "../../pb-generated/agent-backend/websocket"; // Check imports carefully
 import { Command_CommandType } from "../../pb-generated/agent-backend/websocket";
-import YAML from "yaml";
-import type { AgentManager } from "./agentManager";
-import { encrypt, decrypt } from "../utils/crypto";
+import { db } from "../database";
+import {
+	clusterAgent,
+	gatewayPorts,
+	k8sCluster,
+	k8sClusterNode,
+	k8sConfigMaps,
+	k8sDeployments,
+	k8sPods,
+	k8sSecrets,
+	schema,
+} from "../database/schema";
+import { decrypt, encrypt } from "../utils/crypto";
 import {
 	generateDeploymentManifest,
 	generatePodManifest,
 } from "../utils/k8s-manifest";
 import {
-	type PortRef,
 	deleteDeploymentPorts,
 	deletePodPorts,
 	insertDeploymentPorts,
 	insertPodPorts,
+	type PortRef,
 } from "../utils/resource-refs";
+import type { AgentManager } from "./agentManager";
 export class AgentService {
 	// Process incoming heartbeat
 	async handleHeartbeat(
@@ -771,6 +771,8 @@ export class AgentService {
 							),
 						);
 				}
+
+				console.log("existing", existing);
 
 				// Prepare data
 				const dataStr = JSON.stringify(cm.data);

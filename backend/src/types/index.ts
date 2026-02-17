@@ -1,4 +1,4 @@
-import { type Static, Type as t, type TSchema, Type } from "@sinclair/typebox";
+import { type Static, type TSchema, Type, Type as t } from "@sinclair/typebox";
 
 export const baseResponseSchema = <T extends TSchema>(dataSchema: T) => {
 	return t.Object({

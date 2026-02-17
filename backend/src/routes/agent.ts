@@ -1,14 +1,14 @@
+import { Type } from "@sinclair/typebox";
+import { eq } from "drizzle-orm";
 import Elysia from "elysia";
-import { authenticationMiddleware } from "../middleware/auth";
+import { AgentPayload } from "../../pb-generated/agent-backend/websocket";
 import { db } from "../database";
 import { schema } from "../database/schema";
-import { baseResponseSchema, errorResponseSchema } from "../types";
-import { Type } from "@sinclair/typebox";
 import { dbSchemaTypes } from "../database/type";
-import { eq } from "drizzle-orm";
-import { agentManagerService } from "../services/agentManager";
+import { authenticationMiddleware } from "../middleware/auth";
 import { agentService } from "../services/agent.service";
-import { AgentPayload } from "../../pb-generated/agent-backend/websocket";
+import { agentManagerService } from "../services/agentManager";
+import { baseResponseSchema, errorResponseSchema } from "../types";
 
 export const agentRoute = new Elysia({ prefix: "/agents" })
 	.use(authenticationMiddleware)
