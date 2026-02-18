@@ -8,41 +8,58 @@ permissions:
   contents: write
 
 jobs:
-  release-matrix:
-    name: Release Agent Binary
+  build:
+    name: Build (${{ matrix.suffix }})
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         include:
-          - goos: linux
-            goarch: amd64
-          - goos: linux
-            goarch: arm64
-          - goos: windows
-            goarch: amd64
-          - goos: windows
-            goarch: 386
-          - goos: darwin
-            goarch: amd64
-          - goos: darwin
-            goarch: arm64
+          - goarch: amd64
+            suffix: linux-amd64
+          - goarch: arm64
+            suffix: linux-arm64
+          - goarch: arm
+            goarm: "7"
+            suffix: linux-armv7
+
     steps:
       - uses: actions/checkout@v4
 
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version-file: 'agent/go.mod'
+          go-version-file: agent/go.mod
+          cache-dependency-path: agent/go.sum
 
-      - name: Release Agent Binary
-        uses: wangyoucao577/go-release-action@v1
+      - name: Build agent binary
+        working-directory: agent
+        env:
+          GOOS: linux
+          GOARCH: ${{ matrix.goarch }}
+          GOARM: ${{ matrix.goarm }}
+          CGO_ENABLED: "0"
+        run: |
+          go build \
+            -trimpath \
+            -ldflags "-s -w \
+              -X main.Version=${{ github.ref_name }} \
+              -X main.Repo=${{ github.repository }}" \
+            -o agent \
+            .
+
+      # Archive name must match what updater.go constructs:
+      #   agent-{tag}-{suffix}.tar.gz
+      - name: Create archive
+        run: |
+          ARCHIVE="agent-${{ github.ref_name }}-${{ matrix.suffix }}.tar.gz"
+          tar -czf "$ARCHIVE" -C agent agent
+          sha256sum "$ARCHIVE" > "${ARCHIVE}.sha256"
+          echo "ARCHIVE=$ARCHIVE" >> "$GITHUB_ENV"
+
+      - name: Upload to GitHub Release
+        uses: softprops/action-gh-release@v2
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          goos: ${{ matrix.goos }}
-          goarch: ${{ matrix.goarch }}
-          project_path: "./agent"
-          binary_name: "agent"
-          extra_files: LICENSE README.md
-          pre_command: export CGO_ENABLED=0
-          md5sum: true
-          sha256sum: true
+          files: |
+            ${{ env.ARCHIVE }}
+            ${{ env.ARCHIVE }}.sha256

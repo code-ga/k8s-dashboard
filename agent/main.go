@@ -27,6 +27,7 @@ import (
 
 var addr = flag.String("addr", "localhost:3001", "server address")
 var token = flag.String("token", "iamveryhandsome", "server token")
+var skipUpdate = flag.Bool("skip-update", false, "skip self-update check at startup")
 
 // Thread-safe WebSocket writer with auto-reconnect support
 type SafeConn struct {
@@ -128,6 +129,14 @@ func getStream(id string) (*StreamEntry, bool) {
 func main() {
 	flag.Parse()
 	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
+
+	// Self-update: download and re-exec a newer binary if one is available.
+	// On a successful update, checkAndUpdate() never returns (process replaced).
+	if !*skipUpdate {
+		if err := checkAndUpdate(); err != nil {
+			log.Printf("[updater] Self-update failed (non-fatal): %v", err)
+		}
+	}
 
 	// parse addr
 	maybeUrl, err := url.Parse(*addr)
