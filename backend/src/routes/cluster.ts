@@ -54,6 +54,7 @@ export const clusterRoute = new Elysia({ prefix: "/cluster" })
 								tags,
 								clusterDomain: ctx.body.clusterDomain,
 								enableS3Service: ctx.body.enableS3Service || false,
+								acmeEmail: ctx.body.acmeEmail || null,
 								agentId: agent[0].id,
 							})
 							.returning();
@@ -87,6 +88,7 @@ export const clusterRoute = new Elysia({ prefix: "/cluster" })
 							enableS3Service: Type.Optional(
 								dbSchemaTypes.k8sCluster.enableS3Service,
 							),
+							acmeEmail: Type.Optional(dbSchemaTypes.k8sCluster.acmeEmail),
 						}),
 					},
 				)

@@ -3,6 +3,7 @@ package k8s
 import (
 	"fmt"
 	"log"
+	"os"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -29,7 +30,20 @@ func (kc *K8sClient) EnsureGatewayInstalled() error {
 		log.Printf("Warning: failed to label edge nodes: %v", err)
 	}
 
-	// 3. Traefik CRDs & Gateway installation
+	// 3. Resolve ACME email.
+	// Priority: K8sClient.AcmeEmail (from cluster config) > ACME_EMAIL env var > placeholder.
+	// ACME_EMAIL is required for Let's Encrypt certificate registration.
+	acmeEmail := kc.AcmeEmail
+	if acmeEmail == "" {
+		acmeEmail = os.Getenv("ACME_EMAIL")
+	}
+	if acmeEmail == "" {
+		log.Printf("Warning: ACME_EMAIL not set (env or cluster config); using placeholder. " +
+			"Set ACME_EMAIL env var or acmeEmail in cluster config for valid Let's Encrypt certificates.")
+		acmeEmail = "admin@example.com"
+	}
+
+	// 4. Traefik CRDs & Gateway installation
 	// Construct values for Traefik chart
 	values := map[string]interface{}{
 		"service": map[string]interface{}{
@@ -54,7 +68,37 @@ func (kc *K8sClient) EnsureGatewayInstalled() error {
 			"websecure": map[string]interface{}{
 				"exposedPort": 443,
 				"expose":      true,
+				// Enable TLS on the websecure entrypoint
+				"tls": map[string]interface{}{
+					"enabled": true,
+				},
 			},
+		},
+		// ACME / Let's Encrypt certificate resolver using HTTP-01 challenge.
+		// HTTP-01 requires port 80 to be publicly accessible.
+		// Traefik automatically handles /.well-known/acme-challenge/ requests
+		// on the "web" entrypoint before any redirect middleware is applied.
+		"certResolvers": map[string]interface{}{
+			"letsencrypt": map[string]interface{}{
+				"acme": map[string]interface{}{
+					"email":   acmeEmail,
+					"storage": "/data/acme.json",
+					// Use HTTP-01 challenge for easy setup (no DNS provider needed)
+					"httpChallenge": map[string]interface{}{
+						"entryPoint": "web",
+					},
+				},
+			},
+		},
+		// Persistence is required to store the ACME JSON file across restarts.
+		// Without persistence, Traefik requests new certificates on every restart,
+		// which can hit Let's Encrypt rate limits.
+		"persistence": map[string]interface{}{
+			"enabled":    true,
+			"name":       "data",
+			"accessMode": "ReadWriteOnce",
+			"size":       "128Mi",
+			"path":       "/data",
 		},
 	}
 
@@ -80,7 +124,7 @@ func (kc *K8sClient) EnsureGatewayInstalled() error {
 		return fmt.Errorf("failed to install/upgrade traefik: %w", err)
 	}
 
-	log.Printf("Traefik gateway installation initiated in %s using Helm", namespace)
+	log.Printf("Traefik gateway installation initiated in %s using Helm (ACME email: %s)", namespace, acmeEmail)
 	return nil
 }
 

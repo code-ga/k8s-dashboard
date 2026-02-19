@@ -30,6 +30,9 @@ type K8sClient struct {
 	RESTMapper      meta.RESTMapper
 	RestConfig      *rest.Config
 	ClusterKey      string
+	// AcmeEmail is the Let's Encrypt registration email used by EnsureGatewayInstalled.
+	// When set it takes priority over the ACME_EMAIL environment variable.
+	AcmeEmail string
 }
 
 func NewK8sClient(clusterKey string) (*K8sClient, error) {

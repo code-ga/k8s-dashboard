@@ -166,6 +166,9 @@ export const k8sCluster = pgTable("k8sCluster", {
 	internalClusterDomain: text("internal_cluster_domain")
 		.notNull()
 		.default("cluster.local"),
+	// ACME / Let's Encrypt email used by Traefik for certificate registration.
+	// When set the agent uses this email instead of the ACME_EMAIL env var.
+	acmeEmail: text("acme_email"),
 	createdAt: timestamp("created_at").defaultNow().notNull(),
 	updatedAt: timestamp("updated_at")
 		.$onUpdate(() => /* @__PURE__ */ new Date())

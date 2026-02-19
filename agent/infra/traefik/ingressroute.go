@@ -6,6 +6,10 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
+// ACMECertResolver is the name of the Let's Encrypt cert resolver configured
+// in the Traefik Helm values (certResolvers.letsencrypt).
+const ACMECertResolver = "letsencrypt"
+
 // IngressRouteBuilder provides a fluent API for building Traefik IngressRoute resources.
 type IngressRouteBuilder struct {
 	name        string
@@ -47,6 +51,27 @@ func (b *IngressRouteBuilder) WithLabel(key, value string) *IngressRouteBuilder 
 // WithEntryPoint adds an entrypoint to the IngressRoute.
 func (b *IngressRouteBuilder) WithEntryPoint(ep string) *IngressRouteBuilder {
 	b.entryPoints = append(b.entryPoints, ep)
+	return b
+}
+
+// WithEntryPoints replaces the current entrypoints list.
+func (b *IngressRouteBuilder) WithEntryPoints(eps ...string) *IngressRouteBuilder {
+	b.entryPoints = eps
+	return b
+}
+
+// WithTLSCertResolver configures TLS with an ACME certificate resolver.
+// The resolver name must match a key under certResolvers in the Traefik Helm values.
+// Use ACMECertResolver ("letsencrypt") for the default Let's Encrypt resolver.
+//
+// Example:
+//
+//	NewIngressRoute("my-route", "default").
+//	    WithTLSCertResolver(traefik.ACMECertResolver).
+//	    AddRoute("Host(`example.com`)", "my-service", 80).
+//	    Build()
+func (b *IngressRouteBuilder) WithTLSCertResolver(resolver string) *IngressRouteBuilder {
+	b.tls["certResolver"] = resolver
 	return b
 }
 
@@ -104,7 +129,7 @@ func (b *IngressRouteBuilder) Build() *unstructured.Unstructured {
 	return obj
 }
 
-// S3IngressRoute creates an IngressRoute for S3 access.
+// S3IngressRoute creates an IngressRoute for S3 access with ACME TLS.
 func S3IngressRoute(
 	name string,
 	namespace string,
@@ -113,17 +138,41 @@ func S3IngressRoute(
 ) *unstructured.Unstructured {
 	return NewIngressRoute(name, namespace).
 		WithLabel("app", "garage").
+		WithTLSCertResolver(ACMECertResolver).
 		AddRoute(fmt.Sprintf("Host(`%s`)", host), serviceName, 3900).
 		Build()
 }
 
-// S3WildcardIngressRoute creates a wildcard IngressRoute for S3 bucket access.
+// S3WildcardIngressRoute creates a wildcard IngressRoute for S3 bucket access with ACME TLS.
 func S3WildcardIngressRoute(
 	namespace string,
 	serviceName string,
 	clusterDomain string,
 ) *unstructured.Unstructured {
 	return NewIngressRoute("garage-s3-wildcard", namespace).
+		WithTLSCertResolver(ACMECertResolver).
 		AddRoute(fmt.Sprintf("HostRegexp(`{bucket:[a-z0-9-]+}.s3.%s`)", clusterDomain), serviceName, 3900).
+		Build()
+}
+
+// ACMEIngressRoute creates an IngressRoute that uses ACME/Let's Encrypt for TLS.
+// This is the recommended way to expose services with automatic SSL certificates.
+//
+// Parameters:
+//   - name: the IngressRoute resource name
+//   - namespace: the Kubernetes namespace
+//   - host: the public domain (e.g. "app.example.com")
+//   - serviceName: the backing Kubernetes Service name
+//   - servicePort: the port on the backing Service
+func ACMEIngressRoute(
+	name string,
+	namespace string,
+	host string,
+	serviceName string,
+	servicePort int,
+) *unstructured.Unstructured {
+	return NewIngressRoute(name, namespace).
+		WithTLSCertResolver(ACMECertResolver).
+		AddRoute(fmt.Sprintf("Host(`%s`)", host), serviceName, servicePort).
 		Build()
 }

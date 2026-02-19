@@ -163,6 +163,11 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to create Kubernetes client: %v", err)
 	}
+	// Propagate ACME email from cluster config (backend may supply it in future).
+	// If non-empty it overrides the ACME_EMAIL environment variable in EnsureGatewayInstalled.
+	if config.AcmeEmail != "" {
+		kubeClient.AcmeEmail = config.AcmeEmail
+	}
 	log.Printf("Kubernetes client created")
 
 	interrupt := make(chan os.Signal, 1)
@@ -547,6 +552,12 @@ type ClusterConfig struct {
 	Name             string `json:"name"`
 	S3AdminSecretKey string `json:"s3AdminSecretKey"`
 	ClusterKey       string `json:"clusterKey"`
+	// ClusterDomain is the public-facing domain for this cluster,
+	// used when generating IngressRoutes and ACME certificates.
+	ClusterDomain string `json:"clusterDomain"`
+	// AcmeEmail is the email address used for Let's Encrypt ACME registration.
+	// Overrides the ACME_EMAIL environment variable when set.
+	AcmeEmail string `json:"acmeEmail"`
 }
 
 func getClusterConfig() (*ClusterConfig, error) {
