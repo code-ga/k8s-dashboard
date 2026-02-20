@@ -27,6 +27,7 @@ const clusterSchema = z.object({
 	clusterDomain: z.string().min(3, "Domain must be at least 3 characters"),
 	tags: z.string().optional(),
 	enableS3Service: z.boolean().default(false),
+	acmeEmail: z.string().email().optional(),
 });
 
 export function CreateClusterDialog() {
@@ -41,6 +42,7 @@ export function CreateClusterDialog() {
 				tags: values.tags ? values.tags.split(",").map((t) => t.trim()) : [],
 				clusterDomain: values.clusterDomain,
 				enableS3Service: values.enableS3Service,
+				acmeEmail: values.acmeEmail || undefined,
 			});
 
 			if (res.error) {
@@ -66,6 +68,7 @@ export function CreateClusterDialog() {
 			clusterDomain: "",
 			tags: "",
 			enableS3Service: false,
+			acmeEmail: "",
 		},
 		// validatorAdapter: zodValidator(),
 		// validators: {
@@ -177,6 +180,31 @@ export function CreateClusterDialog() {
 									checked={field.state.value}
 									onCheckedChange={(checked) => field.handleChange(checked)}
 								/>
+							)}
+						</form.Field>
+					</div>
+					<div className="space-y-2">
+						<Label htmlFor="acmeEmail">ACME Email (for Let's Encrypt)</Label>
+						<form.Field name="acmeEmail">
+							{(field) => (
+								<>
+									<Input
+										id="acmeEmail"
+										type="email"
+										value={field.state.value}
+										onBlur={field.handleBlur}
+										onChange={(e) => field.handleChange(e.target.value)}
+										placeholder="ops@example.com"
+									/>
+									{field.state.meta.errors && (
+										<p className="text-xs text-destructive">
+											{field.state.meta.errors.join(", ")}
+										</p>
+									)}
+									<p className="text-xs text-muted-foreground">
+										Optional: Email for automatic SSL certificate registration
+									</p>
+								</>
 							)}
 						</form.Field>
 					</div>

@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import {
 	Activity,
@@ -10,7 +10,10 @@ import {
 	Layers,
 	Lock,
 	Network,
+	Shield,
 } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
 	Card,
@@ -19,6 +22,8 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { api } from "@/lib/api";
 import { BACKEND_URL } from "../../../../constants";
 
@@ -28,6 +33,8 @@ export const Route = createFileRoute("/dashboard/cluster/$id/")({
 
 function ClusterOverview() {
 	const { id } = useParams({ from: "/dashboard/cluster/$id/" });
+	const queryClient = useQueryClient();
+	const [acmeEmail, setAcmeEmail] = useState("");
 
 	const { data: cluster, isLoading } = useQuery({
 		queryKey: ["cluster", id],
@@ -50,6 +57,32 @@ function ClusterOverview() {
 			return res.data.data;
 		},
 	});
+
+	const updateAcmeEmailMutation = useMutation({
+		mutationFn: async () => {
+			const res = await api.api.cluster({ id }).patch({
+				acmeEmail,
+			});
+			if (res.error) {
+				throw new Error(
+					res.error.value?.message || "Failed to update ACME email",
+				);
+			}
+			return res.data;
+		},
+		onSuccess: () => {
+			toast.success("ACME email updated successfully");
+			queryClient.invalidateQueries({ queryKey: ["cluster", id] });
+		},
+		onError: (error: Error) => {
+			toast.error(error.message);
+		},
+	});
+
+	// Initialize acmeEmail state when cluster data loads
+	if (cluster && acmeEmail === "" && cluster.acmeEmail) {
+		setAcmeEmail(cluster.acmeEmail);
+	}
 
 	if (isLoading) return <div>Loading cluster...</div>;
 	if (!cluster) return <div>Cluster not found</div>;
@@ -210,6 +243,78 @@ function ClusterOverview() {
 					</Link>
 				</div>
 			</div>
+
+			{/* ACME Configuration */}
+			<Card className="border-2 border-green-500/30 bg-linear-to-br from-green-50/50 to-transparent dark:from-green-950/20">
+				<CardHeader>
+					<CardTitle className="flex items-center gap-2">
+						<Shield className="h-5 w-5 text-green-600" />
+						ACME / Let's Encrypt Configuration
+					</CardTitle>
+					<CardDescription>
+						Configure automatic SSL certificate generation via Let's Encrypt
+					</CardDescription>
+				</CardHeader>
+				<CardContent className="space-y-4">
+					<div className="space-y-2">
+						<Label htmlFor="acme-email">ACME Email</Label>
+						<div className="flex gap-2">
+							<Input
+								id="acme-email"
+								type="email"
+								value={acmeEmail}
+								onChange={(e) => setAcmeEmail(e.target.value)}
+								placeholder="ops@example.com"
+								className="flex-1"
+							/>
+							<Button
+								variant="default"
+								onClick={() => updateAcmeEmailMutation.mutate()}
+								disabled={
+									updateAcmeEmailMutation.isPending ||
+									!acmeEmail ||
+									acmeEmail === cluster?.acmeEmail
+								}
+							>
+								{updateAcmeEmailMutation.isPending ? "Updating..." : "Update"}
+							</Button>
+						</div>
+						<p className="text-xs text-muted-foreground">
+							Email address for Let's Encrypt certificate notifications and
+							recovery
+						</p>
+					</div>
+
+					<div className="bg-secondary/50 p-3 rounded-md space-y-2">
+						<p className="text-xs font-medium">Current Configuration</p>
+						<div className="space-y-1">
+							<p className="text-xs">
+								<span className="font-medium">Email:</span>{" "}
+								{cluster?.acmeEmail || "Not configured"}
+							</p>
+							<p className="text-xs">
+								<span className="font-medium">Challenge Type:</span> HTTP-01
+							</p>
+							<p className="text-xs">
+								<span className="font-medium">Certificate Resolver:</span>{" "}
+								letsencrypt
+							</p>
+						</div>
+					</div>
+
+					<div className="bg-yellow-500/10 border border-yellow-500/30 p-3 rounded-md">
+						<p className="text-xs font-medium text-yellow-700 dark:text-yellow-500 mb-1">
+							⚠️ Important
+						</p>
+						<ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
+							<li>Port 80 must be accessible for HTTP-01 challenge</li>
+							<li>Ensure your domain DNS points to the cluster</li>
+							<li>Certificates auto-renew every 90 days</li>
+							<li>Changes require agent restart to take effect</li>
+						</ul>
+					</div>
+				</CardContent>
+			</Card>
 
 			{/* Agent Configuration */}
 			{agentConfig && (

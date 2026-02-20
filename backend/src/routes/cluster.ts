@@ -126,6 +126,7 @@ export const clusterRoute = new Elysia({ prefix: "/cluster" })
 								tags,
 								clusterDomain: ctx.body.clusterDomain,
 								enableS3Service: ctx.body.enableS3Service,
+								acmeEmail: ctx.body.acmeEmail,
 							})
 							.where(eq(schema.k8sCluster.id, Number(ctx.params.id)))
 							.returning();
@@ -158,6 +159,7 @@ export const clusterRoute = new Elysia({ prefix: "/cluster" })
 								tags: dbSchemaTypes.k8sCluster.tags,
 								enableS3Service: dbSchemaTypes.k8sCluster.enableS3Service,
 								clusterDomain: dbSchemaTypes.k8sCluster.clusterDomain,
+								acmeEmail: dbSchemaTypes.k8sCluster.acmeEmail,
 							}),
 						),
 					},
