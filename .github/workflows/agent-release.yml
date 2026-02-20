@@ -57,9 +57,16 @@ jobs:
           sha256sum "$ARCHIVE" > "${ARCHIVE}.sha256"
           echo "ARCHIVE=$ARCHIVE" >> "$GITHUB_ENV"
 
+      - name: Verify archive files
+        run: |
+          ls -lh agent-* || echo "❌ No archive files found"
+          echo "ARCHIVE env var: ${{ env.ARCHIVE }}"
+          
       - name: Upload to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
             ${{ env.ARCHIVE }}
             ${{ env.ARCHIVE }}.sha256
+          token: ${{ secrets.GITHUB_TOKEN }}
+          verbose: true
