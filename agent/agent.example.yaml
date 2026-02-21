@@ -1,0 +1,15 @@
+# Example configuration file for the k8s-dashboard agent
+# Copy this to agent.yaml and update with your actual values
+
+# Backend server address (required)
+# Format: hostname:port or ip:port
+# Examples: localhost:3001, my-backend.example.com:3001, 192.168.1.10:3001
+addr: "localhost:3001"
+
+# Authentication token (required)
+# This token is used to authenticate with the backend server
+token: "your-secret-token-here"
+
+# Skip automatic update checks (optional, defaults to false)
+# Set to true to disable the self-update mechanism at startup
+skip_update: false

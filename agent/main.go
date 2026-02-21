@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/exec"
 	"os/signal"
 	"path/filepath"
 	"strconv"
@@ -32,6 +33,8 @@ var addr = flag.String("addr", "", "server address (required; set via --addr, AG
 var token = flag.String("token", "", "server token (required; set via --token, AGENT_TOKEN env var, or config file)")
 var skipUpdate = flag.Bool("skip-update", false, "skip self-update check at startup")
 var configFile = flag.String("config", "", "path to config file (YAML or JSON); auto-detects agent.yaml/agent.json in current dir")
+var installService = flag.Bool("install-service", false, "install agent as a systemd service and exit (requires root)")
+var startService = flag.Bool("start-service", false, "start the systemd service after installation (only with --install-service)")
 
 // agentFileConfig mirrors the fields that can be set via a config file.
 // Priority order: CLI flags > config file > environment variables > built-in defaults.
@@ -122,6 +125,99 @@ func resolveConfig() {
 	if *token == "" {
 		log.Fatalf("token is required. Set it via --token flag, AGENT_TOKEN environment variable, or config file")
 	}
+}
+
+// isRoot checks if the process is running as root (UID 0).
+func isRoot() bool {
+	return os.Geteuid() == 0
+}
+
+// installSystemdService creates and enables a systemd service file for the agent.
+func installSystemdService() error {
+	if !isRoot() {
+		return fmt.Errorf("installing systemd service requires root privileges")
+	}
+
+	// Get the absolute path to the current binary.
+	executable, err := os.Executable()
+	if err != nil {
+		return fmt.Errorf("failed to get executable path: %w", err)
+	}
+
+	// Build the ExecStart command.
+	execStart := executable
+	if *configFile != "" {
+		execStart += fmt.Sprintf(" --config %s", *configFile)
+	}
+
+	workingDir, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("failed to get working directory: %w", err)
+	}
+
+	// Create the systemd service file content.
+	serviceContent := fmt.Sprintf(`[Unit]
+Description=K8s Dashboard Agent
+Documentation=https://github.com/code-ga/k8s-dashboard
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=%s
+Restart=always
+RestartSec=30
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=k8s-agent
+WorkingDirectory=%s
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target
+`, execStart, workingDir)
+
+	// Ensure the systemd directory exists.
+	serviceDir := "/etc/systemd/system"
+	if err := os.MkdirAll(serviceDir, 0755); err != nil {
+		return fmt.Errorf("failed to create systemd directory: %w", err)
+	}
+
+	// Write the service file.
+	servicePath := filepath.Join(serviceDir, "k8s-agent.service")
+	if err := os.WriteFile(servicePath, []byte(serviceContent), 0644); err != nil {
+		return fmt.Errorf("failed to write service file to %s: %w", servicePath, err)
+	}
+	log.Printf("Service file created at %s", servicePath)
+
+	// Reload systemd daemon.
+	cmd := exec.Command("systemctl", "daemon-reload")
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("systemctl daemon-reload failed: %w\n%s", err, string(out))
+	}
+	log.Println("Systemd daemon reloaded")
+
+	// Enable the service.
+	cmd = exec.Command("systemctl", "enable", "k8s-agent.service")
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("systemctl enable failed: %w\n%s", err, string(out))
+	}
+	log.Println("Service enabled")
+
+	// Optionally start the service.
+	if *startService {
+		cmd = exec.Command("systemctl", "start", "k8s-agent.service")
+		if out, err := cmd.CombinedOutput(); err != nil {
+			return fmt.Errorf("systemctl start failed: %w\n%s", err, string(out))
+		}
+		log.Println("Service started")
+	}
+
+	return nil
 }
 
 // Thread-safe WebSocket writer with auto-reconnect support
@@ -223,8 +319,23 @@ func getStream(id string) (*StreamEntry, bool) {
 
 func main() {
 	flag.Parse()
-	resolveConfig()
 	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
+
+	// Handle systemd service installation and exit.
+	if *installService {
+		if err := installSystemdService(); err != nil {
+			log.Fatalf("Failed to install systemd service: %v", err)
+		}
+		log.Println("Systemd service installed successfully")
+		if *startService {
+			log.Println("Service is running. Check status with: systemctl status k8s-agent")
+		} else {
+			log.Println("To start the service, run: systemctl start k8s-agent")
+		}
+		os.Exit(0)
+	}
+
+	resolveConfig()
 
 	// Self-update: download and re-exec a newer binary if one is available.
 	// On a successful update, checkAndUpdate() never returns (process replaced).

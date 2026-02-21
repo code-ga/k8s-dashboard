@@ -50,9 +50,15 @@ func NewK8sClient(clusterKey string) (*K8sClient, error) {
 		if _, exists := os.LookupEnv("KUBECONFIG"); exists {
 			config, err = clientcmd.BuildConfigFromFlags("", os.Getenv("KUBECONFIG"))
 		} else {
-			homeDir, _ := os.UserHomeDir()
-			kubeconfigPath := filepath.Join(homeDir, ".kube", "config")
-			config, err = clientcmd.BuildConfigFromFlags("", kubeconfigPath)
+			// Check for k3s kubeconfig
+			k3sConfigPath := "/etc/rancher/k3s/k3s.yaml"
+			if _, err := os.Stat(k3sConfigPath); err == nil {
+				config, err = clientcmd.BuildConfigFromFlags("", k3sConfigPath)
+			} else {
+				homeDir, _ := os.UserHomeDir()
+				kubeconfigPath := filepath.Join(homeDir, ".kube", "config")
+				config, err = clientcmd.BuildConfigFromFlags("", kubeconfigPath)
+			}
 		}
 	}
 
