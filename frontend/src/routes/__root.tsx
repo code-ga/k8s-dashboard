@@ -1,4 +1,5 @@
 import { TanStackDevtools } from "@tanstack/react-devtools";
+import { useQuery } from "@tanstack/react-query";
 import type { QueryClient } from "@tanstack/react-query";
 import {
 	createRootRouteWithContext,
@@ -8,8 +9,11 @@ import {
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import { Toaster } from "sonner";
 import Header from "../components/Header";
+import { Sidebar } from "../components/Sidebar";
 import { ThemeProvider } from "../components/theme-provider";
 import TanStackQueryDevtools from "../integrations/tanstack-query/devtools";
+import { api } from "@/lib/api";
+import { authClient } from "@/lib/auth";
 
 interface MyRouterContext {
 	queryClient: QueryClient;
@@ -20,10 +24,44 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 		const location = useLocation();
 		const isLoginPage = location.pathname === "/login";
 
+		const { data: session } = authClient.useSession();
+		const { data: profile } = useQuery({
+			queryKey: ["profile", session?.user?.id],
+			queryFn: async () => {
+				const res = await api.api.profile.me.get();
+				if (res.error) throw res.error;
+				return res.data.data;
+			},
+			enabled: !!session?.user?.id,
+		});
+
+		const role = (profile?.permission?.[0] as any) || "viewer";
+
+		if (isLoginPage) {
+			return (
+				<ThemeProvider defaultTheme="dark" storageKey="k8s-dashboard-theme">
+					<Outlet />
+					<Toaster position="top-center" richColors />
+				</ThemeProvider>
+			);
+		}
+
 		return (
 			<ThemeProvider defaultTheme="dark" storageKey="k8s-dashboard-theme">
-				{!isLoginPage && <Header />}
-				<Outlet />
+				<div className="flex h-screen overflow-hidden bg-background">
+					{/* Persistent Sidebar on Desktop */}
+					<Sidebar role={role} className="hidden lg:flex" />
+
+					<div className="flex flex-col flex-1 overflow-hidden">
+						<Header />
+						<main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
+							<div className="mx-auto max-w-7xl animate-in fade-in slide-in-from-bottom-2 duration-500">
+								<Outlet />
+							</div>
+						</main>
+					</div>
+				</div>
+
 				<Toaster position="top-center" richColors />
 				<TanStackDevtools
 					config={{

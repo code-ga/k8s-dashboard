@@ -1,84 +1,100 @@
-import { Link } from "@tanstack/react-router";
-import { Home, Menu, Network, X } from "lucide-react";
-import { useState } from "react";
-import logo from "../logo.svg";
+import { useQuery } from "@tanstack/react-query";
+import { Link, useLocation } from "@tanstack/react-router";
+import { Menu, X } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Sidebar } from "./Sidebar";
+import { BreadcrumbNav } from "./shared/breadcrumb-nav";
+import { ClusterSwitcher } from "./shared/cluster-switcher";
 import { ModeToggle } from "./mode-toggle";
+import { api } from "@/lib/api";
+import { authClient } from "@/lib/auth";
 
 export default function Header() {
-	const [isOpen, setIsOpen] = useState(false);
+	const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+	const { pathname } = useLocation();
+
+	const { data: session } = authClient.useSession();
+	const { data: profile } = useQuery({
+		queryKey: ["profile", session?.user?.id],
+		queryFn: async () => {
+			const res = await api.api.profile.me.get();
+			if (res.error) throw res.error;
+			return res.data.data;
+		},
+		enabled: !!session?.user?.id,
+	});
+
+	// Close mobile menu when route changes
+	useEffect(() => {
+		setIsMobileMenuOpen(false);
+	}, [pathname]);
+
+	const role = (profile?.permission?.[0] as any) || "viewer";
 
 	return (
 		<>
-			<header className="p-4 flex items-center bg-card text-card-foreground border-b shadow-sm">
-				<button
-					type="button"
-					onClick={() => setIsOpen(true)}
-					className="p-2 hover:bg-accent rounded-lg transition-colors"
-					aria-label="Open menu"
-				>
-					<Menu size={24} />
-				</button>
-				<h1 className="ml-4 text-xl font-semibold flex-1">
-					<Link to="/">
-						<img
-							src={logo}
-							alt="Logo"
-							className="h-8 dark:invert transition-all"
-						/>
-					</Link>
-				</h1>
-				<div className="ml-auto">
+			<header className="sticky top-0 z-40 flex h-16 w-full items-center justify-between border-b bg-card/80 backdrop-blur-md px-4 sm:px-6 shadow-xs">
+				<div className="flex items-center gap-4">
+					<button
+						type="button"
+						onClick={() => setIsMobileMenuOpen(true)}
+						className="inline-flex items-center justify-center rounded-md p-2 text-muted-foreground hover:bg-accent hover:text-foreground lg:hidden transition-colors"
+						aria-label="Open menu"
+					>
+						<Menu className="h-6 w-6" />
+					</button>
+
+					<div className="hidden lg:block">
+						<BreadcrumbNav />
+					</div>
+				</div>
+
+				<div className="flex items-center gap-2 sm:gap-4">
+					<div className="hidden sm:block">
+						<ClusterSwitcher />
+					</div>
+					<div className="h-8 w-[1px] bg-border mx-1 hidden sm:block" />
 					<ModeToggle />
 				</div>
 			</header>
 
+			{/* Mobile Sidebar Overlay */}
+			{isMobileMenuOpen && (
+				<div
+					className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm lg:hidden transition-all duration-300"
+					onClick={() => setIsMobileMenuOpen(false)}
+				/>
+			)}
+
+			{/* Mobile Sidebar */}
 			<aside
-				className={`fixed top-0 left-0 h-full w-80 bg-card text-card-foreground border-r shadow-2xl z-50 transform transition-transform duration-300 ease-in-out flex flex-col ${
-					isOpen ? "translate-x-0" : "-translate-x-full"
+				className={`fixed inset-y-0 left-0 z-50 w-72 bg-card transform transition-transform duration-300 ease-in-out lg:hidden flex flex-col shadow-2xl ${
+					isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
 				}`}
 			>
 				<div className="flex items-center justify-between p-4 border-b">
-					<h2 className="text-xl font-bold">Navigation</h2>
+					<span className="text-lg font-bold text-primary">Navigation</span>
 					<button
 						type="button"
-						onClick={() => setIsOpen(false)}
-						className="p-2 hover:bg-accent rounded-lg transition-colors"
+						onClick={() => setIsMobileMenuOpen(false)}
+						className="p-2 hover:bg-accent rounded-lg transition-colors text-muted-foreground hover:text-foreground"
 						aria-label="Close menu"
 					>
-						<X size={24} />
+						<X className="h-6 w-6" />
 					</button>
 				</div>
-
-				<nav className="flex-1 p-4 overflow-y-auto">
-					<Link
-						to="/"
-						onClick={() => setIsOpen(false)}
-						className="flex items-center gap-3 p-3 rounded-lg hover:bg-accent transition-colors mb-2"
-						activeProps={{
-							className:
-								"flex items-center gap-3 p-3 rounded-lg bg-primary text-primary-foreground transition-colors mb-2",
-						}}
-					>
-						<Home size={20} />
-						<span className="font-medium">Home</span>
-					</Link>
-
-					{/* Demo Links Start */}
-
-					<Link
-						to="/demo/tanstack-query"
-						onClick={() => setIsOpen(false)}
-						className="flex items-center gap-3 p-3 rounded-lg hover:bg-accent transition-colors mb-2"
-						activeProps={{
-							className:
-								"flex items-center gap-3 p-3 rounded-lg bg-primary text-primary-foreground transition-colors mb-2",
-						}}
-					>
-						<Network size={20} />
-						<span className="font-medium">TanStack Query</span>
-					</Link>
-				</nav>
+				<Sidebar role={role} className="w-full border-r-0" />
 			</aside>
+
+			{/* Mobile Context Info (Breadcrumbs/Switcher) */}
+			<div className="lg:hidden flex items-center justify-between bg-muted/50 px-4 py-2 border-b gap-2">
+				<div className="flex-1 min-w-0">
+					<BreadcrumbNav />
+				</div>
+				<div className="shrink-0 sm:hidden">
+					<ClusterSwitcher />
+				</div>
+			</div>
 		</>
 	);
 }
