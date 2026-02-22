@@ -38,6 +38,7 @@ export const auth = betterAuth({
 	trustedOrigins() {
 		return [
 			...(process.env.BASE_URL ? [process.env.BASE_URL] : []),
+			...(process.env.BACKEND_URL ? process.env.BACKEND_URL.split(",") : []),
 			"http://localhost:3001",
 			...FRONTEND_URLs,
 		];
