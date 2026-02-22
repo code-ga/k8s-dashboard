@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Link, useLocation } from "@tanstack/react-router";
+import { useLocation } from "@tanstack/react-router";
 import { Menu, X } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Sidebar } from "./Sidebar";
