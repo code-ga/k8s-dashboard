@@ -23,7 +23,7 @@ COPY --from=deps /app/node_modules ./node_modules
 # By only copying the backend folder, we ensure that changes in frontend/src
 # do NOT invalidate the Docker cache for this stage.
 COPY backend ./backend
-COPY drizzle ./backend/drizzle
+COPY ./backend/drizzle ./backend/drizzle
 COPY package.json ./
 
 # Set working directory to the backend package
