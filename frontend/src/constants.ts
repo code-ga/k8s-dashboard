@@ -1,5 +1,5 @@
 export const BACKEND_URL =
-	import.meta.env.BACKEND_URL || import.meta.env.DEV
+	import.meta.env.VITE_BACKEND_URL || import.meta.env.DEV
 		? "http://localhost:3001"
 		: "https://the-bridge-backend.nbth.id.vn";
 export const FRONTEND_URL =
