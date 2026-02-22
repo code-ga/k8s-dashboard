@@ -5,6 +5,7 @@ dotenv.config({ path: "../.env" });
 import { cors } from "@elysiajs/cors";
 import { openapi } from "@elysiajs/openapi";
 import { Elysia } from "elysia";
+import { FRONTEND_URLs } from "./constants";
 import { OpenAPI } from "./libs/auths/openAPI";
 import { apiRouter } from "./routes";
 import { scalingController } from "./services/scaling.controller";
@@ -18,6 +19,12 @@ export const app = new Elysia()
 		cors({
 			// methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
 			credentials: true,
+			origin: [
+				...(process.env.BASE_URL ? [process.env.BASE_URL] : []),
+				...(process.env.BACKEND_URL ? process.env.BACKEND_URL.split(",") : []),
+				"http://localhost:3001",
+				...FRONTEND_URLs,
+			],
 		}),
 	)
 	.get("/", () => ({ hello: "Bun👋" }))
@@ -38,3 +45,4 @@ console.log(`Listening on ${app.server?.url}`);
 export type App = typeof app;
 export * as databaseTypes from "./database/type";
 export * as requestTypes from "./types";
+
