@@ -19,12 +19,9 @@ export const app = new Elysia()
 		cors({
 			// methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
 			credentials: true,
-			origin: [
-				...(process.env.BASE_URL ? [process.env.BASE_URL] : []),
-				...(process.env.BACKEND_URL ? process.env.BACKEND_URL.split(",") : []),
-				"http://localhost:3001",
-				...FRONTEND_URLs,
-			],
+			origin() {
+				return true;
+			},
 		}),
 	)
 	.get("/", () => ({ hello: "Bun👋" }))
@@ -45,4 +42,3 @@ console.log(`Listening on ${app.server?.url}`);
 export type App = typeof app;
 export * as databaseTypes from "./database/type";
 export * as requestTypes from "./types";
-
