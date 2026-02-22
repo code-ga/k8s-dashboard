@@ -1,0 +1,1 @@
+CREATE TYPE "cluster_status" AS ENUM('active', 'inactive');
