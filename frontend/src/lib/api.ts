@@ -6,6 +6,7 @@ import { BACKEND_URL } from "@/constants";
 export const api = treaty<App>(BACKEND_URL, {
 	fetch: {
 		credentials: "include",
+		redirect: "follow",
 	},
 });
 
