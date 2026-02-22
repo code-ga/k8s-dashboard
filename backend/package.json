@@ -5,7 +5,7 @@
 	"scripts": {
 		"dev": "bun --watch src/index.ts",
 		"build": "bun build src/index.ts --outdir dist",
-		"start": "bun dist/index.js",
+		"start": "bun run db:migrate && bun run src/index.ts",
 		"db:migrate": "drizzle-kit migrate",
 		"db:push": "drizzle-kit push",
 		"db:studio": "drizzle-kit studio"

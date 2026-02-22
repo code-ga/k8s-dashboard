@@ -36,4 +36,4 @@ ENV NODE_ENV=production
 USER bun
 
 # Run the application
-CMD ["bun", "run", "src/index.ts"]
+CMD ["bun", "run", "start"]
