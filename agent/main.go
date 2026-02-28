@@ -793,6 +793,9 @@ func getClusterConfig() (*ClusterConfig, error) {
 
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("Authorization", "Bot "+*token)
+	req.Header.Add("User-Agent", "K8s-Dashboard-Agent/1.0 (+https://github.com/code-ga/k8s-dashboard)")
+	req.Header.Add("Accept", "application/json")
+	req.Header.Set("Accept-Language", "en-US,en;q=0.9")
 
 	resp, err := client.Do(req)
 	if err != nil {
