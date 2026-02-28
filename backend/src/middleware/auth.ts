@@ -36,15 +36,18 @@ export const authenticationMiddleware = new Elysia({
 		async resolve({ status, request: { headers } }) {
 			console.log("Agent authentication middleware");
 			const authenticationHeader = headers.get("Authorization");
+			console.log("Authentication header: ", authenticationHeader);
 			if (!authenticationHeader || !authenticationHeader.startsWith("Bot ")) {
 				return status(401);
 			}
 			const token = authenticationHeader.replace("Bot ", "").trim();
+			console.log("Received token: ", token);
 			const agent = await db
 				.select()
 				.from(schema.clusterAgent)
 				.where(eq(schema.clusterAgent.token, token))
 				.limit(1);
+			
 			if (agent.length === 0 || !agent[0]) {
 				console.log("Agent not found");
 				return status(401);

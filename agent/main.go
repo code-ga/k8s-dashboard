@@ -84,6 +84,10 @@ func main() {
 
 	header := make(http.Header)
 	header.Add("Authorization", "Bot "+*token)
+	header.Add("Content-Type", "application/json")
+	header.Add("User-Agent", "K8s-Dashboard-Agent/1.0 (+https://github.com/code-ga/k8s-dashboard)")
+	header.Add("Accept", "application/json")
+	header.Set("Accept-Language", "en-US,en;q=0.9")
 
 	safeConn := NewSafeConn()
 
