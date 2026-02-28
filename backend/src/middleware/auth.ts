@@ -34,6 +34,7 @@ export const authenticationMiddleware = new Elysia({
 
 	agentAuth: {
 		async resolve({ status, request: { headers } }) {
+			console.log("Agent authentication middleware");
 			const authenticationHeader = headers.get("Authorization");
 			if (!authenticationHeader || !authenticationHeader.startsWith("Bot ")) {
 				return status(401);
@@ -45,6 +46,7 @@ export const authenticationMiddleware = new Elysia({
 				.where(eq(schema.clusterAgent.token, token))
 				.limit(1);
 			if (agent.length === 0 || !agent[0]) {
+				console.log("Agent not found");
 				return status(401);
 			}
 			const cluster = await db
@@ -53,6 +55,7 @@ export const authenticationMiddleware = new Elysia({
 				.where(eq(schema.k8sCluster.agentId, agent[0].id))
 				.limit(1);
 			if (cluster.length === 0 || !cluster[0]) {
+				console.log("Cluster not found");
 				return status(401);
 			}
 			return {
