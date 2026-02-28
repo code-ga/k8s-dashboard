@@ -1,6 +1,7 @@
 import { auth } from "./auth.config";
 
 let _schema: ReturnType<typeof auth.api.generateOpenAPISchema>;
+// biome-ignore lint/suspicious/noAssignInExpressions: <explanation>
 const getSchema = async () => (_schema ??= auth.api.generateOpenAPISchema());
 
 export const OpenAPI = {

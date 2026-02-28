@@ -40,14 +40,16 @@ var startService = flag.Bool("start-service", false, "start the systemd service 
 // Priority order: CLI flags > config file > environment variables > built-in defaults.
 //
 // Supported environment variables:
-//   AGENT_ADDR        – equivalent to --addr
-//   AGENT_TOKEN       – equivalent to --token
-//   AGENT_SKIP_UPDATE – equivalent to --skip-update (accepted: true/1/yes)
+//
+//	AGENT_ADDR        – equivalent to --addr
+//	AGENT_TOKEN       – equivalent to --token
+//	AGENT_SKIP_UPDATE – equivalent to --skip-update (accepted: true/1/yes)
 //
 // Example agent.yaml:
-//   addr: "my-backend.example.com:3001"
-//   token: "secret-token"
-//   skip_update: false
+//
+//	addr: "my-backend.example.com:3001"
+//	token: "secret-token"
+//	skip_update: false
 type agentFileConfig struct {
 	Addr       string `yaml:"addr"        json:"addr"`
 	Token      string `yaml:"token"       json:"token"`
@@ -808,7 +810,7 @@ func getClusterConfig() (*ClusterConfig, error) {
 	}
 	err = json.Unmarshal(body, &apiResp)
 	if err != nil {
-		log.Fatalf("Error unmarshalling response JSON: %v", err)
+		log.Fatalf("Error unmarshalling response JSON: %v with body: %s", err, string(body))
 	}
 
 	log.Printf("Received Cluster Key: %s...", string([]rune(apiResp.Data.ClusterKey)[:5]))
