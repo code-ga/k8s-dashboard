@@ -9,6 +9,7 @@ message AgentPayload {
     Heartbeat heartbeat = 1;
     CommandResponse command_response = 2;
     StreamData stream_data = 3;
+    AGENT_AUTHORIZE_USER authorize_user = 4;
   }
 }
 
@@ -67,6 +68,10 @@ message Heartbeat {
 
   // Timestamp of the heartbeat
   int64 timestamp = 5;
+}
+
+message AGENT_AUTHORIZE_USER {
+  string token = 1;
 }
 
 message ClusterResource {

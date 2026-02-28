@@ -159,75 +159,125 @@ export const agentRoute = new Elysia({ prefix: "/agents" })
 							),
 						},
 					},
-				)
-				.ws("/ws", {
-					detail: {
-						tags: ["Agent"],
-					},
-					body: Type.Any(),
-					open: async (ctx) => {
-						const cluster = ctx.data.cluster;
-						const agent = ctx.data.agent;
-						console.log(
-							`Agent ${agent.id} connected for cluster ${cluster.name} (${cluster.id})`,
+				),
+	)
+	.ws("/ws", {
+		detail: {
+			tags: ["Agent"],
+		},
+		body: Type.Any(),
+		open: async (ctx) => {
+			const cluster = ctx.data.cluster;
+			const agent = ctx.data.agent;
+			console.log(
+				`Agent ${agent.id} connected for cluster ${cluster.name} (${cluster.id})`,
+			);
+			ctx.data.agentManager.emit("agent/connected", {
+				agentId: `${agent.id}`,
+			});
+			// Register connection
+			ctx.data.agentManager.registerConnection(agent.id, ctx);
+			// Here you can store the WebSocket connection for later use
+		},
+		message: async (ws, message) => {
+			const cluster = ws.data.cluster;
+			const agent = ws.data.agent;
+			console.log(
+				`Received message from agent ${agent.id} for cluster ${cluster.name} (${cluster.id})`,
+			);
+			if (!cluster || !agent) {
+				console.log("No cluster or agent info in WebSocket context");
+				return;
+			}
+
+			// Message is expected to be Uint8Array (binary)
+			if (!(message instanceof Uint8Array) && !Buffer.isBuffer(message)) {
+				console.log("Received non-binary message");
+				return;
+			}
+
+			try {
+				// Decode Protobuf
+				const payload = AgentPayload.decode(new Uint8Array(message));
+
+				if (payload.heartbeat) {
+					await agentService.handleHeartbeat(
+						agent.id,
+						payload.heartbeat,
+						ws.data.agentManager,
+					);
+				}
+
+				if (payload.commandResponse) {
+					ws.data.agentManager.handleCommandResponse(payload.commandResponse);
+				}
+				if (payload.streamData) {
+					ws.data.agentManager.handleStreamData(payload.streamData);
+				}
+				if (payload.authorizeUser) {
+					const agent = await db
+						.select()
+						.from(schema.clusterAgent)
+						.where(eq(schema.clusterAgent.token, payload.authorizeUser.token))
+						.limit(1);
+					if (agent.length === 0 || !agent[0]) {
+						ws.send(
+							JSON.stringify({
+								success: false,
+								message: "Unauthorized",
+							}),
 						);
-						ctx.data.agentManager.emit("agent/connected", {
-							agentId: `${agent.id}`,
-						});
-						// Register connection
-						ctx.data.agentManager.registerConnection(agent.id, ctx);
-						// Here you can store the WebSocket connection for later use
-					},
-					message: async (ws, message) => {
-						const cluster = ws.data.cluster;
-						const agent = ws.data.agent;
-
-						// Message is expected to be Uint8Array (binary)
-						if (!(message instanceof Uint8Array) && !Buffer.isBuffer(message)) {
-							console.log("Received non-binary message");
-							return;
-						}
-
-						try {
-							// Decode Protobuf
-							const payload = AgentPayload.decode(new Uint8Array(message));
-
-							if (payload.heartbeat) {
-								await agentService.handleHeartbeat(
-									agent.id,
-									payload.heartbeat,
-									ws.data.agentManager,
-								);
-							}
-
-							if (payload.commandResponse) {
-								ws.data.agentManager.handleCommandResponse(
-									payload.commandResponse,
-								);
-							}
-							if (payload.streamData) {
-								ws.data.agentManager.handleStreamData(payload.streamData);
-							}
-						} catch (error) {
-							console.error(
-								`Failed to decode or process message from cluster ${cluster.name} (${cluster.id}):`,
-								error,
-							);
-						}
-					},
-					close: async (ctx) => {
-						const cluster = ctx.data.cluster;
-						const agent = ctx.data.agent;
-						console.log(
-							`Agent ${agent.id} disconnected for cluster ${cluster.name} (${cluster.id})`,
+						ws.close();
+						return;
+					}
+					const cluster = await db
+						.select()
+						.from(schema.k8sCluster)
+						.where(eq(schema.k8sCluster.agentId, agent[0].id))
+						.limit(1);
+					if (cluster.length === 0 || !cluster[0]) {
+						ws.send(
+							JSON.stringify({
+								success: false,
+								message: "Unauthorized",
+							}),
 						);
-						ctx.data.agentManager.emit("agent/disconnected", {
-							agentId: `${agent.id}`,
-						});
-						// Remove connection
-						ctx.data.agentManager.removeConnection(agent.id);
-						// Clean up any resources related to the disconnected agent here
-						await agentService.agentDisconnect(agent.id);
-					},
-				}),
-	);
+						ws.close();
+						return;
+					}
+					ws.data.cluster = cluster[0];
+					ws.data.agent = agent[0];
+					console.log(
+						`Agent ${agent[0].id} connected for cluster ${cluster[0].name} (${cluster[0].id})`,
+					);
+					ws.data.agentManager.emit("agent/connected", {
+						agentId: `${agent[0].id}`,
+					});
+					// Register connection
+					ws.data.agentManager.registerConnection(agent[0].id, ws);
+					// Here you can store the WebSocket connection for later use
+				}
+				// Handle other message types similarly
+				// ...
+			} catch (error) {
+				console.error(
+					`Failed to decode or process message from cluster ${cluster.name} (${cluster.id}):`,
+					error,
+				);
+			}
+		},
+		close: async (ctx) => {
+			const cluster = ctx.data.cluster;
+			const agent = ctx.data.agent;
+			console.log(
+				`Agent ${agent.id} disconnected for cluster ${cluster.name} (${cluster.id})`,
+			);
+			ctx.data.agentManager.emit("agent/disconnected", {
+				agentId: `${agent.id}`,
+			});
+			// Remove connection
+			ctx.data.agentManager.removeConnection(agent.id);
+			// Clean up any resources related to the disconnected agent here
+			await agentService.agentDisconnect(agent.id);
+		},
+	});

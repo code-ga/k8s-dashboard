@@ -11,4874 +11,4473 @@ export const protobufPackage = "api";
 
 /** Wrapper for all messages sent from Agent to Server */
 export interface AgentPayload {
-	heartbeat?: Heartbeat | undefined;
-	commandResponse?: CommandResponse | undefined;
-	streamData?: StreamData | undefined;
+  heartbeat?: Heartbeat | undefined;
+  commandResponse?: CommandResponse | undefined;
+  streamData?: StreamData | undefined;
+  authorizeUser?: agentAuthorizeUser | undefined;
 }
 
 export interface StreamData {
-	streamId: string;
-	/** Data chunk */
-	data: Uint8Array;
-	/** True for stderr */
-	isError: boolean;
-	/** Stream closed */
-	closed: boolean;
-	type: StreamData_StreamDataType;
-	rows: number;
-	cols: number;
+  streamId: string;
+  /** Data chunk */
+  data: Uint8Array;
+  /** True for stderr */
+  isError: boolean;
+  /** Stream closed */
+  closed: boolean;
+  type: StreamData_StreamDataType;
+  rows: number;
+  cols: number;
 }
 
 export enum StreamData_StreamDataType {
-	DATA = 0,
-	RESIZE = 1,
-	UNRECOGNIZED = -1,
+  DATA = 0,
+  RESIZE = 1,
+  UNRECOGNIZED = -1,
 }
 
-export function streamData_StreamDataTypeFromJSON(
-	object: any,
-): StreamData_StreamDataType {
-	switch (object) {
-		case 0:
-		case "DATA":
-			return StreamData_StreamDataType.DATA;
-		case 1:
-		case "RESIZE":
-			return StreamData_StreamDataType.RESIZE;
-		case -1:
-		case "UNRECOGNIZED":
-		default:
-			return StreamData_StreamDataType.UNRECOGNIZED;
-	}
+export function streamData_StreamDataTypeFromJSON(object: any): StreamData_StreamDataType {
+  switch (object) {
+    case 0:
+    case "DATA":
+      return StreamData_StreamDataType.DATA;
+    case 1:
+    case "RESIZE":
+      return StreamData_StreamDataType.RESIZE;
+    case -1:
+    case "UNRECOGNIZED":
+    default:
+      return StreamData_StreamDataType.UNRECOGNIZED;
+  }
 }
 
-export function streamData_StreamDataTypeToJSON(
-	object: StreamData_StreamDataType,
-): string {
-	switch (object) {
-		case StreamData_StreamDataType.DATA:
-			return "DATA";
-		case StreamData_StreamDataType.RESIZE:
-			return "RESIZE";
-		case StreamData_StreamDataType.UNRECOGNIZED:
-		default:
-			return "UNRECOGNIZED";
-	}
+export function streamData_StreamDataTypeToJSON(object: StreamData_StreamDataType): string {
+  switch (object) {
+    case StreamData_StreamDataType.DATA:
+      return "DATA";
+    case StreamData_StreamDataType.RESIZE:
+      return "RESIZE";
+    case StreamData_StreamDataType.UNRECOGNIZED:
+    default:
+      return "UNRECOGNIZED";
+  }
 }
 
 export interface CommandResponse {
-	id: string;
-	success: boolean;
-	error: string;
-	data: string;
+  id: string;
+  success: boolean;
+  error: string;
+  data: string;
 }
 
 /** Wrapper for messages sent from Server to Agent */
 export interface ServerPayload {
-	command?: Command | undefined;
-	streamData?: StreamData | undefined;
+  command?: Command | undefined;
+  streamData?: StreamData | undefined;
 }
 
 export interface Heartbeat {
-	/** Information about the cluster itself */
-	clusterResource: ClusterResource | undefined;
-	/** List of nodes in the cluster */
-	nodes: Node[];
-	/** List of pods (can be extensive) */
-	pods: Pod[];
-	/** List of services */
-	services: Service[];
-	/** List of deployments */
-	deployments: Deployment[];
-	/** List of config maps */
-	configMaps: ConfigMap[];
-	/** List of secrets */
-	secrets: Secret[];
-	/** Timestamp of the heartbeat */
-	timestamp: number;
+  /** Information about the cluster itself */
+  clusterResource:
+    | ClusterResource
+    | undefined;
+  /** List of nodes in the cluster */
+  nodes: Node[];
+  /** List of pods (can be extensive) */
+  pods: Pod[];
+  /** List of services */
+  services: Service[];
+  /** List of deployments */
+  deployments: Deployment[];
+  /** List of config maps */
+  configMaps: ConfigMap[];
+  /** List of secrets */
+  secrets: Secret[];
+  /** Timestamp of the heartbeat */
+  timestamp: number;
+}
+
+export interface agentAuthorizeUser {
+  token: string;
 }
 
 export interface ClusterResource {
-	/** Total CPU capacity (millicores) */
-	cpuCapacity: number;
-	/** Total Memory capacity (MiB) */
-	ramCapacity: number;
-	/** Current CPU usage (millicores) */
-	cpuUsage: number;
-	/** Current Memory usage (MiB) */
-	ramUsage: number;
-	/** Cluster domain */
-	clusterDomain: string;
+  /** Total CPU capacity (millicores) */
+  cpuCapacity: number;
+  /** Total Memory capacity (MiB) */
+  ramCapacity: number;
+  /** Current CPU usage (millicores) */
+  cpuUsage: number;
+  /** Current Memory usage (MiB) */
+  ramUsage: number;
+  /** Cluster domain */
+  clusterDomain: string;
 }
 
 export interface ContainerPort {
-	containerPort: number;
-	name: string;
-	/** TCP, UDP */
-	protocol: string;
+  containerPort: number;
+  name: string;
+  /** TCP, UDP */
+  protocol: string;
 }
 
 export interface Node {
-	name: string;
-	cpuUsage: number;
-	ramUsage: number;
-	cpuCapacity: number;
-	ramCapacity: number;
-	/** JSON string or key=value pairs for labels */
-	labels: { [key: string]: string };
-	uid: string;
-	status: string;
-	roles: string[];
+  name: string;
+  cpuUsage: number;
+  ramUsage: number;
+  cpuCapacity: number;
+  ramCapacity: number;
+  /** JSON string or key=value pairs for labels */
+  labels: { [key: string]: string };
+  uid: string;
+  status: string;
+  roles: string[];
 }
 
 export interface Node_LabelsEntry {
-	key: string;
-	value: string;
+  key: string;
+  value: string;
 }
 
 export interface Deployment {
-	name: string;
-	namespace: string;
-	replicas: number;
-	availableReplicas: number;
-	unavailableReplicas: number;
-	/** JSON string or key=value pairs for labels */
-	labels: { [key: string]: string };
-	/** JSON string or key=value pairs for selector */
-	selector: { [key: string]: string };
-	/** Image used in the first container of the template (simplified) */
-	dockerImage: string;
-	uid: string;
-	/** New fields for full parity */
-	command: string;
-	args: string;
-	envVariables: string;
-	cpuRequest: number;
-	cpuLimit: number;
-	memoryRequest: number;
-	memoryLimit: number;
-	ports: ContainerPort[];
+  name: string;
+  namespace: string;
+  replicas: number;
+  availableReplicas: number;
+  unavailableReplicas: number;
+  /** JSON string or key=value pairs for labels */
+  labels: { [key: string]: string };
+  /** JSON string or key=value pairs for selector */
+  selector: { [key: string]: string };
+  /** Image used in the first container of the template (simplified) */
+  dockerImage: string;
+  uid: string;
+  /** New fields for full parity */
+  command: string;
+  args: string;
+  envVariables: string;
+  cpuRequest: number;
+  cpuLimit: number;
+  memoryRequest: number;
+  memoryLimit: number;
+  ports: ContainerPort[];
 }
 
 export interface Deployment_LabelsEntry {
-	key: string;
-	value: string;
+  key: string;
+  value: string;
 }
 
 export interface Deployment_SelectorEntry {
-	key: string;
-	value: string;
+  key: string;
+  value: string;
 }
 
 export interface Pod {
-	name: string;
-	namespace: string;
-	nodeName: string;
-	/** Main image (or list if multiple containers) */
-	dockerImage: string;
-	replicas: number;
-	/** Status (Running, Pending, etc.) */
-	status: string;
-	/** Resource requirements */
-	cpuRequest: number;
-	cpuLimit: number;
-	memoryRequest: number;
-	memoryLimit: number;
-	command: string;
-	/** JSON string or sensitive data masked */
-	envVariables: string;
-	/** Changed to support multiple ports */
-	ports: ContainerPort[];
-	uid: string;
-	cpuUsage: number;
-	ramUsage: number;
-	/** New field for parity */
-	labels: { [key: string]: string };
-	args: string;
+  name: string;
+  namespace: string;
+  nodeName: string;
+  /** Main image (or list if multiple containers) */
+  dockerImage: string;
+  replicas: number;
+  /** Status (Running, Pending, etc.) */
+  status: string;
+  /** Resource requirements */
+  cpuRequest: number;
+  cpuLimit: number;
+  memoryRequest: number;
+  memoryLimit: number;
+  command: string;
+  /** JSON string or sensitive data masked */
+  envVariables: string;
+  /** Changed to support multiple ports */
+  ports: ContainerPort[];
+  uid: string;
+  cpuUsage: number;
+  ramUsage: number;
+  /** New field for parity */
+  labels: { [key: string]: string };
+  args: string;
 }
 
 export interface Pod_LabelsEntry {
-	key: string;
-	value: string;
+  key: string;
+  value: string;
 }
 
 export interface ServicePort {
-	name: string;
-	/** TCP, UDP */
-	protocol: string;
-	port: number;
-	targetPort: number;
-	nodePort: number;
+  name: string;
+  /** TCP, UDP */
+  protocol: string;
+  port: number;
+  targetPort: number;
+  nodePort: number;
 }
 
 export interface Service {
-	name: string;
-	namespace: string;
-	/** ClusterIP, NodePort, LoadBalancer */
-	type: string;
-	clusterIp: string;
-	/** Selector labels */
-	selector: { [key: string]: string };
-	domain: string;
-	uid: string;
-	labels: { [key: string]: string };
-	ports: ServicePort[];
+  name: string;
+  namespace: string;
+  /** ClusterIP, NodePort, LoadBalancer */
+  type: string;
+  clusterIp: string;
+  /** Selector labels */
+  selector: { [key: string]: string };
+  domain: string;
+  uid: string;
+  labels: { [key: string]: string };
+  ports: ServicePort[];
 }
 
 export interface Service_SelectorEntry {
-	key: string;
-	value: string;
+  key: string;
+  value: string;
 }
 
 export interface Service_LabelsEntry {
-	key: string;
-	value: string;
+  key: string;
+  value: string;
 }
 
 export interface ConfigMap {
-	name: string;
-	namespace: string;
-	data: { [key: string]: string };
-	binaryData: { [key: string]: Uint8Array };
-	uid: string;
-	labels: { [key: string]: string };
-	immutable: boolean;
+  name: string;
+  namespace: string;
+  data: { [key: string]: string };
+  binaryData: { [key: string]: Uint8Array };
+  uid: string;
+  labels: { [key: string]: string };
+  immutable: boolean;
 }
 
 export interface ConfigMap_DataEntry {
-	key: string;
-	value: string;
+  key: string;
+  value: string;
 }
 
 export interface ConfigMap_BinaryDataEntry {
-	key: string;
-	value: Uint8Array;
+  key: string;
+  value: Uint8Array;
 }
 
 export interface ConfigMap_LabelsEntry {
-	key: string;
-	value: string;
+  key: string;
+  value: string;
 }
 
 export interface Secret {
-	name: string;
-	namespace: string;
-	data: { [key: string]: Uint8Array };
-	type: string;
-	uid: string;
-	labels: { [key: string]: string };
-	immutable: boolean;
+  name: string;
+  namespace: string;
+  data: { [key: string]: Uint8Array };
+  type: string;
+  uid: string;
+  labels: { [key: string]: string };
+  immutable: boolean;
 }
 
 export interface Secret_DataEntry {
-	key: string;
-	value: Uint8Array;
+  key: string;
+  value: Uint8Array;
 }
 
 export interface Secret_LabelsEntry {
-	key: string;
-	value: string;
+  key: string;
+  value: string;
 }
 
 export interface Command {
-	id: string;
-	type: Command_CommandType;
-	/** Payload depends on the command type (e.g., serialized JSON or YAML) */
-	payload: string;
-	/** Target resource details if applicable */
-	targetNamespace: string;
-	targetName: string;
+  id: string;
+  type: Command_CommandType;
+  /** Payload depends on the command type (e.g., serialized JSON or YAML) */
+  payload: string;
+  /** Target resource details if applicable */
+  targetNamespace: string;
+  targetName: string;
 }
 
 export enum Command_CommandType {
-	UNKNOWN = 0,
-	EDIT_RESOURCE = 1,
-	CREATE_DEPLOYMENT = 2,
-	SCALE_DEPLOYMENT = 3,
-	DELETE_DEPLOYMENT = 4,
-	CREATE_POD = 5,
-	DELETE_POD = 6,
-	DELETE_NODE = 7,
-	GET_JOIN_TOKEN = 8,
-	STREAM_LOGS = 9,
-	EXEC = 10,
-	CREATE_SERVICE = 11,
-	DELETE_SERVICE = 12,
-	DELETE_RESOURCE = 13,
-	CREATE_RESOURCE = 14,
-	CREATE_INGRESS = 15,
-	DELETE_INGRESS = 16,
-	CREATE_CONFIGMAP = 17,
-	DELETE_CONFIGMAP = 18,
-	CREATE_SECRET = 19,
-	DELETE_SECRET = 20,
-	UNRECOGNIZED = -1,
+  UNKNOWN = 0,
+  EDIT_RESOURCE = 1,
+  CREATE_DEPLOYMENT = 2,
+  SCALE_DEPLOYMENT = 3,
+  DELETE_DEPLOYMENT = 4,
+  CREATE_POD = 5,
+  DELETE_POD = 6,
+  DELETE_NODE = 7,
+  GET_JOIN_TOKEN = 8,
+  STREAM_LOGS = 9,
+  EXEC = 10,
+  CREATE_SERVICE = 11,
+  DELETE_SERVICE = 12,
+  DELETE_RESOURCE = 13,
+  CREATE_RESOURCE = 14,
+  CREATE_INGRESS = 15,
+  DELETE_INGRESS = 16,
+  CREATE_CONFIGMAP = 17,
+  DELETE_CONFIGMAP = 18,
+  CREATE_SECRET = 19,
+  DELETE_SECRET = 20,
+  UNRECOGNIZED = -1,
 }
 
 export function command_CommandTypeFromJSON(object: any): Command_CommandType {
-	switch (object) {
-		case 0:
-		case "UNKNOWN":
-			return Command_CommandType.UNKNOWN;
-		case 1:
-		case "EDIT_RESOURCE":
-			return Command_CommandType.EDIT_RESOURCE;
-		case 2:
-		case "CREATE_DEPLOYMENT":
-			return Command_CommandType.CREATE_DEPLOYMENT;
-		case 3:
-		case "SCALE_DEPLOYMENT":
-			return Command_CommandType.SCALE_DEPLOYMENT;
-		case 4:
-		case "DELETE_DEPLOYMENT":
-			return Command_CommandType.DELETE_DEPLOYMENT;
-		case 5:
-		case "CREATE_POD":
-			return Command_CommandType.CREATE_POD;
-		case 6:
-		case "DELETE_POD":
-			return Command_CommandType.DELETE_POD;
-		case 7:
-		case "DELETE_NODE":
-			return Command_CommandType.DELETE_NODE;
-		case 8:
-		case "GET_JOIN_TOKEN":
-			return Command_CommandType.GET_JOIN_TOKEN;
-		case 9:
-		case "STREAM_LOGS":
-			return Command_CommandType.STREAM_LOGS;
-		case 10:
-		case "EXEC":
-			return Command_CommandType.EXEC;
-		case 11:
-		case "CREATE_SERVICE":
-			return Command_CommandType.CREATE_SERVICE;
-		case 12:
-		case "DELETE_SERVICE":
-			return Command_CommandType.DELETE_SERVICE;
-		case 13:
-		case "DELETE_RESOURCE":
-			return Command_CommandType.DELETE_RESOURCE;
-		case 14:
-		case "CREATE_RESOURCE":
-			return Command_CommandType.CREATE_RESOURCE;
-		case 15:
-		case "CREATE_INGRESS":
-			return Command_CommandType.CREATE_INGRESS;
-		case 16:
-		case "DELETE_INGRESS":
-			return Command_CommandType.DELETE_INGRESS;
-		case 17:
-		case "CREATE_CONFIGMAP":
-			return Command_CommandType.CREATE_CONFIGMAP;
-		case 18:
-		case "DELETE_CONFIGMAP":
-			return Command_CommandType.DELETE_CONFIGMAP;
-		case 19:
-		case "CREATE_SECRET":
-			return Command_CommandType.CREATE_SECRET;
-		case 20:
-		case "DELETE_SECRET":
-			return Command_CommandType.DELETE_SECRET;
-		case -1:
-		case "UNRECOGNIZED":
-		default:
-			return Command_CommandType.UNRECOGNIZED;
-	}
+  switch (object) {
+    case 0:
+    case "UNKNOWN":
+      return Command_CommandType.UNKNOWN;
+    case 1:
+    case "EDIT_RESOURCE":
+      return Command_CommandType.EDIT_RESOURCE;
+    case 2:
+    case "CREATE_DEPLOYMENT":
+      return Command_CommandType.CREATE_DEPLOYMENT;
+    case 3:
+    case "SCALE_DEPLOYMENT":
+      return Command_CommandType.SCALE_DEPLOYMENT;
+    case 4:
+    case "DELETE_DEPLOYMENT":
+      return Command_CommandType.DELETE_DEPLOYMENT;
+    case 5:
+    case "CREATE_POD":
+      return Command_CommandType.CREATE_POD;
+    case 6:
+    case "DELETE_POD":
+      return Command_CommandType.DELETE_POD;
+    case 7:
+    case "DELETE_NODE":
+      return Command_CommandType.DELETE_NODE;
+    case 8:
+    case "GET_JOIN_TOKEN":
+      return Command_CommandType.GET_JOIN_TOKEN;
+    case 9:
+    case "STREAM_LOGS":
+      return Command_CommandType.STREAM_LOGS;
+    case 10:
+    case "EXEC":
+      return Command_CommandType.EXEC;
+    case 11:
+    case "CREATE_SERVICE":
+      return Command_CommandType.CREATE_SERVICE;
+    case 12:
+    case "DELETE_SERVICE":
+      return Command_CommandType.DELETE_SERVICE;
+    case 13:
+    case "DELETE_RESOURCE":
+      return Command_CommandType.DELETE_RESOURCE;
+    case 14:
+    case "CREATE_RESOURCE":
+      return Command_CommandType.CREATE_RESOURCE;
+    case 15:
+    case "CREATE_INGRESS":
+      return Command_CommandType.CREATE_INGRESS;
+    case 16:
+    case "DELETE_INGRESS":
+      return Command_CommandType.DELETE_INGRESS;
+    case 17:
+    case "CREATE_CONFIGMAP":
+      return Command_CommandType.CREATE_CONFIGMAP;
+    case 18:
+    case "DELETE_CONFIGMAP":
+      return Command_CommandType.DELETE_CONFIGMAP;
+    case 19:
+    case "CREATE_SECRET":
+      return Command_CommandType.CREATE_SECRET;
+    case 20:
+    case "DELETE_SECRET":
+      return Command_CommandType.DELETE_SECRET;
+    case -1:
+    case "UNRECOGNIZED":
+    default:
+      return Command_CommandType.UNRECOGNIZED;
+  }
 }
 
 export function command_CommandTypeToJSON(object: Command_CommandType): string {
-	switch (object) {
-		case Command_CommandType.UNKNOWN:
-			return "UNKNOWN";
-		case Command_CommandType.EDIT_RESOURCE:
-			return "EDIT_RESOURCE";
-		case Command_CommandType.CREATE_DEPLOYMENT:
-			return "CREATE_DEPLOYMENT";
-		case Command_CommandType.SCALE_DEPLOYMENT:
-			return "SCALE_DEPLOYMENT";
-		case Command_CommandType.DELETE_DEPLOYMENT:
-			return "DELETE_DEPLOYMENT";
-		case Command_CommandType.CREATE_POD:
-			return "CREATE_POD";
-		case Command_CommandType.DELETE_POD:
-			return "DELETE_POD";
-		case Command_CommandType.DELETE_NODE:
-			return "DELETE_NODE";
-		case Command_CommandType.GET_JOIN_TOKEN:
-			return "GET_JOIN_TOKEN";
-		case Command_CommandType.STREAM_LOGS:
-			return "STREAM_LOGS";
-		case Command_CommandType.EXEC:
-			return "EXEC";
-		case Command_CommandType.CREATE_SERVICE:
-			return "CREATE_SERVICE";
-		case Command_CommandType.DELETE_SERVICE:
-			return "DELETE_SERVICE";
-		case Command_CommandType.DELETE_RESOURCE:
-			return "DELETE_RESOURCE";
-		case Command_CommandType.CREATE_RESOURCE:
-			return "CREATE_RESOURCE";
-		case Command_CommandType.CREATE_INGRESS:
-			return "CREATE_INGRESS";
-		case Command_CommandType.DELETE_INGRESS:
-			return "DELETE_INGRESS";
-		case Command_CommandType.CREATE_CONFIGMAP:
-			return "CREATE_CONFIGMAP";
-		case Command_CommandType.DELETE_CONFIGMAP:
-			return "DELETE_CONFIGMAP";
-		case Command_CommandType.CREATE_SECRET:
-			return "CREATE_SECRET";
-		case Command_CommandType.DELETE_SECRET:
-			return "DELETE_SECRET";
-		case Command_CommandType.UNRECOGNIZED:
-		default:
-			return "UNRECOGNIZED";
-	}
+  switch (object) {
+    case Command_CommandType.UNKNOWN:
+      return "UNKNOWN";
+    case Command_CommandType.EDIT_RESOURCE:
+      return "EDIT_RESOURCE";
+    case Command_CommandType.CREATE_DEPLOYMENT:
+      return "CREATE_DEPLOYMENT";
+    case Command_CommandType.SCALE_DEPLOYMENT:
+      return "SCALE_DEPLOYMENT";
+    case Command_CommandType.DELETE_DEPLOYMENT:
+      return "DELETE_DEPLOYMENT";
+    case Command_CommandType.CREATE_POD:
+      return "CREATE_POD";
+    case Command_CommandType.DELETE_POD:
+      return "DELETE_POD";
+    case Command_CommandType.DELETE_NODE:
+      return "DELETE_NODE";
+    case Command_CommandType.GET_JOIN_TOKEN:
+      return "GET_JOIN_TOKEN";
+    case Command_CommandType.STREAM_LOGS:
+      return "STREAM_LOGS";
+    case Command_CommandType.EXEC:
+      return "EXEC";
+    case Command_CommandType.CREATE_SERVICE:
+      return "CREATE_SERVICE";
+    case Command_CommandType.DELETE_SERVICE:
+      return "DELETE_SERVICE";
+    case Command_CommandType.DELETE_RESOURCE:
+      return "DELETE_RESOURCE";
+    case Command_CommandType.CREATE_RESOURCE:
+      return "CREATE_RESOURCE";
+    case Command_CommandType.CREATE_INGRESS:
+      return "CREATE_INGRESS";
+    case Command_CommandType.DELETE_INGRESS:
+      return "DELETE_INGRESS";
+    case Command_CommandType.CREATE_CONFIGMAP:
+      return "CREATE_CONFIGMAP";
+    case Command_CommandType.DELETE_CONFIGMAP:
+      return "DELETE_CONFIGMAP";
+    case Command_CommandType.CREATE_SECRET:
+      return "CREATE_SECRET";
+    case Command_CommandType.DELETE_SECRET:
+      return "DELETE_SECRET";
+    case Command_CommandType.UNRECOGNIZED:
+    default:
+      return "UNRECOGNIZED";
+  }
 }
 
 export interface JoinTokenData {
-	command: string;
-	token: string;
-	discoveryTokenCaCertHash: string;
-	apiServerEndpoint: string;
-	expiration: string;
+  command: string;
+  token: string;
+  discoveryTokenCaCertHash: string;
+  apiServerEndpoint: string;
+  expiration: string;
 }
 
 function createBaseAgentPayload(): AgentPayload {
-	return {
-		heartbeat: undefined,
-		commandResponse: undefined,
-		streamData: undefined,
-	};
+  return { heartbeat: undefined, commandResponse: undefined, streamData: undefined, authorizeUser: undefined };
 }
 
 export const AgentPayload: MessageFns<AgentPayload> = {
-	encode(
-		message: AgentPayload,
-		writer: BinaryWriter = new BinaryWriter(),
-	): BinaryWriter {
-		if (message.heartbeat !== undefined) {
-			Heartbeat.encode(message.heartbeat, writer.uint32(10).fork()).join();
-		}
-		if (message.commandResponse !== undefined) {
-			CommandResponse.encode(
-				message.commandResponse,
-				writer.uint32(18).fork(),
-			).join();
-		}
-		if (message.streamData !== undefined) {
-			StreamData.encode(message.streamData, writer.uint32(26).fork()).join();
-		}
-		return writer;
-	},
+  encode(message: AgentPayload, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.heartbeat !== undefined) {
+      Heartbeat.encode(message.heartbeat, writer.uint32(10).fork()).join();
+    }
+    if (message.commandResponse !== undefined) {
+      CommandResponse.encode(message.commandResponse, writer.uint32(18).fork()).join();
+    }
+    if (message.streamData !== undefined) {
+      StreamData.encode(message.streamData, writer.uint32(26).fork()).join();
+    }
+    if (message.authorizeUser !== undefined) {
+      agentAuthorizeUser.encode(message.authorizeUser, writer.uint32(34).fork()).join();
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): AgentPayload {
-		const reader =
-			input instanceof BinaryReader ? input : new BinaryReader(input);
-		const end = length === undefined ? reader.len : reader.pos + length;
-		const message = createBaseAgentPayload();
-		while (reader.pos < end) {
-			const tag = reader.uint32();
-			switch (tag >>> 3) {
-				case 1: {
-					if (tag !== 10) {
-						break;
-					}
+  decode(input: BinaryReader | Uint8Array, length?: number): AgentPayload {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseAgentPayload();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
 
-					message.heartbeat = Heartbeat.decode(reader, reader.uint32());
-					continue;
-				}
-				case 2: {
-					if (tag !== 18) {
-						break;
-					}
+          message.heartbeat = Heartbeat.decode(reader, reader.uint32());
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
 
-					message.commandResponse = CommandResponse.decode(
-						reader,
-						reader.uint32(),
-					);
-					continue;
-				}
-				case 3: {
-					if (tag !== 26) {
-						break;
-					}
+          message.commandResponse = CommandResponse.decode(reader, reader.uint32());
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
 
-					message.streamData = StreamData.decode(reader, reader.uint32());
-					continue;
-				}
-			}
-			if ((tag & 7) === 4 || tag === 0) {
-				break;
-			}
-			reader.skip(tag & 7);
-		}
-		return message;
-	},
+          message.streamData = StreamData.decode(reader, reader.uint32());
+          continue;
+        }
+        case 4: {
+          if (tag !== 34) {
+            break;
+          }
 
-	fromJSON(object: any): AgentPayload {
-		return {
-			heartbeat: isSet(object.heartbeat)
-				? Heartbeat.fromJSON(object.heartbeat)
-				: undefined,
-			commandResponse: isSet(object.commandResponse)
-				? CommandResponse.fromJSON(object.commandResponse)
-				: isSet(object.command_response)
-					? CommandResponse.fromJSON(object.command_response)
-					: undefined,
-			streamData: isSet(object.streamData)
-				? StreamData.fromJSON(object.streamData)
-				: isSet(object.stream_data)
-					? StreamData.fromJSON(object.stream_data)
-					: undefined,
-		};
-	},
+          message.authorizeUser = agentAuthorizeUser.decode(reader, reader.uint32());
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
 
-	toJSON(message: AgentPayload): unknown {
-		const obj: any = {};
-		if (message.heartbeat !== undefined) {
-			obj.heartbeat = Heartbeat.toJSON(message.heartbeat);
-		}
-		if (message.commandResponse !== undefined) {
-			obj.commandResponse = CommandResponse.toJSON(message.commandResponse);
-		}
-		if (message.streamData !== undefined) {
-			obj.streamData = StreamData.toJSON(message.streamData);
-		}
-		return obj;
-	},
+  fromJSON(object: any): AgentPayload {
+    return {
+      heartbeat: isSet(object.heartbeat) ? Heartbeat.fromJSON(object.heartbeat) : undefined,
+      commandResponse: isSet(object.commandResponse)
+        ? CommandResponse.fromJSON(object.commandResponse)
+        : isSet(object.command_response)
+        ? CommandResponse.fromJSON(object.command_response)
+        : undefined,
+      streamData: isSet(object.streamData)
+        ? StreamData.fromJSON(object.streamData)
+        : isSet(object.stream_data)
+        ? StreamData.fromJSON(object.stream_data)
+        : undefined,
+      authorizeUser: isSet(object.authorizeUser)
+        ? agentAuthorizeUser.fromJSON(object.authorizeUser)
+        : isSet(object.authorize_user)
+        ? agentAuthorizeUser.fromJSON(object.authorize_user)
+        : undefined,
+    };
+  },
 
-	create<I extends Exact<DeepPartial<AgentPayload>, I>>(
-		base?: I,
-	): AgentPayload {
-		return AgentPayload.fromPartial(base ?? ({} as any));
-	},
-	fromPartial<I extends Exact<DeepPartial<AgentPayload>, I>>(
-		object: I,
-	): AgentPayload {
-		const message = createBaseAgentPayload();
-		message.heartbeat =
-			object.heartbeat !== undefined && object.heartbeat !== null
-				? Heartbeat.fromPartial(object.heartbeat)
-				: undefined;
-		message.commandResponse =
-			object.commandResponse !== undefined && object.commandResponse !== null
-				? CommandResponse.fromPartial(object.commandResponse)
-				: undefined;
-		message.streamData =
-			object.streamData !== undefined && object.streamData !== null
-				? StreamData.fromPartial(object.streamData)
-				: undefined;
-		return message;
-	},
+  toJSON(message: AgentPayload): unknown {
+    const obj: any = {};
+    if (message.heartbeat !== undefined) {
+      obj.heartbeat = Heartbeat.toJSON(message.heartbeat);
+    }
+    if (message.commandResponse !== undefined) {
+      obj.commandResponse = CommandResponse.toJSON(message.commandResponse);
+    }
+    if (message.streamData !== undefined) {
+      obj.streamData = StreamData.toJSON(message.streamData);
+    }
+    if (message.authorizeUser !== undefined) {
+      obj.authorizeUser = agentAuthorizeUser.toJSON(message.authorizeUser);
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<AgentPayload>, I>>(base?: I): AgentPayload {
+    return AgentPayload.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<AgentPayload>, I>>(object: I): AgentPayload {
+    const message = createBaseAgentPayload();
+    message.heartbeat = (object.heartbeat !== undefined && object.heartbeat !== null)
+      ? Heartbeat.fromPartial(object.heartbeat)
+      : undefined;
+    message.commandResponse = (object.commandResponse !== undefined && object.commandResponse !== null)
+      ? CommandResponse.fromPartial(object.commandResponse)
+      : undefined;
+    message.streamData = (object.streamData !== undefined && object.streamData !== null)
+      ? StreamData.fromPartial(object.streamData)
+      : undefined;
+    message.authorizeUser = (object.authorizeUser !== undefined && object.authorizeUser !== null)
+      ? agentAuthorizeUser.fromPartial(object.authorizeUser)
+      : undefined;
+    return message;
+  },
 };
 
 function createBaseStreamData(): StreamData {
-	return {
-		streamId: "",
-		data: new Uint8Array(0),
-		isError: false,
-		closed: false,
-		type: 0,
-		rows: 0,
-		cols: 0,
-	};
+  return { streamId: "", data: new Uint8Array(0), isError: false, closed: false, type: 0, rows: 0, cols: 0 };
 }
 
 export const StreamData: MessageFns<StreamData> = {
-	encode(
-		message: StreamData,
-		writer: BinaryWriter = new BinaryWriter(),
-	): BinaryWriter {
-		if (message.streamId !== "") {
-			writer.uint32(10).string(message.streamId);
-		}
-		if (message.data.length !== 0) {
-			writer.uint32(18).bytes(message.data);
-		}
-		if (message.isError !== false) {
-			writer.uint32(24).bool(message.isError);
-		}
-		if (message.closed !== false) {
-			writer.uint32(32).bool(message.closed);
-		}
-		if (message.type !== 0) {
-			writer.uint32(40).int32(message.type);
-		}
-		if (message.rows !== 0) {
-			writer.uint32(48).int32(message.rows);
-		}
-		if (message.cols !== 0) {
-			writer.uint32(56).int32(message.cols);
-		}
-		return writer;
-	},
+  encode(message: StreamData, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.streamId !== "") {
+      writer.uint32(10).string(message.streamId);
+    }
+    if (message.data.length !== 0) {
+      writer.uint32(18).bytes(message.data);
+    }
+    if (message.isError !== false) {
+      writer.uint32(24).bool(message.isError);
+    }
+    if (message.closed !== false) {
+      writer.uint32(32).bool(message.closed);
+    }
+    if (message.type !== 0) {
+      writer.uint32(40).int32(message.type);
+    }
+    if (message.rows !== 0) {
+      writer.uint32(48).int32(message.rows);
+    }
+    if (message.cols !== 0) {
+      writer.uint32(56).int32(message.cols);
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): StreamData {
-		const reader =
-			input instanceof BinaryReader ? input : new BinaryReader(input);
-		const end = length === undefined ? reader.len : reader.pos + length;
-		const message = createBaseStreamData();
-		while (reader.pos < end) {
-			const tag = reader.uint32();
-			switch (tag >>> 3) {
-				case 1: {
-					if (tag !== 10) {
-						break;
-					}
+  decode(input: BinaryReader | Uint8Array, length?: number): StreamData {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseStreamData();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
 
-					message.streamId = reader.string();
-					continue;
-				}
-				case 2: {
-					if (tag !== 18) {
-						break;
-					}
+          message.streamId = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
 
-					message.data = reader.bytes();
-					continue;
-				}
-				case 3: {
-					if (tag !== 24) {
-						break;
-					}
+          message.data = reader.bytes();
+          continue;
+        }
+        case 3: {
+          if (tag !== 24) {
+            break;
+          }
 
-					message.isError = reader.bool();
-					continue;
-				}
-				case 4: {
-					if (tag !== 32) {
-						break;
-					}
+          message.isError = reader.bool();
+          continue;
+        }
+        case 4: {
+          if (tag !== 32) {
+            break;
+          }
 
-					message.closed = reader.bool();
-					continue;
-				}
-				case 5: {
-					if (tag !== 40) {
-						break;
-					}
+          message.closed = reader.bool();
+          continue;
+        }
+        case 5: {
+          if (tag !== 40) {
+            break;
+          }
 
-					message.type = reader.int32() as any;
-					continue;
-				}
-				case 6: {
-					if (tag !== 48) {
-						break;
-					}
+          message.type = reader.int32() as any;
+          continue;
+        }
+        case 6: {
+          if (tag !== 48) {
+            break;
+          }
 
-					message.rows = reader.int32();
-					continue;
-				}
-				case 7: {
-					if (tag !== 56) {
-						break;
-					}
+          message.rows = reader.int32();
+          continue;
+        }
+        case 7: {
+          if (tag !== 56) {
+            break;
+          }
 
-					message.cols = reader.int32();
-					continue;
-				}
-			}
-			if ((tag & 7) === 4 || tag === 0) {
-				break;
-			}
-			reader.skip(tag & 7);
-		}
-		return message;
-	},
+          message.cols = reader.int32();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
 
-	fromJSON(object: any): StreamData {
-		return {
-			streamId: isSet(object.streamId)
-				? globalThis.String(object.streamId)
-				: isSet(object.stream_id)
-					? globalThis.String(object.stream_id)
-					: "",
-			data: isSet(object.data)
-				? bytesFromBase64(object.data)
-				: new Uint8Array(0),
-			isError: isSet(object.isError)
-				? globalThis.Boolean(object.isError)
-				: isSet(object.is_error)
-					? globalThis.Boolean(object.is_error)
-					: false,
-			closed: isSet(object.closed) ? globalThis.Boolean(object.closed) : false,
-			type: isSet(object.type)
-				? streamData_StreamDataTypeFromJSON(object.type)
-				: 0,
-			rows: isSet(object.rows) ? globalThis.Number(object.rows) : 0,
-			cols: isSet(object.cols) ? globalThis.Number(object.cols) : 0,
-		};
-	},
+  fromJSON(object: any): StreamData {
+    return {
+      streamId: isSet(object.streamId)
+        ? globalThis.String(object.streamId)
+        : isSet(object.stream_id)
+        ? globalThis.String(object.stream_id)
+        : "",
+      data: isSet(object.data) ? bytesFromBase64(object.data) : new Uint8Array(0),
+      isError: isSet(object.isError)
+        ? globalThis.Boolean(object.isError)
+        : isSet(object.is_error)
+        ? globalThis.Boolean(object.is_error)
+        : false,
+      closed: isSet(object.closed) ? globalThis.Boolean(object.closed) : false,
+      type: isSet(object.type) ? streamData_StreamDataTypeFromJSON(object.type) : 0,
+      rows: isSet(object.rows) ? globalThis.Number(object.rows) : 0,
+      cols: isSet(object.cols) ? globalThis.Number(object.cols) : 0,
+    };
+  },
 
-	toJSON(message: StreamData): unknown {
-		const obj: any = {};
-		if (message.streamId !== "") {
-			obj.streamId = message.streamId;
-		}
-		if (message.data.length !== 0) {
-			obj.data = base64FromBytes(message.data);
-		}
-		if (message.isError !== false) {
-			obj.isError = message.isError;
-		}
-		if (message.closed !== false) {
-			obj.closed = message.closed;
-		}
-		if (message.type !== 0) {
-			obj.type = streamData_StreamDataTypeToJSON(message.type);
-		}
-		if (message.rows !== 0) {
-			obj.rows = Math.round(message.rows);
-		}
-		if (message.cols !== 0) {
-			obj.cols = Math.round(message.cols);
-		}
-		return obj;
-	},
+  toJSON(message: StreamData): unknown {
+    const obj: any = {};
+    if (message.streamId !== "") {
+      obj.streamId = message.streamId;
+    }
+    if (message.data.length !== 0) {
+      obj.data = base64FromBytes(message.data);
+    }
+    if (message.isError !== false) {
+      obj.isError = message.isError;
+    }
+    if (message.closed !== false) {
+      obj.closed = message.closed;
+    }
+    if (message.type !== 0) {
+      obj.type = streamData_StreamDataTypeToJSON(message.type);
+    }
+    if (message.rows !== 0) {
+      obj.rows = Math.round(message.rows);
+    }
+    if (message.cols !== 0) {
+      obj.cols = Math.round(message.cols);
+    }
+    return obj;
+  },
 
-	create<I extends Exact<DeepPartial<StreamData>, I>>(base?: I): StreamData {
-		return StreamData.fromPartial(base ?? ({} as any));
-	},
-	fromPartial<I extends Exact<DeepPartial<StreamData>, I>>(
-		object: I,
-	): StreamData {
-		const message = createBaseStreamData();
-		message.streamId = object.streamId ?? "";
-		message.data = object.data ?? new Uint8Array(0);
-		message.isError = object.isError ?? false;
-		message.closed = object.closed ?? false;
-		message.type = object.type ?? 0;
-		message.rows = object.rows ?? 0;
-		message.cols = object.cols ?? 0;
-		return message;
-	},
+  create<I extends Exact<DeepPartial<StreamData>, I>>(base?: I): StreamData {
+    return StreamData.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<StreamData>, I>>(object: I): StreamData {
+    const message = createBaseStreamData();
+    message.streamId = object.streamId ?? "";
+    message.data = object.data ?? new Uint8Array(0);
+    message.isError = object.isError ?? false;
+    message.closed = object.closed ?? false;
+    message.type = object.type ?? 0;
+    message.rows = object.rows ?? 0;
+    message.cols = object.cols ?? 0;
+    return message;
+  },
 };
 
 function createBaseCommandResponse(): CommandResponse {
-	return { id: "", success: false, error: "", data: "" };
+  return { id: "", success: false, error: "", data: "" };
 }
 
 export const CommandResponse: MessageFns<CommandResponse> = {
-	encode(
-		message: CommandResponse,
-		writer: BinaryWriter = new BinaryWriter(),
-	): BinaryWriter {
-		if (message.id !== "") {
-			writer.uint32(10).string(message.id);
-		}
-		if (message.success !== false) {
-			writer.uint32(16).bool(message.success);
-		}
-		if (message.error !== "") {
-			writer.uint32(26).string(message.error);
-		}
-		if (message.data !== "") {
-			writer.uint32(34).string(message.data);
-		}
-		return writer;
-	},
+  encode(message: CommandResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== "") {
+      writer.uint32(10).string(message.id);
+    }
+    if (message.success !== false) {
+      writer.uint32(16).bool(message.success);
+    }
+    if (message.error !== "") {
+      writer.uint32(26).string(message.error);
+    }
+    if (message.data !== "") {
+      writer.uint32(34).string(message.data);
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): CommandResponse {
-		const reader =
-			input instanceof BinaryReader ? input : new BinaryReader(input);
-		const end = length === undefined ? reader.len : reader.pos + length;
-		const message = createBaseCommandResponse();
-		while (reader.pos < end) {
-			const tag = reader.uint32();
-			switch (tag >>> 3) {
-				case 1: {
-					if (tag !== 10) {
-						break;
-					}
+  decode(input: BinaryReader | Uint8Array, length?: number): CommandResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseCommandResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
 
-					message.id = reader.string();
-					continue;
-				}
-				case 2: {
-					if (tag !== 16) {
-						break;
-					}
+          message.id = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 16) {
+            break;
+          }
 
-					message.success = reader.bool();
-					continue;
-				}
-				case 3: {
-					if (tag !== 26) {
-						break;
-					}
+          message.success = reader.bool();
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
 
-					message.error = reader.string();
-					continue;
-				}
-				case 4: {
-					if (tag !== 34) {
-						break;
-					}
+          message.error = reader.string();
+          continue;
+        }
+        case 4: {
+          if (tag !== 34) {
+            break;
+          }
 
-					message.data = reader.string();
-					continue;
-				}
-			}
-			if ((tag & 7) === 4 || tag === 0) {
-				break;
-			}
-			reader.skip(tag & 7);
-		}
-		return message;
-	},
+          message.data = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
 
-	fromJSON(object: any): CommandResponse {
-		return {
-			id: isSet(object.id) ? globalThis.String(object.id) : "",
-			success: isSet(object.success)
-				? globalThis.Boolean(object.success)
-				: false,
-			error: isSet(object.error) ? globalThis.String(object.error) : "",
-			data: isSet(object.data) ? globalThis.String(object.data) : "",
-		};
-	},
+  fromJSON(object: any): CommandResponse {
+    return {
+      id: isSet(object.id) ? globalThis.String(object.id) : "",
+      success: isSet(object.success) ? globalThis.Boolean(object.success) : false,
+      error: isSet(object.error) ? globalThis.String(object.error) : "",
+      data: isSet(object.data) ? globalThis.String(object.data) : "",
+    };
+  },
 
-	toJSON(message: CommandResponse): unknown {
-		const obj: any = {};
-		if (message.id !== "") {
-			obj.id = message.id;
-		}
-		if (message.success !== false) {
-			obj.success = message.success;
-		}
-		if (message.error !== "") {
-			obj.error = message.error;
-		}
-		if (message.data !== "") {
-			obj.data = message.data;
-		}
-		return obj;
-	},
+  toJSON(message: CommandResponse): unknown {
+    const obj: any = {};
+    if (message.id !== "") {
+      obj.id = message.id;
+    }
+    if (message.success !== false) {
+      obj.success = message.success;
+    }
+    if (message.error !== "") {
+      obj.error = message.error;
+    }
+    if (message.data !== "") {
+      obj.data = message.data;
+    }
+    return obj;
+  },
 
-	create<I extends Exact<DeepPartial<CommandResponse>, I>>(
-		base?: I,
-	): CommandResponse {
-		return CommandResponse.fromPartial(base ?? ({} as any));
-	},
-	fromPartial<I extends Exact<DeepPartial<CommandResponse>, I>>(
-		object: I,
-	): CommandResponse {
-		const message = createBaseCommandResponse();
-		message.id = object.id ?? "";
-		message.success = object.success ?? false;
-		message.error = object.error ?? "";
-		message.data = object.data ?? "";
-		return message;
-	},
+  create<I extends Exact<DeepPartial<CommandResponse>, I>>(base?: I): CommandResponse {
+    return CommandResponse.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<CommandResponse>, I>>(object: I): CommandResponse {
+    const message = createBaseCommandResponse();
+    message.id = object.id ?? "";
+    message.success = object.success ?? false;
+    message.error = object.error ?? "";
+    message.data = object.data ?? "";
+    return message;
+  },
 };
 
 function createBaseServerPayload(): ServerPayload {
-	return { command: undefined, streamData: undefined };
+  return { command: undefined, streamData: undefined };
 }
 
 export const ServerPayload: MessageFns<ServerPayload> = {
-	encode(
-		message: ServerPayload,
-		writer: BinaryWriter = new BinaryWriter(),
-	): BinaryWriter {
-		if (message.command !== undefined) {
-			Command.encode(message.command, writer.uint32(10).fork()).join();
-		}
-		if (message.streamData !== undefined) {
-			StreamData.encode(message.streamData, writer.uint32(18).fork()).join();
-		}
-		return writer;
-	},
+  encode(message: ServerPayload, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.command !== undefined) {
+      Command.encode(message.command, writer.uint32(10).fork()).join();
+    }
+    if (message.streamData !== undefined) {
+      StreamData.encode(message.streamData, writer.uint32(18).fork()).join();
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): ServerPayload {
-		const reader =
-			input instanceof BinaryReader ? input : new BinaryReader(input);
-		const end = length === undefined ? reader.len : reader.pos + length;
-		const message = createBaseServerPayload();
-		while (reader.pos < end) {
-			const tag = reader.uint32();
-			switch (tag >>> 3) {
-				case 1: {
-					if (tag !== 10) {
-						break;
-					}
+  decode(input: BinaryReader | Uint8Array, length?: number): ServerPayload {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseServerPayload();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
 
-					message.command = Command.decode(reader, reader.uint32());
-					continue;
-				}
-				case 2: {
-					if (tag !== 18) {
-						break;
-					}
+          message.command = Command.decode(reader, reader.uint32());
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
 
-					message.streamData = StreamData.decode(reader, reader.uint32());
-					continue;
-				}
-			}
-			if ((tag & 7) === 4 || tag === 0) {
-				break;
-			}
-			reader.skip(tag & 7);
-		}
-		return message;
-	},
+          message.streamData = StreamData.decode(reader, reader.uint32());
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
 
-	fromJSON(object: any): ServerPayload {
-		return {
-			command: isSet(object.command)
-				? Command.fromJSON(object.command)
-				: undefined,
-			streamData: isSet(object.streamData)
-				? StreamData.fromJSON(object.streamData)
-				: isSet(object.stream_data)
-					? StreamData.fromJSON(object.stream_data)
-					: undefined,
-		};
-	},
+  fromJSON(object: any): ServerPayload {
+    return {
+      command: isSet(object.command) ? Command.fromJSON(object.command) : undefined,
+      streamData: isSet(object.streamData)
+        ? StreamData.fromJSON(object.streamData)
+        : isSet(object.stream_data)
+        ? StreamData.fromJSON(object.stream_data)
+        : undefined,
+    };
+  },
 
-	toJSON(message: ServerPayload): unknown {
-		const obj: any = {};
-		if (message.command !== undefined) {
-			obj.command = Command.toJSON(message.command);
-		}
-		if (message.streamData !== undefined) {
-			obj.streamData = StreamData.toJSON(message.streamData);
-		}
-		return obj;
-	},
+  toJSON(message: ServerPayload): unknown {
+    const obj: any = {};
+    if (message.command !== undefined) {
+      obj.command = Command.toJSON(message.command);
+    }
+    if (message.streamData !== undefined) {
+      obj.streamData = StreamData.toJSON(message.streamData);
+    }
+    return obj;
+  },
 
-	create<I extends Exact<DeepPartial<ServerPayload>, I>>(
-		base?: I,
-	): ServerPayload {
-		return ServerPayload.fromPartial(base ?? ({} as any));
-	},
-	fromPartial<I extends Exact<DeepPartial<ServerPayload>, I>>(
-		object: I,
-	): ServerPayload {
-		const message = createBaseServerPayload();
-		message.command =
-			object.command !== undefined && object.command !== null
-				? Command.fromPartial(object.command)
-				: undefined;
-		message.streamData =
-			object.streamData !== undefined && object.streamData !== null
-				? StreamData.fromPartial(object.streamData)
-				: undefined;
-		return message;
-	},
+  create<I extends Exact<DeepPartial<ServerPayload>, I>>(base?: I): ServerPayload {
+    return ServerPayload.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<ServerPayload>, I>>(object: I): ServerPayload {
+    const message = createBaseServerPayload();
+    message.command = (object.command !== undefined && object.command !== null)
+      ? Command.fromPartial(object.command)
+      : undefined;
+    message.streamData = (object.streamData !== undefined && object.streamData !== null)
+      ? StreamData.fromPartial(object.streamData)
+      : undefined;
+    return message;
+  },
 };
 
 function createBaseHeartbeat(): Heartbeat {
-	return {
-		clusterResource: undefined,
-		nodes: [],
-		pods: [],
-		services: [],
-		deployments: [],
-		configMaps: [],
-		secrets: [],
-		timestamp: 0,
-	};
+  return {
+    clusterResource: undefined,
+    nodes: [],
+    pods: [],
+    services: [],
+    deployments: [],
+    configMaps: [],
+    secrets: [],
+    timestamp: 0,
+  };
 }
 
 export const Heartbeat: MessageFns<Heartbeat> = {
-	encode(
-		message: Heartbeat,
-		writer: BinaryWriter = new BinaryWriter(),
-	): BinaryWriter {
-		if (message.clusterResource !== undefined) {
-			ClusterResource.encode(
-				message.clusterResource,
-				writer.uint32(10).fork(),
-			).join();
-		}
-		for (const v of message.nodes) {
-			Node.encode(v!, writer.uint32(18).fork()).join();
-		}
-		for (const v of message.pods) {
-			Pod.encode(v!, writer.uint32(26).fork()).join();
-		}
-		for (const v of message.services) {
-			Service.encode(v!, writer.uint32(34).fork()).join();
-		}
-		for (const v of message.deployments) {
-			Deployment.encode(v!, writer.uint32(50).fork()).join();
-		}
-		for (const v of message.configMaps) {
-			ConfigMap.encode(v!, writer.uint32(58).fork()).join();
-		}
-		for (const v of message.secrets) {
-			Secret.encode(v!, writer.uint32(66).fork()).join();
-		}
-		if (message.timestamp !== 0) {
-			writer.uint32(40).int64(message.timestamp);
-		}
-		return writer;
-	},
+  encode(message: Heartbeat, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.clusterResource !== undefined) {
+      ClusterResource.encode(message.clusterResource, writer.uint32(10).fork()).join();
+    }
+    for (const v of message.nodes) {
+      Node.encode(v!, writer.uint32(18).fork()).join();
+    }
+    for (const v of message.pods) {
+      Pod.encode(v!, writer.uint32(26).fork()).join();
+    }
+    for (const v of message.services) {
+      Service.encode(v!, writer.uint32(34).fork()).join();
+    }
+    for (const v of message.deployments) {
+      Deployment.encode(v!, writer.uint32(50).fork()).join();
+    }
+    for (const v of message.configMaps) {
+      ConfigMap.encode(v!, writer.uint32(58).fork()).join();
+    }
+    for (const v of message.secrets) {
+      Secret.encode(v!, writer.uint32(66).fork()).join();
+    }
+    if (message.timestamp !== 0) {
+      writer.uint32(40).int64(message.timestamp);
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): Heartbeat {
-		const reader =
-			input instanceof BinaryReader ? input : new BinaryReader(input);
-		const end = length === undefined ? reader.len : reader.pos + length;
-		const message = createBaseHeartbeat();
-		while (reader.pos < end) {
-			const tag = reader.uint32();
-			switch (tag >>> 3) {
-				case 1: {
-					if (tag !== 10) {
-						break;
-					}
+  decode(input: BinaryReader | Uint8Array, length?: number): Heartbeat {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseHeartbeat();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
 
-					message.clusterResource = ClusterResource.decode(
-						reader,
-						reader.uint32(),
-					);
-					continue;
-				}
-				case 2: {
-					if (tag !== 18) {
-						break;
-					}
+          message.clusterResource = ClusterResource.decode(reader, reader.uint32());
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
 
-					message.nodes.push(Node.decode(reader, reader.uint32()));
-					continue;
-				}
-				case 3: {
-					if (tag !== 26) {
-						break;
-					}
+          message.nodes.push(Node.decode(reader, reader.uint32()));
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
 
-					message.pods.push(Pod.decode(reader, reader.uint32()));
-					continue;
-				}
-				case 4: {
-					if (tag !== 34) {
-						break;
-					}
+          message.pods.push(Pod.decode(reader, reader.uint32()));
+          continue;
+        }
+        case 4: {
+          if (tag !== 34) {
+            break;
+          }
 
-					message.services.push(Service.decode(reader, reader.uint32()));
-					continue;
-				}
-				case 6: {
-					if (tag !== 50) {
-						break;
-					}
+          message.services.push(Service.decode(reader, reader.uint32()));
+          continue;
+        }
+        case 6: {
+          if (tag !== 50) {
+            break;
+          }
 
-					message.deployments.push(Deployment.decode(reader, reader.uint32()));
-					continue;
-				}
-				case 7: {
-					if (tag !== 58) {
-						break;
-					}
+          message.deployments.push(Deployment.decode(reader, reader.uint32()));
+          continue;
+        }
+        case 7: {
+          if (tag !== 58) {
+            break;
+          }
 
-					message.configMaps.push(ConfigMap.decode(reader, reader.uint32()));
-					continue;
-				}
-				case 8: {
-					if (tag !== 66) {
-						break;
-					}
+          message.configMaps.push(ConfigMap.decode(reader, reader.uint32()));
+          continue;
+        }
+        case 8: {
+          if (tag !== 66) {
+            break;
+          }
 
-					message.secrets.push(Secret.decode(reader, reader.uint32()));
-					continue;
-				}
-				case 5: {
-					if (tag !== 40) {
-						break;
-					}
+          message.secrets.push(Secret.decode(reader, reader.uint32()));
+          continue;
+        }
+        case 5: {
+          if (tag !== 40) {
+            break;
+          }
 
-					message.timestamp = longToNumber(reader.int64());
-					continue;
-				}
-			}
-			if ((tag & 7) === 4 || tag === 0) {
-				break;
-			}
-			reader.skip(tag & 7);
-		}
-		return message;
-	},
+          message.timestamp = longToNumber(reader.int64());
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
 
-	fromJSON(object: any): Heartbeat {
-		return {
-			clusterResource: isSet(object.clusterResource)
-				? ClusterResource.fromJSON(object.clusterResource)
-				: isSet(object.cluster_resource)
-					? ClusterResource.fromJSON(object.cluster_resource)
-					: undefined,
-			nodes: globalThis.Array.isArray(object?.nodes)
-				? object.nodes.map((e: any) => Node.fromJSON(e))
-				: [],
-			pods: globalThis.Array.isArray(object?.pods)
-				? object.pods.map((e: any) => Pod.fromJSON(e))
-				: [],
-			services: globalThis.Array.isArray(object?.services)
-				? object.services.map((e: any) => Service.fromJSON(e))
-				: [],
-			deployments: globalThis.Array.isArray(object?.deployments)
-				? object.deployments.map((e: any) => Deployment.fromJSON(e))
-				: [],
-			configMaps: globalThis.Array.isArray(object?.configMaps)
-				? object.configMaps.map((e: any) => ConfigMap.fromJSON(e))
-				: globalThis.Array.isArray(object?.config_maps)
-					? object.config_maps.map((e: any) => ConfigMap.fromJSON(e))
-					: [],
-			secrets: globalThis.Array.isArray(object?.secrets)
-				? object.secrets.map((e: any) => Secret.fromJSON(e))
-				: [],
-			timestamp: isSet(object.timestamp)
-				? globalThis.Number(object.timestamp)
-				: 0,
-		};
-	},
+  fromJSON(object: any): Heartbeat {
+    return {
+      clusterResource: isSet(object.clusterResource)
+        ? ClusterResource.fromJSON(object.clusterResource)
+        : isSet(object.cluster_resource)
+        ? ClusterResource.fromJSON(object.cluster_resource)
+        : undefined,
+      nodes: globalThis.Array.isArray(object?.nodes) ? object.nodes.map((e: any) => Node.fromJSON(e)) : [],
+      pods: globalThis.Array.isArray(object?.pods) ? object.pods.map((e: any) => Pod.fromJSON(e)) : [],
+      services: globalThis.Array.isArray(object?.services) ? object.services.map((e: any) => Service.fromJSON(e)) : [],
+      deployments: globalThis.Array.isArray(object?.deployments)
+        ? object.deployments.map((e: any) => Deployment.fromJSON(e))
+        : [],
+      configMaps: globalThis.Array.isArray(object?.configMaps)
+        ? object.configMaps.map((e: any) => ConfigMap.fromJSON(e))
+        : globalThis.Array.isArray(object?.config_maps)
+        ? object.config_maps.map((e: any) => ConfigMap.fromJSON(e))
+        : [],
+      secrets: globalThis.Array.isArray(object?.secrets) ? object.secrets.map((e: any) => Secret.fromJSON(e)) : [],
+      timestamp: isSet(object.timestamp) ? globalThis.Number(object.timestamp) : 0,
+    };
+  },
 
-	toJSON(message: Heartbeat): unknown {
-		const obj: any = {};
-		if (message.clusterResource !== undefined) {
-			obj.clusterResource = ClusterResource.toJSON(message.clusterResource);
-		}
-		if (message.nodes?.length) {
-			obj.nodes = message.nodes.map((e) => Node.toJSON(e));
-		}
-		if (message.pods?.length) {
-			obj.pods = message.pods.map((e) => Pod.toJSON(e));
-		}
-		if (message.services?.length) {
-			obj.services = message.services.map((e) => Service.toJSON(e));
-		}
-		if (message.deployments?.length) {
-			obj.deployments = message.deployments.map((e) => Deployment.toJSON(e));
-		}
-		if (message.configMaps?.length) {
-			obj.configMaps = message.configMaps.map((e) => ConfigMap.toJSON(e));
-		}
-		if (message.secrets?.length) {
-			obj.secrets = message.secrets.map((e) => Secret.toJSON(e));
-		}
-		if (message.timestamp !== 0) {
-			obj.timestamp = Math.round(message.timestamp);
-		}
-		return obj;
-	},
+  toJSON(message: Heartbeat): unknown {
+    const obj: any = {};
+    if (message.clusterResource !== undefined) {
+      obj.clusterResource = ClusterResource.toJSON(message.clusterResource);
+    }
+    if (message.nodes?.length) {
+      obj.nodes = message.nodes.map((e) => Node.toJSON(e));
+    }
+    if (message.pods?.length) {
+      obj.pods = message.pods.map((e) => Pod.toJSON(e));
+    }
+    if (message.services?.length) {
+      obj.services = message.services.map((e) => Service.toJSON(e));
+    }
+    if (message.deployments?.length) {
+      obj.deployments = message.deployments.map((e) => Deployment.toJSON(e));
+    }
+    if (message.configMaps?.length) {
+      obj.configMaps = message.configMaps.map((e) => ConfigMap.toJSON(e));
+    }
+    if (message.secrets?.length) {
+      obj.secrets = message.secrets.map((e) => Secret.toJSON(e));
+    }
+    if (message.timestamp !== 0) {
+      obj.timestamp = Math.round(message.timestamp);
+    }
+    return obj;
+  },
 
-	create<I extends Exact<DeepPartial<Heartbeat>, I>>(base?: I): Heartbeat {
-		return Heartbeat.fromPartial(base ?? ({} as any));
-	},
-	fromPartial<I extends Exact<DeepPartial<Heartbeat>, I>>(
-		object: I,
-	): Heartbeat {
-		const message = createBaseHeartbeat();
-		message.clusterResource =
-			object.clusterResource !== undefined && object.clusterResource !== null
-				? ClusterResource.fromPartial(object.clusterResource)
-				: undefined;
-		message.nodes = object.nodes?.map((e) => Node.fromPartial(e)) || [];
-		message.pods = object.pods?.map((e) => Pod.fromPartial(e)) || [];
-		message.services =
-			object.services?.map((e) => Service.fromPartial(e)) || [];
-		message.deployments =
-			object.deployments?.map((e) => Deployment.fromPartial(e)) || [];
-		message.configMaps =
-			object.configMaps?.map((e) => ConfigMap.fromPartial(e)) || [];
-		message.secrets = object.secrets?.map((e) => Secret.fromPartial(e)) || [];
-		message.timestamp = object.timestamp ?? 0;
-		return message;
-	},
+  create<I extends Exact<DeepPartial<Heartbeat>, I>>(base?: I): Heartbeat {
+    return Heartbeat.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<Heartbeat>, I>>(object: I): Heartbeat {
+    const message = createBaseHeartbeat();
+    message.clusterResource = (object.clusterResource !== undefined && object.clusterResource !== null)
+      ? ClusterResource.fromPartial(object.clusterResource)
+      : undefined;
+    message.nodes = object.nodes?.map((e) => Node.fromPartial(e)) || [];
+    message.pods = object.pods?.map((e) => Pod.fromPartial(e)) || [];
+    message.services = object.services?.map((e) => Service.fromPartial(e)) || [];
+    message.deployments = object.deployments?.map((e) => Deployment.fromPartial(e)) || [];
+    message.configMaps = object.configMaps?.map((e) => ConfigMap.fromPartial(e)) || [];
+    message.secrets = object.secrets?.map((e) => Secret.fromPartial(e)) || [];
+    message.timestamp = object.timestamp ?? 0;
+    return message;
+  },
+};
+
+function createBaseagentAuthorizeUser(): agentAuthorizeUser {
+  return { token: "" };
+}
+
+export const agentAuthorizeUser: MessageFns<agentAuthorizeUser> = {
+  encode(message: agentAuthorizeUser, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.token !== "") {
+      writer.uint32(10).string(message.token);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): agentAuthorizeUser {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseagentAuthorizeUser();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.token = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): agentAuthorizeUser {
+    return { token: isSet(object.token) ? globalThis.String(object.token) : "" };
+  },
+
+  toJSON(message: agentAuthorizeUser): unknown {
+    const obj: any = {};
+    if (message.token !== "") {
+      obj.token = message.token;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<agentAuthorizeUser>, I>>(base?: I): agentAuthorizeUser {
+    return agentAuthorizeUser.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<agentAuthorizeUser>, I>>(object: I): agentAuthorizeUser {
+    const message = createBaseagentAuthorizeUser();
+    message.token = object.token ?? "";
+    return message;
+  },
 };
 
 function createBaseClusterResource(): ClusterResource {
-	return {
-		cpuCapacity: 0,
-		ramCapacity: 0,
-		cpuUsage: 0,
-		ramUsage: 0,
-		clusterDomain: "",
-	};
+  return { cpuCapacity: 0, ramCapacity: 0, cpuUsage: 0, ramUsage: 0, clusterDomain: "" };
 }
 
 export const ClusterResource: MessageFns<ClusterResource> = {
-	encode(
-		message: ClusterResource,
-		writer: BinaryWriter = new BinaryWriter(),
-	): BinaryWriter {
-		if (message.cpuCapacity !== 0) {
-			writer.uint32(8).int64(message.cpuCapacity);
-		}
-		if (message.ramCapacity !== 0) {
-			writer.uint32(16).int64(message.ramCapacity);
-		}
-		if (message.cpuUsage !== 0) {
-			writer.uint32(24).int64(message.cpuUsage);
-		}
-		if (message.ramUsage !== 0) {
-			writer.uint32(32).int64(message.ramUsage);
-		}
-		if (message.clusterDomain !== "") {
-			writer.uint32(42).string(message.clusterDomain);
-		}
-		return writer;
-	},
+  encode(message: ClusterResource, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.cpuCapacity !== 0) {
+      writer.uint32(8).int64(message.cpuCapacity);
+    }
+    if (message.ramCapacity !== 0) {
+      writer.uint32(16).int64(message.ramCapacity);
+    }
+    if (message.cpuUsage !== 0) {
+      writer.uint32(24).int64(message.cpuUsage);
+    }
+    if (message.ramUsage !== 0) {
+      writer.uint32(32).int64(message.ramUsage);
+    }
+    if (message.clusterDomain !== "") {
+      writer.uint32(42).string(message.clusterDomain);
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): ClusterResource {
-		const reader =
-			input instanceof BinaryReader ? input : new BinaryReader(input);
-		const end = length === undefined ? reader.len : reader.pos + length;
-		const message = createBaseClusterResource();
-		while (reader.pos < end) {
-			const tag = reader.uint32();
-			switch (tag >>> 3) {
-				case 1: {
-					if (tag !== 8) {
-						break;
-					}
+  decode(input: BinaryReader | Uint8Array, length?: number): ClusterResource {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseClusterResource();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 8) {
+            break;
+          }
 
-					message.cpuCapacity = longToNumber(reader.int64());
-					continue;
-				}
-				case 2: {
-					if (tag !== 16) {
-						break;
-					}
+          message.cpuCapacity = longToNumber(reader.int64());
+          continue;
+        }
+        case 2: {
+          if (tag !== 16) {
+            break;
+          }
 
-					message.ramCapacity = longToNumber(reader.int64());
-					continue;
-				}
-				case 3: {
-					if (tag !== 24) {
-						break;
-					}
+          message.ramCapacity = longToNumber(reader.int64());
+          continue;
+        }
+        case 3: {
+          if (tag !== 24) {
+            break;
+          }
 
-					message.cpuUsage = longToNumber(reader.int64());
-					continue;
-				}
-				case 4: {
-					if (tag !== 32) {
-						break;
-					}
+          message.cpuUsage = longToNumber(reader.int64());
+          continue;
+        }
+        case 4: {
+          if (tag !== 32) {
+            break;
+          }
 
-					message.ramUsage = longToNumber(reader.int64());
-					continue;
-				}
-				case 5: {
-					if (tag !== 42) {
-						break;
-					}
+          message.ramUsage = longToNumber(reader.int64());
+          continue;
+        }
+        case 5: {
+          if (tag !== 42) {
+            break;
+          }
 
-					message.clusterDomain = reader.string();
-					continue;
-				}
-			}
-			if ((tag & 7) === 4 || tag === 0) {
-				break;
-			}
-			reader.skip(tag & 7);
-		}
-		return message;
-	},
+          message.clusterDomain = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
 
-	fromJSON(object: any): ClusterResource {
-		return {
-			cpuCapacity: isSet(object.cpuCapacity)
-				? globalThis.Number(object.cpuCapacity)
-				: isSet(object.cpu_capacity)
-					? globalThis.Number(object.cpu_capacity)
-					: 0,
-			ramCapacity: isSet(object.ramCapacity)
-				? globalThis.Number(object.ramCapacity)
-				: isSet(object.ram_capacity)
-					? globalThis.Number(object.ram_capacity)
-					: 0,
-			cpuUsage: isSet(object.cpuUsage)
-				? globalThis.Number(object.cpuUsage)
-				: isSet(object.cpu_usage)
-					? globalThis.Number(object.cpu_usage)
-					: 0,
-			ramUsage: isSet(object.ramUsage)
-				? globalThis.Number(object.ramUsage)
-				: isSet(object.ram_usage)
-					? globalThis.Number(object.ram_usage)
-					: 0,
-			clusterDomain: isSet(object.clusterDomain)
-				? globalThis.String(object.clusterDomain)
-				: isSet(object.cluster_domain)
-					? globalThis.String(object.cluster_domain)
-					: "",
-		};
-	},
+  fromJSON(object: any): ClusterResource {
+    return {
+      cpuCapacity: isSet(object.cpuCapacity)
+        ? globalThis.Number(object.cpuCapacity)
+        : isSet(object.cpu_capacity)
+        ? globalThis.Number(object.cpu_capacity)
+        : 0,
+      ramCapacity: isSet(object.ramCapacity)
+        ? globalThis.Number(object.ramCapacity)
+        : isSet(object.ram_capacity)
+        ? globalThis.Number(object.ram_capacity)
+        : 0,
+      cpuUsage: isSet(object.cpuUsage)
+        ? globalThis.Number(object.cpuUsage)
+        : isSet(object.cpu_usage)
+        ? globalThis.Number(object.cpu_usage)
+        : 0,
+      ramUsage: isSet(object.ramUsage)
+        ? globalThis.Number(object.ramUsage)
+        : isSet(object.ram_usage)
+        ? globalThis.Number(object.ram_usage)
+        : 0,
+      clusterDomain: isSet(object.clusterDomain)
+        ? globalThis.String(object.clusterDomain)
+        : isSet(object.cluster_domain)
+        ? globalThis.String(object.cluster_domain)
+        : "",
+    };
+  },
 
-	toJSON(message: ClusterResource): unknown {
-		const obj: any = {};
-		if (message.cpuCapacity !== 0) {
-			obj.cpuCapacity = Math.round(message.cpuCapacity);
-		}
-		if (message.ramCapacity !== 0) {
-			obj.ramCapacity = Math.round(message.ramCapacity);
-		}
-		if (message.cpuUsage !== 0) {
-			obj.cpuUsage = Math.round(message.cpuUsage);
-		}
-		if (message.ramUsage !== 0) {
-			obj.ramUsage = Math.round(message.ramUsage);
-		}
-		if (message.clusterDomain !== "") {
-			obj.clusterDomain = message.clusterDomain;
-		}
-		return obj;
-	},
+  toJSON(message: ClusterResource): unknown {
+    const obj: any = {};
+    if (message.cpuCapacity !== 0) {
+      obj.cpuCapacity = Math.round(message.cpuCapacity);
+    }
+    if (message.ramCapacity !== 0) {
+      obj.ramCapacity = Math.round(message.ramCapacity);
+    }
+    if (message.cpuUsage !== 0) {
+      obj.cpuUsage = Math.round(message.cpuUsage);
+    }
+    if (message.ramUsage !== 0) {
+      obj.ramUsage = Math.round(message.ramUsage);
+    }
+    if (message.clusterDomain !== "") {
+      obj.clusterDomain = message.clusterDomain;
+    }
+    return obj;
+  },
 
-	create<I extends Exact<DeepPartial<ClusterResource>, I>>(
-		base?: I,
-	): ClusterResource {
-		return ClusterResource.fromPartial(base ?? ({} as any));
-	},
-	fromPartial<I extends Exact<DeepPartial<ClusterResource>, I>>(
-		object: I,
-	): ClusterResource {
-		const message = createBaseClusterResource();
-		message.cpuCapacity = object.cpuCapacity ?? 0;
-		message.ramCapacity = object.ramCapacity ?? 0;
-		message.cpuUsage = object.cpuUsage ?? 0;
-		message.ramUsage = object.ramUsage ?? 0;
-		message.clusterDomain = object.clusterDomain ?? "";
-		return message;
-	},
+  create<I extends Exact<DeepPartial<ClusterResource>, I>>(base?: I): ClusterResource {
+    return ClusterResource.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<ClusterResource>, I>>(object: I): ClusterResource {
+    const message = createBaseClusterResource();
+    message.cpuCapacity = object.cpuCapacity ?? 0;
+    message.ramCapacity = object.ramCapacity ?? 0;
+    message.cpuUsage = object.cpuUsage ?? 0;
+    message.ramUsage = object.ramUsage ?? 0;
+    message.clusterDomain = object.clusterDomain ?? "";
+    return message;
+  },
 };
 
 function createBaseContainerPort(): ContainerPort {
-	return { containerPort: 0, name: "", protocol: "" };
+  return { containerPort: 0, name: "", protocol: "" };
 }
 
 export const ContainerPort: MessageFns<ContainerPort> = {
-	encode(
-		message: ContainerPort,
-		writer: BinaryWriter = new BinaryWriter(),
-	): BinaryWriter {
-		if (message.containerPort !== 0) {
-			writer.uint32(8).int32(message.containerPort);
-		}
-		if (message.name !== "") {
-			writer.uint32(18).string(message.name);
-		}
-		if (message.protocol !== "") {
-			writer.uint32(26).string(message.protocol);
-		}
-		return writer;
-	},
+  encode(message: ContainerPort, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.containerPort !== 0) {
+      writer.uint32(8).int32(message.containerPort);
+    }
+    if (message.name !== "") {
+      writer.uint32(18).string(message.name);
+    }
+    if (message.protocol !== "") {
+      writer.uint32(26).string(message.protocol);
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): ContainerPort {
-		const reader =
-			input instanceof BinaryReader ? input : new BinaryReader(input);
-		const end = length === undefined ? reader.len : reader.pos + length;
-		const message = createBaseContainerPort();
-		while (reader.pos < end) {
-			const tag = reader.uint32();
-			switch (tag >>> 3) {
-				case 1: {
-					if (tag !== 8) {
-						break;
-					}
+  decode(input: BinaryReader | Uint8Array, length?: number): ContainerPort {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseContainerPort();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 8) {
+            break;
+          }
 
-					message.containerPort = reader.int32();
-					continue;
-				}
-				case 2: {
-					if (tag !== 18) {
-						break;
-					}
+          message.containerPort = reader.int32();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
 
-					message.name = reader.string();
-					continue;
-				}
-				case 3: {
-					if (tag !== 26) {
-						break;
-					}
+          message.name = reader.string();
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
 
-					message.protocol = reader.string();
-					continue;
-				}
-			}
-			if ((tag & 7) === 4 || tag === 0) {
-				break;
-			}
-			reader.skip(tag & 7);
-		}
-		return message;
-	},
+          message.protocol = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
 
-	fromJSON(object: any): ContainerPort {
-		return {
-			containerPort: isSet(object.containerPort)
-				? globalThis.Number(object.containerPort)
-				: isSet(object.container_port)
-					? globalThis.Number(object.container_port)
-					: 0,
-			name: isSet(object.name) ? globalThis.String(object.name) : "",
-			protocol: isSet(object.protocol)
-				? globalThis.String(object.protocol)
-				: "",
-		};
-	},
+  fromJSON(object: any): ContainerPort {
+    return {
+      containerPort: isSet(object.containerPort)
+        ? globalThis.Number(object.containerPort)
+        : isSet(object.container_port)
+        ? globalThis.Number(object.container_port)
+        : 0,
+      name: isSet(object.name) ? globalThis.String(object.name) : "",
+      protocol: isSet(object.protocol) ? globalThis.String(object.protocol) : "",
+    };
+  },
 
-	toJSON(message: ContainerPort): unknown {
-		const obj: any = {};
-		if (message.containerPort !== 0) {
-			obj.containerPort = Math.round(message.containerPort);
-		}
-		if (message.name !== "") {
-			obj.name = message.name;
-		}
-		if (message.protocol !== "") {
-			obj.protocol = message.protocol;
-		}
-		return obj;
-	},
+  toJSON(message: ContainerPort): unknown {
+    const obj: any = {};
+    if (message.containerPort !== 0) {
+      obj.containerPort = Math.round(message.containerPort);
+    }
+    if (message.name !== "") {
+      obj.name = message.name;
+    }
+    if (message.protocol !== "") {
+      obj.protocol = message.protocol;
+    }
+    return obj;
+  },
 
-	create<I extends Exact<DeepPartial<ContainerPort>, I>>(
-		base?: I,
-	): ContainerPort {
-		return ContainerPort.fromPartial(base ?? ({} as any));
-	},
-	fromPartial<I extends Exact<DeepPartial<ContainerPort>, I>>(
-		object: I,
-	): ContainerPort {
-		const message = createBaseContainerPort();
-		message.containerPort = object.containerPort ?? 0;
-		message.name = object.name ?? "";
-		message.protocol = object.protocol ?? "";
-		return message;
-	},
+  create<I extends Exact<DeepPartial<ContainerPort>, I>>(base?: I): ContainerPort {
+    return ContainerPort.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<ContainerPort>, I>>(object: I): ContainerPort {
+    const message = createBaseContainerPort();
+    message.containerPort = object.containerPort ?? 0;
+    message.name = object.name ?? "";
+    message.protocol = object.protocol ?? "";
+    return message;
+  },
 };
 
 function createBaseNode(): Node {
-	return {
-		name: "",
-		cpuUsage: 0,
-		ramUsage: 0,
-		cpuCapacity: 0,
-		ramCapacity: 0,
-		labels: {},
-		uid: "",
-		status: "",
-		roles: [],
-	};
+  return {
+    name: "",
+    cpuUsage: 0,
+    ramUsage: 0,
+    cpuCapacity: 0,
+    ramCapacity: 0,
+    labels: {},
+    uid: "",
+    status: "",
+    roles: [],
+  };
 }
 
 export const Node: MessageFns<Node> = {
-	encode(
-		message: Node,
-		writer: BinaryWriter = new BinaryWriter(),
-	): BinaryWriter {
-		if (message.name !== "") {
-			writer.uint32(10).string(message.name);
-		}
-		if (message.cpuUsage !== 0) {
-			writer.uint32(16).int64(message.cpuUsage);
-		}
-		if (message.ramUsage !== 0) {
-			writer.uint32(24).int64(message.ramUsage);
-		}
-		if (message.cpuCapacity !== 0) {
-			writer.uint32(32).int64(message.cpuCapacity);
-		}
-		if (message.ramCapacity !== 0) {
-			writer.uint32(40).int64(message.ramCapacity);
-		}
-		globalThis.Object.entries(message.labels).forEach(
-			([key, value]: [string, string]) => {
-				Node_LabelsEntry.encode(
-					{ key: key as any, value },
-					writer.uint32(50).fork(),
-				).join();
-			},
-		);
-		if (message.uid !== "") {
-			writer.uint32(58).string(message.uid);
-		}
-		if (message.status !== "") {
-			writer.uint32(66).string(message.status);
-		}
-		for (const v of message.roles) {
-			writer.uint32(74).string(v!);
-		}
-		return writer;
-	},
+  encode(message: Node, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.name !== "") {
+      writer.uint32(10).string(message.name);
+    }
+    if (message.cpuUsage !== 0) {
+      writer.uint32(16).int64(message.cpuUsage);
+    }
+    if (message.ramUsage !== 0) {
+      writer.uint32(24).int64(message.ramUsage);
+    }
+    if (message.cpuCapacity !== 0) {
+      writer.uint32(32).int64(message.cpuCapacity);
+    }
+    if (message.ramCapacity !== 0) {
+      writer.uint32(40).int64(message.ramCapacity);
+    }
+    globalThis.Object.entries(message.labels).forEach(([key, value]: [string, string]) => {
+      Node_LabelsEntry.encode({ key: key as any, value }, writer.uint32(50).fork()).join();
+    });
+    if (message.uid !== "") {
+      writer.uint32(58).string(message.uid);
+    }
+    if (message.status !== "") {
+      writer.uint32(66).string(message.status);
+    }
+    for (const v of message.roles) {
+      writer.uint32(74).string(v!);
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): Node {
-		const reader =
-			input instanceof BinaryReader ? input : new BinaryReader(input);
-		const end = length === undefined ? reader.len : reader.pos + length;
-		const message = createBaseNode();
-		while (reader.pos < end) {
-			const tag = reader.uint32();
-			switch (tag >>> 3) {
-				case 1: {
-					if (tag !== 10) {
-						break;
-					}
+  decode(input: BinaryReader | Uint8Array, length?: number): Node {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseNode();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
 
-					message.name = reader.string();
-					continue;
-				}
-				case 2: {
-					if (tag !== 16) {
-						break;
-					}
+          message.name = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 16) {
+            break;
+          }
 
-					message.cpuUsage = longToNumber(reader.int64());
-					continue;
-				}
-				case 3: {
-					if (tag !== 24) {
-						break;
-					}
+          message.cpuUsage = longToNumber(reader.int64());
+          continue;
+        }
+        case 3: {
+          if (tag !== 24) {
+            break;
+          }
 
-					message.ramUsage = longToNumber(reader.int64());
-					continue;
-				}
-				case 4: {
-					if (tag !== 32) {
-						break;
-					}
+          message.ramUsage = longToNumber(reader.int64());
+          continue;
+        }
+        case 4: {
+          if (tag !== 32) {
+            break;
+          }
 
-					message.cpuCapacity = longToNumber(reader.int64());
-					continue;
-				}
-				case 5: {
-					if (tag !== 40) {
-						break;
-					}
+          message.cpuCapacity = longToNumber(reader.int64());
+          continue;
+        }
+        case 5: {
+          if (tag !== 40) {
+            break;
+          }
 
-					message.ramCapacity = longToNumber(reader.int64());
-					continue;
-				}
-				case 6: {
-					if (tag !== 50) {
-						break;
-					}
+          message.ramCapacity = longToNumber(reader.int64());
+          continue;
+        }
+        case 6: {
+          if (tag !== 50) {
+            break;
+          }
 
-					const entry6 = Node_LabelsEntry.decode(reader, reader.uint32());
-					if (entry6.value !== undefined) {
-						message.labels[entry6.key] = entry6.value;
-					}
-					continue;
-				}
-				case 7: {
-					if (tag !== 58) {
-						break;
-					}
+          const entry6 = Node_LabelsEntry.decode(reader, reader.uint32());
+          if (entry6.value !== undefined) {
+            message.labels[entry6.key] = entry6.value;
+          }
+          continue;
+        }
+        case 7: {
+          if (tag !== 58) {
+            break;
+          }
 
-					message.uid = reader.string();
-					continue;
-				}
-				case 8: {
-					if (tag !== 66) {
-						break;
-					}
+          message.uid = reader.string();
+          continue;
+        }
+        case 8: {
+          if (tag !== 66) {
+            break;
+          }
 
-					message.status = reader.string();
-					continue;
-				}
-				case 9: {
-					if (tag !== 74) {
-						break;
-					}
+          message.status = reader.string();
+          continue;
+        }
+        case 9: {
+          if (tag !== 74) {
+            break;
+          }
 
-					message.roles.push(reader.string());
-					continue;
-				}
-			}
-			if ((tag & 7) === 4 || tag === 0) {
-				break;
-			}
-			reader.skip(tag & 7);
-		}
-		return message;
-	},
+          message.roles.push(reader.string());
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
 
-	fromJSON(object: any): Node {
-		return {
-			name: isSet(object.name) ? globalThis.String(object.name) : "",
-			cpuUsage: isSet(object.cpuUsage)
-				? globalThis.Number(object.cpuUsage)
-				: isSet(object.cpu_usage)
-					? globalThis.Number(object.cpu_usage)
-					: 0,
-			ramUsage: isSet(object.ramUsage)
-				? globalThis.Number(object.ramUsage)
-				: isSet(object.ram_usage)
-					? globalThis.Number(object.ram_usage)
-					: 0,
-			cpuCapacity: isSet(object.cpuCapacity)
-				? globalThis.Number(object.cpuCapacity)
-				: isSet(object.cpu_capacity)
-					? globalThis.Number(object.cpu_capacity)
-					: 0,
-			ramCapacity: isSet(object.ramCapacity)
-				? globalThis.Number(object.ramCapacity)
-				: isSet(object.ram_capacity)
-					? globalThis.Number(object.ram_capacity)
-					: 0,
-			labels: isObject(object.labels)
-				? (globalThis.Object.entries(object.labels) as [string, any][]).reduce(
-						(acc: { [key: string]: string }, [key, value]: [string, any]) => {
-							acc[key] = globalThis.String(value);
-							return acc;
-						},
-						{},
-					)
-				: {},
-			uid: isSet(object.uid) ? globalThis.String(object.uid) : "",
-			status: isSet(object.status) ? globalThis.String(object.status) : "",
-			roles: globalThis.Array.isArray(object?.roles)
-				? object.roles.map((e: any) => globalThis.String(e))
-				: [],
-		};
-	},
+  fromJSON(object: any): Node {
+    return {
+      name: isSet(object.name) ? globalThis.String(object.name) : "",
+      cpuUsage: isSet(object.cpuUsage)
+        ? globalThis.Number(object.cpuUsage)
+        : isSet(object.cpu_usage)
+        ? globalThis.Number(object.cpu_usage)
+        : 0,
+      ramUsage: isSet(object.ramUsage)
+        ? globalThis.Number(object.ramUsage)
+        : isSet(object.ram_usage)
+        ? globalThis.Number(object.ram_usage)
+        : 0,
+      cpuCapacity: isSet(object.cpuCapacity)
+        ? globalThis.Number(object.cpuCapacity)
+        : isSet(object.cpu_capacity)
+        ? globalThis.Number(object.cpu_capacity)
+        : 0,
+      ramCapacity: isSet(object.ramCapacity)
+        ? globalThis.Number(object.ramCapacity)
+        : isSet(object.ram_capacity)
+        ? globalThis.Number(object.ram_capacity)
+        : 0,
+      labels: isObject(object.labels)
+        ? (globalThis.Object.entries(object.labels) as [string, any][]).reduce(
+          (acc: { [key: string]: string }, [key, value]: [string, any]) => {
+            acc[key] = globalThis.String(value);
+            return acc;
+          },
+          {},
+        )
+        : {},
+      uid: isSet(object.uid) ? globalThis.String(object.uid) : "",
+      status: isSet(object.status) ? globalThis.String(object.status) : "",
+      roles: globalThis.Array.isArray(object?.roles)
+        ? object.roles.map((e: any) => globalThis.String(e))
+        : [],
+    };
+  },
 
-	toJSON(message: Node): unknown {
-		const obj: any = {};
-		if (message.name !== "") {
-			obj.name = message.name;
-		}
-		if (message.cpuUsage !== 0) {
-			obj.cpuUsage = Math.round(message.cpuUsage);
-		}
-		if (message.ramUsage !== 0) {
-			obj.ramUsage = Math.round(message.ramUsage);
-		}
-		if (message.cpuCapacity !== 0) {
-			obj.cpuCapacity = Math.round(message.cpuCapacity);
-		}
-		if (message.ramCapacity !== 0) {
-			obj.ramCapacity = Math.round(message.ramCapacity);
-		}
-		if (message.labels) {
-			const entries = globalThis.Object.entries(message.labels) as [
-				string,
-				string,
-			][];
-			if (entries.length > 0) {
-				obj.labels = {};
-				entries.forEach(([k, v]) => {
-					obj.labels[k] = v;
-				});
-			}
-		}
-		if (message.uid !== "") {
-			obj.uid = message.uid;
-		}
-		if (message.status !== "") {
-			obj.status = message.status;
-		}
-		if (message.roles?.length) {
-			obj.roles = message.roles;
-		}
-		return obj;
-	},
+  toJSON(message: Node): unknown {
+    const obj: any = {};
+    if (message.name !== "") {
+      obj.name = message.name;
+    }
+    if (message.cpuUsage !== 0) {
+      obj.cpuUsage = Math.round(message.cpuUsage);
+    }
+    if (message.ramUsage !== 0) {
+      obj.ramUsage = Math.round(message.ramUsage);
+    }
+    if (message.cpuCapacity !== 0) {
+      obj.cpuCapacity = Math.round(message.cpuCapacity);
+    }
+    if (message.ramCapacity !== 0) {
+      obj.ramCapacity = Math.round(message.ramCapacity);
+    }
+    if (message.labels) {
+      const entries = globalThis.Object.entries(message.labels) as [string, string][];
+      if (entries.length > 0) {
+        obj.labels = {};
+        entries.forEach(([k, v]) => {
+          obj.labels[k] = v;
+        });
+      }
+    }
+    if (message.uid !== "") {
+      obj.uid = message.uid;
+    }
+    if (message.status !== "") {
+      obj.status = message.status;
+    }
+    if (message.roles?.length) {
+      obj.roles = message.roles;
+    }
+    return obj;
+  },
 
-	create<I extends Exact<DeepPartial<Node>, I>>(base?: I): Node {
-		return Node.fromPartial(base ?? ({} as any));
-	},
-	fromPartial<I extends Exact<DeepPartial<Node>, I>>(object: I): Node {
-		const message = createBaseNode();
-		message.name = object.name ?? "";
-		message.cpuUsage = object.cpuUsage ?? 0;
-		message.ramUsage = object.ramUsage ?? 0;
-		message.cpuCapacity = object.cpuCapacity ?? 0;
-		message.ramCapacity = object.ramCapacity ?? 0;
-		message.labels = (
-			globalThis.Object.entries(object.labels ?? {}) as [string, string][]
-		).reduce(
-			(acc: { [key: string]: string }, [key, value]: [string, string]) => {
-				if (value !== undefined) {
-					acc[key] = globalThis.String(value);
-				}
-				return acc;
-			},
-			{},
-		);
-		message.uid = object.uid ?? "";
-		message.status = object.status ?? "";
-		message.roles = object.roles?.map((e) => e) || [];
-		return message;
-	},
+  create<I extends Exact<DeepPartial<Node>, I>>(base?: I): Node {
+    return Node.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<Node>, I>>(object: I): Node {
+    const message = createBaseNode();
+    message.name = object.name ?? "";
+    message.cpuUsage = object.cpuUsage ?? 0;
+    message.ramUsage = object.ramUsage ?? 0;
+    message.cpuCapacity = object.cpuCapacity ?? 0;
+    message.ramCapacity = object.ramCapacity ?? 0;
+    message.labels = (globalThis.Object.entries(object.labels ?? {}) as [string, string][]).reduce(
+      (acc: { [key: string]: string }, [key, value]: [string, string]) => {
+        if (value !== undefined) {
+          acc[key] = globalThis.String(value);
+        }
+        return acc;
+      },
+      {},
+    );
+    message.uid = object.uid ?? "";
+    message.status = object.status ?? "";
+    message.roles = object.roles?.map((e) => e) || [];
+    return message;
+  },
 };
 
 function createBaseNode_LabelsEntry(): Node_LabelsEntry {
-	return { key: "", value: "" };
+  return { key: "", value: "" };
 }
 
 export const Node_LabelsEntry: MessageFns<Node_LabelsEntry> = {
-	encode(
-		message: Node_LabelsEntry,
-		writer: BinaryWriter = new BinaryWriter(),
-	): BinaryWriter {
-		if (message.key !== "") {
-			writer.uint32(10).string(message.key);
-		}
-		if (message.value !== "") {
-			writer.uint32(18).string(message.value);
-		}
-		return writer;
-	},
+  encode(message: Node_LabelsEntry, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.key !== "") {
+      writer.uint32(10).string(message.key);
+    }
+    if (message.value !== "") {
+      writer.uint32(18).string(message.value);
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): Node_LabelsEntry {
-		const reader =
-			input instanceof BinaryReader ? input : new BinaryReader(input);
-		const end = length === undefined ? reader.len : reader.pos + length;
-		const message = createBaseNode_LabelsEntry();
-		while (reader.pos < end) {
-			const tag = reader.uint32();
-			switch (tag >>> 3) {
-				case 1: {
-					if (tag !== 10) {
-						break;
-					}
+  decode(input: BinaryReader | Uint8Array, length?: number): Node_LabelsEntry {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseNode_LabelsEntry();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
 
-					message.key = reader.string();
-					continue;
-				}
-				case 2: {
-					if (tag !== 18) {
-						break;
-					}
+          message.key = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
 
-					message.value = reader.string();
-					continue;
-				}
-			}
-			if ((tag & 7) === 4 || tag === 0) {
-				break;
-			}
-			reader.skip(tag & 7);
-		}
-		return message;
-	},
+          message.value = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
 
-	fromJSON(object: any): Node_LabelsEntry {
-		return {
-			key: isSet(object.key) ? globalThis.String(object.key) : "",
-			value: isSet(object.value) ? globalThis.String(object.value) : "",
-		};
-	},
+  fromJSON(object: any): Node_LabelsEntry {
+    return {
+      key: isSet(object.key) ? globalThis.String(object.key) : "",
+      value: isSet(object.value) ? globalThis.String(object.value) : "",
+    };
+  },
 
-	toJSON(message: Node_LabelsEntry): unknown {
-		const obj: any = {};
-		if (message.key !== "") {
-			obj.key = message.key;
-		}
-		if (message.value !== "") {
-			obj.value = message.value;
-		}
-		return obj;
-	},
+  toJSON(message: Node_LabelsEntry): unknown {
+    const obj: any = {};
+    if (message.key !== "") {
+      obj.key = message.key;
+    }
+    if (message.value !== "") {
+      obj.value = message.value;
+    }
+    return obj;
+  },
 
-	create<I extends Exact<DeepPartial<Node_LabelsEntry>, I>>(
-		base?: I,
-	): Node_LabelsEntry {
-		return Node_LabelsEntry.fromPartial(base ?? ({} as any));
-	},
-	fromPartial<I extends Exact<DeepPartial<Node_LabelsEntry>, I>>(
-		object: I,
-	): Node_LabelsEntry {
-		const message = createBaseNode_LabelsEntry();
-		message.key = object.key ?? "";
-		message.value = object.value ?? "";
-		return message;
-	},
+  create<I extends Exact<DeepPartial<Node_LabelsEntry>, I>>(base?: I): Node_LabelsEntry {
+    return Node_LabelsEntry.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<Node_LabelsEntry>, I>>(object: I): Node_LabelsEntry {
+    const message = createBaseNode_LabelsEntry();
+    message.key = object.key ?? "";
+    message.value = object.value ?? "";
+    return message;
+  },
 };
 
 function createBaseDeployment(): Deployment {
-	return {
-		name: "",
-		namespace: "",
-		replicas: 0,
-		availableReplicas: 0,
-		unavailableReplicas: 0,
-		labels: {},
-		selector: {},
-		dockerImage: "",
-		uid: "",
-		command: "",
-		args: "",
-		envVariables: "",
-		cpuRequest: 0,
-		cpuLimit: 0,
-		memoryRequest: 0,
-		memoryLimit: 0,
-		ports: [],
-	};
+  return {
+    name: "",
+    namespace: "",
+    replicas: 0,
+    availableReplicas: 0,
+    unavailableReplicas: 0,
+    labels: {},
+    selector: {},
+    dockerImage: "",
+    uid: "",
+    command: "",
+    args: "",
+    envVariables: "",
+    cpuRequest: 0,
+    cpuLimit: 0,
+    memoryRequest: 0,
+    memoryLimit: 0,
+    ports: [],
+  };
 }
 
 export const Deployment: MessageFns<Deployment> = {
-	encode(
-		message: Deployment,
-		writer: BinaryWriter = new BinaryWriter(),
-	): BinaryWriter {
-		if (message.name !== "") {
-			writer.uint32(10).string(message.name);
-		}
-		if (message.namespace !== "") {
-			writer.uint32(18).string(message.namespace);
-		}
-		if (message.replicas !== 0) {
-			writer.uint32(24).int32(message.replicas);
-		}
-		if (message.availableReplicas !== 0) {
-			writer.uint32(32).int32(message.availableReplicas);
-		}
-		if (message.unavailableReplicas !== 0) {
-			writer.uint32(40).int32(message.unavailableReplicas);
-		}
-		globalThis.Object.entries(message.labels).forEach(
-			([key, value]: [string, string]) => {
-				Deployment_LabelsEntry.encode(
-					{ key: key as any, value },
-					writer.uint32(50).fork(),
-				).join();
-			},
-		);
-		globalThis.Object.entries(message.selector).forEach(
-			([key, value]: [string, string]) => {
-				Deployment_SelectorEntry.encode(
-					{ key: key as any, value },
-					writer.uint32(58).fork(),
-				).join();
-			},
-		);
-		if (message.dockerImage !== "") {
-			writer.uint32(66).string(message.dockerImage);
-		}
-		if (message.uid !== "") {
-			writer.uint32(74).string(message.uid);
-		}
-		if (message.command !== "") {
-			writer.uint32(82).string(message.command);
-		}
-		if (message.args !== "") {
-			writer.uint32(90).string(message.args);
-		}
-		if (message.envVariables !== "") {
-			writer.uint32(98).string(message.envVariables);
-		}
-		if (message.cpuRequest !== 0) {
-			writer.uint32(104).int64(message.cpuRequest);
-		}
-		if (message.cpuLimit !== 0) {
-			writer.uint32(112).int64(message.cpuLimit);
-		}
-		if (message.memoryRequest !== 0) {
-			writer.uint32(120).int64(message.memoryRequest);
-		}
-		if (message.memoryLimit !== 0) {
-			writer.uint32(128).int64(message.memoryLimit);
-		}
-		for (const v of message.ports) {
-			ContainerPort.encode(v!, writer.uint32(138).fork()).join();
-		}
-		return writer;
-	},
+  encode(message: Deployment, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.name !== "") {
+      writer.uint32(10).string(message.name);
+    }
+    if (message.namespace !== "") {
+      writer.uint32(18).string(message.namespace);
+    }
+    if (message.replicas !== 0) {
+      writer.uint32(24).int32(message.replicas);
+    }
+    if (message.availableReplicas !== 0) {
+      writer.uint32(32).int32(message.availableReplicas);
+    }
+    if (message.unavailableReplicas !== 0) {
+      writer.uint32(40).int32(message.unavailableReplicas);
+    }
+    globalThis.Object.entries(message.labels).forEach(([key, value]: [string, string]) => {
+      Deployment_LabelsEntry.encode({ key: key as any, value }, writer.uint32(50).fork()).join();
+    });
+    globalThis.Object.entries(message.selector).forEach(([key, value]: [string, string]) => {
+      Deployment_SelectorEntry.encode({ key: key as any, value }, writer.uint32(58).fork()).join();
+    });
+    if (message.dockerImage !== "") {
+      writer.uint32(66).string(message.dockerImage);
+    }
+    if (message.uid !== "") {
+      writer.uint32(74).string(message.uid);
+    }
+    if (message.command !== "") {
+      writer.uint32(82).string(message.command);
+    }
+    if (message.args !== "") {
+      writer.uint32(90).string(message.args);
+    }
+    if (message.envVariables !== "") {
+      writer.uint32(98).string(message.envVariables);
+    }
+    if (message.cpuRequest !== 0) {
+      writer.uint32(104).int64(message.cpuRequest);
+    }
+    if (message.cpuLimit !== 0) {
+      writer.uint32(112).int64(message.cpuLimit);
+    }
+    if (message.memoryRequest !== 0) {
+      writer.uint32(120).int64(message.memoryRequest);
+    }
+    if (message.memoryLimit !== 0) {
+      writer.uint32(128).int64(message.memoryLimit);
+    }
+    for (const v of message.ports) {
+      ContainerPort.encode(v!, writer.uint32(138).fork()).join();
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): Deployment {
-		const reader =
-			input instanceof BinaryReader ? input : new BinaryReader(input);
-		const end = length === undefined ? reader.len : reader.pos + length;
-		const message = createBaseDeployment();
-		while (reader.pos < end) {
-			const tag = reader.uint32();
-			switch (tag >>> 3) {
-				case 1: {
-					if (tag !== 10) {
-						break;
-					}
+  decode(input: BinaryReader | Uint8Array, length?: number): Deployment {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseDeployment();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
 
-					message.name = reader.string();
-					continue;
-				}
-				case 2: {
-					if (tag !== 18) {
-						break;
-					}
+          message.name = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
 
-					message.namespace = reader.string();
-					continue;
-				}
-				case 3: {
-					if (tag !== 24) {
-						break;
-					}
+          message.namespace = reader.string();
+          continue;
+        }
+        case 3: {
+          if (tag !== 24) {
+            break;
+          }
 
-					message.replicas = reader.int32();
-					continue;
-				}
-				case 4: {
-					if (tag !== 32) {
-						break;
-					}
+          message.replicas = reader.int32();
+          continue;
+        }
+        case 4: {
+          if (tag !== 32) {
+            break;
+          }
 
-					message.availableReplicas = reader.int32();
-					continue;
-				}
-				case 5: {
-					if (tag !== 40) {
-						break;
-					}
+          message.availableReplicas = reader.int32();
+          continue;
+        }
+        case 5: {
+          if (tag !== 40) {
+            break;
+          }
 
-					message.unavailableReplicas = reader.int32();
-					continue;
-				}
-				case 6: {
-					if (tag !== 50) {
-						break;
-					}
+          message.unavailableReplicas = reader.int32();
+          continue;
+        }
+        case 6: {
+          if (tag !== 50) {
+            break;
+          }
 
-					const entry6 = Deployment_LabelsEntry.decode(reader, reader.uint32());
-					if (entry6.value !== undefined) {
-						message.labels[entry6.key] = entry6.value;
-					}
-					continue;
-				}
-				case 7: {
-					if (tag !== 58) {
-						break;
-					}
+          const entry6 = Deployment_LabelsEntry.decode(reader, reader.uint32());
+          if (entry6.value !== undefined) {
+            message.labels[entry6.key] = entry6.value;
+          }
+          continue;
+        }
+        case 7: {
+          if (tag !== 58) {
+            break;
+          }
 
-					const entry7 = Deployment_SelectorEntry.decode(
-						reader,
-						reader.uint32(),
-					);
-					if (entry7.value !== undefined) {
-						message.selector[entry7.key] = entry7.value;
-					}
-					continue;
-				}
-				case 8: {
-					if (tag !== 66) {
-						break;
-					}
+          const entry7 = Deployment_SelectorEntry.decode(reader, reader.uint32());
+          if (entry7.value !== undefined) {
+            message.selector[entry7.key] = entry7.value;
+          }
+          continue;
+        }
+        case 8: {
+          if (tag !== 66) {
+            break;
+          }
 
-					message.dockerImage = reader.string();
-					continue;
-				}
-				case 9: {
-					if (tag !== 74) {
-						break;
-					}
+          message.dockerImage = reader.string();
+          continue;
+        }
+        case 9: {
+          if (tag !== 74) {
+            break;
+          }
 
-					message.uid = reader.string();
-					continue;
-				}
-				case 10: {
-					if (tag !== 82) {
-						break;
-					}
+          message.uid = reader.string();
+          continue;
+        }
+        case 10: {
+          if (tag !== 82) {
+            break;
+          }
 
-					message.command = reader.string();
-					continue;
-				}
-				case 11: {
-					if (tag !== 90) {
-						break;
-					}
+          message.command = reader.string();
+          continue;
+        }
+        case 11: {
+          if (tag !== 90) {
+            break;
+          }
 
-					message.args = reader.string();
-					continue;
-				}
-				case 12: {
-					if (tag !== 98) {
-						break;
-					}
+          message.args = reader.string();
+          continue;
+        }
+        case 12: {
+          if (tag !== 98) {
+            break;
+          }
 
-					message.envVariables = reader.string();
-					continue;
-				}
-				case 13: {
-					if (tag !== 104) {
-						break;
-					}
+          message.envVariables = reader.string();
+          continue;
+        }
+        case 13: {
+          if (tag !== 104) {
+            break;
+          }
 
-					message.cpuRequest = longToNumber(reader.int64());
-					continue;
-				}
-				case 14: {
-					if (tag !== 112) {
-						break;
-					}
+          message.cpuRequest = longToNumber(reader.int64());
+          continue;
+        }
+        case 14: {
+          if (tag !== 112) {
+            break;
+          }
 
-					message.cpuLimit = longToNumber(reader.int64());
-					continue;
-				}
-				case 15: {
-					if (tag !== 120) {
-						break;
-					}
+          message.cpuLimit = longToNumber(reader.int64());
+          continue;
+        }
+        case 15: {
+          if (tag !== 120) {
+            break;
+          }
 
-					message.memoryRequest = longToNumber(reader.int64());
-					continue;
-				}
-				case 16: {
-					if (tag !== 128) {
-						break;
-					}
+          message.memoryRequest = longToNumber(reader.int64());
+          continue;
+        }
+        case 16: {
+          if (tag !== 128) {
+            break;
+          }
 
-					message.memoryLimit = longToNumber(reader.int64());
-					continue;
-				}
-				case 17: {
-					if (tag !== 138) {
-						break;
-					}
+          message.memoryLimit = longToNumber(reader.int64());
+          continue;
+        }
+        case 17: {
+          if (tag !== 138) {
+            break;
+          }
 
-					message.ports.push(ContainerPort.decode(reader, reader.uint32()));
-					continue;
-				}
-			}
-			if ((tag & 7) === 4 || tag === 0) {
-				break;
-			}
-			reader.skip(tag & 7);
-		}
-		return message;
-	},
+          message.ports.push(ContainerPort.decode(reader, reader.uint32()));
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
 
-	fromJSON(object: any): Deployment {
-		return {
-			name: isSet(object.name) ? globalThis.String(object.name) : "",
-			namespace: isSet(object.namespace)
-				? globalThis.String(object.namespace)
-				: "",
-			replicas: isSet(object.replicas) ? globalThis.Number(object.replicas) : 0,
-			availableReplicas: isSet(object.availableReplicas)
-				? globalThis.Number(object.availableReplicas)
-				: isSet(object.available_replicas)
-					? globalThis.Number(object.available_replicas)
-					: 0,
-			unavailableReplicas: isSet(object.unavailableReplicas)
-				? globalThis.Number(object.unavailableReplicas)
-				: isSet(object.unavailable_replicas)
-					? globalThis.Number(object.unavailable_replicas)
-					: 0,
-			labels: isObject(object.labels)
-				? (globalThis.Object.entries(object.labels) as [string, any][]).reduce(
-						(acc: { [key: string]: string }, [key, value]: [string, any]) => {
-							acc[key] = globalThis.String(value);
-							return acc;
-						},
-						{},
-					)
-				: {},
-			selector: isObject(object.selector)
-				? (
-						globalThis.Object.entries(object.selector) as [string, any][]
-					).reduce(
-						(acc: { [key: string]: string }, [key, value]: [string, any]) => {
-							acc[key] = globalThis.String(value);
-							return acc;
-						},
-						{},
-					)
-				: {},
-			dockerImage: isSet(object.dockerImage)
-				? globalThis.String(object.dockerImage)
-				: isSet(object.docker_image)
-					? globalThis.String(object.docker_image)
-					: "",
-			uid: isSet(object.uid) ? globalThis.String(object.uid) : "",
-			command: isSet(object.command) ? globalThis.String(object.command) : "",
-			args: isSet(object.args) ? globalThis.String(object.args) : "",
-			envVariables: isSet(object.envVariables)
-				? globalThis.String(object.envVariables)
-				: isSet(object.env_variables)
-					? globalThis.String(object.env_variables)
-					: "",
-			cpuRequest: isSet(object.cpuRequest)
-				? globalThis.Number(object.cpuRequest)
-				: isSet(object.cpu_request)
-					? globalThis.Number(object.cpu_request)
-					: 0,
-			cpuLimit: isSet(object.cpuLimit)
-				? globalThis.Number(object.cpuLimit)
-				: isSet(object.cpu_limit)
-					? globalThis.Number(object.cpu_limit)
-					: 0,
-			memoryRequest: isSet(object.memoryRequest)
-				? globalThis.Number(object.memoryRequest)
-				: isSet(object.memory_request)
-					? globalThis.Number(object.memory_request)
-					: 0,
-			memoryLimit: isSet(object.memoryLimit)
-				? globalThis.Number(object.memoryLimit)
-				: isSet(object.memory_limit)
-					? globalThis.Number(object.memory_limit)
-					: 0,
-			ports: globalThis.Array.isArray(object?.ports)
-				? object.ports.map((e: any) => ContainerPort.fromJSON(e))
-				: [],
-		};
-	},
+  fromJSON(object: any): Deployment {
+    return {
+      name: isSet(object.name) ? globalThis.String(object.name) : "",
+      namespace: isSet(object.namespace) ? globalThis.String(object.namespace) : "",
+      replicas: isSet(object.replicas) ? globalThis.Number(object.replicas) : 0,
+      availableReplicas: isSet(object.availableReplicas)
+        ? globalThis.Number(object.availableReplicas)
+        : isSet(object.available_replicas)
+        ? globalThis.Number(object.available_replicas)
+        : 0,
+      unavailableReplicas: isSet(object.unavailableReplicas)
+        ? globalThis.Number(object.unavailableReplicas)
+        : isSet(object.unavailable_replicas)
+        ? globalThis.Number(object.unavailable_replicas)
+        : 0,
+      labels: isObject(object.labels)
+        ? (globalThis.Object.entries(object.labels) as [string, any][]).reduce(
+          (acc: { [key: string]: string }, [key, value]: [string, any]) => {
+            acc[key] = globalThis.String(value);
+            return acc;
+          },
+          {},
+        )
+        : {},
+      selector: isObject(object.selector)
+        ? (globalThis.Object.entries(object.selector) as [string, any][]).reduce(
+          (acc: { [key: string]: string }, [key, value]: [string, any]) => {
+            acc[key] = globalThis.String(value);
+            return acc;
+          },
+          {},
+        )
+        : {},
+      dockerImage: isSet(object.dockerImage)
+        ? globalThis.String(object.dockerImage)
+        : isSet(object.docker_image)
+        ? globalThis.String(object.docker_image)
+        : "",
+      uid: isSet(object.uid) ? globalThis.String(object.uid) : "",
+      command: isSet(object.command) ? globalThis.String(object.command) : "",
+      args: isSet(object.args) ? globalThis.String(object.args) : "",
+      envVariables: isSet(object.envVariables)
+        ? globalThis.String(object.envVariables)
+        : isSet(object.env_variables)
+        ? globalThis.String(object.env_variables)
+        : "",
+      cpuRequest: isSet(object.cpuRequest)
+        ? globalThis.Number(object.cpuRequest)
+        : isSet(object.cpu_request)
+        ? globalThis.Number(object.cpu_request)
+        : 0,
+      cpuLimit: isSet(object.cpuLimit)
+        ? globalThis.Number(object.cpuLimit)
+        : isSet(object.cpu_limit)
+        ? globalThis.Number(object.cpu_limit)
+        : 0,
+      memoryRequest: isSet(object.memoryRequest)
+        ? globalThis.Number(object.memoryRequest)
+        : isSet(object.memory_request)
+        ? globalThis.Number(object.memory_request)
+        : 0,
+      memoryLimit: isSet(object.memoryLimit)
+        ? globalThis.Number(object.memoryLimit)
+        : isSet(object.memory_limit)
+        ? globalThis.Number(object.memory_limit)
+        : 0,
+      ports: globalThis.Array.isArray(object?.ports)
+        ? object.ports.map((e: any) => ContainerPort.fromJSON(e))
+        : [],
+    };
+  },
 
-	toJSON(message: Deployment): unknown {
-		const obj: any = {};
-		if (message.name !== "") {
-			obj.name = message.name;
-		}
-		if (message.namespace !== "") {
-			obj.namespace = message.namespace;
-		}
-		if (message.replicas !== 0) {
-			obj.replicas = Math.round(message.replicas);
-		}
-		if (message.availableReplicas !== 0) {
-			obj.availableReplicas = Math.round(message.availableReplicas);
-		}
-		if (message.unavailableReplicas !== 0) {
-			obj.unavailableReplicas = Math.round(message.unavailableReplicas);
-		}
-		if (message.labels) {
-			const entries = globalThis.Object.entries(message.labels) as [
-				string,
-				string,
-			][];
-			if (entries.length > 0) {
-				obj.labels = {};
-				entries.forEach(([k, v]) => {
-					obj.labels[k] = v;
-				});
-			}
-		}
-		if (message.selector) {
-			const entries = globalThis.Object.entries(message.selector) as [
-				string,
-				string,
-			][];
-			if (entries.length > 0) {
-				obj.selector = {};
-				entries.forEach(([k, v]) => {
-					obj.selector[k] = v;
-				});
-			}
-		}
-		if (message.dockerImage !== "") {
-			obj.dockerImage = message.dockerImage;
-		}
-		if (message.uid !== "") {
-			obj.uid = message.uid;
-		}
-		if (message.command !== "") {
-			obj.command = message.command;
-		}
-		if (message.args !== "") {
-			obj.args = message.args;
-		}
-		if (message.envVariables !== "") {
-			obj.envVariables = message.envVariables;
-		}
-		if (message.cpuRequest !== 0) {
-			obj.cpuRequest = Math.round(message.cpuRequest);
-		}
-		if (message.cpuLimit !== 0) {
-			obj.cpuLimit = Math.round(message.cpuLimit);
-		}
-		if (message.memoryRequest !== 0) {
-			obj.memoryRequest = Math.round(message.memoryRequest);
-		}
-		if (message.memoryLimit !== 0) {
-			obj.memoryLimit = Math.round(message.memoryLimit);
-		}
-		if (message.ports?.length) {
-			obj.ports = message.ports.map((e) => ContainerPort.toJSON(e));
-		}
-		return obj;
-	},
+  toJSON(message: Deployment): unknown {
+    const obj: any = {};
+    if (message.name !== "") {
+      obj.name = message.name;
+    }
+    if (message.namespace !== "") {
+      obj.namespace = message.namespace;
+    }
+    if (message.replicas !== 0) {
+      obj.replicas = Math.round(message.replicas);
+    }
+    if (message.availableReplicas !== 0) {
+      obj.availableReplicas = Math.round(message.availableReplicas);
+    }
+    if (message.unavailableReplicas !== 0) {
+      obj.unavailableReplicas = Math.round(message.unavailableReplicas);
+    }
+    if (message.labels) {
+      const entries = globalThis.Object.entries(message.labels) as [string, string][];
+      if (entries.length > 0) {
+        obj.labels = {};
+        entries.forEach(([k, v]) => {
+          obj.labels[k] = v;
+        });
+      }
+    }
+    if (message.selector) {
+      const entries = globalThis.Object.entries(message.selector) as [string, string][];
+      if (entries.length > 0) {
+        obj.selector = {};
+        entries.forEach(([k, v]) => {
+          obj.selector[k] = v;
+        });
+      }
+    }
+    if (message.dockerImage !== "") {
+      obj.dockerImage = message.dockerImage;
+    }
+    if (message.uid !== "") {
+      obj.uid = message.uid;
+    }
+    if (message.command !== "") {
+      obj.command = message.command;
+    }
+    if (message.args !== "") {
+      obj.args = message.args;
+    }
+    if (message.envVariables !== "") {
+      obj.envVariables = message.envVariables;
+    }
+    if (message.cpuRequest !== 0) {
+      obj.cpuRequest = Math.round(message.cpuRequest);
+    }
+    if (message.cpuLimit !== 0) {
+      obj.cpuLimit = Math.round(message.cpuLimit);
+    }
+    if (message.memoryRequest !== 0) {
+      obj.memoryRequest = Math.round(message.memoryRequest);
+    }
+    if (message.memoryLimit !== 0) {
+      obj.memoryLimit = Math.round(message.memoryLimit);
+    }
+    if (message.ports?.length) {
+      obj.ports = message.ports.map((e) => ContainerPort.toJSON(e));
+    }
+    return obj;
+  },
 
-	create<I extends Exact<DeepPartial<Deployment>, I>>(base?: I): Deployment {
-		return Deployment.fromPartial(base ?? ({} as any));
-	},
-	fromPartial<I extends Exact<DeepPartial<Deployment>, I>>(
-		object: I,
-	): Deployment {
-		const message = createBaseDeployment();
-		message.name = object.name ?? "";
-		message.namespace = object.namespace ?? "";
-		message.replicas = object.replicas ?? 0;
-		message.availableReplicas = object.availableReplicas ?? 0;
-		message.unavailableReplicas = object.unavailableReplicas ?? 0;
-		message.labels = (
-			globalThis.Object.entries(object.labels ?? {}) as [string, string][]
-		).reduce(
-			(acc: { [key: string]: string }, [key, value]: [string, string]) => {
-				if (value !== undefined) {
-					acc[key] = globalThis.String(value);
-				}
-				return acc;
-			},
-			{},
-		);
-		message.selector = (
-			globalThis.Object.entries(object.selector ?? {}) as [string, string][]
-		).reduce(
-			(acc: { [key: string]: string }, [key, value]: [string, string]) => {
-				if (value !== undefined) {
-					acc[key] = globalThis.String(value);
-				}
-				return acc;
-			},
-			{},
-		);
-		message.dockerImage = object.dockerImage ?? "";
-		message.uid = object.uid ?? "";
-		message.command = object.command ?? "";
-		message.args = object.args ?? "";
-		message.envVariables = object.envVariables ?? "";
-		message.cpuRequest = object.cpuRequest ?? 0;
-		message.cpuLimit = object.cpuLimit ?? 0;
-		message.memoryRequest = object.memoryRequest ?? 0;
-		message.memoryLimit = object.memoryLimit ?? 0;
-		message.ports =
-			object.ports?.map((e) => ContainerPort.fromPartial(e)) || [];
-		return message;
-	},
+  create<I extends Exact<DeepPartial<Deployment>, I>>(base?: I): Deployment {
+    return Deployment.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<Deployment>, I>>(object: I): Deployment {
+    const message = createBaseDeployment();
+    message.name = object.name ?? "";
+    message.namespace = object.namespace ?? "";
+    message.replicas = object.replicas ?? 0;
+    message.availableReplicas = object.availableReplicas ?? 0;
+    message.unavailableReplicas = object.unavailableReplicas ?? 0;
+    message.labels = (globalThis.Object.entries(object.labels ?? {}) as [string, string][]).reduce(
+      (acc: { [key: string]: string }, [key, value]: [string, string]) => {
+        if (value !== undefined) {
+          acc[key] = globalThis.String(value);
+        }
+        return acc;
+      },
+      {},
+    );
+    message.selector = (globalThis.Object.entries(object.selector ?? {}) as [string, string][]).reduce(
+      (acc: { [key: string]: string }, [key, value]: [string, string]) => {
+        if (value !== undefined) {
+          acc[key] = globalThis.String(value);
+        }
+        return acc;
+      },
+      {},
+    );
+    message.dockerImage = object.dockerImage ?? "";
+    message.uid = object.uid ?? "";
+    message.command = object.command ?? "";
+    message.args = object.args ?? "";
+    message.envVariables = object.envVariables ?? "";
+    message.cpuRequest = object.cpuRequest ?? 0;
+    message.cpuLimit = object.cpuLimit ?? 0;
+    message.memoryRequest = object.memoryRequest ?? 0;
+    message.memoryLimit = object.memoryLimit ?? 0;
+    message.ports = object.ports?.map((e) => ContainerPort.fromPartial(e)) || [];
+    return message;
+  },
 };
 
 function createBaseDeployment_LabelsEntry(): Deployment_LabelsEntry {
-	return { key: "", value: "" };
+  return { key: "", value: "" };
 }
 
 export const Deployment_LabelsEntry: MessageFns<Deployment_LabelsEntry> = {
-	encode(
-		message: Deployment_LabelsEntry,
-		writer: BinaryWriter = new BinaryWriter(),
-	): BinaryWriter {
-		if (message.key !== "") {
-			writer.uint32(10).string(message.key);
-		}
-		if (message.value !== "") {
-			writer.uint32(18).string(message.value);
-		}
-		return writer;
-	},
+  encode(message: Deployment_LabelsEntry, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.key !== "") {
+      writer.uint32(10).string(message.key);
+    }
+    if (message.value !== "") {
+      writer.uint32(18).string(message.value);
+    }
+    return writer;
+  },
 
-	decode(
-		input: BinaryReader | Uint8Array,
-		length?: number,
-	): Deployment_LabelsEntry {
-		const reader =
-			input instanceof BinaryReader ? input : new BinaryReader(input);
-		const end = length === undefined ? reader.len : reader.pos + length;
-		const message = createBaseDeployment_LabelsEntry();
-		while (reader.pos < end) {
-			const tag = reader.uint32();
-			switch (tag >>> 3) {
-				case 1: {
-					if (tag !== 10) {
-						break;
-					}
+  decode(input: BinaryReader | Uint8Array, length?: number): Deployment_LabelsEntry {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseDeployment_LabelsEntry();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
 
-					message.key = reader.string();
-					continue;
-				}
-				case 2: {
-					if (tag !== 18) {
-						break;
-					}
+          message.key = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
 
-					message.value = reader.string();
-					continue;
-				}
-			}
-			if ((tag & 7) === 4 || tag === 0) {
-				break;
-			}
-			reader.skip(tag & 7);
-		}
-		return message;
-	},
+          message.value = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
 
-	fromJSON(object: any): Deployment_LabelsEntry {
-		return {
-			key: isSet(object.key) ? globalThis.String(object.key) : "",
-			value: isSet(object.value) ? globalThis.String(object.value) : "",
-		};
-	},
+  fromJSON(object: any): Deployment_LabelsEntry {
+    return {
+      key: isSet(object.key) ? globalThis.String(object.key) : "",
+      value: isSet(object.value) ? globalThis.String(object.value) : "",
+    };
+  },
 
-	toJSON(message: Deployment_LabelsEntry): unknown {
-		const obj: any = {};
-		if (message.key !== "") {
-			obj.key = message.key;
-		}
-		if (message.value !== "") {
-			obj.value = message.value;
-		}
-		return obj;
-	},
+  toJSON(message: Deployment_LabelsEntry): unknown {
+    const obj: any = {};
+    if (message.key !== "") {
+      obj.key = message.key;
+    }
+    if (message.value !== "") {
+      obj.value = message.value;
+    }
+    return obj;
+  },
 
-	create<I extends Exact<DeepPartial<Deployment_LabelsEntry>, I>>(
-		base?: I,
-	): Deployment_LabelsEntry {
-		return Deployment_LabelsEntry.fromPartial(base ?? ({} as any));
-	},
-	fromPartial<I extends Exact<DeepPartial<Deployment_LabelsEntry>, I>>(
-		object: I,
-	): Deployment_LabelsEntry {
-		const message = createBaseDeployment_LabelsEntry();
-		message.key = object.key ?? "";
-		message.value = object.value ?? "";
-		return message;
-	},
+  create<I extends Exact<DeepPartial<Deployment_LabelsEntry>, I>>(base?: I): Deployment_LabelsEntry {
+    return Deployment_LabelsEntry.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<Deployment_LabelsEntry>, I>>(object: I): Deployment_LabelsEntry {
+    const message = createBaseDeployment_LabelsEntry();
+    message.key = object.key ?? "";
+    message.value = object.value ?? "";
+    return message;
+  },
 };
 
 function createBaseDeployment_SelectorEntry(): Deployment_SelectorEntry {
-	return { key: "", value: "" };
+  return { key: "", value: "" };
 }
 
 export const Deployment_SelectorEntry: MessageFns<Deployment_SelectorEntry> = {
-	encode(
-		message: Deployment_SelectorEntry,
-		writer: BinaryWriter = new BinaryWriter(),
-	): BinaryWriter {
-		if (message.key !== "") {
-			writer.uint32(10).string(message.key);
-		}
-		if (message.value !== "") {
-			writer.uint32(18).string(message.value);
-		}
-		return writer;
-	},
+  encode(message: Deployment_SelectorEntry, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.key !== "") {
+      writer.uint32(10).string(message.key);
+    }
+    if (message.value !== "") {
+      writer.uint32(18).string(message.value);
+    }
+    return writer;
+  },
 
-	decode(
-		input: BinaryReader | Uint8Array,
-		length?: number,
-	): Deployment_SelectorEntry {
-		const reader =
-			input instanceof BinaryReader ? input : new BinaryReader(input);
-		const end = length === undefined ? reader.len : reader.pos + length;
-		const message = createBaseDeployment_SelectorEntry();
-		while (reader.pos < end) {
-			const tag = reader.uint32();
-			switch (tag >>> 3) {
-				case 1: {
-					if (tag !== 10) {
-						break;
-					}
+  decode(input: BinaryReader | Uint8Array, length?: number): Deployment_SelectorEntry {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseDeployment_SelectorEntry();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
 
-					message.key = reader.string();
-					continue;
-				}
-				case 2: {
-					if (tag !== 18) {
-						break;
-					}
+          message.key = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
 
-					message.value = reader.string();
-					continue;
-				}
-			}
-			if ((tag & 7) === 4 || tag === 0) {
-				break;
-			}
-			reader.skip(tag & 7);
-		}
-		return message;
-	},
+          message.value = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
 
-	fromJSON(object: any): Deployment_SelectorEntry {
-		return {
-			key: isSet(object.key) ? globalThis.String(object.key) : "",
-			value: isSet(object.value) ? globalThis.String(object.value) : "",
-		};
-	},
+  fromJSON(object: any): Deployment_SelectorEntry {
+    return {
+      key: isSet(object.key) ? globalThis.String(object.key) : "",
+      value: isSet(object.value) ? globalThis.String(object.value) : "",
+    };
+  },
 
-	toJSON(message: Deployment_SelectorEntry): unknown {
-		const obj: any = {};
-		if (message.key !== "") {
-			obj.key = message.key;
-		}
-		if (message.value !== "") {
-			obj.value = message.value;
-		}
-		return obj;
-	},
+  toJSON(message: Deployment_SelectorEntry): unknown {
+    const obj: any = {};
+    if (message.key !== "") {
+      obj.key = message.key;
+    }
+    if (message.value !== "") {
+      obj.value = message.value;
+    }
+    return obj;
+  },
 
-	create<I extends Exact<DeepPartial<Deployment_SelectorEntry>, I>>(
-		base?: I,
-	): Deployment_SelectorEntry {
-		return Deployment_SelectorEntry.fromPartial(base ?? ({} as any));
-	},
-	fromPartial<I extends Exact<DeepPartial<Deployment_SelectorEntry>, I>>(
-		object: I,
-	): Deployment_SelectorEntry {
-		const message = createBaseDeployment_SelectorEntry();
-		message.key = object.key ?? "";
-		message.value = object.value ?? "";
-		return message;
-	},
+  create<I extends Exact<DeepPartial<Deployment_SelectorEntry>, I>>(base?: I): Deployment_SelectorEntry {
+    return Deployment_SelectorEntry.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<Deployment_SelectorEntry>, I>>(object: I): Deployment_SelectorEntry {
+    const message = createBaseDeployment_SelectorEntry();
+    message.key = object.key ?? "";
+    message.value = object.value ?? "";
+    return message;
+  },
 };
 
 function createBasePod(): Pod {
-	return {
-		name: "",
-		namespace: "",
-		nodeName: "",
-		dockerImage: "",
-		replicas: 0,
-		status: "",
-		cpuRequest: 0,
-		cpuLimit: 0,
-		memoryRequest: 0,
-		memoryLimit: 0,
-		command: "",
-		envVariables: "",
-		ports: [],
-		uid: "",
-		cpuUsage: 0,
-		ramUsage: 0,
-		labels: {},
-		args: "",
-	};
+  return {
+    name: "",
+    namespace: "",
+    nodeName: "",
+    dockerImage: "",
+    replicas: 0,
+    status: "",
+    cpuRequest: 0,
+    cpuLimit: 0,
+    memoryRequest: 0,
+    memoryLimit: 0,
+    command: "",
+    envVariables: "",
+    ports: [],
+    uid: "",
+    cpuUsage: 0,
+    ramUsage: 0,
+    labels: {},
+    args: "",
+  };
 }
 
 export const Pod: MessageFns<Pod> = {
-	encode(
-		message: Pod,
-		writer: BinaryWriter = new BinaryWriter(),
-	): BinaryWriter {
-		if (message.name !== "") {
-			writer.uint32(10).string(message.name);
-		}
-		if (message.namespace !== "") {
-			writer.uint32(18).string(message.namespace);
-		}
-		if (message.nodeName !== "") {
-			writer.uint32(26).string(message.nodeName);
-		}
-		if (message.dockerImage !== "") {
-			writer.uint32(34).string(message.dockerImage);
-		}
-		if (message.replicas !== 0) {
-			writer.uint32(40).int32(message.replicas);
-		}
-		if (message.status !== "") {
-			writer.uint32(50).string(message.status);
-		}
-		if (message.cpuRequest !== 0) {
-			writer.uint32(56).int64(message.cpuRequest);
-		}
-		if (message.cpuLimit !== 0) {
-			writer.uint32(64).int64(message.cpuLimit);
-		}
-		if (message.memoryRequest !== 0) {
-			writer.uint32(72).int64(message.memoryRequest);
-		}
-		if (message.memoryLimit !== 0) {
-			writer.uint32(80).int64(message.memoryLimit);
-		}
-		if (message.command !== "") {
-			writer.uint32(90).string(message.command);
-		}
-		if (message.envVariables !== "") {
-			writer.uint32(98).string(message.envVariables);
-		}
-		for (const v of message.ports) {
-			ContainerPort.encode(v!, writer.uint32(106).fork()).join();
-		}
-		if (message.uid !== "") {
-			writer.uint32(114).string(message.uid);
-		}
-		if (message.cpuUsage !== 0) {
-			writer.uint32(120).int64(message.cpuUsage);
-		}
-		if (message.ramUsage !== 0) {
-			writer.uint32(128).int64(message.ramUsage);
-		}
-		globalThis.Object.entries(message.labels).forEach(
-			([key, value]: [string, string]) => {
-				Pod_LabelsEntry.encode(
-					{ key: key as any, value },
-					writer.uint32(138).fork(),
-				).join();
-			},
-		);
-		if (message.args !== "") {
-			writer.uint32(146).string(message.args);
-		}
-		return writer;
-	},
+  encode(message: Pod, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.name !== "") {
+      writer.uint32(10).string(message.name);
+    }
+    if (message.namespace !== "") {
+      writer.uint32(18).string(message.namespace);
+    }
+    if (message.nodeName !== "") {
+      writer.uint32(26).string(message.nodeName);
+    }
+    if (message.dockerImage !== "") {
+      writer.uint32(34).string(message.dockerImage);
+    }
+    if (message.replicas !== 0) {
+      writer.uint32(40).int32(message.replicas);
+    }
+    if (message.status !== "") {
+      writer.uint32(50).string(message.status);
+    }
+    if (message.cpuRequest !== 0) {
+      writer.uint32(56).int64(message.cpuRequest);
+    }
+    if (message.cpuLimit !== 0) {
+      writer.uint32(64).int64(message.cpuLimit);
+    }
+    if (message.memoryRequest !== 0) {
+      writer.uint32(72).int64(message.memoryRequest);
+    }
+    if (message.memoryLimit !== 0) {
+      writer.uint32(80).int64(message.memoryLimit);
+    }
+    if (message.command !== "") {
+      writer.uint32(90).string(message.command);
+    }
+    if (message.envVariables !== "") {
+      writer.uint32(98).string(message.envVariables);
+    }
+    for (const v of message.ports) {
+      ContainerPort.encode(v!, writer.uint32(106).fork()).join();
+    }
+    if (message.uid !== "") {
+      writer.uint32(114).string(message.uid);
+    }
+    if (message.cpuUsage !== 0) {
+      writer.uint32(120).int64(message.cpuUsage);
+    }
+    if (message.ramUsage !== 0) {
+      writer.uint32(128).int64(message.ramUsage);
+    }
+    globalThis.Object.entries(message.labels).forEach(([key, value]: [string, string]) => {
+      Pod_LabelsEntry.encode({ key: key as any, value }, writer.uint32(138).fork()).join();
+    });
+    if (message.args !== "") {
+      writer.uint32(146).string(message.args);
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): Pod {
-		const reader =
-			input instanceof BinaryReader ? input : new BinaryReader(input);
-		const end = length === undefined ? reader.len : reader.pos + length;
-		const message = createBasePod();
-		while (reader.pos < end) {
-			const tag = reader.uint32();
-			switch (tag >>> 3) {
-				case 1: {
-					if (tag !== 10) {
-						break;
-					}
+  decode(input: BinaryReader | Uint8Array, length?: number): Pod {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBasePod();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
 
-					message.name = reader.string();
-					continue;
-				}
-				case 2: {
-					if (tag !== 18) {
-						break;
-					}
+          message.name = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
 
-					message.namespace = reader.string();
-					continue;
-				}
-				case 3: {
-					if (tag !== 26) {
-						break;
-					}
+          message.namespace = reader.string();
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
 
-					message.nodeName = reader.string();
-					continue;
-				}
-				case 4: {
-					if (tag !== 34) {
-						break;
-					}
+          message.nodeName = reader.string();
+          continue;
+        }
+        case 4: {
+          if (tag !== 34) {
+            break;
+          }
 
-					message.dockerImage = reader.string();
-					continue;
-				}
-				case 5: {
-					if (tag !== 40) {
-						break;
-					}
+          message.dockerImage = reader.string();
+          continue;
+        }
+        case 5: {
+          if (tag !== 40) {
+            break;
+          }
 
-					message.replicas = reader.int32();
-					continue;
-				}
-				case 6: {
-					if (tag !== 50) {
-						break;
-					}
+          message.replicas = reader.int32();
+          continue;
+        }
+        case 6: {
+          if (tag !== 50) {
+            break;
+          }
 
-					message.status = reader.string();
-					continue;
-				}
-				case 7: {
-					if (tag !== 56) {
-						break;
-					}
+          message.status = reader.string();
+          continue;
+        }
+        case 7: {
+          if (tag !== 56) {
+            break;
+          }
 
-					message.cpuRequest = longToNumber(reader.int64());
-					continue;
-				}
-				case 8: {
-					if (tag !== 64) {
-						break;
-					}
+          message.cpuRequest = longToNumber(reader.int64());
+          continue;
+        }
+        case 8: {
+          if (tag !== 64) {
+            break;
+          }
 
-					message.cpuLimit = longToNumber(reader.int64());
-					continue;
-				}
-				case 9: {
-					if (tag !== 72) {
-						break;
-					}
+          message.cpuLimit = longToNumber(reader.int64());
+          continue;
+        }
+        case 9: {
+          if (tag !== 72) {
+            break;
+          }
 
-					message.memoryRequest = longToNumber(reader.int64());
-					continue;
-				}
-				case 10: {
-					if (tag !== 80) {
-						break;
-					}
+          message.memoryRequest = longToNumber(reader.int64());
+          continue;
+        }
+        case 10: {
+          if (tag !== 80) {
+            break;
+          }
 
-					message.memoryLimit = longToNumber(reader.int64());
-					continue;
-				}
-				case 11: {
-					if (tag !== 90) {
-						break;
-					}
+          message.memoryLimit = longToNumber(reader.int64());
+          continue;
+        }
+        case 11: {
+          if (tag !== 90) {
+            break;
+          }
 
-					message.command = reader.string();
-					continue;
-				}
-				case 12: {
-					if (tag !== 98) {
-						break;
-					}
+          message.command = reader.string();
+          continue;
+        }
+        case 12: {
+          if (tag !== 98) {
+            break;
+          }
 
-					message.envVariables = reader.string();
-					continue;
-				}
-				case 13: {
-					if (tag !== 106) {
-						break;
-					}
+          message.envVariables = reader.string();
+          continue;
+        }
+        case 13: {
+          if (tag !== 106) {
+            break;
+          }
 
-					message.ports.push(ContainerPort.decode(reader, reader.uint32()));
-					continue;
-				}
-				case 14: {
-					if (tag !== 114) {
-						break;
-					}
+          message.ports.push(ContainerPort.decode(reader, reader.uint32()));
+          continue;
+        }
+        case 14: {
+          if (tag !== 114) {
+            break;
+          }
 
-					message.uid = reader.string();
-					continue;
-				}
-				case 15: {
-					if (tag !== 120) {
-						break;
-					}
+          message.uid = reader.string();
+          continue;
+        }
+        case 15: {
+          if (tag !== 120) {
+            break;
+          }
 
-					message.cpuUsage = longToNumber(reader.int64());
-					continue;
-				}
-				case 16: {
-					if (tag !== 128) {
-						break;
-					}
+          message.cpuUsage = longToNumber(reader.int64());
+          continue;
+        }
+        case 16: {
+          if (tag !== 128) {
+            break;
+          }
 
-					message.ramUsage = longToNumber(reader.int64());
-					continue;
-				}
-				case 17: {
-					if (tag !== 138) {
-						break;
-					}
+          message.ramUsage = longToNumber(reader.int64());
+          continue;
+        }
+        case 17: {
+          if (tag !== 138) {
+            break;
+          }
 
-					const entry17 = Pod_LabelsEntry.decode(reader, reader.uint32());
-					if (entry17.value !== undefined) {
-						message.labels[entry17.key] = entry17.value;
-					}
-					continue;
-				}
-				case 18: {
-					if (tag !== 146) {
-						break;
-					}
+          const entry17 = Pod_LabelsEntry.decode(reader, reader.uint32());
+          if (entry17.value !== undefined) {
+            message.labels[entry17.key] = entry17.value;
+          }
+          continue;
+        }
+        case 18: {
+          if (tag !== 146) {
+            break;
+          }
 
-					message.args = reader.string();
-					continue;
-				}
-			}
-			if ((tag & 7) === 4 || tag === 0) {
-				break;
-			}
-			reader.skip(tag & 7);
-		}
-		return message;
-	},
+          message.args = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
 
-	fromJSON(object: any): Pod {
-		return {
-			name: isSet(object.name) ? globalThis.String(object.name) : "",
-			namespace: isSet(object.namespace)
-				? globalThis.String(object.namespace)
-				: "",
-			nodeName: isSet(object.nodeName)
-				? globalThis.String(object.nodeName)
-				: isSet(object.node_name)
-					? globalThis.String(object.node_name)
-					: "",
-			dockerImage: isSet(object.dockerImage)
-				? globalThis.String(object.dockerImage)
-				: isSet(object.docker_image)
-					? globalThis.String(object.docker_image)
-					: "",
-			replicas: isSet(object.replicas) ? globalThis.Number(object.replicas) : 0,
-			status: isSet(object.status) ? globalThis.String(object.status) : "",
-			cpuRequest: isSet(object.cpuRequest)
-				? globalThis.Number(object.cpuRequest)
-				: isSet(object.cpu_request)
-					? globalThis.Number(object.cpu_request)
-					: 0,
-			cpuLimit: isSet(object.cpuLimit)
-				? globalThis.Number(object.cpuLimit)
-				: isSet(object.cpu_limit)
-					? globalThis.Number(object.cpu_limit)
-					: 0,
-			memoryRequest: isSet(object.memoryRequest)
-				? globalThis.Number(object.memoryRequest)
-				: isSet(object.memory_request)
-					? globalThis.Number(object.memory_request)
-					: 0,
-			memoryLimit: isSet(object.memoryLimit)
-				? globalThis.Number(object.memoryLimit)
-				: isSet(object.memory_limit)
-					? globalThis.Number(object.memory_limit)
-					: 0,
-			command: isSet(object.command) ? globalThis.String(object.command) : "",
-			envVariables: isSet(object.envVariables)
-				? globalThis.String(object.envVariables)
-				: isSet(object.env_variables)
-					? globalThis.String(object.env_variables)
-					: "",
-			ports: globalThis.Array.isArray(object?.ports)
-				? object.ports.map((e: any) => ContainerPort.fromJSON(e))
-				: [],
-			uid: isSet(object.uid) ? globalThis.String(object.uid) : "",
-			cpuUsage: isSet(object.cpuUsage)
-				? globalThis.Number(object.cpuUsage)
-				: isSet(object.cpu_usage)
-					? globalThis.Number(object.cpu_usage)
-					: 0,
-			ramUsage: isSet(object.ramUsage)
-				? globalThis.Number(object.ramUsage)
-				: isSet(object.ram_usage)
-					? globalThis.Number(object.ram_usage)
-					: 0,
-			labels: isObject(object.labels)
-				? (globalThis.Object.entries(object.labels) as [string, any][]).reduce(
-						(acc: { [key: string]: string }, [key, value]: [string, any]) => {
-							acc[key] = globalThis.String(value);
-							return acc;
-						},
-						{},
-					)
-				: {},
-			args: isSet(object.args) ? globalThis.String(object.args) : "",
-		};
-	},
+  fromJSON(object: any): Pod {
+    return {
+      name: isSet(object.name) ? globalThis.String(object.name) : "",
+      namespace: isSet(object.namespace) ? globalThis.String(object.namespace) : "",
+      nodeName: isSet(object.nodeName)
+        ? globalThis.String(object.nodeName)
+        : isSet(object.node_name)
+        ? globalThis.String(object.node_name)
+        : "",
+      dockerImage: isSet(object.dockerImage)
+        ? globalThis.String(object.dockerImage)
+        : isSet(object.docker_image)
+        ? globalThis.String(object.docker_image)
+        : "",
+      replicas: isSet(object.replicas) ? globalThis.Number(object.replicas) : 0,
+      status: isSet(object.status) ? globalThis.String(object.status) : "",
+      cpuRequest: isSet(object.cpuRequest)
+        ? globalThis.Number(object.cpuRequest)
+        : isSet(object.cpu_request)
+        ? globalThis.Number(object.cpu_request)
+        : 0,
+      cpuLimit: isSet(object.cpuLimit)
+        ? globalThis.Number(object.cpuLimit)
+        : isSet(object.cpu_limit)
+        ? globalThis.Number(object.cpu_limit)
+        : 0,
+      memoryRequest: isSet(object.memoryRequest)
+        ? globalThis.Number(object.memoryRequest)
+        : isSet(object.memory_request)
+        ? globalThis.Number(object.memory_request)
+        : 0,
+      memoryLimit: isSet(object.memoryLimit)
+        ? globalThis.Number(object.memoryLimit)
+        : isSet(object.memory_limit)
+        ? globalThis.Number(object.memory_limit)
+        : 0,
+      command: isSet(object.command) ? globalThis.String(object.command) : "",
+      envVariables: isSet(object.envVariables)
+        ? globalThis.String(object.envVariables)
+        : isSet(object.env_variables)
+        ? globalThis.String(object.env_variables)
+        : "",
+      ports: globalThis.Array.isArray(object?.ports)
+        ? object.ports.map((e: any) => ContainerPort.fromJSON(e))
+        : [],
+      uid: isSet(object.uid) ? globalThis.String(object.uid) : "",
+      cpuUsage: isSet(object.cpuUsage)
+        ? globalThis.Number(object.cpuUsage)
+        : isSet(object.cpu_usage)
+        ? globalThis.Number(object.cpu_usage)
+        : 0,
+      ramUsage: isSet(object.ramUsage)
+        ? globalThis.Number(object.ramUsage)
+        : isSet(object.ram_usage)
+        ? globalThis.Number(object.ram_usage)
+        : 0,
+      labels: isObject(object.labels)
+        ? (globalThis.Object.entries(object.labels) as [string, any][]).reduce(
+          (acc: { [key: string]: string }, [key, value]: [string, any]) => {
+            acc[key] = globalThis.String(value);
+            return acc;
+          },
+          {},
+        )
+        : {},
+      args: isSet(object.args) ? globalThis.String(object.args) : "",
+    };
+  },
 
-	toJSON(message: Pod): unknown {
-		const obj: any = {};
-		if (message.name !== "") {
-			obj.name = message.name;
-		}
-		if (message.namespace !== "") {
-			obj.namespace = message.namespace;
-		}
-		if (message.nodeName !== "") {
-			obj.nodeName = message.nodeName;
-		}
-		if (message.dockerImage !== "") {
-			obj.dockerImage = message.dockerImage;
-		}
-		if (message.replicas !== 0) {
-			obj.replicas = Math.round(message.replicas);
-		}
-		if (message.status !== "") {
-			obj.status = message.status;
-		}
-		if (message.cpuRequest !== 0) {
-			obj.cpuRequest = Math.round(message.cpuRequest);
-		}
-		if (message.cpuLimit !== 0) {
-			obj.cpuLimit = Math.round(message.cpuLimit);
-		}
-		if (message.memoryRequest !== 0) {
-			obj.memoryRequest = Math.round(message.memoryRequest);
-		}
-		if (message.memoryLimit !== 0) {
-			obj.memoryLimit = Math.round(message.memoryLimit);
-		}
-		if (message.command !== "") {
-			obj.command = message.command;
-		}
-		if (message.envVariables !== "") {
-			obj.envVariables = message.envVariables;
-		}
-		if (message.ports?.length) {
-			obj.ports = message.ports.map((e) => ContainerPort.toJSON(e));
-		}
-		if (message.uid !== "") {
-			obj.uid = message.uid;
-		}
-		if (message.cpuUsage !== 0) {
-			obj.cpuUsage = Math.round(message.cpuUsage);
-		}
-		if (message.ramUsage !== 0) {
-			obj.ramUsage = Math.round(message.ramUsage);
-		}
-		if (message.labels) {
-			const entries = globalThis.Object.entries(message.labels) as [
-				string,
-				string,
-			][];
-			if (entries.length > 0) {
-				obj.labels = {};
-				entries.forEach(([k, v]) => {
-					obj.labels[k] = v;
-				});
-			}
-		}
-		if (message.args !== "") {
-			obj.args = message.args;
-		}
-		return obj;
-	},
+  toJSON(message: Pod): unknown {
+    const obj: any = {};
+    if (message.name !== "") {
+      obj.name = message.name;
+    }
+    if (message.namespace !== "") {
+      obj.namespace = message.namespace;
+    }
+    if (message.nodeName !== "") {
+      obj.nodeName = message.nodeName;
+    }
+    if (message.dockerImage !== "") {
+      obj.dockerImage = message.dockerImage;
+    }
+    if (message.replicas !== 0) {
+      obj.replicas = Math.round(message.replicas);
+    }
+    if (message.status !== "") {
+      obj.status = message.status;
+    }
+    if (message.cpuRequest !== 0) {
+      obj.cpuRequest = Math.round(message.cpuRequest);
+    }
+    if (message.cpuLimit !== 0) {
+      obj.cpuLimit = Math.round(message.cpuLimit);
+    }
+    if (message.memoryRequest !== 0) {
+      obj.memoryRequest = Math.round(message.memoryRequest);
+    }
+    if (message.memoryLimit !== 0) {
+      obj.memoryLimit = Math.round(message.memoryLimit);
+    }
+    if (message.command !== "") {
+      obj.command = message.command;
+    }
+    if (message.envVariables !== "") {
+      obj.envVariables = message.envVariables;
+    }
+    if (message.ports?.length) {
+      obj.ports = message.ports.map((e) => ContainerPort.toJSON(e));
+    }
+    if (message.uid !== "") {
+      obj.uid = message.uid;
+    }
+    if (message.cpuUsage !== 0) {
+      obj.cpuUsage = Math.round(message.cpuUsage);
+    }
+    if (message.ramUsage !== 0) {
+      obj.ramUsage = Math.round(message.ramUsage);
+    }
+    if (message.labels) {
+      const entries = globalThis.Object.entries(message.labels) as [string, string][];
+      if (entries.length > 0) {
+        obj.labels = {};
+        entries.forEach(([k, v]) => {
+          obj.labels[k] = v;
+        });
+      }
+    }
+    if (message.args !== "") {
+      obj.args = message.args;
+    }
+    return obj;
+  },
 
-	create<I extends Exact<DeepPartial<Pod>, I>>(base?: I): Pod {
-		return Pod.fromPartial(base ?? ({} as any));
-	},
-	fromPartial<I extends Exact<DeepPartial<Pod>, I>>(object: I): Pod {
-		const message = createBasePod();
-		message.name = object.name ?? "";
-		message.namespace = object.namespace ?? "";
-		message.nodeName = object.nodeName ?? "";
-		message.dockerImage = object.dockerImage ?? "";
-		message.replicas = object.replicas ?? 0;
-		message.status = object.status ?? "";
-		message.cpuRequest = object.cpuRequest ?? 0;
-		message.cpuLimit = object.cpuLimit ?? 0;
-		message.memoryRequest = object.memoryRequest ?? 0;
-		message.memoryLimit = object.memoryLimit ?? 0;
-		message.command = object.command ?? "";
-		message.envVariables = object.envVariables ?? "";
-		message.ports =
-			object.ports?.map((e) => ContainerPort.fromPartial(e)) || [];
-		message.uid = object.uid ?? "";
-		message.cpuUsage = object.cpuUsage ?? 0;
-		message.ramUsage = object.ramUsage ?? 0;
-		message.labels = (
-			globalThis.Object.entries(object.labels ?? {}) as [string, string][]
-		).reduce(
-			(acc: { [key: string]: string }, [key, value]: [string, string]) => {
-				if (value !== undefined) {
-					acc[key] = globalThis.String(value);
-				}
-				return acc;
-			},
-			{},
-		);
-		message.args = object.args ?? "";
-		return message;
-	},
+  create<I extends Exact<DeepPartial<Pod>, I>>(base?: I): Pod {
+    return Pod.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<Pod>, I>>(object: I): Pod {
+    const message = createBasePod();
+    message.name = object.name ?? "";
+    message.namespace = object.namespace ?? "";
+    message.nodeName = object.nodeName ?? "";
+    message.dockerImage = object.dockerImage ?? "";
+    message.replicas = object.replicas ?? 0;
+    message.status = object.status ?? "";
+    message.cpuRequest = object.cpuRequest ?? 0;
+    message.cpuLimit = object.cpuLimit ?? 0;
+    message.memoryRequest = object.memoryRequest ?? 0;
+    message.memoryLimit = object.memoryLimit ?? 0;
+    message.command = object.command ?? "";
+    message.envVariables = object.envVariables ?? "";
+    message.ports = object.ports?.map((e) => ContainerPort.fromPartial(e)) || [];
+    message.uid = object.uid ?? "";
+    message.cpuUsage = object.cpuUsage ?? 0;
+    message.ramUsage = object.ramUsage ?? 0;
+    message.labels = (globalThis.Object.entries(object.labels ?? {}) as [string, string][]).reduce(
+      (acc: { [key: string]: string }, [key, value]: [string, string]) => {
+        if (value !== undefined) {
+          acc[key] = globalThis.String(value);
+        }
+        return acc;
+      },
+      {},
+    );
+    message.args = object.args ?? "";
+    return message;
+  },
 };
 
 function createBasePod_LabelsEntry(): Pod_LabelsEntry {
-	return { key: "", value: "" };
+  return { key: "", value: "" };
 }
 
 export const Pod_LabelsEntry: MessageFns<Pod_LabelsEntry> = {
-	encode(
-		message: Pod_LabelsEntry,
-		writer: BinaryWriter = new BinaryWriter(),
-	): BinaryWriter {
-		if (message.key !== "") {
-			writer.uint32(10).string(message.key);
-		}
-		if (message.value !== "") {
-			writer.uint32(18).string(message.value);
-		}
-		return writer;
-	},
+  encode(message: Pod_LabelsEntry, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.key !== "") {
+      writer.uint32(10).string(message.key);
+    }
+    if (message.value !== "") {
+      writer.uint32(18).string(message.value);
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): Pod_LabelsEntry {
-		const reader =
-			input instanceof BinaryReader ? input : new BinaryReader(input);
-		const end = length === undefined ? reader.len : reader.pos + length;
-		const message = createBasePod_LabelsEntry();
-		while (reader.pos < end) {
-			const tag = reader.uint32();
-			switch (tag >>> 3) {
-				case 1: {
-					if (tag !== 10) {
-						break;
-					}
+  decode(input: BinaryReader | Uint8Array, length?: number): Pod_LabelsEntry {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBasePod_LabelsEntry();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
 
-					message.key = reader.string();
-					continue;
-				}
-				case 2: {
-					if (tag !== 18) {
-						break;
-					}
+          message.key = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
 
-					message.value = reader.string();
-					continue;
-				}
-			}
-			if ((tag & 7) === 4 || tag === 0) {
-				break;
-			}
-			reader.skip(tag & 7);
-		}
-		return message;
-	},
+          message.value = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
 
-	fromJSON(object: any): Pod_LabelsEntry {
-		return {
-			key: isSet(object.key) ? globalThis.String(object.key) : "",
-			value: isSet(object.value) ? globalThis.String(object.value) : "",
-		};
-	},
+  fromJSON(object: any): Pod_LabelsEntry {
+    return {
+      key: isSet(object.key) ? globalThis.String(object.key) : "",
+      value: isSet(object.value) ? globalThis.String(object.value) : "",
+    };
+  },
 
-	toJSON(message: Pod_LabelsEntry): unknown {
-		const obj: any = {};
-		if (message.key !== "") {
-			obj.key = message.key;
-		}
-		if (message.value !== "") {
-			obj.value = message.value;
-		}
-		return obj;
-	},
+  toJSON(message: Pod_LabelsEntry): unknown {
+    const obj: any = {};
+    if (message.key !== "") {
+      obj.key = message.key;
+    }
+    if (message.value !== "") {
+      obj.value = message.value;
+    }
+    return obj;
+  },
 
-	create<I extends Exact<DeepPartial<Pod_LabelsEntry>, I>>(
-		base?: I,
-	): Pod_LabelsEntry {
-		return Pod_LabelsEntry.fromPartial(base ?? ({} as any));
-	},
-	fromPartial<I extends Exact<DeepPartial<Pod_LabelsEntry>, I>>(
-		object: I,
-	): Pod_LabelsEntry {
-		const message = createBasePod_LabelsEntry();
-		message.key = object.key ?? "";
-		message.value = object.value ?? "";
-		return message;
-	},
+  create<I extends Exact<DeepPartial<Pod_LabelsEntry>, I>>(base?: I): Pod_LabelsEntry {
+    return Pod_LabelsEntry.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<Pod_LabelsEntry>, I>>(object: I): Pod_LabelsEntry {
+    const message = createBasePod_LabelsEntry();
+    message.key = object.key ?? "";
+    message.value = object.value ?? "";
+    return message;
+  },
 };
 
 function createBaseServicePort(): ServicePort {
-	return { name: "", protocol: "", port: 0, targetPort: 0, nodePort: 0 };
+  return { name: "", protocol: "", port: 0, targetPort: 0, nodePort: 0 };
 }
 
 export const ServicePort: MessageFns<ServicePort> = {
-	encode(
-		message: ServicePort,
-		writer: BinaryWriter = new BinaryWriter(),
-	): BinaryWriter {
-		if (message.name !== "") {
-			writer.uint32(10).string(message.name);
-		}
-		if (message.protocol !== "") {
-			writer.uint32(18).string(message.protocol);
-		}
-		if (message.port !== 0) {
-			writer.uint32(24).int32(message.port);
-		}
-		if (message.targetPort !== 0) {
-			writer.uint32(32).int32(message.targetPort);
-		}
-		if (message.nodePort !== 0) {
-			writer.uint32(40).int32(message.nodePort);
-		}
-		return writer;
-	},
+  encode(message: ServicePort, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.name !== "") {
+      writer.uint32(10).string(message.name);
+    }
+    if (message.protocol !== "") {
+      writer.uint32(18).string(message.protocol);
+    }
+    if (message.port !== 0) {
+      writer.uint32(24).int32(message.port);
+    }
+    if (message.targetPort !== 0) {
+      writer.uint32(32).int32(message.targetPort);
+    }
+    if (message.nodePort !== 0) {
+      writer.uint32(40).int32(message.nodePort);
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): ServicePort {
-		const reader =
-			input instanceof BinaryReader ? input : new BinaryReader(input);
-		const end = length === undefined ? reader.len : reader.pos + length;
-		const message = createBaseServicePort();
-		while (reader.pos < end) {
-			const tag = reader.uint32();
-			switch (tag >>> 3) {
-				case 1: {
-					if (tag !== 10) {
-						break;
-					}
+  decode(input: BinaryReader | Uint8Array, length?: number): ServicePort {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseServicePort();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
 
-					message.name = reader.string();
-					continue;
-				}
-				case 2: {
-					if (tag !== 18) {
-						break;
-					}
+          message.name = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
 
-					message.protocol = reader.string();
-					continue;
-				}
-				case 3: {
-					if (tag !== 24) {
-						break;
-					}
+          message.protocol = reader.string();
+          continue;
+        }
+        case 3: {
+          if (tag !== 24) {
+            break;
+          }
 
-					message.port = reader.int32();
-					continue;
-				}
-				case 4: {
-					if (tag !== 32) {
-						break;
-					}
+          message.port = reader.int32();
+          continue;
+        }
+        case 4: {
+          if (tag !== 32) {
+            break;
+          }
 
-					message.targetPort = reader.int32();
-					continue;
-				}
-				case 5: {
-					if (tag !== 40) {
-						break;
-					}
+          message.targetPort = reader.int32();
+          continue;
+        }
+        case 5: {
+          if (tag !== 40) {
+            break;
+          }
 
-					message.nodePort = reader.int32();
-					continue;
-				}
-			}
-			if ((tag & 7) === 4 || tag === 0) {
-				break;
-			}
-			reader.skip(tag & 7);
-		}
-		return message;
-	},
+          message.nodePort = reader.int32();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
 
-	fromJSON(object: any): ServicePort {
-		return {
-			name: isSet(object.name) ? globalThis.String(object.name) : "",
-			protocol: isSet(object.protocol)
-				? globalThis.String(object.protocol)
-				: "",
-			port: isSet(object.port) ? globalThis.Number(object.port) : 0,
-			targetPort: isSet(object.targetPort)
-				? globalThis.Number(object.targetPort)
-				: isSet(object.target_port)
-					? globalThis.Number(object.target_port)
-					: 0,
-			nodePort: isSet(object.nodePort)
-				? globalThis.Number(object.nodePort)
-				: isSet(object.node_port)
-					? globalThis.Number(object.node_port)
-					: 0,
-		};
-	},
+  fromJSON(object: any): ServicePort {
+    return {
+      name: isSet(object.name) ? globalThis.String(object.name) : "",
+      protocol: isSet(object.protocol) ? globalThis.String(object.protocol) : "",
+      port: isSet(object.port) ? globalThis.Number(object.port) : 0,
+      targetPort: isSet(object.targetPort)
+        ? globalThis.Number(object.targetPort)
+        : isSet(object.target_port)
+        ? globalThis.Number(object.target_port)
+        : 0,
+      nodePort: isSet(object.nodePort)
+        ? globalThis.Number(object.nodePort)
+        : isSet(object.node_port)
+        ? globalThis.Number(object.node_port)
+        : 0,
+    };
+  },
 
-	toJSON(message: ServicePort): unknown {
-		const obj: any = {};
-		if (message.name !== "") {
-			obj.name = message.name;
-		}
-		if (message.protocol !== "") {
-			obj.protocol = message.protocol;
-		}
-		if (message.port !== 0) {
-			obj.port = Math.round(message.port);
-		}
-		if (message.targetPort !== 0) {
-			obj.targetPort = Math.round(message.targetPort);
-		}
-		if (message.nodePort !== 0) {
-			obj.nodePort = Math.round(message.nodePort);
-		}
-		return obj;
-	},
+  toJSON(message: ServicePort): unknown {
+    const obj: any = {};
+    if (message.name !== "") {
+      obj.name = message.name;
+    }
+    if (message.protocol !== "") {
+      obj.protocol = message.protocol;
+    }
+    if (message.port !== 0) {
+      obj.port = Math.round(message.port);
+    }
+    if (message.targetPort !== 0) {
+      obj.targetPort = Math.round(message.targetPort);
+    }
+    if (message.nodePort !== 0) {
+      obj.nodePort = Math.round(message.nodePort);
+    }
+    return obj;
+  },
 
-	create<I extends Exact<DeepPartial<ServicePort>, I>>(base?: I): ServicePort {
-		return ServicePort.fromPartial(base ?? ({} as any));
-	},
-	fromPartial<I extends Exact<DeepPartial<ServicePort>, I>>(
-		object: I,
-	): ServicePort {
-		const message = createBaseServicePort();
-		message.name = object.name ?? "";
-		message.protocol = object.protocol ?? "";
-		message.port = object.port ?? 0;
-		message.targetPort = object.targetPort ?? 0;
-		message.nodePort = object.nodePort ?? 0;
-		return message;
-	},
+  create<I extends Exact<DeepPartial<ServicePort>, I>>(base?: I): ServicePort {
+    return ServicePort.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<ServicePort>, I>>(object: I): ServicePort {
+    const message = createBaseServicePort();
+    message.name = object.name ?? "";
+    message.protocol = object.protocol ?? "";
+    message.port = object.port ?? 0;
+    message.targetPort = object.targetPort ?? 0;
+    message.nodePort = object.nodePort ?? 0;
+    return message;
+  },
 };
 
 function createBaseService(): Service {
-	return {
-		name: "",
-		namespace: "",
-		type: "",
-		clusterIp: "",
-		selector: {},
-		domain: "",
-		uid: "",
-		labels: {},
-		ports: [],
-	};
+  return { name: "", namespace: "", type: "", clusterIp: "", selector: {}, domain: "", uid: "", labels: {}, ports: [] };
 }
 
 export const Service: MessageFns<Service> = {
-	encode(
-		message: Service,
-		writer: BinaryWriter = new BinaryWriter(),
-	): BinaryWriter {
-		if (message.name !== "") {
-			writer.uint32(10).string(message.name);
-		}
-		if (message.namespace !== "") {
-			writer.uint32(18).string(message.namespace);
-		}
-		if (message.type !== "") {
-			writer.uint32(26).string(message.type);
-		}
-		if (message.clusterIp !== "") {
-			writer.uint32(34).string(message.clusterIp);
-		}
-		globalThis.Object.entries(message.selector).forEach(
-			([key, value]: [string, string]) => {
-				Service_SelectorEntry.encode(
-					{ key: key as any, value },
-					writer.uint32(42).fork(),
-				).join();
-			},
-		);
-		if (message.domain !== "") {
-			writer.uint32(50).string(message.domain);
-		}
-		if (message.uid !== "") {
-			writer.uint32(58).string(message.uid);
-		}
-		globalThis.Object.entries(message.labels).forEach(
-			([key, value]: [string, string]) => {
-				Service_LabelsEntry.encode(
-					{ key: key as any, value },
-					writer.uint32(66).fork(),
-				).join();
-			},
-		);
-		for (const v of message.ports) {
-			ServicePort.encode(v!, writer.uint32(74).fork()).join();
-		}
-		return writer;
-	},
+  encode(message: Service, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.name !== "") {
+      writer.uint32(10).string(message.name);
+    }
+    if (message.namespace !== "") {
+      writer.uint32(18).string(message.namespace);
+    }
+    if (message.type !== "") {
+      writer.uint32(26).string(message.type);
+    }
+    if (message.clusterIp !== "") {
+      writer.uint32(34).string(message.clusterIp);
+    }
+    globalThis.Object.entries(message.selector).forEach(([key, value]: [string, string]) => {
+      Service_SelectorEntry.encode({ key: key as any, value }, writer.uint32(42).fork()).join();
+    });
+    if (message.domain !== "") {
+      writer.uint32(50).string(message.domain);
+    }
+    if (message.uid !== "") {
+      writer.uint32(58).string(message.uid);
+    }
+    globalThis.Object.entries(message.labels).forEach(([key, value]: [string, string]) => {
+      Service_LabelsEntry.encode({ key: key as any, value }, writer.uint32(66).fork()).join();
+    });
+    for (const v of message.ports) {
+      ServicePort.encode(v!, writer.uint32(74).fork()).join();
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): Service {
-		const reader =
-			input instanceof BinaryReader ? input : new BinaryReader(input);
-		const end = length === undefined ? reader.len : reader.pos + length;
-		const message = createBaseService();
-		while (reader.pos < end) {
-			const tag = reader.uint32();
-			switch (tag >>> 3) {
-				case 1: {
-					if (tag !== 10) {
-						break;
-					}
+  decode(input: BinaryReader | Uint8Array, length?: number): Service {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseService();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
 
-					message.name = reader.string();
-					continue;
-				}
-				case 2: {
-					if (tag !== 18) {
-						break;
-					}
+          message.name = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
 
-					message.namespace = reader.string();
-					continue;
-				}
-				case 3: {
-					if (tag !== 26) {
-						break;
-					}
+          message.namespace = reader.string();
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
 
-					message.type = reader.string();
-					continue;
-				}
-				case 4: {
-					if (tag !== 34) {
-						break;
-					}
+          message.type = reader.string();
+          continue;
+        }
+        case 4: {
+          if (tag !== 34) {
+            break;
+          }
 
-					message.clusterIp = reader.string();
-					continue;
-				}
-				case 5: {
-					if (tag !== 42) {
-						break;
-					}
+          message.clusterIp = reader.string();
+          continue;
+        }
+        case 5: {
+          if (tag !== 42) {
+            break;
+          }
 
-					const entry5 = Service_SelectorEntry.decode(reader, reader.uint32());
-					if (entry5.value !== undefined) {
-						message.selector[entry5.key] = entry5.value;
-					}
-					continue;
-				}
-				case 6: {
-					if (tag !== 50) {
-						break;
-					}
+          const entry5 = Service_SelectorEntry.decode(reader, reader.uint32());
+          if (entry5.value !== undefined) {
+            message.selector[entry5.key] = entry5.value;
+          }
+          continue;
+        }
+        case 6: {
+          if (tag !== 50) {
+            break;
+          }
 
-					message.domain = reader.string();
-					continue;
-				}
-				case 7: {
-					if (tag !== 58) {
-						break;
-					}
+          message.domain = reader.string();
+          continue;
+        }
+        case 7: {
+          if (tag !== 58) {
+            break;
+          }
 
-					message.uid = reader.string();
-					continue;
-				}
-				case 8: {
-					if (tag !== 66) {
-						break;
-					}
+          message.uid = reader.string();
+          continue;
+        }
+        case 8: {
+          if (tag !== 66) {
+            break;
+          }
 
-					const entry8 = Service_LabelsEntry.decode(reader, reader.uint32());
-					if (entry8.value !== undefined) {
-						message.labels[entry8.key] = entry8.value;
-					}
-					continue;
-				}
-				case 9: {
-					if (tag !== 74) {
-						break;
-					}
+          const entry8 = Service_LabelsEntry.decode(reader, reader.uint32());
+          if (entry8.value !== undefined) {
+            message.labels[entry8.key] = entry8.value;
+          }
+          continue;
+        }
+        case 9: {
+          if (tag !== 74) {
+            break;
+          }
 
-					message.ports.push(ServicePort.decode(reader, reader.uint32()));
-					continue;
-				}
-			}
-			if ((tag & 7) === 4 || tag === 0) {
-				break;
-			}
-			reader.skip(tag & 7);
-		}
-		return message;
-	},
+          message.ports.push(ServicePort.decode(reader, reader.uint32()));
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
 
-	fromJSON(object: any): Service {
-		return {
-			name: isSet(object.name) ? globalThis.String(object.name) : "",
-			namespace: isSet(object.namespace)
-				? globalThis.String(object.namespace)
-				: "",
-			type: isSet(object.type) ? globalThis.String(object.type) : "",
-			clusterIp: isSet(object.clusterIp)
-				? globalThis.String(object.clusterIp)
-				: isSet(object.cluster_ip)
-					? globalThis.String(object.cluster_ip)
-					: "",
-			selector: isObject(object.selector)
-				? (
-						globalThis.Object.entries(object.selector) as [string, any][]
-					).reduce(
-						(acc: { [key: string]: string }, [key, value]: [string, any]) => {
-							acc[key] = globalThis.String(value);
-							return acc;
-						},
-						{},
-					)
-				: {},
-			domain: isSet(object.domain) ? globalThis.String(object.domain) : "",
-			uid: isSet(object.uid) ? globalThis.String(object.uid) : "",
-			labels: isObject(object.labels)
-				? (globalThis.Object.entries(object.labels) as [string, any][]).reduce(
-						(acc: { [key: string]: string }, [key, value]: [string, any]) => {
-							acc[key] = globalThis.String(value);
-							return acc;
-						},
-						{},
-					)
-				: {},
-			ports: globalThis.Array.isArray(object?.ports)
-				? object.ports.map((e: any) => ServicePort.fromJSON(e))
-				: [],
-		};
-	},
+  fromJSON(object: any): Service {
+    return {
+      name: isSet(object.name) ? globalThis.String(object.name) : "",
+      namespace: isSet(object.namespace) ? globalThis.String(object.namespace) : "",
+      type: isSet(object.type) ? globalThis.String(object.type) : "",
+      clusterIp: isSet(object.clusterIp)
+        ? globalThis.String(object.clusterIp)
+        : isSet(object.cluster_ip)
+        ? globalThis.String(object.cluster_ip)
+        : "",
+      selector: isObject(object.selector)
+        ? (globalThis.Object.entries(object.selector) as [string, any][]).reduce(
+          (acc: { [key: string]: string }, [key, value]: [string, any]) => {
+            acc[key] = globalThis.String(value);
+            return acc;
+          },
+          {},
+        )
+        : {},
+      domain: isSet(object.domain) ? globalThis.String(object.domain) : "",
+      uid: isSet(object.uid) ? globalThis.String(object.uid) : "",
+      labels: isObject(object.labels)
+        ? (globalThis.Object.entries(object.labels) as [string, any][]).reduce(
+          (acc: { [key: string]: string }, [key, value]: [string, any]) => {
+            acc[key] = globalThis.String(value);
+            return acc;
+          },
+          {},
+        )
+        : {},
+      ports: globalThis.Array.isArray(object?.ports)
+        ? object.ports.map((e: any) => ServicePort.fromJSON(e))
+        : [],
+    };
+  },
 
-	toJSON(message: Service): unknown {
-		const obj: any = {};
-		if (message.name !== "") {
-			obj.name = message.name;
-		}
-		if (message.namespace !== "") {
-			obj.namespace = message.namespace;
-		}
-		if (message.type !== "") {
-			obj.type = message.type;
-		}
-		if (message.clusterIp !== "") {
-			obj.clusterIp = message.clusterIp;
-		}
-		if (message.selector) {
-			const entries = globalThis.Object.entries(message.selector) as [
-				string,
-				string,
-			][];
-			if (entries.length > 0) {
-				obj.selector = {};
-				entries.forEach(([k, v]) => {
-					obj.selector[k] = v;
-				});
-			}
-		}
-		if (message.domain !== "") {
-			obj.domain = message.domain;
-		}
-		if (message.uid !== "") {
-			obj.uid = message.uid;
-		}
-		if (message.labels) {
-			const entries = globalThis.Object.entries(message.labels) as [
-				string,
-				string,
-			][];
-			if (entries.length > 0) {
-				obj.labels = {};
-				entries.forEach(([k, v]) => {
-					obj.labels[k] = v;
-				});
-			}
-		}
-		if (message.ports?.length) {
-			obj.ports = message.ports.map((e) => ServicePort.toJSON(e));
-		}
-		return obj;
-	},
+  toJSON(message: Service): unknown {
+    const obj: any = {};
+    if (message.name !== "") {
+      obj.name = message.name;
+    }
+    if (message.namespace !== "") {
+      obj.namespace = message.namespace;
+    }
+    if (message.type !== "") {
+      obj.type = message.type;
+    }
+    if (message.clusterIp !== "") {
+      obj.clusterIp = message.clusterIp;
+    }
+    if (message.selector) {
+      const entries = globalThis.Object.entries(message.selector) as [string, string][];
+      if (entries.length > 0) {
+        obj.selector = {};
+        entries.forEach(([k, v]) => {
+          obj.selector[k] = v;
+        });
+      }
+    }
+    if (message.domain !== "") {
+      obj.domain = message.domain;
+    }
+    if (message.uid !== "") {
+      obj.uid = message.uid;
+    }
+    if (message.labels) {
+      const entries = globalThis.Object.entries(message.labels) as [string, string][];
+      if (entries.length > 0) {
+        obj.labels = {};
+        entries.forEach(([k, v]) => {
+          obj.labels[k] = v;
+        });
+      }
+    }
+    if (message.ports?.length) {
+      obj.ports = message.ports.map((e) => ServicePort.toJSON(e));
+    }
+    return obj;
+  },
 
-	create<I extends Exact<DeepPartial<Service>, I>>(base?: I): Service {
-		return Service.fromPartial(base ?? ({} as any));
-	},
-	fromPartial<I extends Exact<DeepPartial<Service>, I>>(object: I): Service {
-		const message = createBaseService();
-		message.name = object.name ?? "";
-		message.namespace = object.namespace ?? "";
-		message.type = object.type ?? "";
-		message.clusterIp = object.clusterIp ?? "";
-		message.selector = (
-			globalThis.Object.entries(object.selector ?? {}) as [string, string][]
-		).reduce(
-			(acc: { [key: string]: string }, [key, value]: [string, string]) => {
-				if (value !== undefined) {
-					acc[key] = globalThis.String(value);
-				}
-				return acc;
-			},
-			{},
-		);
-		message.domain = object.domain ?? "";
-		message.uid = object.uid ?? "";
-		message.labels = (
-			globalThis.Object.entries(object.labels ?? {}) as [string, string][]
-		).reduce(
-			(acc: { [key: string]: string }, [key, value]: [string, string]) => {
-				if (value !== undefined) {
-					acc[key] = globalThis.String(value);
-				}
-				return acc;
-			},
-			{},
-		);
-		message.ports = object.ports?.map((e) => ServicePort.fromPartial(e)) || [];
-		return message;
-	},
+  create<I extends Exact<DeepPartial<Service>, I>>(base?: I): Service {
+    return Service.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<Service>, I>>(object: I): Service {
+    const message = createBaseService();
+    message.name = object.name ?? "";
+    message.namespace = object.namespace ?? "";
+    message.type = object.type ?? "";
+    message.clusterIp = object.clusterIp ?? "";
+    message.selector = (globalThis.Object.entries(object.selector ?? {}) as [string, string][]).reduce(
+      (acc: { [key: string]: string }, [key, value]: [string, string]) => {
+        if (value !== undefined) {
+          acc[key] = globalThis.String(value);
+        }
+        return acc;
+      },
+      {},
+    );
+    message.domain = object.domain ?? "";
+    message.uid = object.uid ?? "";
+    message.labels = (globalThis.Object.entries(object.labels ?? {}) as [string, string][]).reduce(
+      (acc: { [key: string]: string }, [key, value]: [string, string]) => {
+        if (value !== undefined) {
+          acc[key] = globalThis.String(value);
+        }
+        return acc;
+      },
+      {},
+    );
+    message.ports = object.ports?.map((e) => ServicePort.fromPartial(e)) || [];
+    return message;
+  },
 };
 
 function createBaseService_SelectorEntry(): Service_SelectorEntry {
-	return { key: "", value: "" };
+  return { key: "", value: "" };
 }
 
 export const Service_SelectorEntry: MessageFns<Service_SelectorEntry> = {
-	encode(
-		message: Service_SelectorEntry,
-		writer: BinaryWriter = new BinaryWriter(),
-	): BinaryWriter {
-		if (message.key !== "") {
-			writer.uint32(10).string(message.key);
-		}
-		if (message.value !== "") {
-			writer.uint32(18).string(message.value);
-		}
-		return writer;
-	},
+  encode(message: Service_SelectorEntry, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.key !== "") {
+      writer.uint32(10).string(message.key);
+    }
+    if (message.value !== "") {
+      writer.uint32(18).string(message.value);
+    }
+    return writer;
+  },
 
-	decode(
-		input: BinaryReader | Uint8Array,
-		length?: number,
-	): Service_SelectorEntry {
-		const reader =
-			input instanceof BinaryReader ? input : new BinaryReader(input);
-		const end = length === undefined ? reader.len : reader.pos + length;
-		const message = createBaseService_SelectorEntry();
-		while (reader.pos < end) {
-			const tag = reader.uint32();
-			switch (tag >>> 3) {
-				case 1: {
-					if (tag !== 10) {
-						break;
-					}
+  decode(input: BinaryReader | Uint8Array, length?: number): Service_SelectorEntry {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseService_SelectorEntry();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
 
-					message.key = reader.string();
-					continue;
-				}
-				case 2: {
-					if (tag !== 18) {
-						break;
-					}
+          message.key = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
 
-					message.value = reader.string();
-					continue;
-				}
-			}
-			if ((tag & 7) === 4 || tag === 0) {
-				break;
-			}
-			reader.skip(tag & 7);
-		}
-		return message;
-	},
+          message.value = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
 
-	fromJSON(object: any): Service_SelectorEntry {
-		return {
-			key: isSet(object.key) ? globalThis.String(object.key) : "",
-			value: isSet(object.value) ? globalThis.String(object.value) : "",
-		};
-	},
+  fromJSON(object: any): Service_SelectorEntry {
+    return {
+      key: isSet(object.key) ? globalThis.String(object.key) : "",
+      value: isSet(object.value) ? globalThis.String(object.value) : "",
+    };
+  },
 
-	toJSON(message: Service_SelectorEntry): unknown {
-		const obj: any = {};
-		if (message.key !== "") {
-			obj.key = message.key;
-		}
-		if (message.value !== "") {
-			obj.value = message.value;
-		}
-		return obj;
-	},
+  toJSON(message: Service_SelectorEntry): unknown {
+    const obj: any = {};
+    if (message.key !== "") {
+      obj.key = message.key;
+    }
+    if (message.value !== "") {
+      obj.value = message.value;
+    }
+    return obj;
+  },
 
-	create<I extends Exact<DeepPartial<Service_SelectorEntry>, I>>(
-		base?: I,
-	): Service_SelectorEntry {
-		return Service_SelectorEntry.fromPartial(base ?? ({} as any));
-	},
-	fromPartial<I extends Exact<DeepPartial<Service_SelectorEntry>, I>>(
-		object: I,
-	): Service_SelectorEntry {
-		const message = createBaseService_SelectorEntry();
-		message.key = object.key ?? "";
-		message.value = object.value ?? "";
-		return message;
-	},
+  create<I extends Exact<DeepPartial<Service_SelectorEntry>, I>>(base?: I): Service_SelectorEntry {
+    return Service_SelectorEntry.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<Service_SelectorEntry>, I>>(object: I): Service_SelectorEntry {
+    const message = createBaseService_SelectorEntry();
+    message.key = object.key ?? "";
+    message.value = object.value ?? "";
+    return message;
+  },
 };
 
 function createBaseService_LabelsEntry(): Service_LabelsEntry {
-	return { key: "", value: "" };
+  return { key: "", value: "" };
 }
 
 export const Service_LabelsEntry: MessageFns<Service_LabelsEntry> = {
-	encode(
-		message: Service_LabelsEntry,
-		writer: BinaryWriter = new BinaryWriter(),
-	): BinaryWriter {
-		if (message.key !== "") {
-			writer.uint32(10).string(message.key);
-		}
-		if (message.value !== "") {
-			writer.uint32(18).string(message.value);
-		}
-		return writer;
-	},
+  encode(message: Service_LabelsEntry, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.key !== "") {
+      writer.uint32(10).string(message.key);
+    }
+    if (message.value !== "") {
+      writer.uint32(18).string(message.value);
+    }
+    return writer;
+  },
 
-	decode(
-		input: BinaryReader | Uint8Array,
-		length?: number,
-	): Service_LabelsEntry {
-		const reader =
-			input instanceof BinaryReader ? input : new BinaryReader(input);
-		const end = length === undefined ? reader.len : reader.pos + length;
-		const message = createBaseService_LabelsEntry();
-		while (reader.pos < end) {
-			const tag = reader.uint32();
-			switch (tag >>> 3) {
-				case 1: {
-					if (tag !== 10) {
-						break;
-					}
+  decode(input: BinaryReader | Uint8Array, length?: number): Service_LabelsEntry {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseService_LabelsEntry();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
 
-					message.key = reader.string();
-					continue;
-				}
-				case 2: {
-					if (tag !== 18) {
-						break;
-					}
+          message.key = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
 
-					message.value = reader.string();
-					continue;
-				}
-			}
-			if ((tag & 7) === 4 || tag === 0) {
-				break;
-			}
-			reader.skip(tag & 7);
-		}
-		return message;
-	},
+          message.value = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
 
-	fromJSON(object: any): Service_LabelsEntry {
-		return {
-			key: isSet(object.key) ? globalThis.String(object.key) : "",
-			value: isSet(object.value) ? globalThis.String(object.value) : "",
-		};
-	},
+  fromJSON(object: any): Service_LabelsEntry {
+    return {
+      key: isSet(object.key) ? globalThis.String(object.key) : "",
+      value: isSet(object.value) ? globalThis.String(object.value) : "",
+    };
+  },
 
-	toJSON(message: Service_LabelsEntry): unknown {
-		const obj: any = {};
-		if (message.key !== "") {
-			obj.key = message.key;
-		}
-		if (message.value !== "") {
-			obj.value = message.value;
-		}
-		return obj;
-	},
+  toJSON(message: Service_LabelsEntry): unknown {
+    const obj: any = {};
+    if (message.key !== "") {
+      obj.key = message.key;
+    }
+    if (message.value !== "") {
+      obj.value = message.value;
+    }
+    return obj;
+  },
 
-	create<I extends Exact<DeepPartial<Service_LabelsEntry>, I>>(
-		base?: I,
-	): Service_LabelsEntry {
-		return Service_LabelsEntry.fromPartial(base ?? ({} as any));
-	},
-	fromPartial<I extends Exact<DeepPartial<Service_LabelsEntry>, I>>(
-		object: I,
-	): Service_LabelsEntry {
-		const message = createBaseService_LabelsEntry();
-		message.key = object.key ?? "";
-		message.value = object.value ?? "";
-		return message;
-	},
+  create<I extends Exact<DeepPartial<Service_LabelsEntry>, I>>(base?: I): Service_LabelsEntry {
+    return Service_LabelsEntry.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<Service_LabelsEntry>, I>>(object: I): Service_LabelsEntry {
+    const message = createBaseService_LabelsEntry();
+    message.key = object.key ?? "";
+    message.value = object.value ?? "";
+    return message;
+  },
 };
 
 function createBaseConfigMap(): ConfigMap {
-	return {
-		name: "",
-		namespace: "",
-		data: {},
-		binaryData: {},
-		uid: "",
-		labels: {},
-		immutable: false,
-	};
+  return { name: "", namespace: "", data: {}, binaryData: {}, uid: "", labels: {}, immutable: false };
 }
 
 export const ConfigMap: MessageFns<ConfigMap> = {
-	encode(
-		message: ConfigMap,
-		writer: BinaryWriter = new BinaryWriter(),
-	): BinaryWriter {
-		if (message.name !== "") {
-			writer.uint32(10).string(message.name);
-		}
-		if (message.namespace !== "") {
-			writer.uint32(18).string(message.namespace);
-		}
-		globalThis.Object.entries(message.data).forEach(
-			([key, value]: [string, string]) => {
-				ConfigMap_DataEntry.encode(
-					{ key: key as any, value },
-					writer.uint32(26).fork(),
-				).join();
-			},
-		);
-		globalThis.Object.entries(message.binaryData).forEach(
-			([key, value]: [string, Uint8Array]) => {
-				ConfigMap_BinaryDataEntry.encode(
-					{ key: key as any, value },
-					writer.uint32(34).fork(),
-				).join();
-			},
-		);
-		if (message.uid !== "") {
-			writer.uint32(42).string(message.uid);
-		}
-		globalThis.Object.entries(message.labels).forEach(
-			([key, value]: [string, string]) => {
-				ConfigMap_LabelsEntry.encode(
-					{ key: key as any, value },
-					writer.uint32(50).fork(),
-				).join();
-			},
-		);
-		if (message.immutable !== false) {
-			writer.uint32(56).bool(message.immutable);
-		}
-		return writer;
-	},
+  encode(message: ConfigMap, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.name !== "") {
+      writer.uint32(10).string(message.name);
+    }
+    if (message.namespace !== "") {
+      writer.uint32(18).string(message.namespace);
+    }
+    globalThis.Object.entries(message.data).forEach(([key, value]: [string, string]) => {
+      ConfigMap_DataEntry.encode({ key: key as any, value }, writer.uint32(26).fork()).join();
+    });
+    globalThis.Object.entries(message.binaryData).forEach(([key, value]: [string, Uint8Array]) => {
+      ConfigMap_BinaryDataEntry.encode({ key: key as any, value }, writer.uint32(34).fork()).join();
+    });
+    if (message.uid !== "") {
+      writer.uint32(42).string(message.uid);
+    }
+    globalThis.Object.entries(message.labels).forEach(([key, value]: [string, string]) => {
+      ConfigMap_LabelsEntry.encode({ key: key as any, value }, writer.uint32(50).fork()).join();
+    });
+    if (message.immutable !== false) {
+      writer.uint32(56).bool(message.immutable);
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): ConfigMap {
-		const reader =
-			input instanceof BinaryReader ? input : new BinaryReader(input);
-		const end = length === undefined ? reader.len : reader.pos + length;
-		const message = createBaseConfigMap();
-		while (reader.pos < end) {
-			const tag = reader.uint32();
-			switch (tag >>> 3) {
-				case 1: {
-					if (tag !== 10) {
-						break;
-					}
+  decode(input: BinaryReader | Uint8Array, length?: number): ConfigMap {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseConfigMap();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
 
-					message.name = reader.string();
-					continue;
-				}
-				case 2: {
-					if (tag !== 18) {
-						break;
-					}
+          message.name = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
 
-					message.namespace = reader.string();
-					continue;
-				}
-				case 3: {
-					if (tag !== 26) {
-						break;
-					}
+          message.namespace = reader.string();
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
 
-					const entry3 = ConfigMap_DataEntry.decode(reader, reader.uint32());
-					if (entry3.value !== undefined) {
-						message.data[entry3.key] = entry3.value;
-					}
-					continue;
-				}
-				case 4: {
-					if (tag !== 34) {
-						break;
-					}
+          const entry3 = ConfigMap_DataEntry.decode(reader, reader.uint32());
+          if (entry3.value !== undefined) {
+            message.data[entry3.key] = entry3.value;
+          }
+          continue;
+        }
+        case 4: {
+          if (tag !== 34) {
+            break;
+          }
 
-					const entry4 = ConfigMap_BinaryDataEntry.decode(
-						reader,
-						reader.uint32(),
-					);
-					if (entry4.value !== undefined) {
-						message.binaryData[entry4.key] = entry4.value;
-					}
-					continue;
-				}
-				case 5: {
-					if (tag !== 42) {
-						break;
-					}
+          const entry4 = ConfigMap_BinaryDataEntry.decode(reader, reader.uint32());
+          if (entry4.value !== undefined) {
+            message.binaryData[entry4.key] = entry4.value;
+          }
+          continue;
+        }
+        case 5: {
+          if (tag !== 42) {
+            break;
+          }
 
-					message.uid = reader.string();
-					continue;
-				}
-				case 6: {
-					if (tag !== 50) {
-						break;
-					}
+          message.uid = reader.string();
+          continue;
+        }
+        case 6: {
+          if (tag !== 50) {
+            break;
+          }
 
-					const entry6 = ConfigMap_LabelsEntry.decode(reader, reader.uint32());
-					if (entry6.value !== undefined) {
-						message.labels[entry6.key] = entry6.value;
-					}
-					continue;
-				}
-				case 7: {
-					if (tag !== 56) {
-						break;
-					}
+          const entry6 = ConfigMap_LabelsEntry.decode(reader, reader.uint32());
+          if (entry6.value !== undefined) {
+            message.labels[entry6.key] = entry6.value;
+          }
+          continue;
+        }
+        case 7: {
+          if (tag !== 56) {
+            break;
+          }
 
-					message.immutable = reader.bool();
-					continue;
-				}
-			}
-			if ((tag & 7) === 4 || tag === 0) {
-				break;
-			}
-			reader.skip(tag & 7);
-		}
-		return message;
-	},
+          message.immutable = reader.bool();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
 
-	fromJSON(object: any): ConfigMap {
-		return {
-			name: isSet(object.name) ? globalThis.String(object.name) : "",
-			namespace: isSet(object.namespace)
-				? globalThis.String(object.namespace)
-				: "",
-			data: isObject(object.data)
-				? (globalThis.Object.entries(object.data) as [string, any][]).reduce(
-						(acc: { [key: string]: string }, [key, value]: [string, any]) => {
-							acc[key] = globalThis.String(value);
-							return acc;
-						},
-						{},
-					)
-				: {},
-			binaryData: isObject(object.binaryData)
-				? (
-						globalThis.Object.entries(object.binaryData) as [string, any][]
-					).reduce(
-						(
-							acc: { [key: string]: Uint8Array },
-							[key, value]: [string, any],
-						) => {
-							acc[key] = bytesFromBase64(value as string);
-							return acc;
-						},
-						{},
-					)
-				: isObject(object.binary_data)
-					? (
-							globalThis.Object.entries(object.binary_data) as [string, any][]
-						).reduce(
-							(
-								acc: { [key: string]: Uint8Array },
-								[key, value]: [string, any],
-							) => {
-								acc[key] = bytesFromBase64(value as string);
-								return acc;
-							},
-							{},
-						)
-					: {},
-			uid: isSet(object.uid) ? globalThis.String(object.uid) : "",
-			labels: isObject(object.labels)
-				? (globalThis.Object.entries(object.labels) as [string, any][]).reduce(
-						(acc: { [key: string]: string }, [key, value]: [string, any]) => {
-							acc[key] = globalThis.String(value);
-							return acc;
-						},
-						{},
-					)
-				: {},
-			immutable: isSet(object.immutable)
-				? globalThis.Boolean(object.immutable)
-				: false,
-		};
-	},
+  fromJSON(object: any): ConfigMap {
+    return {
+      name: isSet(object.name) ? globalThis.String(object.name) : "",
+      namespace: isSet(object.namespace) ? globalThis.String(object.namespace) : "",
+      data: isObject(object.data)
+        ? (globalThis.Object.entries(object.data) as [string, any][]).reduce(
+          (acc: { [key: string]: string }, [key, value]: [string, any]) => {
+            acc[key] = globalThis.String(value);
+            return acc;
+          },
+          {},
+        )
+        : {},
+      binaryData: isObject(object.binaryData)
+        ? (globalThis.Object.entries(object.binaryData) as [string, any][]).reduce(
+          (acc: { [key: string]: Uint8Array }, [key, value]: [string, any]) => {
+            acc[key] = bytesFromBase64(value as string);
+            return acc;
+          },
+          {},
+        )
+        : isObject(object.binary_data)
+        ? (globalThis.Object.entries(object.binary_data) as [string, any][]).reduce(
+          (acc: { [key: string]: Uint8Array }, [key, value]: [string, any]) => {
+            acc[key] = bytesFromBase64(value as string);
+            return acc;
+          },
+          {},
+        )
+        : {},
+      uid: isSet(object.uid) ? globalThis.String(object.uid) : "",
+      labels: isObject(object.labels)
+        ? (globalThis.Object.entries(object.labels) as [string, any][]).reduce(
+          (acc: { [key: string]: string }, [key, value]: [string, any]) => {
+            acc[key] = globalThis.String(value);
+            return acc;
+          },
+          {},
+        )
+        : {},
+      immutable: isSet(object.immutable) ? globalThis.Boolean(object.immutable) : false,
+    };
+  },
 
-	toJSON(message: ConfigMap): unknown {
-		const obj: any = {};
-		if (message.name !== "") {
-			obj.name = message.name;
-		}
-		if (message.namespace !== "") {
-			obj.namespace = message.namespace;
-		}
-		if (message.data) {
-			const entries = globalThis.Object.entries(message.data) as [
-				string,
-				string,
-			][];
-			if (entries.length > 0) {
-				obj.data = {};
-				entries.forEach(([k, v]) => {
-					obj.data[k] = v;
-				});
-			}
-		}
-		if (message.binaryData) {
-			const entries = globalThis.Object.entries(message.binaryData) as [
-				string,
-				Uint8Array,
-			][];
-			if (entries.length > 0) {
-				obj.binaryData = {};
-				entries.forEach(([k, v]) => {
-					obj.binaryData[k] = base64FromBytes(v);
-				});
-			}
-		}
-		if (message.uid !== "") {
-			obj.uid = message.uid;
-		}
-		if (message.labels) {
-			const entries = globalThis.Object.entries(message.labels) as [
-				string,
-				string,
-			][];
-			if (entries.length > 0) {
-				obj.labels = {};
-				entries.forEach(([k, v]) => {
-					obj.labels[k] = v;
-				});
-			}
-		}
-		if (message.immutable !== false) {
-			obj.immutable = message.immutable;
-		}
-		return obj;
-	},
+  toJSON(message: ConfigMap): unknown {
+    const obj: any = {};
+    if (message.name !== "") {
+      obj.name = message.name;
+    }
+    if (message.namespace !== "") {
+      obj.namespace = message.namespace;
+    }
+    if (message.data) {
+      const entries = globalThis.Object.entries(message.data) as [string, string][];
+      if (entries.length > 0) {
+        obj.data = {};
+        entries.forEach(([k, v]) => {
+          obj.data[k] = v;
+        });
+      }
+    }
+    if (message.binaryData) {
+      const entries = globalThis.Object.entries(message.binaryData) as [string, Uint8Array][];
+      if (entries.length > 0) {
+        obj.binaryData = {};
+        entries.forEach(([k, v]) => {
+          obj.binaryData[k] = base64FromBytes(v);
+        });
+      }
+    }
+    if (message.uid !== "") {
+      obj.uid = message.uid;
+    }
+    if (message.labels) {
+      const entries = globalThis.Object.entries(message.labels) as [string, string][];
+      if (entries.length > 0) {
+        obj.labels = {};
+        entries.forEach(([k, v]) => {
+          obj.labels[k] = v;
+        });
+      }
+    }
+    if (message.immutable !== false) {
+      obj.immutable = message.immutable;
+    }
+    return obj;
+  },
 
-	create<I extends Exact<DeepPartial<ConfigMap>, I>>(base?: I): ConfigMap {
-		return ConfigMap.fromPartial(base ?? ({} as any));
-	},
-	fromPartial<I extends Exact<DeepPartial<ConfigMap>, I>>(
-		object: I,
-	): ConfigMap {
-		const message = createBaseConfigMap();
-		message.name = object.name ?? "";
-		message.namespace = object.namespace ?? "";
-		message.data = (
-			globalThis.Object.entries(object.data ?? {}) as [string, string][]
-		).reduce(
-			(acc: { [key: string]: string }, [key, value]: [string, string]) => {
-				if (value !== undefined) {
-					acc[key] = globalThis.String(value);
-				}
-				return acc;
-			},
-			{},
-		);
-		message.binaryData = (
-			globalThis.Object.entries(object.binaryData ?? {}) as [
-				string,
-				Uint8Array,
-			][]
-		).reduce(
-			(
-				acc: { [key: string]: Uint8Array },
-				[key, value]: [string, Uint8Array],
-			) => {
-				if (value !== undefined) {
-					acc[key] = value;
-				}
-				return acc;
-			},
-			{},
-		);
-		message.uid = object.uid ?? "";
-		message.labels = (
-			globalThis.Object.entries(object.labels ?? {}) as [string, string][]
-		).reduce(
-			(acc: { [key: string]: string }, [key, value]: [string, string]) => {
-				if (value !== undefined) {
-					acc[key] = globalThis.String(value);
-				}
-				return acc;
-			},
-			{},
-		);
-		message.immutable = object.immutable ?? false;
-		return message;
-	},
+  create<I extends Exact<DeepPartial<ConfigMap>, I>>(base?: I): ConfigMap {
+    return ConfigMap.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<ConfigMap>, I>>(object: I): ConfigMap {
+    const message = createBaseConfigMap();
+    message.name = object.name ?? "";
+    message.namespace = object.namespace ?? "";
+    message.data = (globalThis.Object.entries(object.data ?? {}) as [string, string][]).reduce(
+      (acc: { [key: string]: string }, [key, value]: [string, string]) => {
+        if (value !== undefined) {
+          acc[key] = globalThis.String(value);
+        }
+        return acc;
+      },
+      {},
+    );
+    message.binaryData = (globalThis.Object.entries(object.binaryData ?? {}) as [string, Uint8Array][]).reduce(
+      (acc: { [key: string]: Uint8Array }, [key, value]: [string, Uint8Array]) => {
+        if (value !== undefined) {
+          acc[key] = value;
+        }
+        return acc;
+      },
+      {},
+    );
+    message.uid = object.uid ?? "";
+    message.labels = (globalThis.Object.entries(object.labels ?? {}) as [string, string][]).reduce(
+      (acc: { [key: string]: string }, [key, value]: [string, string]) => {
+        if (value !== undefined) {
+          acc[key] = globalThis.String(value);
+        }
+        return acc;
+      },
+      {},
+    );
+    message.immutable = object.immutable ?? false;
+    return message;
+  },
 };
 
 function createBaseConfigMap_DataEntry(): ConfigMap_DataEntry {
-	return { key: "", value: "" };
+  return { key: "", value: "" };
 }
 
 export const ConfigMap_DataEntry: MessageFns<ConfigMap_DataEntry> = {
-	encode(
-		message: ConfigMap_DataEntry,
-		writer: BinaryWriter = new BinaryWriter(),
-	): BinaryWriter {
-		if (message.key !== "") {
-			writer.uint32(10).string(message.key);
-		}
-		if (message.value !== "") {
-			writer.uint32(18).string(message.value);
-		}
-		return writer;
-	},
+  encode(message: ConfigMap_DataEntry, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.key !== "") {
+      writer.uint32(10).string(message.key);
+    }
+    if (message.value !== "") {
+      writer.uint32(18).string(message.value);
+    }
+    return writer;
+  },
 
-	decode(
-		input: BinaryReader | Uint8Array,
-		length?: number,
-	): ConfigMap_DataEntry {
-		const reader =
-			input instanceof BinaryReader ? input : new BinaryReader(input);
-		const end = length === undefined ? reader.len : reader.pos + length;
-		const message = createBaseConfigMap_DataEntry();
-		while (reader.pos < end) {
-			const tag = reader.uint32();
-			switch (tag >>> 3) {
-				case 1: {
-					if (tag !== 10) {
-						break;
-					}
+  decode(input: BinaryReader | Uint8Array, length?: number): ConfigMap_DataEntry {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseConfigMap_DataEntry();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
 
-					message.key = reader.string();
-					continue;
-				}
-				case 2: {
-					if (tag !== 18) {
-						break;
-					}
+          message.key = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
 
-					message.value = reader.string();
-					continue;
-				}
-			}
-			if ((tag & 7) === 4 || tag === 0) {
-				break;
-			}
-			reader.skip(tag & 7);
-		}
-		return message;
-	},
+          message.value = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
 
-	fromJSON(object: any): ConfigMap_DataEntry {
-		return {
-			key: isSet(object.key) ? globalThis.String(object.key) : "",
-			value: isSet(object.value) ? globalThis.String(object.value) : "",
-		};
-	},
+  fromJSON(object: any): ConfigMap_DataEntry {
+    return {
+      key: isSet(object.key) ? globalThis.String(object.key) : "",
+      value: isSet(object.value) ? globalThis.String(object.value) : "",
+    };
+  },
 
-	toJSON(message: ConfigMap_DataEntry): unknown {
-		const obj: any = {};
-		if (message.key !== "") {
-			obj.key = message.key;
-		}
-		if (message.value !== "") {
-			obj.value = message.value;
-		}
-		return obj;
-	},
+  toJSON(message: ConfigMap_DataEntry): unknown {
+    const obj: any = {};
+    if (message.key !== "") {
+      obj.key = message.key;
+    }
+    if (message.value !== "") {
+      obj.value = message.value;
+    }
+    return obj;
+  },
 
-	create<I extends Exact<DeepPartial<ConfigMap_DataEntry>, I>>(
-		base?: I,
-	): ConfigMap_DataEntry {
-		return ConfigMap_DataEntry.fromPartial(base ?? ({} as any));
-	},
-	fromPartial<I extends Exact<DeepPartial<ConfigMap_DataEntry>, I>>(
-		object: I,
-	): ConfigMap_DataEntry {
-		const message = createBaseConfigMap_DataEntry();
-		message.key = object.key ?? "";
-		message.value = object.value ?? "";
-		return message;
-	},
+  create<I extends Exact<DeepPartial<ConfigMap_DataEntry>, I>>(base?: I): ConfigMap_DataEntry {
+    return ConfigMap_DataEntry.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<ConfigMap_DataEntry>, I>>(object: I): ConfigMap_DataEntry {
+    const message = createBaseConfigMap_DataEntry();
+    message.key = object.key ?? "";
+    message.value = object.value ?? "";
+    return message;
+  },
 };
 
 function createBaseConfigMap_BinaryDataEntry(): ConfigMap_BinaryDataEntry {
-	return { key: "", value: new Uint8Array(0) };
+  return { key: "", value: new Uint8Array(0) };
 }
 
-export const ConfigMap_BinaryDataEntry: MessageFns<ConfigMap_BinaryDataEntry> =
-	{
-		encode(
-			message: ConfigMap_BinaryDataEntry,
-			writer: BinaryWriter = new BinaryWriter(),
-		): BinaryWriter {
-			if (message.key !== "") {
-				writer.uint32(10).string(message.key);
-			}
-			if (message.value.length !== 0) {
-				writer.uint32(18).bytes(message.value);
-			}
-			return writer;
-		},
+export const ConfigMap_BinaryDataEntry: MessageFns<ConfigMap_BinaryDataEntry> = {
+  encode(message: ConfigMap_BinaryDataEntry, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.key !== "") {
+      writer.uint32(10).string(message.key);
+    }
+    if (message.value.length !== 0) {
+      writer.uint32(18).bytes(message.value);
+    }
+    return writer;
+  },
 
-		decode(
-			input: BinaryReader | Uint8Array,
-			length?: number,
-		): ConfigMap_BinaryDataEntry {
-			const reader =
-				input instanceof BinaryReader ? input : new BinaryReader(input);
-			const end = length === undefined ? reader.len : reader.pos + length;
-			const message = createBaseConfigMap_BinaryDataEntry();
-			while (reader.pos < end) {
-				const tag = reader.uint32();
-				switch (tag >>> 3) {
-					case 1: {
-						if (tag !== 10) {
-							break;
-						}
+  decode(input: BinaryReader | Uint8Array, length?: number): ConfigMap_BinaryDataEntry {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseConfigMap_BinaryDataEntry();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
 
-						message.key = reader.string();
-						continue;
-					}
-					case 2: {
-						if (tag !== 18) {
-							break;
-						}
+          message.key = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
 
-						message.value = reader.bytes();
-						continue;
-					}
-				}
-				if ((tag & 7) === 4 || tag === 0) {
-					break;
-				}
-				reader.skip(tag & 7);
-			}
-			return message;
-		},
+          message.value = reader.bytes();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
 
-		fromJSON(object: any): ConfigMap_BinaryDataEntry {
-			return {
-				key: isSet(object.key) ? globalThis.String(object.key) : "",
-				value: isSet(object.value)
-					? bytesFromBase64(object.value)
-					: new Uint8Array(0),
-			};
-		},
+  fromJSON(object: any): ConfigMap_BinaryDataEntry {
+    return {
+      key: isSet(object.key) ? globalThis.String(object.key) : "",
+      value: isSet(object.value) ? bytesFromBase64(object.value) : new Uint8Array(0),
+    };
+  },
 
-		toJSON(message: ConfigMap_BinaryDataEntry): unknown {
-			const obj: any = {};
-			if (message.key !== "") {
-				obj.key = message.key;
-			}
-			if (message.value.length !== 0) {
-				obj.value = base64FromBytes(message.value);
-			}
-			return obj;
-		},
+  toJSON(message: ConfigMap_BinaryDataEntry): unknown {
+    const obj: any = {};
+    if (message.key !== "") {
+      obj.key = message.key;
+    }
+    if (message.value.length !== 0) {
+      obj.value = base64FromBytes(message.value);
+    }
+    return obj;
+  },
 
-		create<I extends Exact<DeepPartial<ConfigMap_BinaryDataEntry>, I>>(
-			base?: I,
-		): ConfigMap_BinaryDataEntry {
-			return ConfigMap_BinaryDataEntry.fromPartial(base ?? ({} as any));
-		},
-		fromPartial<I extends Exact<DeepPartial<ConfigMap_BinaryDataEntry>, I>>(
-			object: I,
-		): ConfigMap_BinaryDataEntry {
-			const message = createBaseConfigMap_BinaryDataEntry();
-			message.key = object.key ?? "";
-			message.value = object.value ?? new Uint8Array(0);
-			return message;
-		},
-	};
+  create<I extends Exact<DeepPartial<ConfigMap_BinaryDataEntry>, I>>(base?: I): ConfigMap_BinaryDataEntry {
+    return ConfigMap_BinaryDataEntry.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<ConfigMap_BinaryDataEntry>, I>>(object: I): ConfigMap_BinaryDataEntry {
+    const message = createBaseConfigMap_BinaryDataEntry();
+    message.key = object.key ?? "";
+    message.value = object.value ?? new Uint8Array(0);
+    return message;
+  },
+};
 
 function createBaseConfigMap_LabelsEntry(): ConfigMap_LabelsEntry {
-	return { key: "", value: "" };
+  return { key: "", value: "" };
 }
 
 export const ConfigMap_LabelsEntry: MessageFns<ConfigMap_LabelsEntry> = {
-	encode(
-		message: ConfigMap_LabelsEntry,
-		writer: BinaryWriter = new BinaryWriter(),
-	): BinaryWriter {
-		if (message.key !== "") {
-			writer.uint32(10).string(message.key);
-		}
-		if (message.value !== "") {
-			writer.uint32(18).string(message.value);
-		}
-		return writer;
-	},
+  encode(message: ConfigMap_LabelsEntry, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.key !== "") {
+      writer.uint32(10).string(message.key);
+    }
+    if (message.value !== "") {
+      writer.uint32(18).string(message.value);
+    }
+    return writer;
+  },
 
-	decode(
-		input: BinaryReader | Uint8Array,
-		length?: number,
-	): ConfigMap_LabelsEntry {
-		const reader =
-			input instanceof BinaryReader ? input : new BinaryReader(input);
-		const end = length === undefined ? reader.len : reader.pos + length;
-		const message = createBaseConfigMap_LabelsEntry();
-		while (reader.pos < end) {
-			const tag = reader.uint32();
-			switch (tag >>> 3) {
-				case 1: {
-					if (tag !== 10) {
-						break;
-					}
+  decode(input: BinaryReader | Uint8Array, length?: number): ConfigMap_LabelsEntry {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseConfigMap_LabelsEntry();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
 
-					message.key = reader.string();
-					continue;
-				}
-				case 2: {
-					if (tag !== 18) {
-						break;
-					}
+          message.key = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
 
-					message.value = reader.string();
-					continue;
-				}
-			}
-			if ((tag & 7) === 4 || tag === 0) {
-				break;
-			}
-			reader.skip(tag & 7);
-		}
-		return message;
-	},
+          message.value = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
 
-	fromJSON(object: any): ConfigMap_LabelsEntry {
-		return {
-			key: isSet(object.key) ? globalThis.String(object.key) : "",
-			value: isSet(object.value) ? globalThis.String(object.value) : "",
-		};
-	},
+  fromJSON(object: any): ConfigMap_LabelsEntry {
+    return {
+      key: isSet(object.key) ? globalThis.String(object.key) : "",
+      value: isSet(object.value) ? globalThis.String(object.value) : "",
+    };
+  },
 
-	toJSON(message: ConfigMap_LabelsEntry): unknown {
-		const obj: any = {};
-		if (message.key !== "") {
-			obj.key = message.key;
-		}
-		if (message.value !== "") {
-			obj.value = message.value;
-		}
-		return obj;
-	},
+  toJSON(message: ConfigMap_LabelsEntry): unknown {
+    const obj: any = {};
+    if (message.key !== "") {
+      obj.key = message.key;
+    }
+    if (message.value !== "") {
+      obj.value = message.value;
+    }
+    return obj;
+  },
 
-	create<I extends Exact<DeepPartial<ConfigMap_LabelsEntry>, I>>(
-		base?: I,
-	): ConfigMap_LabelsEntry {
-		return ConfigMap_LabelsEntry.fromPartial(base ?? ({} as any));
-	},
-	fromPartial<I extends Exact<DeepPartial<ConfigMap_LabelsEntry>, I>>(
-		object: I,
-	): ConfigMap_LabelsEntry {
-		const message = createBaseConfigMap_LabelsEntry();
-		message.key = object.key ?? "";
-		message.value = object.value ?? "";
-		return message;
-	},
+  create<I extends Exact<DeepPartial<ConfigMap_LabelsEntry>, I>>(base?: I): ConfigMap_LabelsEntry {
+    return ConfigMap_LabelsEntry.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<ConfigMap_LabelsEntry>, I>>(object: I): ConfigMap_LabelsEntry {
+    const message = createBaseConfigMap_LabelsEntry();
+    message.key = object.key ?? "";
+    message.value = object.value ?? "";
+    return message;
+  },
 };
 
 function createBaseSecret(): Secret {
-	return {
-		name: "",
-		namespace: "",
-		data: {},
-		type: "",
-		uid: "",
-		labels: {},
-		immutable: false,
-	};
+  return { name: "", namespace: "", data: {}, type: "", uid: "", labels: {}, immutable: false };
 }
 
 export const Secret: MessageFns<Secret> = {
-	encode(
-		message: Secret,
-		writer: BinaryWriter = new BinaryWriter(),
-	): BinaryWriter {
-		if (message.name !== "") {
-			writer.uint32(10).string(message.name);
-		}
-		if (message.namespace !== "") {
-			writer.uint32(18).string(message.namespace);
-		}
-		globalThis.Object.entries(message.data).forEach(
-			([key, value]: [string, Uint8Array]) => {
-				Secret_DataEntry.encode(
-					{ key: key as any, value },
-					writer.uint32(26).fork(),
-				).join();
-			},
-		);
-		if (message.type !== "") {
-			writer.uint32(34).string(message.type);
-		}
-		if (message.uid !== "") {
-			writer.uint32(42).string(message.uid);
-		}
-		globalThis.Object.entries(message.labels).forEach(
-			([key, value]: [string, string]) => {
-				Secret_LabelsEntry.encode(
-					{ key: key as any, value },
-					writer.uint32(50).fork(),
-				).join();
-			},
-		);
-		if (message.immutable !== false) {
-			writer.uint32(56).bool(message.immutable);
-		}
-		return writer;
-	},
+  encode(message: Secret, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.name !== "") {
+      writer.uint32(10).string(message.name);
+    }
+    if (message.namespace !== "") {
+      writer.uint32(18).string(message.namespace);
+    }
+    globalThis.Object.entries(message.data).forEach(([key, value]: [string, Uint8Array]) => {
+      Secret_DataEntry.encode({ key: key as any, value }, writer.uint32(26).fork()).join();
+    });
+    if (message.type !== "") {
+      writer.uint32(34).string(message.type);
+    }
+    if (message.uid !== "") {
+      writer.uint32(42).string(message.uid);
+    }
+    globalThis.Object.entries(message.labels).forEach(([key, value]: [string, string]) => {
+      Secret_LabelsEntry.encode({ key: key as any, value }, writer.uint32(50).fork()).join();
+    });
+    if (message.immutable !== false) {
+      writer.uint32(56).bool(message.immutable);
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): Secret {
-		const reader =
-			input instanceof BinaryReader ? input : new BinaryReader(input);
-		const end = length === undefined ? reader.len : reader.pos + length;
-		const message = createBaseSecret();
-		while (reader.pos < end) {
-			const tag = reader.uint32();
-			switch (tag >>> 3) {
-				case 1: {
-					if (tag !== 10) {
-						break;
-					}
+  decode(input: BinaryReader | Uint8Array, length?: number): Secret {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseSecret();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
 
-					message.name = reader.string();
-					continue;
-				}
-				case 2: {
-					if (tag !== 18) {
-						break;
-					}
+          message.name = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
 
-					message.namespace = reader.string();
-					continue;
-				}
-				case 3: {
-					if (tag !== 26) {
-						break;
-					}
+          message.namespace = reader.string();
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
 
-					const entry3 = Secret_DataEntry.decode(reader, reader.uint32());
-					if (entry3.value !== undefined) {
-						message.data[entry3.key] = entry3.value;
-					}
-					continue;
-				}
-				case 4: {
-					if (tag !== 34) {
-						break;
-					}
+          const entry3 = Secret_DataEntry.decode(reader, reader.uint32());
+          if (entry3.value !== undefined) {
+            message.data[entry3.key] = entry3.value;
+          }
+          continue;
+        }
+        case 4: {
+          if (tag !== 34) {
+            break;
+          }
 
-					message.type = reader.string();
-					continue;
-				}
-				case 5: {
-					if (tag !== 42) {
-						break;
-					}
+          message.type = reader.string();
+          continue;
+        }
+        case 5: {
+          if (tag !== 42) {
+            break;
+          }
 
-					message.uid = reader.string();
-					continue;
-				}
-				case 6: {
-					if (tag !== 50) {
-						break;
-					}
+          message.uid = reader.string();
+          continue;
+        }
+        case 6: {
+          if (tag !== 50) {
+            break;
+          }
 
-					const entry6 = Secret_LabelsEntry.decode(reader, reader.uint32());
-					if (entry6.value !== undefined) {
-						message.labels[entry6.key] = entry6.value;
-					}
-					continue;
-				}
-				case 7: {
-					if (tag !== 56) {
-						break;
-					}
+          const entry6 = Secret_LabelsEntry.decode(reader, reader.uint32());
+          if (entry6.value !== undefined) {
+            message.labels[entry6.key] = entry6.value;
+          }
+          continue;
+        }
+        case 7: {
+          if (tag !== 56) {
+            break;
+          }
 
-					message.immutable = reader.bool();
-					continue;
-				}
-			}
-			if ((tag & 7) === 4 || tag === 0) {
-				break;
-			}
-			reader.skip(tag & 7);
-		}
-		return message;
-	},
+          message.immutable = reader.bool();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
 
-	fromJSON(object: any): Secret {
-		return {
-			name: isSet(object.name) ? globalThis.String(object.name) : "",
-			namespace: isSet(object.namespace)
-				? globalThis.String(object.namespace)
-				: "",
-			data: isObject(object.data)
-				? (globalThis.Object.entries(object.data) as [string, any][]).reduce(
-						(
-							acc: { [key: string]: Uint8Array },
-							[key, value]: [string, any],
-						) => {
-							acc[key] = bytesFromBase64(value as string);
-							return acc;
-						},
-						{},
-					)
-				: {},
-			type: isSet(object.type) ? globalThis.String(object.type) : "",
-			uid: isSet(object.uid) ? globalThis.String(object.uid) : "",
-			labels: isObject(object.labels)
-				? (globalThis.Object.entries(object.labels) as [string, any][]).reduce(
-						(acc: { [key: string]: string }, [key, value]: [string, any]) => {
-							acc[key] = globalThis.String(value);
-							return acc;
-						},
-						{},
-					)
-				: {},
-			immutable: isSet(object.immutable)
-				? globalThis.Boolean(object.immutable)
-				: false,
-		};
-	},
+  fromJSON(object: any): Secret {
+    return {
+      name: isSet(object.name) ? globalThis.String(object.name) : "",
+      namespace: isSet(object.namespace) ? globalThis.String(object.namespace) : "",
+      data: isObject(object.data)
+        ? (globalThis.Object.entries(object.data) as [string, any][]).reduce(
+          (acc: { [key: string]: Uint8Array }, [key, value]: [string, any]) => {
+            acc[key] = bytesFromBase64(value as string);
+            return acc;
+          },
+          {},
+        )
+        : {},
+      type: isSet(object.type) ? globalThis.String(object.type) : "",
+      uid: isSet(object.uid) ? globalThis.String(object.uid) : "",
+      labels: isObject(object.labels)
+        ? (globalThis.Object.entries(object.labels) as [string, any][]).reduce(
+          (acc: { [key: string]: string }, [key, value]: [string, any]) => {
+            acc[key] = globalThis.String(value);
+            return acc;
+          },
+          {},
+        )
+        : {},
+      immutable: isSet(object.immutable) ? globalThis.Boolean(object.immutable) : false,
+    };
+  },
 
-	toJSON(message: Secret): unknown {
-		const obj: any = {};
-		if (message.name !== "") {
-			obj.name = message.name;
-		}
-		if (message.namespace !== "") {
-			obj.namespace = message.namespace;
-		}
-		if (message.data) {
-			const entries = globalThis.Object.entries(message.data) as [
-				string,
-				Uint8Array,
-			][];
-			if (entries.length > 0) {
-				obj.data = {};
-				entries.forEach(([k, v]) => {
-					obj.data[k] = base64FromBytes(v);
-				});
-			}
-		}
-		if (message.type !== "") {
-			obj.type = message.type;
-		}
-		if (message.uid !== "") {
-			obj.uid = message.uid;
-		}
-		if (message.labels) {
-			const entries = globalThis.Object.entries(message.labels) as [
-				string,
-				string,
-			][];
-			if (entries.length > 0) {
-				obj.labels = {};
-				entries.forEach(([k, v]) => {
-					obj.labels[k] = v;
-				});
-			}
-		}
-		if (message.immutable !== false) {
-			obj.immutable = message.immutable;
-		}
-		return obj;
-	},
+  toJSON(message: Secret): unknown {
+    const obj: any = {};
+    if (message.name !== "") {
+      obj.name = message.name;
+    }
+    if (message.namespace !== "") {
+      obj.namespace = message.namespace;
+    }
+    if (message.data) {
+      const entries = globalThis.Object.entries(message.data) as [string, Uint8Array][];
+      if (entries.length > 0) {
+        obj.data = {};
+        entries.forEach(([k, v]) => {
+          obj.data[k] = base64FromBytes(v);
+        });
+      }
+    }
+    if (message.type !== "") {
+      obj.type = message.type;
+    }
+    if (message.uid !== "") {
+      obj.uid = message.uid;
+    }
+    if (message.labels) {
+      const entries = globalThis.Object.entries(message.labels) as [string, string][];
+      if (entries.length > 0) {
+        obj.labels = {};
+        entries.forEach(([k, v]) => {
+          obj.labels[k] = v;
+        });
+      }
+    }
+    if (message.immutable !== false) {
+      obj.immutable = message.immutable;
+    }
+    return obj;
+  },
 
-	create<I extends Exact<DeepPartial<Secret>, I>>(base?: I): Secret {
-		return Secret.fromPartial(base ?? ({} as any));
-	},
-	fromPartial<I extends Exact<DeepPartial<Secret>, I>>(object: I): Secret {
-		const message = createBaseSecret();
-		message.name = object.name ?? "";
-		message.namespace = object.namespace ?? "";
-		message.data = (
-			globalThis.Object.entries(object.data ?? {}) as [string, Uint8Array][]
-		).reduce(
-			(
-				acc: { [key: string]: Uint8Array },
-				[key, value]: [string, Uint8Array],
-			) => {
-				if (value !== undefined) {
-					acc[key] = value;
-				}
-				return acc;
-			},
-			{},
-		);
-		message.type = object.type ?? "";
-		message.uid = object.uid ?? "";
-		message.labels = (
-			globalThis.Object.entries(object.labels ?? {}) as [string, string][]
-		).reduce(
-			(acc: { [key: string]: string }, [key, value]: [string, string]) => {
-				if (value !== undefined) {
-					acc[key] = globalThis.String(value);
-				}
-				return acc;
-			},
-			{},
-		);
-		message.immutable = object.immutable ?? false;
-		return message;
-	},
+  create<I extends Exact<DeepPartial<Secret>, I>>(base?: I): Secret {
+    return Secret.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<Secret>, I>>(object: I): Secret {
+    const message = createBaseSecret();
+    message.name = object.name ?? "";
+    message.namespace = object.namespace ?? "";
+    message.data = (globalThis.Object.entries(object.data ?? {}) as [string, Uint8Array][]).reduce(
+      (acc: { [key: string]: Uint8Array }, [key, value]: [string, Uint8Array]) => {
+        if (value !== undefined) {
+          acc[key] = value;
+        }
+        return acc;
+      },
+      {},
+    );
+    message.type = object.type ?? "";
+    message.uid = object.uid ?? "";
+    message.labels = (globalThis.Object.entries(object.labels ?? {}) as [string, string][]).reduce(
+      (acc: { [key: string]: string }, [key, value]: [string, string]) => {
+        if (value !== undefined) {
+          acc[key] = globalThis.String(value);
+        }
+        return acc;
+      },
+      {},
+    );
+    message.immutable = object.immutable ?? false;
+    return message;
+  },
 };
 
 function createBaseSecret_DataEntry(): Secret_DataEntry {
-	return { key: "", value: new Uint8Array(0) };
+  return { key: "", value: new Uint8Array(0) };
 }
 
 export const Secret_DataEntry: MessageFns<Secret_DataEntry> = {
-	encode(
-		message: Secret_DataEntry,
-		writer: BinaryWriter = new BinaryWriter(),
-	): BinaryWriter {
-		if (message.key !== "") {
-			writer.uint32(10).string(message.key);
-		}
-		if (message.value.length !== 0) {
-			writer.uint32(18).bytes(message.value);
-		}
-		return writer;
-	},
+  encode(message: Secret_DataEntry, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.key !== "") {
+      writer.uint32(10).string(message.key);
+    }
+    if (message.value.length !== 0) {
+      writer.uint32(18).bytes(message.value);
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): Secret_DataEntry {
-		const reader =
-			input instanceof BinaryReader ? input : new BinaryReader(input);
-		const end = length === undefined ? reader.len : reader.pos + length;
-		const message = createBaseSecret_DataEntry();
-		while (reader.pos < end) {
-			const tag = reader.uint32();
-			switch (tag >>> 3) {
-				case 1: {
-					if (tag !== 10) {
-						break;
-					}
+  decode(input: BinaryReader | Uint8Array, length?: number): Secret_DataEntry {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseSecret_DataEntry();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
 
-					message.key = reader.string();
-					continue;
-				}
-				case 2: {
-					if (tag !== 18) {
-						break;
-					}
+          message.key = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
 
-					message.value = reader.bytes();
-					continue;
-				}
-			}
-			if ((tag & 7) === 4 || tag === 0) {
-				break;
-			}
-			reader.skip(tag & 7);
-		}
-		return message;
-	},
+          message.value = reader.bytes();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
 
-	fromJSON(object: any): Secret_DataEntry {
-		return {
-			key: isSet(object.key) ? globalThis.String(object.key) : "",
-			value: isSet(object.value)
-				? bytesFromBase64(object.value)
-				: new Uint8Array(0),
-		};
-	},
+  fromJSON(object: any): Secret_DataEntry {
+    return {
+      key: isSet(object.key) ? globalThis.String(object.key) : "",
+      value: isSet(object.value) ? bytesFromBase64(object.value) : new Uint8Array(0),
+    };
+  },
 
-	toJSON(message: Secret_DataEntry): unknown {
-		const obj: any = {};
-		if (message.key !== "") {
-			obj.key = message.key;
-		}
-		if (message.value.length !== 0) {
-			obj.value = base64FromBytes(message.value);
-		}
-		return obj;
-	},
+  toJSON(message: Secret_DataEntry): unknown {
+    const obj: any = {};
+    if (message.key !== "") {
+      obj.key = message.key;
+    }
+    if (message.value.length !== 0) {
+      obj.value = base64FromBytes(message.value);
+    }
+    return obj;
+  },
 
-	create<I extends Exact<DeepPartial<Secret_DataEntry>, I>>(
-		base?: I,
-	): Secret_DataEntry {
-		return Secret_DataEntry.fromPartial(base ?? ({} as any));
-	},
-	fromPartial<I extends Exact<DeepPartial<Secret_DataEntry>, I>>(
-		object: I,
-	): Secret_DataEntry {
-		const message = createBaseSecret_DataEntry();
-		message.key = object.key ?? "";
-		message.value = object.value ?? new Uint8Array(0);
-		return message;
-	},
+  create<I extends Exact<DeepPartial<Secret_DataEntry>, I>>(base?: I): Secret_DataEntry {
+    return Secret_DataEntry.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<Secret_DataEntry>, I>>(object: I): Secret_DataEntry {
+    const message = createBaseSecret_DataEntry();
+    message.key = object.key ?? "";
+    message.value = object.value ?? new Uint8Array(0);
+    return message;
+  },
 };
 
 function createBaseSecret_LabelsEntry(): Secret_LabelsEntry {
-	return { key: "", value: "" };
+  return { key: "", value: "" };
 }
 
 export const Secret_LabelsEntry: MessageFns<Secret_LabelsEntry> = {
-	encode(
-		message: Secret_LabelsEntry,
-		writer: BinaryWriter = new BinaryWriter(),
-	): BinaryWriter {
-		if (message.key !== "") {
-			writer.uint32(10).string(message.key);
-		}
-		if (message.value !== "") {
-			writer.uint32(18).string(message.value);
-		}
-		return writer;
-	},
+  encode(message: Secret_LabelsEntry, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.key !== "") {
+      writer.uint32(10).string(message.key);
+    }
+    if (message.value !== "") {
+      writer.uint32(18).string(message.value);
+    }
+    return writer;
+  },
 
-	decode(
-		input: BinaryReader | Uint8Array,
-		length?: number,
-	): Secret_LabelsEntry {
-		const reader =
-			input instanceof BinaryReader ? input : new BinaryReader(input);
-		const end = length === undefined ? reader.len : reader.pos + length;
-		const message = createBaseSecret_LabelsEntry();
-		while (reader.pos < end) {
-			const tag = reader.uint32();
-			switch (tag >>> 3) {
-				case 1: {
-					if (tag !== 10) {
-						break;
-					}
+  decode(input: BinaryReader | Uint8Array, length?: number): Secret_LabelsEntry {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseSecret_LabelsEntry();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
 
-					message.key = reader.string();
-					continue;
-				}
-				case 2: {
-					if (tag !== 18) {
-						break;
-					}
+          message.key = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
 
-					message.value = reader.string();
-					continue;
-				}
-			}
-			if ((tag & 7) === 4 || tag === 0) {
-				break;
-			}
-			reader.skip(tag & 7);
-		}
-		return message;
-	},
+          message.value = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
 
-	fromJSON(object: any): Secret_LabelsEntry {
-		return {
-			key: isSet(object.key) ? globalThis.String(object.key) : "",
-			value: isSet(object.value) ? globalThis.String(object.value) : "",
-		};
-	},
+  fromJSON(object: any): Secret_LabelsEntry {
+    return {
+      key: isSet(object.key) ? globalThis.String(object.key) : "",
+      value: isSet(object.value) ? globalThis.String(object.value) : "",
+    };
+  },
 
-	toJSON(message: Secret_LabelsEntry): unknown {
-		const obj: any = {};
-		if (message.key !== "") {
-			obj.key = message.key;
-		}
-		if (message.value !== "") {
-			obj.value = message.value;
-		}
-		return obj;
-	},
+  toJSON(message: Secret_LabelsEntry): unknown {
+    const obj: any = {};
+    if (message.key !== "") {
+      obj.key = message.key;
+    }
+    if (message.value !== "") {
+      obj.value = message.value;
+    }
+    return obj;
+  },
 
-	create<I extends Exact<DeepPartial<Secret_LabelsEntry>, I>>(
-		base?: I,
-	): Secret_LabelsEntry {
-		return Secret_LabelsEntry.fromPartial(base ?? ({} as any));
-	},
-	fromPartial<I extends Exact<DeepPartial<Secret_LabelsEntry>, I>>(
-		object: I,
-	): Secret_LabelsEntry {
-		const message = createBaseSecret_LabelsEntry();
-		message.key = object.key ?? "";
-		message.value = object.value ?? "";
-		return message;
-	},
+  create<I extends Exact<DeepPartial<Secret_LabelsEntry>, I>>(base?: I): Secret_LabelsEntry {
+    return Secret_LabelsEntry.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<Secret_LabelsEntry>, I>>(object: I): Secret_LabelsEntry {
+    const message = createBaseSecret_LabelsEntry();
+    message.key = object.key ?? "";
+    message.value = object.value ?? "";
+    return message;
+  },
 };
 
 function createBaseCommand(): Command {
-	return { id: "", type: 0, payload: "", targetNamespace: "", targetName: "" };
+  return { id: "", type: 0, payload: "", targetNamespace: "", targetName: "" };
 }
 
 export const Command: MessageFns<Command> = {
-	encode(
-		message: Command,
-		writer: BinaryWriter = new BinaryWriter(),
-	): BinaryWriter {
-		if (message.id !== "") {
-			writer.uint32(10).string(message.id);
-		}
-		if (message.type !== 0) {
-			writer.uint32(16).int32(message.type);
-		}
-		if (message.payload !== "") {
-			writer.uint32(26).string(message.payload);
-		}
-		if (message.targetNamespace !== "") {
-			writer.uint32(34).string(message.targetNamespace);
-		}
-		if (message.targetName !== "") {
-			writer.uint32(42).string(message.targetName);
-		}
-		return writer;
-	},
+  encode(message: Command, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== "") {
+      writer.uint32(10).string(message.id);
+    }
+    if (message.type !== 0) {
+      writer.uint32(16).int32(message.type);
+    }
+    if (message.payload !== "") {
+      writer.uint32(26).string(message.payload);
+    }
+    if (message.targetNamespace !== "") {
+      writer.uint32(34).string(message.targetNamespace);
+    }
+    if (message.targetName !== "") {
+      writer.uint32(42).string(message.targetName);
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): Command {
-		const reader =
-			input instanceof BinaryReader ? input : new BinaryReader(input);
-		const end = length === undefined ? reader.len : reader.pos + length;
-		const message = createBaseCommand();
-		while (reader.pos < end) {
-			const tag = reader.uint32();
-			switch (tag >>> 3) {
-				case 1: {
-					if (tag !== 10) {
-						break;
-					}
+  decode(input: BinaryReader | Uint8Array, length?: number): Command {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseCommand();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
 
-					message.id = reader.string();
-					continue;
-				}
-				case 2: {
-					if (tag !== 16) {
-						break;
-					}
+          message.id = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 16) {
+            break;
+          }
 
-					message.type = reader.int32() as any;
-					continue;
-				}
-				case 3: {
-					if (tag !== 26) {
-						break;
-					}
+          message.type = reader.int32() as any;
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
 
-					message.payload = reader.string();
-					continue;
-				}
-				case 4: {
-					if (tag !== 34) {
-						break;
-					}
+          message.payload = reader.string();
+          continue;
+        }
+        case 4: {
+          if (tag !== 34) {
+            break;
+          }
 
-					message.targetNamespace = reader.string();
-					continue;
-				}
-				case 5: {
-					if (tag !== 42) {
-						break;
-					}
+          message.targetNamespace = reader.string();
+          continue;
+        }
+        case 5: {
+          if (tag !== 42) {
+            break;
+          }
 
-					message.targetName = reader.string();
-					continue;
-				}
-			}
-			if ((tag & 7) === 4 || tag === 0) {
-				break;
-			}
-			reader.skip(tag & 7);
-		}
-		return message;
-	},
+          message.targetName = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
 
-	fromJSON(object: any): Command {
-		return {
-			id: isSet(object.id) ? globalThis.String(object.id) : "",
-			type: isSet(object.type) ? command_CommandTypeFromJSON(object.type) : 0,
-			payload: isSet(object.payload) ? globalThis.String(object.payload) : "",
-			targetNamespace: isSet(object.targetNamespace)
-				? globalThis.String(object.targetNamespace)
-				: isSet(object.target_namespace)
-					? globalThis.String(object.target_namespace)
-					: "",
-			targetName: isSet(object.targetName)
-				? globalThis.String(object.targetName)
-				: isSet(object.target_name)
-					? globalThis.String(object.target_name)
-					: "",
-		};
-	},
+  fromJSON(object: any): Command {
+    return {
+      id: isSet(object.id) ? globalThis.String(object.id) : "",
+      type: isSet(object.type) ? command_CommandTypeFromJSON(object.type) : 0,
+      payload: isSet(object.payload) ? globalThis.String(object.payload) : "",
+      targetNamespace: isSet(object.targetNamespace)
+        ? globalThis.String(object.targetNamespace)
+        : isSet(object.target_namespace)
+        ? globalThis.String(object.target_namespace)
+        : "",
+      targetName: isSet(object.targetName)
+        ? globalThis.String(object.targetName)
+        : isSet(object.target_name)
+        ? globalThis.String(object.target_name)
+        : "",
+    };
+  },
 
-	toJSON(message: Command): unknown {
-		const obj: any = {};
-		if (message.id !== "") {
-			obj.id = message.id;
-		}
-		if (message.type !== 0) {
-			obj.type = command_CommandTypeToJSON(message.type);
-		}
-		if (message.payload !== "") {
-			obj.payload = message.payload;
-		}
-		if (message.targetNamespace !== "") {
-			obj.targetNamespace = message.targetNamespace;
-		}
-		if (message.targetName !== "") {
-			obj.targetName = message.targetName;
-		}
-		return obj;
-	},
+  toJSON(message: Command): unknown {
+    const obj: any = {};
+    if (message.id !== "") {
+      obj.id = message.id;
+    }
+    if (message.type !== 0) {
+      obj.type = command_CommandTypeToJSON(message.type);
+    }
+    if (message.payload !== "") {
+      obj.payload = message.payload;
+    }
+    if (message.targetNamespace !== "") {
+      obj.targetNamespace = message.targetNamespace;
+    }
+    if (message.targetName !== "") {
+      obj.targetName = message.targetName;
+    }
+    return obj;
+  },
 
-	create<I extends Exact<DeepPartial<Command>, I>>(base?: I): Command {
-		return Command.fromPartial(base ?? ({} as any));
-	},
-	fromPartial<I extends Exact<DeepPartial<Command>, I>>(object: I): Command {
-		const message = createBaseCommand();
-		message.id = object.id ?? "";
-		message.type = object.type ?? 0;
-		message.payload = object.payload ?? "";
-		message.targetNamespace = object.targetNamespace ?? "";
-		message.targetName = object.targetName ?? "";
-		return message;
-	},
+  create<I extends Exact<DeepPartial<Command>, I>>(base?: I): Command {
+    return Command.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<Command>, I>>(object: I): Command {
+    const message = createBaseCommand();
+    message.id = object.id ?? "";
+    message.type = object.type ?? 0;
+    message.payload = object.payload ?? "";
+    message.targetNamespace = object.targetNamespace ?? "";
+    message.targetName = object.targetName ?? "";
+    return message;
+  },
 };
 
 function createBaseJoinTokenData(): JoinTokenData {
-	return {
-		command: "",
-		token: "",
-		discoveryTokenCaCertHash: "",
-		apiServerEndpoint: "",
-		expiration: "",
-	};
+  return { command: "", token: "", discoveryTokenCaCertHash: "", apiServerEndpoint: "", expiration: "" };
 }
 
 export const JoinTokenData: MessageFns<JoinTokenData> = {
-	encode(
-		message: JoinTokenData,
-		writer: BinaryWriter = new BinaryWriter(),
-	): BinaryWriter {
-		if (message.command !== "") {
-			writer.uint32(10).string(message.command);
-		}
-		if (message.token !== "") {
-			writer.uint32(18).string(message.token);
-		}
-		if (message.discoveryTokenCaCertHash !== "") {
-			writer.uint32(26).string(message.discoveryTokenCaCertHash);
-		}
-		if (message.apiServerEndpoint !== "") {
-			writer.uint32(34).string(message.apiServerEndpoint);
-		}
-		if (message.expiration !== "") {
-			writer.uint32(42).string(message.expiration);
-		}
-		return writer;
-	},
+  encode(message: JoinTokenData, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.command !== "") {
+      writer.uint32(10).string(message.command);
+    }
+    if (message.token !== "") {
+      writer.uint32(18).string(message.token);
+    }
+    if (message.discoveryTokenCaCertHash !== "") {
+      writer.uint32(26).string(message.discoveryTokenCaCertHash);
+    }
+    if (message.apiServerEndpoint !== "") {
+      writer.uint32(34).string(message.apiServerEndpoint);
+    }
+    if (message.expiration !== "") {
+      writer.uint32(42).string(message.expiration);
+    }
+    return writer;
+  },
 
-	decode(input: BinaryReader | Uint8Array, length?: number): JoinTokenData {
-		const reader =
-			input instanceof BinaryReader ? input : new BinaryReader(input);
-		const end = length === undefined ? reader.len : reader.pos + length;
-		const message = createBaseJoinTokenData();
-		while (reader.pos < end) {
-			const tag = reader.uint32();
-			switch (tag >>> 3) {
-				case 1: {
-					if (tag !== 10) {
-						break;
-					}
+  decode(input: BinaryReader | Uint8Array, length?: number): JoinTokenData {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseJoinTokenData();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
 
-					message.command = reader.string();
-					continue;
-				}
-				case 2: {
-					if (tag !== 18) {
-						break;
-					}
+          message.command = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
 
-					message.token = reader.string();
-					continue;
-				}
-				case 3: {
-					if (tag !== 26) {
-						break;
-					}
+          message.token = reader.string();
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
 
-					message.discoveryTokenCaCertHash = reader.string();
-					continue;
-				}
-				case 4: {
-					if (tag !== 34) {
-						break;
-					}
+          message.discoveryTokenCaCertHash = reader.string();
+          continue;
+        }
+        case 4: {
+          if (tag !== 34) {
+            break;
+          }
 
-					message.apiServerEndpoint = reader.string();
-					continue;
-				}
-				case 5: {
-					if (tag !== 42) {
-						break;
-					}
+          message.apiServerEndpoint = reader.string();
+          continue;
+        }
+        case 5: {
+          if (tag !== 42) {
+            break;
+          }
 
-					message.expiration = reader.string();
-					continue;
-				}
-			}
-			if ((tag & 7) === 4 || tag === 0) {
-				break;
-			}
-			reader.skip(tag & 7);
-		}
-		return message;
-	},
+          message.expiration = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
 
-	fromJSON(object: any): JoinTokenData {
-		return {
-			command: isSet(object.command) ? globalThis.String(object.command) : "",
-			token: isSet(object.token) ? globalThis.String(object.token) : "",
-			discoveryTokenCaCertHash: isSet(object.discoveryTokenCaCertHash)
-				? globalThis.String(object.discoveryTokenCaCertHash)
-				: isSet(object.discovery_token_ca_cert_hash)
-					? globalThis.String(object.discovery_token_ca_cert_hash)
-					: "",
-			apiServerEndpoint: isSet(object.apiServerEndpoint)
-				? globalThis.String(object.apiServerEndpoint)
-				: isSet(object.api_server_endpoint)
-					? globalThis.String(object.api_server_endpoint)
-					: "",
-			expiration: isSet(object.expiration)
-				? globalThis.String(object.expiration)
-				: "",
-		};
-	},
+  fromJSON(object: any): JoinTokenData {
+    return {
+      command: isSet(object.command) ? globalThis.String(object.command) : "",
+      token: isSet(object.token) ? globalThis.String(object.token) : "",
+      discoveryTokenCaCertHash: isSet(object.discoveryTokenCaCertHash)
+        ? globalThis.String(object.discoveryTokenCaCertHash)
+        : isSet(object.discovery_token_ca_cert_hash)
+        ? globalThis.String(object.discovery_token_ca_cert_hash)
+        : "",
+      apiServerEndpoint: isSet(object.apiServerEndpoint)
+        ? globalThis.String(object.apiServerEndpoint)
+        : isSet(object.api_server_endpoint)
+        ? globalThis.String(object.api_server_endpoint)
+        : "",
+      expiration: isSet(object.expiration) ? globalThis.String(object.expiration) : "",
+    };
+  },
 
-	toJSON(message: JoinTokenData): unknown {
-		const obj: any = {};
-		if (message.command !== "") {
-			obj.command = message.command;
-		}
-		if (message.token !== "") {
-			obj.token = message.token;
-		}
-		if (message.discoveryTokenCaCertHash !== "") {
-			obj.discoveryTokenCaCertHash = message.discoveryTokenCaCertHash;
-		}
-		if (message.apiServerEndpoint !== "") {
-			obj.apiServerEndpoint = message.apiServerEndpoint;
-		}
-		if (message.expiration !== "") {
-			obj.expiration = message.expiration;
-		}
-		return obj;
-	},
+  toJSON(message: JoinTokenData): unknown {
+    const obj: any = {};
+    if (message.command !== "") {
+      obj.command = message.command;
+    }
+    if (message.token !== "") {
+      obj.token = message.token;
+    }
+    if (message.discoveryTokenCaCertHash !== "") {
+      obj.discoveryTokenCaCertHash = message.discoveryTokenCaCertHash;
+    }
+    if (message.apiServerEndpoint !== "") {
+      obj.apiServerEndpoint = message.apiServerEndpoint;
+    }
+    if (message.expiration !== "") {
+      obj.expiration = message.expiration;
+    }
+    return obj;
+  },
 
-	create<I extends Exact<DeepPartial<JoinTokenData>, I>>(
-		base?: I,
-	): JoinTokenData {
-		return JoinTokenData.fromPartial(base ?? ({} as any));
-	},
-	fromPartial<I extends Exact<DeepPartial<JoinTokenData>, I>>(
-		object: I,
-	): JoinTokenData {
-		const message = createBaseJoinTokenData();
-		message.command = object.command ?? "";
-		message.token = object.token ?? "";
-		message.discoveryTokenCaCertHash = object.discoveryTokenCaCertHash ?? "";
-		message.apiServerEndpoint = object.apiServerEndpoint ?? "";
-		message.expiration = object.expiration ?? "";
-		return message;
-	},
+  create<I extends Exact<DeepPartial<JoinTokenData>, I>>(base?: I): JoinTokenData {
+    return JoinTokenData.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<JoinTokenData>, I>>(object: I): JoinTokenData {
+    const message = createBaseJoinTokenData();
+    message.command = object.command ?? "";
+    message.token = object.token ?? "";
+    message.discoveryTokenCaCertHash = object.discoveryTokenCaCertHash ?? "";
+    message.apiServerEndpoint = object.apiServerEndpoint ?? "";
+    message.expiration = object.expiration ?? "";
+    return message;
+  },
 };
 
 function bytesFromBase64(b64: string): Uint8Array {
-	if ((globalThis as any).Buffer) {
-		return Uint8Array.from(globalThis.Buffer.from(b64, "base64"));
-	} else {
-		const bin = globalThis.atob(b64);
-		const arr = new Uint8Array(bin.length);
-		for (let i = 0; i < bin.length; ++i) {
-			arr[i] = bin.charCodeAt(i);
-		}
-		return arr;
-	}
+  if ((globalThis as any).Buffer) {
+    return Uint8Array.from(globalThis.Buffer.from(b64, "base64"));
+  } else {
+    const bin = globalThis.atob(b64);
+    const arr = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; ++i) {
+      arr[i] = bin.charCodeAt(i);
+    }
+    return arr;
+  }
 }
 
 function base64FromBytes(arr: Uint8Array): string {
-	if ((globalThis as any).Buffer) {
-		return globalThis.Buffer.from(arr).toString("base64");
-	} else {
-		const bin: string[] = [];
-		arr.forEach((byte) => {
-			bin.push(globalThis.String.fromCharCode(byte));
-		});
-		return globalThis.btoa(bin.join(""));
-	}
+  if ((globalThis as any).Buffer) {
+    return globalThis.Buffer.from(arr).toString("base64");
+  } else {
+    const bin: string[] = [];
+    arr.forEach((byte) => {
+      bin.push(globalThis.String.fromCharCode(byte));
+    });
+    return globalThis.btoa(bin.join(""));
+  }
 }
 
-type Builtin =
-	| Date
-	| Function
-	| Uint8Array
-	| string
-	| number
-	| boolean
-	| undefined;
+type Builtin = Date | Function | Uint8Array | string | number | boolean | undefined;
 
-export type DeepPartial<T> = T extends Builtin
-	? T
-	: T extends globalThis.Array<infer U>
-		? globalThis.Array<DeepPartial<U>>
-		: T extends ReadonlyArray<infer U>
-			? ReadonlyArray<DeepPartial<U>>
-			: T extends {}
-				? { [K in keyof T]?: DeepPartial<T[K]> }
-				: Partial<T>;
+export type DeepPartial<T> = T extends Builtin ? T
+  : T extends globalThis.Array<infer U> ? globalThis.Array<DeepPartial<U>>
+  : T extends ReadonlyArray<infer U> ? ReadonlyArray<DeepPartial<U>>
+  : T extends {} ? { [K in keyof T]?: DeepPartial<T[K]> }
+  : Partial<T>;
 
 type KeysOfUnion<T> = T extends T ? keyof T : never;
-export type Exact<P, I extends P> = P extends Builtin
-	? P
-	: P & { [K in keyof P]: Exact<P[K], I[K]> } & {
-			[K in Exclude<keyof I, KeysOfUnion<P>>]: never;
-		};
+export type Exact<P, I extends P> = P extends Builtin ? P
+  : P & { [K in keyof P]: Exact<P[K], I[K]> } & { [K in Exclude<keyof I, KeysOfUnion<P>>]: never };
 
 function longToNumber(int64: { toString(): string }): number {
-	const num = globalThis.Number(int64.toString());
-	if (num > globalThis.Number.MAX_SAFE_INTEGER) {
-		throw new globalThis.Error("Value is larger than Number.MAX_SAFE_INTEGER");
-	}
-	if (num < globalThis.Number.MIN_SAFE_INTEGER) {
-		throw new globalThis.Error("Value is smaller than Number.MIN_SAFE_INTEGER");
-	}
-	return num;
+  const num = globalThis.Number(int64.toString());
+  if (num > globalThis.Number.MAX_SAFE_INTEGER) {
+    throw new globalThis.Error("Value is larger than Number.MAX_SAFE_INTEGER");
+  }
+  if (num < globalThis.Number.MIN_SAFE_INTEGER) {
+    throw new globalThis.Error("Value is smaller than Number.MIN_SAFE_INTEGER");
+  }
+  return num;
 }
 
 function isObject(value: any): boolean {
-	return typeof value === "object" && value !== null;
+  return typeof value === "object" && value !== null;
 }
 
 function isSet(value: any): boolean {
-	return value !== null && value !== undefined;
+  return value !== null && value !== undefined;
 }
 
 export interface MessageFns<T> {
-	encode(message: T, writer?: BinaryWriter): BinaryWriter;
-	decode(input: BinaryReader | Uint8Array, length?: number): T;
-	fromJSON(object: any): T;
-	toJSON(message: T): unknown;
-	create<I extends Exact<DeepPartial<T>, I>>(base?: I): T;
-	fromPartial<I extends Exact<DeepPartial<T>, I>>(object: I): T;
+  encode(message: T, writer?: BinaryWriter): BinaryWriter;
+  decode(input: BinaryReader | Uint8Array, length?: number): T;
+  fromJSON(object: any): T;
+  toJSON(message: T): unknown;
+  create<I extends Exact<DeepPartial<T>, I>>(base?: I): T;
+  fromPartial<I extends Exact<DeepPartial<T>, I>>(object: I): T;
 }

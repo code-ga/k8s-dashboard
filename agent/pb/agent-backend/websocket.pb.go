@@ -167,7 +167,7 @@ func (x Command_CommandType) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use Command_CommandType.Descriptor instead.
 func (Command_CommandType) EnumDescriptor() ([]byte, []int) {
-	return file_agent_backend_websocket_proto_rawDescGZIP(), []int{14, 0}
+	return file_agent_backend_websocket_proto_rawDescGZIP(), []int{15, 0}
 }
 
 // Wrapper for all messages sent from Agent to Server
@@ -178,6 +178,7 @@ type AgentPayload struct {
 	//	*AgentPayload_Heartbeat
 	//	*AgentPayload_CommandResponse
 	//	*AgentPayload_StreamData
+	//	*AgentPayload_AuthorizeUser
 	Payload       isAgentPayload_Payload `protobuf_oneof:"payload"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -247,6 +248,15 @@ func (x *AgentPayload) GetStreamData() *StreamData {
 	return nil
 }
 
+func (x *AgentPayload) GetAuthorizeUser() *AGENT_AUTHORIZE_USER {
+	if x != nil {
+		if x, ok := x.Payload.(*AgentPayload_AuthorizeUser); ok {
+			return x.AuthorizeUser
+		}
+	}
+	return nil
+}
+
 type isAgentPayload_Payload interface {
 	isAgentPayload_Payload()
 }
@@ -263,11 +273,17 @@ type AgentPayload_StreamData struct {
 	StreamData *StreamData `protobuf:"bytes,3,opt,name=stream_data,json=streamData,proto3,oneof"`
 }
 
+type AgentPayload_AuthorizeUser struct {
+	AuthorizeUser *AGENT_AUTHORIZE_USER `protobuf:"bytes,4,opt,name=authorize_user,json=authorizeUser,proto3,oneof"`
+}
+
 func (*AgentPayload_Heartbeat) isAgentPayload_Payload() {}
 
 func (*AgentPayload_CommandResponse) isAgentPayload_Payload() {}
 
 func (*AgentPayload_StreamData) isAgentPayload_Payload() {}
+
+func (*AgentPayload_AuthorizeUser) isAgentPayload_Payload() {}
 
 type StreamData struct {
 	state         protoimpl.MessageState    `protogen:"open.v1"`
@@ -620,6 +636,50 @@ func (x *Heartbeat) GetTimestamp() int64 {
 	return 0
 }
 
+type AGENT_AUTHORIZE_USER struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Token         string                 `protobuf:"bytes,1,opt,name=token,proto3" json:"token,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AGENT_AUTHORIZE_USER) Reset() {
+	*x = AGENT_AUTHORIZE_USER{}
+	mi := &file_agent_backend_websocket_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AGENT_AUTHORIZE_USER) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AGENT_AUTHORIZE_USER) ProtoMessage() {}
+
+func (x *AGENT_AUTHORIZE_USER) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_backend_websocket_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AGENT_AUTHORIZE_USER.ProtoReflect.Descriptor instead.
+func (*AGENT_AUTHORIZE_USER) Descriptor() ([]byte, []int) {
+	return file_agent_backend_websocket_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *AGENT_AUTHORIZE_USER) GetToken() string {
+	if x != nil {
+		return x.Token
+	}
+	return ""
+}
+
 type ClusterResource struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Total CPU capacity (millicores)
@@ -638,7 +698,7 @@ type ClusterResource struct {
 
 func (x *ClusterResource) Reset() {
 	*x = ClusterResource{}
-	mi := &file_agent_backend_websocket_proto_msgTypes[5]
+	mi := &file_agent_backend_websocket_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -650,7 +710,7 @@ func (x *ClusterResource) String() string {
 func (*ClusterResource) ProtoMessage() {}
 
 func (x *ClusterResource) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_backend_websocket_proto_msgTypes[5]
+	mi := &file_agent_backend_websocket_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -663,7 +723,7 @@ func (x *ClusterResource) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClusterResource.ProtoReflect.Descriptor instead.
 func (*ClusterResource) Descriptor() ([]byte, []int) {
-	return file_agent_backend_websocket_proto_rawDescGZIP(), []int{5}
+	return file_agent_backend_websocket_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *ClusterResource) GetCpuCapacity() int64 {
@@ -712,7 +772,7 @@ type ContainerPort struct {
 
 func (x *ContainerPort) Reset() {
 	*x = ContainerPort{}
-	mi := &file_agent_backend_websocket_proto_msgTypes[6]
+	mi := &file_agent_backend_websocket_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -724,7 +784,7 @@ func (x *ContainerPort) String() string {
 func (*ContainerPort) ProtoMessage() {}
 
 func (x *ContainerPort) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_backend_websocket_proto_msgTypes[6]
+	mi := &file_agent_backend_websocket_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -737,7 +797,7 @@ func (x *ContainerPort) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ContainerPort.ProtoReflect.Descriptor instead.
 func (*ContainerPort) Descriptor() ([]byte, []int) {
-	return file_agent_backend_websocket_proto_rawDescGZIP(), []int{6}
+	return file_agent_backend_websocket_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *ContainerPort) GetContainerPort() int32 {
@@ -779,7 +839,7 @@ type Node struct {
 
 func (x *Node) Reset() {
 	*x = Node{}
-	mi := &file_agent_backend_websocket_proto_msgTypes[7]
+	mi := &file_agent_backend_websocket_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -791,7 +851,7 @@ func (x *Node) String() string {
 func (*Node) ProtoMessage() {}
 
 func (x *Node) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_backend_websocket_proto_msgTypes[7]
+	mi := &file_agent_backend_websocket_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -804,7 +864,7 @@ func (x *Node) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Node.ProtoReflect.Descriptor instead.
 func (*Node) Descriptor() ([]byte, []int) {
-	return file_agent_backend_websocket_proto_rawDescGZIP(), []int{7}
+	return file_agent_backend_websocket_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *Node) GetName() string {
@@ -899,7 +959,7 @@ type Deployment struct {
 
 func (x *Deployment) Reset() {
 	*x = Deployment{}
-	mi := &file_agent_backend_websocket_proto_msgTypes[8]
+	mi := &file_agent_backend_websocket_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -911,7 +971,7 @@ func (x *Deployment) String() string {
 func (*Deployment) ProtoMessage() {}
 
 func (x *Deployment) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_backend_websocket_proto_msgTypes[8]
+	mi := &file_agent_backend_websocket_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -924,7 +984,7 @@ func (x *Deployment) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Deployment.ProtoReflect.Descriptor instead.
 func (*Deployment) Descriptor() ([]byte, []int) {
-	return file_agent_backend_websocket_proto_rawDescGZIP(), []int{8}
+	return file_agent_backend_websocket_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *Deployment) GetName() string {
@@ -1078,7 +1138,7 @@ type Pod struct {
 
 func (x *Pod) Reset() {
 	*x = Pod{}
-	mi := &file_agent_backend_websocket_proto_msgTypes[9]
+	mi := &file_agent_backend_websocket_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1090,7 +1150,7 @@ func (x *Pod) String() string {
 func (*Pod) ProtoMessage() {}
 
 func (x *Pod) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_backend_websocket_proto_msgTypes[9]
+	mi := &file_agent_backend_websocket_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1103,7 +1163,7 @@ func (x *Pod) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Pod.ProtoReflect.Descriptor instead.
 func (*Pod) Descriptor() ([]byte, []int) {
-	return file_agent_backend_websocket_proto_rawDescGZIP(), []int{9}
+	return file_agent_backend_websocket_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *Pod) GetName() string {
@@ -1245,7 +1305,7 @@ type ServicePort struct {
 
 func (x *ServicePort) Reset() {
 	*x = ServicePort{}
-	mi := &file_agent_backend_websocket_proto_msgTypes[10]
+	mi := &file_agent_backend_websocket_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1257,7 +1317,7 @@ func (x *ServicePort) String() string {
 func (*ServicePort) ProtoMessage() {}
 
 func (x *ServicePort) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_backend_websocket_proto_msgTypes[10]
+	mi := &file_agent_backend_websocket_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1270,7 +1330,7 @@ func (x *ServicePort) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ServicePort.ProtoReflect.Descriptor instead.
 func (*ServicePort) Descriptor() ([]byte, []int) {
-	return file_agent_backend_websocket_proto_rawDescGZIP(), []int{10}
+	return file_agent_backend_websocket_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *ServicePort) GetName() string {
@@ -1326,7 +1386,7 @@ type Service struct {
 
 func (x *Service) Reset() {
 	*x = Service{}
-	mi := &file_agent_backend_websocket_proto_msgTypes[11]
+	mi := &file_agent_backend_websocket_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1338,7 +1398,7 @@ func (x *Service) String() string {
 func (*Service) ProtoMessage() {}
 
 func (x *Service) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_backend_websocket_proto_msgTypes[11]
+	mi := &file_agent_backend_websocket_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1351,7 +1411,7 @@ func (x *Service) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Service.ProtoReflect.Descriptor instead.
 func (*Service) Descriptor() ([]byte, []int) {
-	return file_agent_backend_websocket_proto_rawDescGZIP(), []int{11}
+	return file_agent_backend_websocket_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *Service) GetName() string {
@@ -1432,7 +1492,7 @@ type ConfigMap struct {
 
 func (x *ConfigMap) Reset() {
 	*x = ConfigMap{}
-	mi := &file_agent_backend_websocket_proto_msgTypes[12]
+	mi := &file_agent_backend_websocket_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1444,7 +1504,7 @@ func (x *ConfigMap) String() string {
 func (*ConfigMap) ProtoMessage() {}
 
 func (x *ConfigMap) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_backend_websocket_proto_msgTypes[12]
+	mi := &file_agent_backend_websocket_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1457,7 +1517,7 @@ func (x *ConfigMap) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConfigMap.ProtoReflect.Descriptor instead.
 func (*ConfigMap) Descriptor() ([]byte, []int) {
-	return file_agent_backend_websocket_proto_rawDescGZIP(), []int{12}
+	return file_agent_backend_websocket_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *ConfigMap) GetName() string {
@@ -1524,7 +1584,7 @@ type Secret struct {
 
 func (x *Secret) Reset() {
 	*x = Secret{}
-	mi := &file_agent_backend_websocket_proto_msgTypes[13]
+	mi := &file_agent_backend_websocket_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1536,7 +1596,7 @@ func (x *Secret) String() string {
 func (*Secret) ProtoMessage() {}
 
 func (x *Secret) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_backend_websocket_proto_msgTypes[13]
+	mi := &file_agent_backend_websocket_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1549,7 +1609,7 @@ func (x *Secret) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Secret.ProtoReflect.Descriptor instead.
 func (*Secret) Descriptor() ([]byte, []int) {
-	return file_agent_backend_websocket_proto_rawDescGZIP(), []int{13}
+	return file_agent_backend_websocket_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *Secret) GetName() string {
@@ -1616,7 +1676,7 @@ type Command struct {
 
 func (x *Command) Reset() {
 	*x = Command{}
-	mi := &file_agent_backend_websocket_proto_msgTypes[14]
+	mi := &file_agent_backend_websocket_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1628,7 +1688,7 @@ func (x *Command) String() string {
 func (*Command) ProtoMessage() {}
 
 func (x *Command) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_backend_websocket_proto_msgTypes[14]
+	mi := &file_agent_backend_websocket_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1641,7 +1701,7 @@ func (x *Command) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Command.ProtoReflect.Descriptor instead.
 func (*Command) Descriptor() ([]byte, []int) {
-	return file_agent_backend_websocket_proto_rawDescGZIP(), []int{14}
+	return file_agent_backend_websocket_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *Command) GetId() string {
@@ -1692,7 +1752,7 @@ type JoinTokenData struct {
 
 func (x *JoinTokenData) Reset() {
 	*x = JoinTokenData{}
-	mi := &file_agent_backend_websocket_proto_msgTypes[15]
+	mi := &file_agent_backend_websocket_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1704,7 +1764,7 @@ func (x *JoinTokenData) String() string {
 func (*JoinTokenData) ProtoMessage() {}
 
 func (x *JoinTokenData) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_backend_websocket_proto_msgTypes[15]
+	mi := &file_agent_backend_websocket_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1717,7 +1777,7 @@ func (x *JoinTokenData) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use JoinTokenData.ProtoReflect.Descriptor instead.
 func (*JoinTokenData) Descriptor() ([]byte, []int) {
-	return file_agent_backend_websocket_proto_rawDescGZIP(), []int{15}
+	return file_agent_backend_websocket_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *JoinTokenData) GetCommand() string {
@@ -1759,12 +1819,13 @@ var File_agent_backend_websocket_proto protoreflect.FileDescriptor
 
 const file_agent_backend_websocket_proto_rawDesc = "" +
 	"\n" +
-	"\x1dagent-backend/websocket.proto\x12\x03api\"\xc0\x01\n" +
+	"\x1dagent-backend/websocket.proto\x12\x03api\"\x84\x02\n" +
 	"\fAgentPayload\x12.\n" +
 	"\theartbeat\x18\x01 \x01(\v2\x0e.api.HeartbeatH\x00R\theartbeat\x12A\n" +
 	"\x10command_response\x18\x02 \x01(\v2\x14.api.CommandResponseH\x00R\x0fcommandResponse\x122\n" +
 	"\vstream_data\x18\x03 \x01(\v2\x0f.api.StreamDataH\x00R\n" +
-	"streamDataB\t\n" +
+	"streamData\x12B\n" +
+	"\x0eauthorize_user\x18\x04 \x01(\v2\x19.api.AGENT_AUTHORIZE_USERH\x00R\rauthorizeUserB\t\n" +
 	"\apayload\"\xf4\x01\n" +
 	"\n" +
 	"StreamData\x12\x1b\n" +
@@ -1798,7 +1859,9 @@ const file_agent_backend_websocket_proto_rawDesc = "" +
 	"\vconfig_maps\x18\a \x03(\v2\x0e.api.ConfigMapR\n" +
 	"configMaps\x12%\n" +
 	"\asecrets\x18\b \x03(\v2\v.api.SecretR\asecrets\x12\x1c\n" +
-	"\ttimestamp\x18\x05 \x01(\x03R\ttimestamp\"\xb8\x01\n" +
+	"\ttimestamp\x18\x05 \x01(\x03R\ttimestamp\",\n" +
+	"\x14AGENT_AUTHORIZE_USER\x12\x14\n" +
+	"\x05token\x18\x01 \x01(\tR\x05token\"\xb8\x01\n" +
 	"\x0fClusterResource\x12!\n" +
 	"\fcpu_capacity\x18\x01 \x01(\x03R\vcpuCapacity\x12!\n" +
 	"\fram_capacity\x18\x02 \x01(\x03R\vramCapacity\x12\x1b\n" +
@@ -1983,7 +2046,7 @@ func file_agent_backend_websocket_proto_rawDescGZIP() []byte {
 }
 
 var file_agent_backend_websocket_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_agent_backend_websocket_proto_msgTypes = make([]protoimpl.MessageInfo, 27)
+var file_agent_backend_websocket_proto_msgTypes = make([]protoimpl.MessageInfo, 28)
 var file_agent_backend_websocket_proto_goTypes = []any{
 	(StreamData_StreamDataType)(0), // 0: api.StreamData.StreamDataType
 	(Command_CommandType)(0),       // 1: api.Command.CommandType
@@ -1992,63 +2055,65 @@ var file_agent_backend_websocket_proto_goTypes = []any{
 	(*CommandResponse)(nil),        // 4: api.CommandResponse
 	(*ServerPayload)(nil),          // 5: api.ServerPayload
 	(*Heartbeat)(nil),              // 6: api.Heartbeat
-	(*ClusterResource)(nil),        // 7: api.ClusterResource
-	(*ContainerPort)(nil),          // 8: api.ContainerPort
-	(*Node)(nil),                   // 9: api.Node
-	(*Deployment)(nil),             // 10: api.Deployment
-	(*Pod)(nil),                    // 11: api.Pod
-	(*ServicePort)(nil),            // 12: api.ServicePort
-	(*Service)(nil),                // 13: api.Service
-	(*ConfigMap)(nil),              // 14: api.ConfigMap
-	(*Secret)(nil),                 // 15: api.Secret
-	(*Command)(nil),                // 16: api.Command
-	(*JoinTokenData)(nil),          // 17: api.JoinTokenData
-	nil,                            // 18: api.Node.LabelsEntry
-	nil,                            // 19: api.Deployment.LabelsEntry
-	nil,                            // 20: api.Deployment.SelectorEntry
-	nil,                            // 21: api.Pod.LabelsEntry
-	nil,                            // 22: api.Service.SelectorEntry
-	nil,                            // 23: api.Service.LabelsEntry
-	nil,                            // 24: api.ConfigMap.DataEntry
-	nil,                            // 25: api.ConfigMap.BinaryDataEntry
-	nil,                            // 26: api.ConfigMap.LabelsEntry
-	nil,                            // 27: api.Secret.DataEntry
-	nil,                            // 28: api.Secret.LabelsEntry
+	(*AGENT_AUTHORIZE_USER)(nil),   // 7: api.AGENT_AUTHORIZE_USER
+	(*ClusterResource)(nil),        // 8: api.ClusterResource
+	(*ContainerPort)(nil),          // 9: api.ContainerPort
+	(*Node)(nil),                   // 10: api.Node
+	(*Deployment)(nil),             // 11: api.Deployment
+	(*Pod)(nil),                    // 12: api.Pod
+	(*ServicePort)(nil),            // 13: api.ServicePort
+	(*Service)(nil),                // 14: api.Service
+	(*ConfigMap)(nil),              // 15: api.ConfigMap
+	(*Secret)(nil),                 // 16: api.Secret
+	(*Command)(nil),                // 17: api.Command
+	(*JoinTokenData)(nil),          // 18: api.JoinTokenData
+	nil,                            // 19: api.Node.LabelsEntry
+	nil,                            // 20: api.Deployment.LabelsEntry
+	nil,                            // 21: api.Deployment.SelectorEntry
+	nil,                            // 22: api.Pod.LabelsEntry
+	nil,                            // 23: api.Service.SelectorEntry
+	nil,                            // 24: api.Service.LabelsEntry
+	nil,                            // 25: api.ConfigMap.DataEntry
+	nil,                            // 26: api.ConfigMap.BinaryDataEntry
+	nil,                            // 27: api.ConfigMap.LabelsEntry
+	nil,                            // 28: api.Secret.DataEntry
+	nil,                            // 29: api.Secret.LabelsEntry
 }
 var file_agent_backend_websocket_proto_depIdxs = []int32{
 	6,  // 0: api.AgentPayload.heartbeat:type_name -> api.Heartbeat
 	4,  // 1: api.AgentPayload.command_response:type_name -> api.CommandResponse
 	3,  // 2: api.AgentPayload.stream_data:type_name -> api.StreamData
-	0,  // 3: api.StreamData.type:type_name -> api.StreamData.StreamDataType
-	16, // 4: api.ServerPayload.command:type_name -> api.Command
-	3,  // 5: api.ServerPayload.stream_data:type_name -> api.StreamData
-	7,  // 6: api.Heartbeat.cluster_resource:type_name -> api.ClusterResource
-	9,  // 7: api.Heartbeat.nodes:type_name -> api.Node
-	11, // 8: api.Heartbeat.pods:type_name -> api.Pod
-	13, // 9: api.Heartbeat.services:type_name -> api.Service
-	10, // 10: api.Heartbeat.deployments:type_name -> api.Deployment
-	14, // 11: api.Heartbeat.config_maps:type_name -> api.ConfigMap
-	15, // 12: api.Heartbeat.secrets:type_name -> api.Secret
-	18, // 13: api.Node.labels:type_name -> api.Node.LabelsEntry
-	19, // 14: api.Deployment.labels:type_name -> api.Deployment.LabelsEntry
-	20, // 15: api.Deployment.selector:type_name -> api.Deployment.SelectorEntry
-	8,  // 16: api.Deployment.ports:type_name -> api.ContainerPort
-	8,  // 17: api.Pod.ports:type_name -> api.ContainerPort
-	21, // 18: api.Pod.labels:type_name -> api.Pod.LabelsEntry
-	22, // 19: api.Service.selector:type_name -> api.Service.SelectorEntry
-	23, // 20: api.Service.labels:type_name -> api.Service.LabelsEntry
-	12, // 21: api.Service.ports:type_name -> api.ServicePort
-	24, // 22: api.ConfigMap.data:type_name -> api.ConfigMap.DataEntry
-	25, // 23: api.ConfigMap.binary_data:type_name -> api.ConfigMap.BinaryDataEntry
-	26, // 24: api.ConfigMap.labels:type_name -> api.ConfigMap.LabelsEntry
-	27, // 25: api.Secret.data:type_name -> api.Secret.DataEntry
-	28, // 26: api.Secret.labels:type_name -> api.Secret.LabelsEntry
-	1,  // 27: api.Command.type:type_name -> api.Command.CommandType
-	28, // [28:28] is the sub-list for method output_type
-	28, // [28:28] is the sub-list for method input_type
-	28, // [28:28] is the sub-list for extension type_name
-	28, // [28:28] is the sub-list for extension extendee
-	0,  // [0:28] is the sub-list for field type_name
+	7,  // 3: api.AgentPayload.authorize_user:type_name -> api.AGENT_AUTHORIZE_USER
+	0,  // 4: api.StreamData.type:type_name -> api.StreamData.StreamDataType
+	17, // 5: api.ServerPayload.command:type_name -> api.Command
+	3,  // 6: api.ServerPayload.stream_data:type_name -> api.StreamData
+	8,  // 7: api.Heartbeat.cluster_resource:type_name -> api.ClusterResource
+	10, // 8: api.Heartbeat.nodes:type_name -> api.Node
+	12, // 9: api.Heartbeat.pods:type_name -> api.Pod
+	14, // 10: api.Heartbeat.services:type_name -> api.Service
+	11, // 11: api.Heartbeat.deployments:type_name -> api.Deployment
+	15, // 12: api.Heartbeat.config_maps:type_name -> api.ConfigMap
+	16, // 13: api.Heartbeat.secrets:type_name -> api.Secret
+	19, // 14: api.Node.labels:type_name -> api.Node.LabelsEntry
+	20, // 15: api.Deployment.labels:type_name -> api.Deployment.LabelsEntry
+	21, // 16: api.Deployment.selector:type_name -> api.Deployment.SelectorEntry
+	9,  // 17: api.Deployment.ports:type_name -> api.ContainerPort
+	9,  // 18: api.Pod.ports:type_name -> api.ContainerPort
+	22, // 19: api.Pod.labels:type_name -> api.Pod.LabelsEntry
+	23, // 20: api.Service.selector:type_name -> api.Service.SelectorEntry
+	24, // 21: api.Service.labels:type_name -> api.Service.LabelsEntry
+	13, // 22: api.Service.ports:type_name -> api.ServicePort
+	25, // 23: api.ConfigMap.data:type_name -> api.ConfigMap.DataEntry
+	26, // 24: api.ConfigMap.binary_data:type_name -> api.ConfigMap.BinaryDataEntry
+	27, // 25: api.ConfigMap.labels:type_name -> api.ConfigMap.LabelsEntry
+	28, // 26: api.Secret.data:type_name -> api.Secret.DataEntry
+	29, // 27: api.Secret.labels:type_name -> api.Secret.LabelsEntry
+	1,  // 28: api.Command.type:type_name -> api.Command.CommandType
+	29, // [29:29] is the sub-list for method output_type
+	29, // [29:29] is the sub-list for method input_type
+	29, // [29:29] is the sub-list for extension type_name
+	29, // [29:29] is the sub-list for extension extendee
+	0,  // [0:29] is the sub-list for field type_name
 }
 
 func init() { file_agent_backend_websocket_proto_init() }
@@ -2060,6 +2125,7 @@ func file_agent_backend_websocket_proto_init() {
 		(*AgentPayload_Heartbeat)(nil),
 		(*AgentPayload_CommandResponse)(nil),
 		(*AgentPayload_StreamData)(nil),
+		(*AgentPayload_AuthorizeUser)(nil),
 	}
 	file_agent_backend_websocket_proto_msgTypes[3].OneofWrappers = []any{
 		(*ServerPayload_Command)(nil),
@@ -2071,7 +2137,7 @@ func file_agent_backend_websocket_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agent_backend_websocket_proto_rawDesc), len(file_agent_backend_websocket_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   27,
+			NumMessages:   28,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
