@@ -77,7 +77,7 @@ func (kc *K8sClient) EnsureGatewayInstalled() error {
 		// ACME / Let's Encrypt certificate resolver using HTTP-01 challenge.
 		// Passed as CLI arguments because certResolvers is not a valid top-level
 		// schema key in newer Traefik Helm chart versions.
-		"additionalArguments": []string{
+		"additionalArguments": []any{
 			"--certificatesresolvers.letsencrypt.acme.email=" + acmeEmail,
 			"--certificatesresolvers.letsencrypt.acme.storage=/data/acme.json",
 			"--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web",
