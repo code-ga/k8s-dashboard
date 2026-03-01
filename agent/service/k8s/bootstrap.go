@@ -165,8 +165,6 @@ persistence:
   accessMode: ReadWriteOnce
   size: 128Mi
   path: /data
-nodeSelector:
-  role.k8s.io/edge: "true"
 `, acmeEmail)
 
 	obj := &unstructured.Unstructured{
