@@ -44,12 +44,16 @@ func (kc *K8sClient) EnsureGatewayInstalled() error {
 	}
 
 	// 4. Traefik CRDs & Gateway installation
-	// Construct values for Traefik chart
+	// Construct values for Traefik chart.
+	// Note: expose must be an object {default: bool} in Traefik Helm chart v32+.
+	// Note: certResolvers is not a valid top-level schema key in newer chart versions;
+	//       ACME is configured via additionalArguments instead.
+	expose := map[string]interface{}{"default": true}
 	values := map[string]interface{}{
 		"service": map[string]interface{}{
 			"type": "LoadBalancer",
 		},
-		"nodeSelector": map[string]string{
+		"nodeSelector": map[string]interface{}{
 			"role.k8s.io/edge": "true",
 		},
 		"providers": map[string]interface{}{
@@ -63,32 +67,20 @@ func (kc *K8sClient) EnsureGatewayInstalled() error {
 		"ports": map[string]interface{}{
 			"web": map[string]interface{}{
 				"exposedPort": 80,
-				"expose":      true,
+				"expose":      expose,
 			},
 			"websecure": map[string]interface{}{
 				"exposedPort": 443,
-				"expose":      true,
-				// Enable TLS on the websecure entrypoint
-				"tls": map[string]interface{}{
-					"enabled": true,
-				},
+				"expose":      expose,
 			},
 		},
 		// ACME / Let's Encrypt certificate resolver using HTTP-01 challenge.
-		// HTTP-01 requires port 80 to be publicly accessible.
-		// Traefik automatically handles /.well-known/acme-challenge/ requests
-		// on the "web" entrypoint before any redirect middleware is applied.
-		"certResolvers": map[string]interface{}{
-			"letsencrypt": map[string]interface{}{
-				"acme": map[string]interface{}{
-					"email":   acmeEmail,
-					"storage": "/data/acme.json",
-					// Use HTTP-01 challenge for easy setup (no DNS provider needed)
-					"httpChallenge": map[string]interface{}{
-						"entryPoint": "web",
-					},
-				},
-			},
+		// Passed as CLI arguments because certResolvers is not a valid top-level
+		// schema key in newer Traefik Helm chart versions.
+		"additionalArguments": []string{
+			"--certificatesresolvers.letsencrypt.acme.email=" + acmeEmail,
+			"--certificatesresolvers.letsencrypt.acme.storage=/data/acme.json",
+			"--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web",
 		},
 		// Persistence is required to store the ACME JSON file across restarts.
 		// Without persistence, Traefik requests new certificates on every restart,
@@ -107,13 +99,13 @@ func (kc *K8sClient) EnsureGatewayInstalled() error {
 	for i := 30000; i <= 30100; i++ {
 		ports[fmt.Sprintf("p%d", i)] = map[string]interface{}{
 			"port":        i,
-			"expose":      true,
+			"expose":      expose,
 			"exposedPort": i,
 			"protocol":    "TCP",
 		}
 		ports[fmt.Sprintf("u%d", i)] = map[string]interface{}{
 			"port":        i,
-			"expose":      true,
+			"expose":      expose,
 			"exposedPort": i,
 			"protocol":    "UDP",
 		}
