@@ -79,6 +79,11 @@ func main() {
 	}
 	log.Printf("Kubernetes client created")
 
+	// Ensure Traefik gateway is installed with cert resolver configuration.
+	if err := kubeClient.EnsureGatewayInstalled(); err != nil {
+		log.Printf("Warning: failed to ensure gateway installed: %v", err)
+	}
+
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt)
 
