@@ -7,6 +7,17 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+)
+
+var (
+	helmChartGVR = schema.GroupVersionResource{
+		Group: "helm.cattle.io", Version: "v1", Resource: "helmcharts",
+	}
+	helmChartConfigGVR = schema.GroupVersionResource{
+		Group: "helm.cattle.io", Version: "v1", Resource: "helmchartconfigs",
+	}
 )
 
 func (kc *K8sClient) EnsureGatewayInstalled() error {
@@ -43,7 +54,16 @@ func (kc *K8sClient) EnsureGatewayInstalled() error {
 		acmeEmail = "admin@example.com"
 	}
 
-	// 4. Traefik CRDs & Gateway installation
+	// 4. Check if k3s manages Traefik (k3s installs it in kube-system via its own
+	//    HelmChart controller). If so, configure it via HelmChartConfig instead of
+	//    running a competing Helm install that will always conflict with k3s.
+	_, k3sErr := kc.DynamicClient.Resource(helmChartGVR).Namespace("kube-system").Get(kc.Context, "traefik", metav1.GetOptions{})
+	if k3sErr == nil {
+		log.Printf("k3s-managed Traefik detected; applying HelmChartConfig in kube-system")
+		return kc.applyK3sTraefikConfig(acmeEmail)
+	}
+
+	// 5. Traefik CRDs & Gateway installation (non-k3s path)
 	// Construct values for Traefik chart.
 	// Note: expose must be an object {default: bool} in Traefik Helm chart v32+.
 	// Note: certResolvers is not a valid top-level schema key in newer chart versions;
@@ -111,12 +131,73 @@ func (kc *K8sClient) EnsureGatewayInstalled() error {
 		}
 	}
 
+	// 6. Remove cluster-scoped IngressClass if it was previously installed in a
+	//    different namespace. Helm enforces ownership via the release-namespace
+	//    annotation, and will refuse to adopt a resource owned by another release.
+	if ic, icErr := kc.Clientset.NetworkingV1().IngressClasses().Get(kc.Context, "traefik", metav1.GetOptions{}); icErr == nil {
+		if ic.Annotations["meta.helm.sh/release-namespace"] != namespace {
+			log.Printf("Deleting IngressClass 'traefik' (owned by namespace %q, re-creating in %q)",
+				ic.Annotations["meta.helm.sh/release-namespace"], namespace)
+			_ = kc.Clientset.NetworkingV1().IngressClasses().Delete(kc.Context, "traefik", metav1.DeleteOptions{})
+		}
+	}
+
 	err = kc.InstallOrUpgradeChart("https://traefik.github.io/charts", "traefik", "traefik", namespace, values)
 	if err != nil {
 		return fmt.Errorf("failed to install/upgrade traefik: %w", err)
 	}
 
 	log.Printf("Traefik gateway installation initiated in %s using Helm (ACME email: %s)", namespace, acmeEmail)
+	return nil
+}
+
+// applyK3sTraefikConfig configures the k3s-managed Traefik instance by creating or
+// updating a HelmChartConfig resource in kube-system. k3s reconciles this resource
+// automatically, so our ACME/certResolver settings get applied to the built-in Traefik.
+func (kc *K8sClient) applyK3sTraefikConfig(acmeEmail string) error {
+	valuesContent := fmt.Sprintf(`additionalArguments:
+  - "--certificatesresolvers.letsencrypt.acme.email=%s"
+  - "--certificatesresolvers.letsencrypt.acme.storage=/data/acme.json"
+  - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
+persistence:
+  enabled: true
+  name: data
+  accessMode: ReadWriteOnce
+  size: 128Mi
+  path: /data
+nodeSelector:
+  role.k8s.io/edge: "true"
+`, acmeEmail)
+
+	obj := &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"apiVersion": "helm.cattle.io/v1",
+			"kind":       "HelmChartConfig",
+			"metadata": map[string]interface{}{
+				"name":      "traefik",
+				"namespace": "kube-system",
+			},
+			"spec": map[string]interface{}{
+				"valuesContent": valuesContent,
+			},
+		},
+	}
+
+	existing, err := kc.DynamicClient.Resource(helmChartConfigGVR).Namespace("kube-system").Get(kc.Context, "traefik", metav1.GetOptions{})
+	if err != nil {
+		_, err = kc.DynamicClient.Resource(helmChartConfigGVR).Namespace("kube-system").Create(kc.Context, obj, metav1.CreateOptions{})
+		if err != nil {
+			return fmt.Errorf("failed to create HelmChartConfig: %w", err)
+		}
+		log.Printf("Created HelmChartConfig for k3s Traefik (ACME email: %s)", acmeEmail)
+	} else {
+		obj.SetResourceVersion(existing.GetResourceVersion())
+		_, err = kc.DynamicClient.Resource(helmChartConfigGVR).Namespace("kube-system").Update(kc.Context, obj, metav1.UpdateOptions{})
+		if err != nil {
+			return fmt.Errorf("failed to update HelmChartConfig: %w", err)
+		}
+		log.Printf("Updated HelmChartConfig for k3s Traefik (ACME email: %s)", acmeEmail)
+	}
 	return nil
 }
 
