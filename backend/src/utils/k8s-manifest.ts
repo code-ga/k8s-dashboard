@@ -454,6 +454,9 @@ export const generateIngressRouteManifest = (dto: IngressRouteDTO): string => {
 						],
 					},
 				],
+				tls: {
+					certResolver: "letsencrypt", // This secret should be created separately with the TLS cert for the domain
+				},
 			},
 		};
 		return YAML.stringify(manifest);
