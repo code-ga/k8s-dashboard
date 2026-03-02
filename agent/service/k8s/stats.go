@@ -422,6 +422,12 @@ func (kc *K8sClient) GetFullClusterState() (*pb.Heartbeat, error) {
 		clusterDomain = "cluster.local" // default
 	}
 
+	// Fetch Ingresses (Traefik IngressRoute / IngressRouteTCP / IngressRouteUDP)
+	pbIngresses, err := kc.GetIngressRoutes()
+	if err != nil {
+		fmt.Printf("Warning: Failed to fetch ingress routes: %v\n", err)
+	}
+
 	heartbeat := &pb.Heartbeat{
 		ClusterResource: &pb.ClusterResource{
 			CpuCapacity:   totalCPUCap,
@@ -436,6 +442,7 @@ func (kc *K8sClient) GetFullClusterState() (*pb.Heartbeat, error) {
 		Deployments: pbDeployments,
 		ConfigMaps:  pbConfigMaps,
 		Secrets:     pbSecrets,
+		Ingresses:   pbIngresses,
 		Timestamp:   time.Now().Unix(),
 	}
 

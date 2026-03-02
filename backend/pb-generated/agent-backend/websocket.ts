@@ -93,6 +93,8 @@ export interface Heartbeat {
   configMaps: ConfigMap[];
   /** List of secrets */
   secrets: Secret[];
+  /** List of ingresses (IngressRoute / IngressRouteTCP / IngressRouteUDP) */
+  ingresses: Ingress[];
   /** Timestamp of the heartbeat */
   timestamp: number;
 }
@@ -279,6 +281,31 @@ export interface Secret_DataEntry {
 }
 
 export interface Secret_LabelsEntry {
+  key: string;
+  value: string;
+}
+
+export interface Ingress {
+  name: string;
+  namespace: string;
+  /** Protocol: http, tcp, or udp (inferred from Traefik resource kind) */
+  protocol: string;
+  /** External gateway port (0 for http which uses the default entrypoint) */
+  port: number;
+  /** Internal service port */
+  internalPort: number;
+  /** Service name this ingress routes to */
+  serviceName: string;
+  /** Hostname/domain rule for HTTP routes */
+  domain: string;
+  /** Path prefix (HTTP only) */
+  path: string;
+  /** Kubernetes UID of the IngressRoute resource */
+  uid: string;
+  labels: { [key: string]: string };
+}
+
+export interface Ingress_LabelsEntry {
   key: string;
   value: string;
 }
@@ -941,6 +968,7 @@ function createBaseHeartbeat(): Heartbeat {
     deployments: [],
     configMaps: [],
     secrets: [],
+    ingresses: [],
     timestamp: 0,
   };
 }
@@ -967,6 +995,9 @@ export const Heartbeat: MessageFns<Heartbeat> = {
     }
     for (const v of message.secrets) {
       Secret.encode(v!, writer.uint32(66).fork()).join();
+    }
+    for (const v of message.ingresses) {
+      Ingress.encode(v!, writer.uint32(74).fork()).join();
     }
     if (message.timestamp !== 0) {
       writer.uint32(40).int64(message.timestamp);
@@ -1037,6 +1068,14 @@ export const Heartbeat: MessageFns<Heartbeat> = {
           message.secrets.push(Secret.decode(reader, reader.uint32()));
           continue;
         }
+        case 9: {
+          if (tag !== 74) {
+            break;
+          }
+
+          message.ingresses.push(Ingress.decode(reader, reader.uint32()));
+          continue;
+        }
         case 5: {
           if (tag !== 40) {
             break;
@@ -1073,6 +1112,9 @@ export const Heartbeat: MessageFns<Heartbeat> = {
         ? object.config_maps.map((e: any) => ConfigMap.fromJSON(e))
         : [],
       secrets: globalThis.Array.isArray(object?.secrets) ? object.secrets.map((e: any) => Secret.fromJSON(e)) : [],
+      ingresses: globalThis.Array.isArray(object?.ingresses)
+        ? object.ingresses.map((e: any) => Ingress.fromJSON(e))
+        : [],
       timestamp: isSet(object.timestamp) ? globalThis.Number(object.timestamp) : 0,
     };
   },
@@ -1100,6 +1142,9 @@ export const Heartbeat: MessageFns<Heartbeat> = {
     if (message.secrets?.length) {
       obj.secrets = message.secrets.map((e) => Secret.toJSON(e));
     }
+    if (message.ingresses?.length) {
+      obj.ingresses = message.ingresses.map((e) => Ingress.toJSON(e));
+    }
     if (message.timestamp !== 0) {
       obj.timestamp = Math.round(message.timestamp);
     }
@@ -1120,6 +1165,7 @@ export const Heartbeat: MessageFns<Heartbeat> = {
     message.deployments = object.deployments?.map((e) => Deployment.fromPartial(e)) || [];
     message.configMaps = object.configMaps?.map((e) => ConfigMap.fromPartial(e)) || [];
     message.secrets = object.secrets?.map((e) => Secret.fromPartial(e)) || [];
+    message.ingresses = object.ingresses?.map((e) => Ingress.fromPartial(e)) || [];
     message.timestamp = object.timestamp ?? 0;
     return message;
   },
@@ -4147,6 +4193,330 @@ export const Secret_LabelsEntry: MessageFns<Secret_LabelsEntry> = {
   },
   fromPartial<I extends Exact<DeepPartial<Secret_LabelsEntry>, I>>(object: I): Secret_LabelsEntry {
     const message = createBaseSecret_LabelsEntry();
+    message.key = object.key ?? "";
+    message.value = object.value ?? "";
+    return message;
+  },
+};
+
+function createBaseIngress(): Ingress {
+  return {
+    name: "",
+    namespace: "",
+    protocol: "",
+    port: 0,
+    internalPort: 0,
+    serviceName: "",
+    domain: "",
+    path: "",
+    uid: "",
+    labels: {},
+  };
+}
+
+export const Ingress: MessageFns<Ingress> = {
+  encode(message: Ingress, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.name !== "") {
+      writer.uint32(10).string(message.name);
+    }
+    if (message.namespace !== "") {
+      writer.uint32(18).string(message.namespace);
+    }
+    if (message.protocol !== "") {
+      writer.uint32(26).string(message.protocol);
+    }
+    if (message.port !== 0) {
+      writer.uint32(32).int32(message.port);
+    }
+    if (message.internalPort !== 0) {
+      writer.uint32(40).int32(message.internalPort);
+    }
+    if (message.serviceName !== "") {
+      writer.uint32(50).string(message.serviceName);
+    }
+    if (message.domain !== "") {
+      writer.uint32(58).string(message.domain);
+    }
+    if (message.path !== "") {
+      writer.uint32(66).string(message.path);
+    }
+    if (message.uid !== "") {
+      writer.uint32(74).string(message.uid);
+    }
+    globalThis.Object.entries(message.labels).forEach(([key, value]: [string, string]) => {
+      Ingress_LabelsEntry.encode({ key: key as any, value }, writer.uint32(82).fork()).join();
+    });
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): Ingress {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseIngress();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.name = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.namespace = reader.string();
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.protocol = reader.string();
+          continue;
+        }
+        case 4: {
+          if (tag !== 32) {
+            break;
+          }
+
+          message.port = reader.int32();
+          continue;
+        }
+        case 5: {
+          if (tag !== 40) {
+            break;
+          }
+
+          message.internalPort = reader.int32();
+          continue;
+        }
+        case 6: {
+          if (tag !== 50) {
+            break;
+          }
+
+          message.serviceName = reader.string();
+          continue;
+        }
+        case 7: {
+          if (tag !== 58) {
+            break;
+          }
+
+          message.domain = reader.string();
+          continue;
+        }
+        case 8: {
+          if (tag !== 66) {
+            break;
+          }
+
+          message.path = reader.string();
+          continue;
+        }
+        case 9: {
+          if (tag !== 74) {
+            break;
+          }
+
+          message.uid = reader.string();
+          continue;
+        }
+        case 10: {
+          if (tag !== 82) {
+            break;
+          }
+
+          const entry10 = Ingress_LabelsEntry.decode(reader, reader.uint32());
+          if (entry10.value !== undefined) {
+            message.labels[entry10.key] = entry10.value;
+          }
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): Ingress {
+    return {
+      name: isSet(object.name) ? globalThis.String(object.name) : "",
+      namespace: isSet(object.namespace) ? globalThis.String(object.namespace) : "",
+      protocol: isSet(object.protocol) ? globalThis.String(object.protocol) : "",
+      port: isSet(object.port) ? globalThis.Number(object.port) : 0,
+      internalPort: isSet(object.internalPort)
+        ? globalThis.Number(object.internalPort)
+        : isSet(object.internal_port)
+        ? globalThis.Number(object.internal_port)
+        : 0,
+      serviceName: isSet(object.serviceName)
+        ? globalThis.String(object.serviceName)
+        : isSet(object.service_name)
+        ? globalThis.String(object.service_name)
+        : "",
+      domain: isSet(object.domain) ? globalThis.String(object.domain) : "",
+      path: isSet(object.path) ? globalThis.String(object.path) : "",
+      uid: isSet(object.uid) ? globalThis.String(object.uid) : "",
+      labels: isObject(object.labels)
+        ? (globalThis.Object.entries(object.labels) as [string, any][]).reduce(
+          (acc: { [key: string]: string }, [key, value]: [string, any]) => {
+            acc[key] = globalThis.String(value);
+            return acc;
+          },
+          {},
+        )
+        : {},
+    };
+  },
+
+  toJSON(message: Ingress): unknown {
+    const obj: any = {};
+    if (message.name !== "") {
+      obj.name = message.name;
+    }
+    if (message.namespace !== "") {
+      obj.namespace = message.namespace;
+    }
+    if (message.protocol !== "") {
+      obj.protocol = message.protocol;
+    }
+    if (message.port !== 0) {
+      obj.port = Math.round(message.port);
+    }
+    if (message.internalPort !== 0) {
+      obj.internalPort = Math.round(message.internalPort);
+    }
+    if (message.serviceName !== "") {
+      obj.serviceName = message.serviceName;
+    }
+    if (message.domain !== "") {
+      obj.domain = message.domain;
+    }
+    if (message.path !== "") {
+      obj.path = message.path;
+    }
+    if (message.uid !== "") {
+      obj.uid = message.uid;
+    }
+    if (message.labels) {
+      const entries = globalThis.Object.entries(message.labels) as [string, string][];
+      if (entries.length > 0) {
+        obj.labels = {};
+        entries.forEach(([k, v]) => {
+          obj.labels[k] = v;
+        });
+      }
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<Ingress>, I>>(base?: I): Ingress {
+    return Ingress.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<Ingress>, I>>(object: I): Ingress {
+    const message = createBaseIngress();
+    message.name = object.name ?? "";
+    message.namespace = object.namespace ?? "";
+    message.protocol = object.protocol ?? "";
+    message.port = object.port ?? 0;
+    message.internalPort = object.internalPort ?? 0;
+    message.serviceName = object.serviceName ?? "";
+    message.domain = object.domain ?? "";
+    message.path = object.path ?? "";
+    message.uid = object.uid ?? "";
+    message.labels = (globalThis.Object.entries(object.labels ?? {}) as [string, string][]).reduce(
+      (acc: { [key: string]: string }, [key, value]: [string, string]) => {
+        if (value !== undefined) {
+          acc[key] = globalThis.String(value);
+        }
+        return acc;
+      },
+      {},
+    );
+    return message;
+  },
+};
+
+function createBaseIngress_LabelsEntry(): Ingress_LabelsEntry {
+  return { key: "", value: "" };
+}
+
+export const Ingress_LabelsEntry: MessageFns<Ingress_LabelsEntry> = {
+  encode(message: Ingress_LabelsEntry, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.key !== "") {
+      writer.uint32(10).string(message.key);
+    }
+    if (message.value !== "") {
+      writer.uint32(18).string(message.value);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): Ingress_LabelsEntry {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseIngress_LabelsEntry();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.key = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.value = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): Ingress_LabelsEntry {
+    return {
+      key: isSet(object.key) ? globalThis.String(object.key) : "",
+      value: isSet(object.value) ? globalThis.String(object.value) : "",
+    };
+  },
+
+  toJSON(message: Ingress_LabelsEntry): unknown {
+    const obj: any = {};
+    if (message.key !== "") {
+      obj.key = message.key;
+    }
+    if (message.value !== "") {
+      obj.value = message.value;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<Ingress_LabelsEntry>, I>>(base?: I): Ingress_LabelsEntry {
+    return Ingress_LabelsEntry.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<Ingress_LabelsEntry>, I>>(object: I): Ingress_LabelsEntry {
+    const message = createBaseIngress_LabelsEntry();
     message.key = object.key ?? "";
     message.value = object.value ?? "";
     return message;

@@ -167,7 +167,7 @@ func (x Command_CommandType) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use Command_CommandType.Descriptor instead.
 func (Command_CommandType) EnumDescriptor() ([]byte, []int) {
-	return file_agent_backend_websocket_proto_rawDescGZIP(), []int{15, 0}
+	return file_agent_backend_websocket_proto_rawDescGZIP(), []int{16, 0}
 }
 
 // Wrapper for all messages sent from Agent to Server
@@ -544,6 +544,8 @@ type Heartbeat struct {
 	ConfigMaps []*ConfigMap `protobuf:"bytes,7,rep,name=config_maps,json=configMaps,proto3" json:"config_maps,omitempty"`
 	// List of secrets
 	Secrets []*Secret `protobuf:"bytes,8,rep,name=secrets,proto3" json:"secrets,omitempty"`
+	// List of ingresses (IngressRoute / IngressRouteTCP / IngressRouteUDP)
+	Ingresses []*Ingress `protobuf:"bytes,9,rep,name=ingresses,proto3" json:"ingresses,omitempty"`
 	// Timestamp of the heartbeat
 	Timestamp     int64 `protobuf:"varint,5,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -625,6 +627,13 @@ func (x *Heartbeat) GetConfigMaps() []*ConfigMap {
 func (x *Heartbeat) GetSecrets() []*Secret {
 	if x != nil {
 		return x.Secrets
+	}
+	return nil
+}
+
+func (x *Heartbeat) GetIngresses() []*Ingress {
+	if x != nil {
+		return x.Ingresses
 	}
 	return nil
 }
@@ -1661,6 +1670,129 @@ func (x *Secret) GetImmutable() bool {
 	return false
 }
 
+type Ingress struct {
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	Name      string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Namespace string                 `protobuf:"bytes,2,opt,name=namespace,proto3" json:"namespace,omitempty"`
+	// Protocol: http, tcp, or udp (inferred from Traefik resource kind)
+	Protocol string `protobuf:"bytes,3,opt,name=protocol,proto3" json:"protocol,omitempty"`
+	// External gateway port (0 for http which uses the default entrypoint)
+	Port int32 `protobuf:"varint,4,opt,name=port,proto3" json:"port,omitempty"`
+	// Internal service port
+	InternalPort int32 `protobuf:"varint,5,opt,name=internal_port,json=internalPort,proto3" json:"internal_port,omitempty"`
+	// Service name this ingress routes to
+	ServiceName string `protobuf:"bytes,6,opt,name=service_name,json=serviceName,proto3" json:"service_name,omitempty"`
+	// Hostname/domain rule for HTTP routes
+	Domain string `protobuf:"bytes,7,opt,name=domain,proto3" json:"domain,omitempty"`
+	// Path prefix (HTTP only)
+	Path string `protobuf:"bytes,8,opt,name=path,proto3" json:"path,omitempty"`
+	// Kubernetes UID of the IngressRoute resource
+	Uid           string            `protobuf:"bytes,9,opt,name=uid,proto3" json:"uid,omitempty"`
+	Labels        map[string]string `protobuf:"bytes,10,rep,name=labels,proto3" json:"labels,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Ingress) Reset() {
+	*x = Ingress{}
+	mi := &file_agent_backend_websocket_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Ingress) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Ingress) ProtoMessage() {}
+
+func (x *Ingress) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_backend_websocket_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Ingress.ProtoReflect.Descriptor instead.
+func (*Ingress) Descriptor() ([]byte, []int) {
+	return file_agent_backend_websocket_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *Ingress) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *Ingress) GetNamespace() string {
+	if x != nil {
+		return x.Namespace
+	}
+	return ""
+}
+
+func (x *Ingress) GetProtocol() string {
+	if x != nil {
+		return x.Protocol
+	}
+	return ""
+}
+
+func (x *Ingress) GetPort() int32 {
+	if x != nil {
+		return x.Port
+	}
+	return 0
+}
+
+func (x *Ingress) GetInternalPort() int32 {
+	if x != nil {
+		return x.InternalPort
+	}
+	return 0
+}
+
+func (x *Ingress) GetServiceName() string {
+	if x != nil {
+		return x.ServiceName
+	}
+	return ""
+}
+
+func (x *Ingress) GetDomain() string {
+	if x != nil {
+		return x.Domain
+	}
+	return ""
+}
+
+func (x *Ingress) GetPath() string {
+	if x != nil {
+		return x.Path
+	}
+	return ""
+}
+
+func (x *Ingress) GetUid() string {
+	if x != nil {
+		return x.Uid
+	}
+	return ""
+}
+
+func (x *Ingress) GetLabels() map[string]string {
+	if x != nil {
+		return x.Labels
+	}
+	return nil
+}
+
 type Command struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -1676,7 +1808,7 @@ type Command struct {
 
 func (x *Command) Reset() {
 	*x = Command{}
-	mi := &file_agent_backend_websocket_proto_msgTypes[15]
+	mi := &file_agent_backend_websocket_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1688,7 +1820,7 @@ func (x *Command) String() string {
 func (*Command) ProtoMessage() {}
 
 func (x *Command) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_backend_websocket_proto_msgTypes[15]
+	mi := &file_agent_backend_websocket_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1701,7 +1833,7 @@ func (x *Command) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Command.ProtoReflect.Descriptor instead.
 func (*Command) Descriptor() ([]byte, []int) {
-	return file_agent_backend_websocket_proto_rawDescGZIP(), []int{15}
+	return file_agent_backend_websocket_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *Command) GetId() string {
@@ -1752,7 +1884,7 @@ type JoinTokenData struct {
 
 func (x *JoinTokenData) Reset() {
 	*x = JoinTokenData{}
-	mi := &file_agent_backend_websocket_proto_msgTypes[16]
+	mi := &file_agent_backend_websocket_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1764,7 +1896,7 @@ func (x *JoinTokenData) String() string {
 func (*JoinTokenData) ProtoMessage() {}
 
 func (x *JoinTokenData) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_backend_websocket_proto_msgTypes[16]
+	mi := &file_agent_backend_websocket_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1777,7 +1909,7 @@ func (x *JoinTokenData) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use JoinTokenData.ProtoReflect.Descriptor instead.
 func (*JoinTokenData) Descriptor() ([]byte, []int) {
-	return file_agent_backend_websocket_proto_rawDescGZIP(), []int{16}
+	return file_agent_backend_websocket_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *JoinTokenData) GetCommand() string {
@@ -1849,7 +1981,7 @@ const file_agent_backend_websocket_proto_rawDesc = "" +
 	"\acommand\x18\x01 \x01(\v2\f.api.CommandH\x00R\acommand\x122\n" +
 	"\vstream_data\x18\x02 \x01(\v2\x0f.api.StreamDataH\x00R\n" +
 	"streamDataB\t\n" +
-	"\apayload\"\xde\x02\n" +
+	"\apayload\"\x8a\x03\n" +
 	"\tHeartbeat\x12?\n" +
 	"\x10cluster_resource\x18\x01 \x01(\v2\x14.api.ClusterResourceR\x0fclusterResource\x12\x1f\n" +
 	"\x05nodes\x18\x02 \x03(\v2\t.api.NodeR\x05nodes\x12\x1c\n" +
@@ -1858,7 +1990,8 @@ const file_agent_backend_websocket_proto_rawDesc = "" +
 	"\vdeployments\x18\x06 \x03(\v2\x0f.api.DeploymentR\vdeployments\x12/\n" +
 	"\vconfig_maps\x18\a \x03(\v2\x0e.api.ConfigMapR\n" +
 	"configMaps\x12%\n" +
-	"\asecrets\x18\b \x03(\v2\v.api.SecretR\asecrets\x12\x1c\n" +
+	"\asecrets\x18\b \x03(\v2\v.api.SecretR\asecrets\x12*\n" +
+	"\tingresses\x18\t \x03(\v2\f.api.IngressR\tingresses\x12\x1c\n" +
 	"\ttimestamp\x18\x05 \x01(\x03R\ttimestamp\",\n" +
 	"\x14AGENT_AUTHORIZE_USER\x12\x14\n" +
 	"\x05token\x18\x01 \x01(\tR\x05token\"\xb8\x01\n" +
@@ -1991,6 +2124,21 @@ const file_agent_backend_websocket_proto_rawDesc = "" +
 	"\x05value\x18\x02 \x01(\fR\x05value:\x028\x01\x1a9\n" +
 	"\vLabelsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xde\x02\n" +
+	"\aIngress\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1c\n" +
+	"\tnamespace\x18\x02 \x01(\tR\tnamespace\x12\x1a\n" +
+	"\bprotocol\x18\x03 \x01(\tR\bprotocol\x12\x12\n" +
+	"\x04port\x18\x04 \x01(\x05R\x04port\x12#\n" +
+	"\rinternal_port\x18\x05 \x01(\x05R\finternalPort\x12!\n" +
+	"\fservice_name\x18\x06 \x01(\tR\vserviceName\x12\x16\n" +
+	"\x06domain\x18\a \x01(\tR\x06domain\x12\x12\n" +
+	"\x04path\x18\b \x01(\tR\x04path\x12\x10\n" +
+	"\x03uid\x18\t \x01(\tR\x03uid\x120\n" +
+	"\x06labels\x18\n" +
+	" \x03(\v2\x18.api.Ingress.LabelsEntryR\x06labels\x1a9\n" +
+	"\vLabelsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xcd\x04\n" +
 	"\aCommand\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12,\n" +
@@ -2046,7 +2194,7 @@ func file_agent_backend_websocket_proto_rawDescGZIP() []byte {
 }
 
 var file_agent_backend_websocket_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_agent_backend_websocket_proto_msgTypes = make([]protoimpl.MessageInfo, 28)
+var file_agent_backend_websocket_proto_msgTypes = make([]protoimpl.MessageInfo, 30)
 var file_agent_backend_websocket_proto_goTypes = []any{
 	(StreamData_StreamDataType)(0), // 0: api.StreamData.StreamDataType
 	(Command_CommandType)(0),       // 1: api.Command.CommandType
@@ -2065,19 +2213,21 @@ var file_agent_backend_websocket_proto_goTypes = []any{
 	(*Service)(nil),                // 14: api.Service
 	(*ConfigMap)(nil),              // 15: api.ConfigMap
 	(*Secret)(nil),                 // 16: api.Secret
-	(*Command)(nil),                // 17: api.Command
-	(*JoinTokenData)(nil),          // 18: api.JoinTokenData
-	nil,                            // 19: api.Node.LabelsEntry
-	nil,                            // 20: api.Deployment.LabelsEntry
-	nil,                            // 21: api.Deployment.SelectorEntry
-	nil,                            // 22: api.Pod.LabelsEntry
-	nil,                            // 23: api.Service.SelectorEntry
-	nil,                            // 24: api.Service.LabelsEntry
-	nil,                            // 25: api.ConfigMap.DataEntry
-	nil,                            // 26: api.ConfigMap.BinaryDataEntry
-	nil,                            // 27: api.ConfigMap.LabelsEntry
-	nil,                            // 28: api.Secret.DataEntry
-	nil,                            // 29: api.Secret.LabelsEntry
+	(*Ingress)(nil),                // 17: api.Ingress
+	(*Command)(nil),                // 18: api.Command
+	(*JoinTokenData)(nil),          // 19: api.JoinTokenData
+	nil,                            // 20: api.Node.LabelsEntry
+	nil,                            // 21: api.Deployment.LabelsEntry
+	nil,                            // 22: api.Deployment.SelectorEntry
+	nil,                            // 23: api.Pod.LabelsEntry
+	nil,                            // 24: api.Service.SelectorEntry
+	nil,                            // 25: api.Service.LabelsEntry
+	nil,                            // 26: api.ConfigMap.DataEntry
+	nil,                            // 27: api.ConfigMap.BinaryDataEntry
+	nil,                            // 28: api.ConfigMap.LabelsEntry
+	nil,                            // 29: api.Secret.DataEntry
+	nil,                            // 30: api.Secret.LabelsEntry
+	nil,                            // 31: api.Ingress.LabelsEntry
 }
 var file_agent_backend_websocket_proto_depIdxs = []int32{
 	6,  // 0: api.AgentPayload.heartbeat:type_name -> api.Heartbeat
@@ -2085,7 +2235,7 @@ var file_agent_backend_websocket_proto_depIdxs = []int32{
 	3,  // 2: api.AgentPayload.stream_data:type_name -> api.StreamData
 	7,  // 3: api.AgentPayload.authorize_user:type_name -> api.AGENT_AUTHORIZE_USER
 	0,  // 4: api.StreamData.type:type_name -> api.StreamData.StreamDataType
-	17, // 5: api.ServerPayload.command:type_name -> api.Command
+	18, // 5: api.ServerPayload.command:type_name -> api.Command
 	3,  // 6: api.ServerPayload.stream_data:type_name -> api.StreamData
 	8,  // 7: api.Heartbeat.cluster_resource:type_name -> api.ClusterResource
 	10, // 8: api.Heartbeat.nodes:type_name -> api.Node
@@ -2094,26 +2244,28 @@ var file_agent_backend_websocket_proto_depIdxs = []int32{
 	11, // 11: api.Heartbeat.deployments:type_name -> api.Deployment
 	15, // 12: api.Heartbeat.config_maps:type_name -> api.ConfigMap
 	16, // 13: api.Heartbeat.secrets:type_name -> api.Secret
-	19, // 14: api.Node.labels:type_name -> api.Node.LabelsEntry
-	20, // 15: api.Deployment.labels:type_name -> api.Deployment.LabelsEntry
-	21, // 16: api.Deployment.selector:type_name -> api.Deployment.SelectorEntry
-	9,  // 17: api.Deployment.ports:type_name -> api.ContainerPort
-	9,  // 18: api.Pod.ports:type_name -> api.ContainerPort
-	22, // 19: api.Pod.labels:type_name -> api.Pod.LabelsEntry
-	23, // 20: api.Service.selector:type_name -> api.Service.SelectorEntry
-	24, // 21: api.Service.labels:type_name -> api.Service.LabelsEntry
-	13, // 22: api.Service.ports:type_name -> api.ServicePort
-	25, // 23: api.ConfigMap.data:type_name -> api.ConfigMap.DataEntry
-	26, // 24: api.ConfigMap.binary_data:type_name -> api.ConfigMap.BinaryDataEntry
-	27, // 25: api.ConfigMap.labels:type_name -> api.ConfigMap.LabelsEntry
-	28, // 26: api.Secret.data:type_name -> api.Secret.DataEntry
-	29, // 27: api.Secret.labels:type_name -> api.Secret.LabelsEntry
-	1,  // 28: api.Command.type:type_name -> api.Command.CommandType
-	29, // [29:29] is the sub-list for method output_type
-	29, // [29:29] is the sub-list for method input_type
-	29, // [29:29] is the sub-list for extension type_name
-	29, // [29:29] is the sub-list for extension extendee
-	0,  // [0:29] is the sub-list for field type_name
+	17, // 14: api.Heartbeat.ingresses:type_name -> api.Ingress
+	20, // 15: api.Node.labels:type_name -> api.Node.LabelsEntry
+	21, // 16: api.Deployment.labels:type_name -> api.Deployment.LabelsEntry
+	22, // 17: api.Deployment.selector:type_name -> api.Deployment.SelectorEntry
+	9,  // 18: api.Deployment.ports:type_name -> api.ContainerPort
+	9,  // 19: api.Pod.ports:type_name -> api.ContainerPort
+	23, // 20: api.Pod.labels:type_name -> api.Pod.LabelsEntry
+	24, // 21: api.Service.selector:type_name -> api.Service.SelectorEntry
+	25, // 22: api.Service.labels:type_name -> api.Service.LabelsEntry
+	13, // 23: api.Service.ports:type_name -> api.ServicePort
+	26, // 24: api.ConfigMap.data:type_name -> api.ConfigMap.DataEntry
+	27, // 25: api.ConfigMap.binary_data:type_name -> api.ConfigMap.BinaryDataEntry
+	28, // 26: api.ConfigMap.labels:type_name -> api.ConfigMap.LabelsEntry
+	29, // 27: api.Secret.data:type_name -> api.Secret.DataEntry
+	30, // 28: api.Secret.labels:type_name -> api.Secret.LabelsEntry
+	31, // 29: api.Ingress.labels:type_name -> api.Ingress.LabelsEntry
+	1,  // 30: api.Command.type:type_name -> api.Command.CommandType
+	31, // [31:31] is the sub-list for method output_type
+	31, // [31:31] is the sub-list for method input_type
+	31, // [31:31] is the sub-list for extension type_name
+	31, // [31:31] is the sub-list for extension extendee
+	0,  // [0:31] is the sub-list for field type_name
 }
 
 func init() { file_agent_backend_websocket_proto_init() }
@@ -2137,7 +2289,7 @@ func file_agent_backend_websocket_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agent_backend_websocket_proto_rawDesc), len(file_agent_backend_websocket_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   28,
+			NumMessages:   30,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

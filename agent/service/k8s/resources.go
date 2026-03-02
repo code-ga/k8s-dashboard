@@ -2,11 +2,17 @@ package k8s
 
 import (
 	"fmt"
+	"regexp"
+	"strconv"
+	"strings"
 	"time"
+
+	pb "k8s-dashboard/agents/pb/agent-backend"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 func (kc *K8sClient) GetPods(namespace string) (*corev1.PodList, error) {
@@ -63,6 +69,177 @@ func (kc *K8sClient) GetSecrets(namespace string) (*corev1.SecretList, error) {
 		return nil, err
 	}
 	return secrets, nil
+}
+
+// traefikGVR returns the GroupVersionResource for a Traefik CRD type.
+func traefikGVR(resource string) schema.GroupVersionResource {
+	return schema.GroupVersionResource{Group: "traefik.io", Version: "v1alpha1", Resource: resource}
+}
+
+// parseEntryPointPort converts a Traefik entrypoint name to an external port number.
+// "websecure" → 0 (HTTP uses default HTTPS entrypoint, no explicit gateway port)
+// "p30000"    → 30000 (TCP)
+// "u30001"    → 30001 (UDP)
+func parseEntryPointPort(ep string) int32 {
+	if ep == "web" || ep == "websecure" {
+		return 0
+	}
+	if strings.HasPrefix(ep, "p") || strings.HasPrefix(ep, "u") {
+		if n, err := strconv.Atoi(ep[1:]); err == nil {
+			return int32(n)
+		}
+	}
+	return 0
+}
+
+var (
+	reHost       = regexp.MustCompile(`Host\(` + "`" + `([^` + "`" + `]+)` + "`" + `\)`)
+	rePathPrefix = regexp.MustCompile(`PathPrefix\(` + "`" + `([^` + "`" + `]+)` + "`" + `\)`)
+)
+
+// parseMatchRule extracts domain and path from a Traefik route match rule.
+// e.g. "Host(`example.com`) && PathPrefix(`/api`)" → ("example.com", "/api")
+func parseMatchRule(match string) (domain, path string) {
+	if m := reHost.FindStringSubmatch(match); len(m) == 2 {
+		domain = m[1]
+	}
+	if m := rePathPrefix.FindStringSubmatch(match); len(m) == 2 {
+		path = m[1]
+	}
+	return
+}
+
+// nestedString safely extracts a string from an unstructured nested map.
+func nestedString(obj map[string]any, fields ...string) string {
+	val, found, _ := nestedFieldNoCopy(obj, fields...)
+	if !found {
+		return ""
+	}
+	s, _ := val.(string)
+	return s
+}
+
+func nestedFieldNoCopy(obj map[string]any, fields ...string) (any, bool, error) {
+	current := any(obj)
+	for _, f := range fields {
+		m, ok := current.(map[string]any)
+		if !ok {
+			return nil, false, nil
+		}
+		current, ok = m[f]
+		if !ok {
+			return nil, false, nil
+		}
+	}
+	return current, true, nil
+}
+
+func nestedSlice(obj map[string]any, fields ...string) []any {
+	val, found, _ := nestedFieldNoCopy(obj, fields...)
+	if !found {
+		return nil
+	}
+	s, _ := val.([]any)
+	return s
+}
+
+func nestedInt64(obj map[string]any, fields ...string) int64 {
+	val, found, _ := nestedFieldNoCopy(obj, fields...)
+	if !found {
+		return 0
+	}
+	switch v := val.(type) {
+	case int64:
+		return v
+	case float64:
+		return int64(v)
+	case int32:
+		return int64(v)
+	}
+	return 0
+}
+
+// GetIngressRoutes lists all Traefik IngressRoute, IngressRouteTCP, and IngressRouteUDP
+// resources across all namespaces and converts them to pb.Ingress protos.
+// If Traefik CRDs are not installed, an empty slice is returned without error.
+func (kc *K8sClient) GetIngressRoutes() ([]*pb.Ingress, error) {
+	var ingresses []*pb.Ingress
+
+	type ingressKind struct {
+		gvr      schema.GroupVersionResource
+		protocol string
+	}
+	kinds := []ingressKind{
+		{traefikGVR("ingressroutes"), "http"},
+		{traefikGVR("ingressroutetcps"), "tcp"},
+		{traefikGVR("ingressrouteudps"), "udp"},
+	}
+
+	for _, k := range kinds {
+		list, err := kc.DynamicClient.Resource(k.gvr).Namespace("").List(kc.Context, metav1.ListOptions{})
+		if err != nil {
+			// CRD not installed or API group unavailable — skip silently
+			fmt.Printf("Warning: could not list %s: %v\n", k.gvr.Resource, err)
+			continue
+		}
+
+		for _, item := range list.Items {
+			obj := item.Object
+			spec, _ := obj["spec"].(map[string]any)
+			if spec == nil {
+				continue
+			}
+
+			name := item.GetName()
+			namespace := item.GetNamespace()
+			uid := string(item.GetUID())
+			labels := item.GetLabels()
+
+			// External port from first entrypoint
+			var externalPort int32
+			if eps := nestedSlice(spec, "entryPoints"); len(eps) > 0 {
+				if ep, ok := eps[0].(string); ok {
+					externalPort = parseEntryPointPort(ep)
+				}
+			}
+
+			// Service name, internal port, domain, path from first route
+			var serviceName string
+			var internalPort int32
+			var domain, path string
+
+			routes := nestedSlice(spec, "routes")
+			if len(routes) > 0 {
+				if route, ok := routes[0].(map[string]any); ok {
+					matchRule := nestedString(route, "match")
+					domain, path = parseMatchRule(matchRule)
+
+					services := nestedSlice(route, "services")
+					if len(services) > 0 {
+						if svc, ok := services[0].(map[string]any); ok {
+							serviceName = nestedString(svc, "name")
+							internalPort = int32(nestedInt64(svc, "port"))
+						}
+					}
+				}
+			}
+
+			ingresses = append(ingresses, &pb.Ingress{
+				Name:         name,
+				Namespace:    namespace,
+				Uid:          uid,
+				Labels:       labels,
+				Protocol:     k.protocol,
+				Port:         externalPort,
+				InternalPort: internalPort,
+				ServiceName:  serviceName,
+				Domain:       domain,
+				Path:         path,
+			})
+		}
+	}
+
+	return ingresses, nil
 }
 
 func (k *K8sClient) WaitForDeployment(namespace, name string, timeout time.Duration) error {

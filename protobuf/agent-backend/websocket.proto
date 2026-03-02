@@ -66,6 +66,9 @@ message Heartbeat {
   // List of secrets
   repeated Secret secrets = 8;
 
+  // List of ingresses (IngressRoute / IngressRouteTCP / IngressRouteUDP)
+  repeated Ingress ingresses = 9;
+
   // Timestamp of the heartbeat
   int64 timestamp = 5;
 }
@@ -201,6 +204,26 @@ message Secret {
   string uid = 5;
   map<string, string> labels = 6;
   bool immutable = 7;
+}
+
+message Ingress {
+  string name = 1;
+  string namespace = 2;
+  // Protocol: http, tcp, or udp (inferred from Traefik resource kind)
+  string protocol = 3;
+  // External gateway port (0 for http which uses the default entrypoint)
+  int32 port = 4;
+  // Internal service port
+  int32 internal_port = 5;
+  // Service name this ingress routes to
+  string service_name = 6;
+  // Hostname/domain rule for HTTP routes
+  string domain = 7;
+  // Path prefix (HTTP only)
+  string path = 8;
+  // Kubernetes UID of the IngressRoute resource
+  string uid = 9;
+  map<string, string> labels = 10;
 }
 
 message Command {
