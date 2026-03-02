@@ -25,6 +25,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api, type databaseTypes, type SchemaStatic } from "@/lib/api";
 import "xterm/css/xterm.css";
+import { BACKEND_URL } from "../../../../../constants";
 
 export const Route = createFileRoute("/dashboard/cluster/$id/pods/$podId")({
 	component: ManagePodPage,
@@ -661,9 +662,7 @@ export function PodLogs({ pod, clusterId, isActive }: PodLogsProps) {
 		}
 
 		const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-		const backendUrl = new URL(
-			`http${protocol.includes("https") ? "s" : ""}://${window.location.host}`,
-		);
+		const backendUrl = new URL(BACKEND_URL);
 		const ws = new WebSocket(
 			`${protocol}//${backendUrl.host}/api/pods/${clusterId}/logs/${pod.id}`,
 		);

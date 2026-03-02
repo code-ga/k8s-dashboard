@@ -38,6 +38,7 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { BACKEND_URL } from "../../../../../constants";
 
 export const Route = createFileRoute(
 	"/dashboard/cluster/$id/deployments/$deploymentId",
@@ -799,8 +800,9 @@ export function DeploymentLogs({
 		}
 
 		const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+		const backendUrl = new URL(BACKEND_URL);
 		const ws = new WebSocket(
-			`${protocol}//${window.location.host}/api/deployments/${clusterId}/logs/${deployment.id}`,
+			`${protocol}//${backendUrl.host}/api/deployments/${clusterId}/logs/${deployment.id}`,
 		);
 		wsRef.current = ws;
 
