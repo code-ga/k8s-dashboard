@@ -136,32 +136,32 @@ func (kc *K8sClient) GetFullClusterState() (*pb.Heartbeat, error) {
 	metricsGVR := schema.GroupVersionResource{Group: "metrics.k8s.io", Version: "v1beta1", Resource: "pods"}
 	metricsList, err := kc.DynamicClient.Resource(metricsGVR).List(kc.Context, metav1.ListOptions{})
 	if err == nil {
-		items := metricsList.UnstructuredContent()["items"].([]interface{})
-		for _, item := range items {
-			m := item.(map[string]interface{})
-			metadata := m["metadata"].(map[string]interface{})
-			name := metadata["name"].(string)
-			namespace := metadata["namespace"].(string)
+		for _, item := range metricsList.Items {
+			obj := item.Object
+			name := nestedString(obj, "metadata", "name")
+			namespace := nestedString(obj, "metadata", "namespace")
+			if name == "" || namespace == "" {
+				continue
+			}
 
 			var cpuUsed, memUsed int64
-			containers := m["containers"].([]interface{})
-			for _, c := range containers {
-				cont := c.(map[string]interface{})
-				usage := cont["usage"].(map[string]interface{})
-
-				if cpuStr, ok := usage["cpu"].(string); ok {
+			for _, c := range nestedSlice(obj, "containers") {
+				cont, ok := c.(map[string]any)
+				if !ok {
+					continue
+				}
+				if cpuStr := nestedString(cont, "usage", "cpu"); cpuStr != "" {
 					if q, err := resource.ParseQuantity(cpuStr); err == nil {
 						cpuUsed += q.MilliValue()
 					}
 				}
-				if memStr, ok := usage["memory"].(string); ok {
+				if memStr := nestedString(cont, "usage", "memory"); memStr != "" {
 					if q, err := resource.ParseQuantity(memStr); err == nil {
 						memUsed += q.Value() / (1024 * 1024)
 					}
 				}
 			}
-			key := fmt.Sprintf("%s/%s", namespace, name)
-			podMetricsMap[key] = map[string]int64{"cpu": cpuUsed, "memory": memUsed}
+			podMetricsMap[fmt.Sprintf("%s/%s", namespace, name)] = map[string]int64{"cpu": cpuUsed, "memory": memUsed}
 		}
 	} else {
 		fmt.Printf("Warning: Failed to fetch pod metrics: %v\n", err)

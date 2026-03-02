@@ -143,6 +143,15 @@ func nestedSlice(obj map[string]any, fields ...string) []any {
 	return s
 }
 
+// firstMap returns the first element of a slice cast to map[string]any, or nil.
+func firstMap(s []any) map[string]any {
+	if len(s) == 0 {
+		return nil
+	}
+	m, _ := s[0].(map[string]any)
+	return m
+}
+
 func nestedInt64(obj map[string]any, fields ...string) int64 {
 	val, found, _ := nestedFieldNoCopy(obj, fields...)
 	if !found {
@@ -208,19 +217,11 @@ func (kc *K8sClient) GetIngressRoutes() ([]*pb.Ingress, error) {
 			var internalPort int32
 			var domain, path string
 
-			routes := nestedSlice(spec, "routes")
-			if len(routes) > 0 {
-				if route, ok := routes[0].(map[string]any); ok {
-					matchRule := nestedString(route, "match")
-					domain, path = parseMatchRule(matchRule)
-
-					services := nestedSlice(route, "services")
-					if len(services) > 0 {
-						if svc, ok := services[0].(map[string]any); ok {
-							serviceName = nestedString(svc, "name")
-							internalPort = int32(nestedInt64(svc, "port"))
-						}
-					}
+			if route := firstMap(nestedSlice(spec, "routes")); route != nil {
+				domain, path = parseMatchRule(nestedString(route, "match"))
+				if svc := firstMap(nestedSlice(route, "services")); svc != nil {
+					serviceName = nestedString(svc, "name")
+					internalPort = int32(nestedInt64(svc, "port"))
 				}
 			}
 
