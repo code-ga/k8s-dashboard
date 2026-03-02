@@ -1,4 +1,4 @@
-import { and, eq, type InferInsertModel, isNull } from "drizzle-orm";
+import { and, eq, type InferInsertModel, isNull, or } from "drizzle-orm";
 import YAML from "yaml";
 import type {
 	Heartbeat,
@@ -227,6 +227,25 @@ export class AgentService {
 					}
 				}
 			}
+
+			// Cleanup: remove auto-created deployments no longer present in the cluster
+			const heartbeatDepUids = new Set(
+				heartbeat.deployments.map((d) => d.uid).filter(Boolean),
+			);
+			const autoCreatedDeps = await db
+				.select()
+				.from(k8sDeployments)
+				.where(
+					and(
+						eq(k8sDeployments.clusterId, cluster.id),
+						eq(k8sDeployments.autoCreated, true),
+					),
+				);
+			for (const dep of autoCreatedDeps) {
+				if (dep.k8sUid && !heartbeatDepUids.has(dep.k8sUid)) {
+					await db.delete(k8sDeployments).where(eq(k8sDeployments.id, dep.id));
+				}
+			}
 		}
 
 		// Sync Pods
@@ -363,6 +382,26 @@ export class AgentService {
 					}
 				}
 			}
+
+			// Cleanup: remove auto-created bare pods no longer present in the cluster
+			const heartbeatPodUids = new Set(
+				heartbeat.pods.map((p) => p.uid).filter(Boolean),
+			);
+			const autoCreatedPods = await db
+				.select()
+				.from(k8sPods)
+				.where(
+					and(
+						eq(k8sPods.clusterId, cluster.id),
+						eq(k8sPods.autoCreated, true),
+						isNull(k8sPods.deploymentId),
+					),
+				);
+			for (const pod of autoCreatedPods) {
+				if (pod.k8sUid && !heartbeatPodUids.has(pod.k8sUid)) {
+					await db.delete(k8sPods).where(eq(k8sPods.id, pod.id));
+				}
+			}
 		}
 
 		// Sync Services
@@ -430,14 +469,40 @@ export class AgentService {
 					});
 				}
 			}
+
+			// Cleanup: remove auto-created services no longer present in the cluster
+			const heartbeatSvcUids = new Set(
+				heartbeat.services.map((s) => s.uid).filter(Boolean),
+			);
+			const autoCreatedSvcs = await db
+				.select()
+				.from(schema.k8sServices)
+				.where(
+					and(
+						eq(schema.k8sServices.clusterId, cluster.id),
+						eq(schema.k8sServices.autoCreated, true),
+					),
+				);
+			for (const svc of autoCreatedSvcs) {
+				if (svc.k8sUid && !heartbeatSvcUids.has(svc.k8sUid)) {
+					await db
+						.delete(schema.k8sServices)
+						.where(eq(schema.k8sServices.id, svc.id));
+				}
+			}
 		}
 
 		// 2. Validate Deployments (Source of Truth: k8sDeployments in DB)
-		const configuredDeployments = await db.query.k8sDeployments.findMany({
-			where: {
-				clusterId: cluster.id,
-			},
-		});
+		// Only sync deployments created by our app (not auto-discovered ones)
+		const configuredDeployments = await db
+			.select()
+			.from(k8sDeployments)
+			.where(
+				and(
+					eq(k8sDeployments.clusterId, cluster.id),
+					or(isNull(k8sDeployments.autoCreated), eq(k8sDeployments.autoCreated, false)),
+				),
+			);
 
 		const activeDeployments = heartbeat.deployments || [];
 
@@ -554,11 +619,16 @@ export class AgentService {
 		}
 
 		// 3. Validate Pods (Bare Pods)
+		// Only sync bare pods created by our app (not auto-discovered ones)
 		const configuredPods = await db
 			.select()
 			.from(k8sPods)
 			.where(
-				and(eq(k8sPods.clusterId, cluster.id), isNull(k8sPods.deploymentId)),
+				and(
+					eq(k8sPods.clusterId, cluster.id),
+					isNull(k8sPods.deploymentId),
+					or(isNull(k8sPods.autoCreated), eq(k8sPods.autoCreated, false)),
+				),
 			);
 
 		const activePods = heartbeat.pods || [];
@@ -691,11 +761,16 @@ export class AgentService {
 		}
 
 		// 4. Validate Services (Source of Truth: k8sServices in DB)
-		const configuredServices = await db.query.k8sServices.findMany({
-			where: {
-				clusterId: cluster.id,
-			},
-		});
+		// Only sync services created by our app (not auto-discovered ones)
+		const configuredServices = await db
+			.select()
+			.from(schema.k8sServices)
+			.where(
+				and(
+					eq(schema.k8sServices.clusterId, cluster.id),
+					or(isNull(schema.k8sServices.autoCreated), eq(schema.k8sServices.autoCreated, false)),
+				),
+			);
 
 		const activeServices = heartbeat.services || [];
 
@@ -811,6 +886,25 @@ export class AgentService {
 					});
 				}
 			}
+
+			// Cleanup: remove auto-created configmaps no longer present in the cluster
+			const heartbeatCmUids = new Set(
+				heartbeat.configMaps.map((cm) => cm.uid).filter(Boolean),
+			);
+			const autoCreatedCms = await db
+				.select()
+				.from(k8sConfigMaps)
+				.where(
+					and(
+						eq(k8sConfigMaps.clusterId, cluster.id),
+						eq(k8sConfigMaps.autoCreated, true),
+					),
+				);
+			for (const cm of autoCreatedCms) {
+				if (cm.k8sUid && !heartbeatCmUids.has(cm.k8sUid)) {
+					await db.delete(k8sConfigMaps).where(eq(k8sConfigMaps.id, cm.id));
+				}
+			}
 		}
 
 		// Sync Secrets
@@ -880,14 +974,38 @@ export class AgentService {
 					});
 				}
 			}
+
+			// Cleanup: remove auto-created secrets no longer present in the cluster
+			const heartbeatSecUids = new Set(
+				heartbeat.secrets.map((s) => s.uid).filter(Boolean),
+			);
+			const autoCreatedSecs = await db
+				.select()
+				.from(k8sSecrets)
+				.where(
+					and(
+						eq(k8sSecrets.clusterId, cluster.id),
+						eq(k8sSecrets.autoCreated, true),
+					),
+				);
+			for (const sec of autoCreatedSecs) {
+				if (sec.k8sUid && !heartbeatSecUids.has(sec.k8sUid)) {
+					await db.delete(k8sSecrets).where(eq(k8sSecrets.id, sec.id));
+				}
+			}
 		}
 
 		// 5. Validate ConfigMaps (Source of Truth: k8sConfigMaps in DB)
-		const configuredConfigMaps = await db.query.k8sConfigMaps.findMany({
-			where: {
-				clusterId: cluster.id,
-			},
-		});
+		// Only sync configmaps created by our app (not auto-discovered ones)
+		const configuredConfigMaps = await db
+			.select()
+			.from(k8sConfigMaps)
+			.where(
+				and(
+					eq(k8sConfigMaps.clusterId, cluster.id),
+					or(isNull(k8sConfigMaps.autoCreated), eq(k8sConfigMaps.autoCreated, false)),
+				),
+			);
 
 		const activeConfigMaps = heartbeat.configMaps || [];
 
@@ -947,11 +1065,16 @@ export class AgentService {
 		}
 
 		// 6. Validate Secrets (Source of Truth: k8sSecrets in DB)
-		const configuredSecrets = await db.query.k8sSecrets.findMany({
-			where: {
-				clusterId: cluster.id,
-			},
-		});
+		// Only sync secrets created by our app (not auto-discovered ones)
+		const configuredSecrets = await db
+			.select()
+			.from(k8sSecrets)
+			.where(
+				and(
+					eq(k8sSecrets.clusterId, cluster.id),
+					or(isNull(k8sSecrets.autoCreated), eq(k8sSecrets.autoCreated, false)),
+				),
+			);
 
 		const activeSecrets = heartbeat.secrets || [];
 
