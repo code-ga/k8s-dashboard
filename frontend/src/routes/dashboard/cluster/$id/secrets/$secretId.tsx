@@ -158,116 +158,155 @@ function ManageSecretPage() {
 		},
 	});
 
-	if (isLoading) return <div>Loading secret details...</div>;
-	if (!secret) return <div>Secret not found</div>;
+	if (isLoading) return <div className="p-6">Loading secret details...</div>;
+	if (!secret) return <div className="p-6">Secret not found</div>;
 
 	return (
-		<div className="space-y-6">
-			<div className="flex items-center justify-between">
-				<div className="flex items-center gap-4">
-					<Link
-						to={`/dashboard/cluster/$id/secrets`}
-						params={{ id: clusterId }}
-					>
-						<Button variant="ghost" size="icon">
-							<ArrowLeft className="h-4 w-4" />
-						</Button>
-					</Link>
-					<div>
-						<h2 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-							<Lock className="h-6 w-6 text-yellow-500" />
-							Secret: {secret.name}
-						</h2>
-						<p className="text-muted-foreground">
-							View security-sensitive configuration data.
-						</p>
+		<div className="flex flex-col h-screen bg-background">
+			{/* Header Section */}
+			<div className="border-b border-border bg-card">
+				<div className="px-6 py-6 flex items-center justify-between">
+					<div className="flex items-center gap-4 flex-1">
+						<Link
+							to={`/dashboard/cluster/$id/secrets`}
+							params={{ id: clusterId }}
+						>
+							<Button variant="ghost" size="icon" className="h-9 w-9">
+								<ArrowLeft className="h-4 w-4" />
+							</Button>
+						</Link>
+						<div className="flex-1 min-w-0">
+							<h1 className="text-2xl font-bold tracking-tight flex items-center gap-2 truncate">
+								<Lock className="h-5 w-5 text-yellow-500 flex-shrink-0" />
+								<span className="truncate">{secret.name}</span>
+							</h1>
+							<p className="text-sm text-muted-foreground">
+								View and manage security-sensitive configuration data.
+							</p>
+						</div>
 					</div>
-				</div>
-				<div className="flex gap-2">
-					{isEditing ? (
-						<>
-							<Button
-								variant="outline"
-								onClick={cancelEdit}
-								disabled={updateMutation.isPending}
-							>
-								<X className="h-4 w-4 mr-2" />
-								Cancel
+					<div className="flex gap-2 ml-4 flex-shrink-0">
+						{isEditing ? (
+							<>
+								<Button
+									variant="outline"
+									onClick={cancelEdit}
+									disabled={updateMutation.isPending}
+									size="sm"
+								>
+									<X className="h-4 w-4 mr-2" />
+									Cancel
+								</Button>
+								<Button
+									onClick={saveEdit}
+									disabled={updateMutation.isPending}
+									size="sm"
+								>
+									<Save className="h-4 w-4 mr-2" />
+									{updateMutation.isPending ? "Saving..." : "Save"}
+								</Button>
+							</>
+						) : (
+							<Button variant="outline" onClick={startEdit} size="sm">
+								<Edit2 className="h-4 w-4 mr-2" />
+								Edit
 							</Button>
-							<Button onClick={saveEdit} disabled={updateMutation.isPending}>
-								<Save className="h-4 w-4 mr-2" />
-								{updateMutation.isPending ? "Saving..." : "Save Changes"}
-							</Button>
-						</>
-					) : (
-						<Button variant="outline" onClick={startEdit}>
-							<Edit2 className="h-4 w-4 mr-2" />
-							Edit Secret
+						)}
+						<Button
+							variant="destructive"
+							onClick={() => {
+								if (confirm("Are you sure you want to delete this Secret?")) {
+									deleteMutation.mutate();
+								}
+							}}
+							disabled={deleteMutation.isPending}
+							size="sm"
+						>
+							<Trash2 className="h-4 w-4 mr-2" />
+							{deleteMutation.isPending ? "Deleting..." : "Delete"}
 						</Button>
-					)}
-					<Button
-						variant="destructive"
-						onClick={() => {
-							if (confirm("Are you sure you want to delete this Secret?")) {
-								deleteMutation.mutate();
-							}
-						}}
-						disabled={deleteMutation.isPending}
-					>
-						<Trash2 className="h-4 w-4 mr-2" />
-						{deleteMutation.isPending ? "Deleting..." : "Delete Secret"}
-					</Button>
+					</div>
 				</div>
 			</div>
 
-			<Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-				<TabsList className="grid w-full grid-cols-3 max-w-xl">
-					<TabsTrigger value="overview">Overview</TabsTrigger>
-					<TabsTrigger value="data">Secret Data</TabsTrigger>
-					<TabsTrigger value="labels">Labels</TabsTrigger>
-				</TabsList>
+			{/* Tabs Section */}
+			<Tabs
+				value={activeTab}
+				onValueChange={setActiveTab}
+				className="flex-1 flex flex-col overflow-hidden"
+			>
+				<div className="border-b border-border bg-card px-6">
+					<TabsList className="grid w-full grid-cols-3 max-w-lg h-auto bg-transparent p-0 gap-0">
+						<TabsTrigger
+							value="overview"
+							className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary"
+						>
+							Overview
+						</TabsTrigger>
+						<TabsTrigger
+							value="data"
+							className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary"
+						>
+							Secret Data
+						</TabsTrigger>
+						<TabsTrigger
+							value="labels"
+							className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary"
+						>
+							Labels
+						</TabsTrigger>
+					</TabsList>
+				</div>
 
-				<TabsContent value="overview" className="pt-4 space-y-4">
-					<div className="grid grid-cols-2 gap-4 p-6 bg-muted rounded-lg border">
-						<div>
-							<div className="text-sm font-medium text-muted-foreground">
+				{/* Overview Tab */}
+				<TabsContent
+					value="overview"
+					className="flex-1 overflow-auto p-6 space-y-6"
+				>
+					<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+						<div className="space-y-2">
+							<span className="text-xs font-semibold text-muted-foreground uppercase">
 								Name
-							</div>
-							<p className="font-mono text-lg">{secret.name}</p>
+							</span>
+							<p className="font-mono text-sm">{secret.name}</p>
 						</div>
-						<div>
-							<div className="text-sm font-medium text-muted-foreground">
+						<div className="space-y-2">
+							<span className="text-xs font-semibold text-muted-foreground uppercase">
 								Namespace
-							</div>
-							<p className="font-mono text-lg">{secret.namespace}</p>
+							</span>
+							<p className="font-mono text-sm">{secret.namespace}</p>
 						</div>
-						<div>
-							<div className="text-sm font-medium text-muted-foreground">
+						<div className="space-y-2">
+							<span className="text-xs font-semibold text-muted-foreground uppercase">
 								Type
-							</div>
-							<p className="font-mono text-lg">{secret.type || "Opaque"}</p>
+							</span>
+							<p className="font-mono text-sm">{secret.type || "Opaque"}</p>
 						</div>
-						<div>
-							<div className="text-sm font-medium text-muted-foreground">
+						<div className="space-y-2">
+							<span className="text-xs font-semibold text-muted-foreground uppercase">
 								UID
-							</div>
+							</span>
 							<p className="font-mono text-sm break-all">{secret.k8sUid}</p>
 						</div>
-						<div>
-							<div className="text-sm font-medium text-muted-foreground">
+						<div className="space-y-2">
+							<span className="text-xs font-semibold text-muted-foreground uppercase">
 								Updated At
-							</div>
-							<p className="font-mono text-lg">
+							</span>
+							<p className="font-mono text-sm">
 								{new Date(secret.updatedAt).toLocaleString()}
 							</p>
 						</div>
 					</div>
 				</TabsContent>
 
-				<TabsContent value="data" className="pt-4 space-y-4">
-					<div className="bg-muted p-4 rounded-lg border">
+				{/* Data Tab */}
+				<TabsContent
+					value="data"
+					className="flex-1 overflow-auto p-6 space-y-6"
+				>
+					<div>
 						<div className="flex items-center justify-between mb-4">
-							<h3 className="text-lg font-medium">Decrypted Values</h3>
+							<h3 className="text-sm font-semibold">Decrypted Values</h3>
 							{!isEditing && (
 								<Button
 									variant="ghost"
@@ -349,7 +388,7 @@ function ManageSecretPage() {
 									/>
 								))
 							) : (
-								<p className="text-muted-foreground italic">
+								<p className="text-muted-foreground italic text-sm">
 									No data values found.
 								</p>
 							)}
@@ -357,9 +396,13 @@ function ManageSecretPage() {
 					</div>
 				</TabsContent>
 
-				<TabsContent value="labels" className="pt-4 space-y-4">
-					<div className="bg-muted p-4 rounded-lg border">
-						<h3 className="text-lg font-medium mb-4">Labels</h3>
+				{/* Labels Tab */}
+				<TabsContent
+					value="labels"
+					className="flex-1 overflow-auto p-6 space-y-6"
+				>
+					<div>
+						<h3 className="text-sm font-semibold mb-4">Labels</h3>
 						<div className="space-y-2">
 							{isEditing ? (
 								<>
@@ -413,16 +456,23 @@ function ManageSecretPage() {
 									</Button>
 								</>
 							) : labels.length > 0 ? (
-								labels.map((l: any) => (
-									<div key={l.name} className="flex gap-2">
-										<span className="font-bold text-xs bg-secondary px-2 py-1 rounded">
-											{l.name}
-										</span>
-										<span className="text-xs py-1">{l.value}</span>
-									</div>
-								))
+								<div className="flex flex-wrap gap-2">
+									{labels.map((l: any) => (
+										<div
+											key={l.name}
+											className="flex gap-2 items-center px-3 py-1 bg-secondary rounded border"
+										>
+											<span className="font-semibold text-xs">{l.name}</span>
+											<span className="text-xs text-muted-foreground">
+												{l.value}
+											</span>
+										</div>
+									))}
+								</div>
 							) : (
-								<p className="text-muted-foreground italic">No labels found.</p>
+								<p className="text-muted-foreground italic text-sm">
+									No labels found.
+								</p>
 							)}
 						</div>
 					</div>
@@ -460,7 +510,9 @@ function SecretValueRow({
 	return (
 		<div className="space-y-1 group">
 			<div className="flex items-center justify-between">
-				<div className="text-sm font-bold text-muted-foreground">{name}</div>
+				<div className="text-xs font-semibold text-muted-foreground">
+					{name}
+				</div>
 				<Button
 					variant="ghost"
 					size="icon"
@@ -475,7 +527,7 @@ function SecretValueRow({
 				</Button>
 			</div>
 			<pre className="p-3 bg-secondary rounded border overflow-x-auto whitespace-pre-wrap break-all text-xs font-mono">
-				{isRevealed ? decodedValue : "********************************"}
+				{isRevealed ? decodedValue : "••••••••••••••••"}
 			</pre>
 		</div>
 	);

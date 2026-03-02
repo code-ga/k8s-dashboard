@@ -433,9 +433,10 @@ export const k8sIngresses = pgTable(
 		autoCreated: boolean("is_auto_created").default(false).notNull(), // created by agent when it detects an ingress not in DB
 	},
 	(table) => ({
-		clusterUidIdx: uniqueIndex("ing_cluster_uid_idx").on(
+		clusterNameNamespaceIdx: uniqueIndex("ing_cluster_name_namespace_idx").on(
 			table.clusterId,
-			table.k8sUid,
+			table.name,
+			table.namespace,
 		),
 	}),
 );

@@ -861,6 +861,74 @@ export const deploymentRoute = new Elysia({
 					},
 				},
 			)
+			.get(
+				"/:id/pods",
+				async (ctx) => {
+					const { clusterId, id } = ctx.params;
+					if (!clusterId || !id) {
+						return ctx.status(400, {
+							success: false,
+							message: "Cluster ID and Deployment ID are required",
+							timestamp: Date.now(),
+						});
+					}
+
+					// Check authorization: user must be manager or deployment owner
+					const isManager = checkPermission(ctx.profile?.permission || [], [
+						"manager",
+					]);
+					const deployment = await db.query.k8sDeployments.findFirst({
+						where: isManager
+							? { id: Number(id), clusterId: Number(clusterId) }
+							: {
+									id: Number(id),
+									clusterId: Number(clusterId),
+									ownerId: ctx.profile?.id ?? "",
+								},
+					});
+
+					if (!deployment) {
+						return ctx.status(404, {
+							success: false,
+							message: "Deployment not found",
+							timestamp: Date.now(),
+						});
+					}
+
+					// Fetch all pods managed by this deployment
+					// Only query pods that belong to the same cluster
+					const pods = await db.query.k8sPods.findMany({
+						where: {
+							deploymentId: deployment.id,
+							clusterId: Number(clusterId),
+						},
+					});
+
+					// Sort by createdAt descending (newest first)
+					const sortedPods = pods.sort((a, b) => {
+						const timeA = new Date(a.createdAt).getTime();
+						const timeB = new Date(b.createdAt).getTime();
+						return timeB - timeA;
+					});
+
+					return ctx.status(200, {
+						success: true,
+						message: "Pods fetched successfully",
+						data: sortedPods,
+						timestamp: Date.now(),
+					});
+				},
+				{
+					detail: { tags: ["Deployments"] },
+					response: {
+						200: baseResponseSchema(
+							Type.Array(Type.Object(dbSchemaTypes.k8sPods)),
+						),
+						404: errorResponseSchema,
+						400: errorResponseSchema,
+					},
+				},
+			)
 			.delete(
 				"/:id",
 				async (ctx) => {

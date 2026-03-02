@@ -23,7 +23,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BACKEND_URL } from "@/constants";
 import { api, type databaseTypes, type SchemaStatic } from "@/lib/api";
 import "xterm/css/xterm.css";
 
@@ -229,7 +228,7 @@ function ManagePodPage() {
 	});
 
 	const RecreationWarning = () => (
-		<div className="bg-yellow-500/10 border border-yellow-500/50 rounded-lg p-3 flex gap-3 items-start mb-4">
+		<div className="bg-yellow-500/10 border border-yellow-500/50 rounded-lg p-3 flex gap-3 items-start">
 			<AlertTriangle className="h-5 w-5 text-yellow-500 shrink-0 mt-0.5" />
 			<div className="text-sm text-yellow-200">
 				<span className="font-bold text-yellow-500">Warning:</span> Saving
@@ -239,98 +238,30 @@ function ManagePodPage() {
 		</div>
 	);
 
-	if (isLoading) return <div>Loading pod details...</div>;
-	if (!pod) return <div>Pod not found</div>;
+	if (isLoading) return <div className="p-6">Loading pod details...</div>;
+	if (!pod) return <div className="p-6">Pod not found</div>;
 
 	return (
-		<div className="space-y-6">
-			<div className="flex items-center justify-between">
-				<div className="flex items-center gap-4">
-					<Link to={`/dashboard/cluster/$id/pods`} params={{ id: clusterId }}>
-						<Button variant="ghost" size="icon">
-							<ArrowLeft className="h-4 w-4" />
-						</Button>
-					</Link>
-					<div>
-						<h2 className="text-3xl font-bold tracking-tight">
-							Manage Pod: {pod.name}
-						</h2>
-						<p className="text-muted-foreground">
-							View details, stream logs, or access the terminal for this pod.
-						</p>
-					</div>
-				</div>
-			</div>
-
-			<Tabs
-				value={activeTab}
-				onValueChange={setActiveTab}
-				className="flex-1 flex flex-col h-[calc(100vh-250px)]"
-			>
-				<TabsList className="grid w-full grid-cols-7 max-w-4xl">
-					<TabsTrigger value="overview">Overview</TabsTrigger>
-					<TabsTrigger value="config">Config</TabsTrigger>
-					<TabsTrigger value="env">Env</TabsTrigger>
-					<TabsTrigger value="resources">Resources</TabsTrigger>
-					<TabsTrigger value="labels">Labels</TabsTrigger>
-					<TabsTrigger value="logs">Logs</TabsTrigger>
-					<TabsTrigger value="terminal">Terminal</TabsTrigger>
-				</TabsList>
-
-				<TabsContent
-					value="overview"
-					className="flex-1 overflow-auto space-y-4 pt-4"
-				>
-					<div className="grid grid-cols-2 gap-4 p-6 bg-muted rounded-lg border">
-						<div>
-							<div className="text-sm font-medium text-muted-foreground">
-								Name
-							</div>
-							<p className="font-mono text-lg">{pod.name}</p>
-						</div>
-						<div>
-							<div className="text-sm font-medium text-muted-foreground">
-								Namespace
-							</div>
-							<p className="font-mono text-lg">{pod.namespace}</p>
-						</div>
-						<div>
-							<div className="text-sm font-medium text-muted-foreground">
-								Status
-							</div>
-							<p className="font-mono text-lg">{pod.status}</p>
-						</div>
-						<div>
-							<div className="text-sm font-medium text-muted-foreground">
-								Node
-							</div>
-							<p className="font-mono text-lg">{pod.nodeId}</p>
-						</div>
-						<div className="col-span-2">
-							<div className="text-sm font-medium text-muted-foreground">
-								Image
-							</div>
-							<p className="font-mono text-lg">{pod.dockerImage}</p>
-						</div>
-						<div>
-							<div className="text-sm font-medium text-muted-foreground">
-								CPU Request/Limit
-							</div>
-							<p className="font-mono text-lg">
-								{pod.cpuRequest}m / {pod.cpuLimit}m
-							</p>
-						</div>
-						<div>
-							<div className="text-sm font-medium text-muted-foreground">
-								Memory Request/Limit
-							</div>
-							<p className="font-mono text-lg">
-								{pod.memoryRequest}Mi / {pod.memoryLimit}Mi
+		<div className="flex flex-col h-screen bg-background">
+			{/* Header Section */}
+			<div className="border-b border-border bg-card">
+				<div className="px-6 py-6 flex items-center justify-between">
+					<div className="flex items-center gap-4 flex-1">
+						<Link to={`/dashboard/cluster/$id/pods`} params={{ id: clusterId }}>
+							<Button variant="ghost" size="icon" className="h-9 w-9">
+								<ArrowLeft className="h-4 w-4" />
+							</Button>
+						</Link>
+						<div className="flex-1 min-w-0">
+							<h1 className="text-2xl font-bold tracking-tight truncate">
+								{pod.name}
+							</h1>
+							<p className="text-sm text-muted-foreground">
+								View and manage pod configuration, environment, and resources.
 							</p>
 						</div>
 					</div>
-
-					<div className="flex gap-4">
+					<div className="flex gap-2 ml-4 flex-shrink-0">
 						<ExposeDialog
 							clusterId={clusterId}
 							defaultName={pod.name}
@@ -346,40 +277,160 @@ function ManagePodPage() {
 							variant="destructive"
 							onClick={() => deleteMutation.mutate()}
 							disabled={deleteMutation.isPending}
+							size="sm"
 						>
 							<Trash2 className="h-4 w-4 mr-2" />
-							{deleteMutation.isPending ? "Deleting..." : "Delete Pod"}
+							{deleteMutation.isPending ? "Deleting..." : "Delete"}
 						</Button>
+					</div>
+				</div>
+			</div>
+
+			{/* Tabs Section */}
+			<Tabs
+				value={activeTab}
+				onValueChange={setActiveTab}
+				className="flex-1 flex flex-col overflow-hidden"
+			>
+				<div className="border-b border-border bg-card px-6">
+					<TabsList className="grid w-full grid-cols-7 max-w-3xl h-auto bg-transparent p-0 gap-0">
+						<TabsTrigger
+							value="overview"
+							className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary"
+						>
+							Overview
+						</TabsTrigger>
+						<TabsTrigger
+							value="config"
+							className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary"
+						>
+							Config
+						</TabsTrigger>
+						<TabsTrigger
+							value="env"
+							className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary"
+						>
+							Environment
+						</TabsTrigger>
+						<TabsTrigger
+							value="resources"
+							className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary"
+						>
+							Resources
+						</TabsTrigger>
+						<TabsTrigger
+							value="labels"
+							className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary"
+						>
+							Labels
+						</TabsTrigger>
+						<TabsTrigger
+							value="logs"
+							className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary"
+						>
+							Logs
+						</TabsTrigger>
+						<TabsTrigger
+							value="terminal"
+							className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary"
+						>
+							Terminal
+						</TabsTrigger>
+					</TabsList>
+				</div>
+
+				{/* Overview Tab */}
+				<TabsContent
+					value="overview"
+					className="flex-1 overflow-auto p-6 space-y-6"
+				>
+					<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+						<div className="space-y-2">
+							<span className="text-xs font-semibold text-muted-foreground uppercase">
+								Name
+							</span>
+							<p className="font-mono text-sm">{pod.name}</p>
+						</div>
+						<div className="space-y-2">
+							<span className="text-xs font-semibold text-muted-foreground uppercase">
+								Namespace
+							</span>
+							<p className="font-mono text-sm">{pod.namespace}</p>
+						</div>
+						<div className="space-y-2">
+							<span className="text-xs font-semibold text-muted-foreground uppercase">
+								Status
+							</span>
+							<p className="font-mono text-sm">{pod.status}</p>
+						</div>
+						<div className="space-y-2">
+							<span className="text-xs font-semibold text-muted-foreground uppercase">
+								Node
+							</span>
+							<p className="font-mono text-sm">{pod.nodeId}</p>
+						</div>
+						<div className="md:col-span-2 space-y-2">
+							<span className="text-xs font-semibold text-muted-foreground uppercase">
+								Image
+							</span>
+							<p className="font-mono text-sm break-all">{pod.dockerImage}</p>
+						</div>
+						<div className="space-y-2">
+							<span className="text-xs font-semibold text-muted-foreground uppercase">
+								CPU Request/Limit
+							</span>
+							<p className="font-mono text-sm">
+								{pod.cpuRequest}m / {pod.cpuLimit}m
+							</p>
+						</div>
+						<div className="space-y-2">
+							<span className="text-xs font-semibold text-muted-foreground uppercase">
+								Memory Request/Limit
+							</span>
+							<p className="font-mono text-sm">
+								{pod.memoryRequest}Mi / {pod.memoryLimit}Mi
+							</p>
+						</div>
 					</div>
 				</TabsContent>
 
+				{/* Config Tab */}
 				<TabsContent
 					value="config"
-					className="flex-1 overflow-auto pt-4 space-y-4"
+					className="flex-1 overflow-auto p-6 space-y-6"
 				>
 					<RecreationWarning />
-					<div className="space-y-4 max-w-2xl">
-						<div className="grid gap-2">
-							<Label>Image</Label>
-							<Input value={image} onChange={(e) => setImage(e.target.value)} />
-						</div>
-						<div className="grid gap-2">
-							<Label>Command (space-separated)</Label>
+					<div className="max-w-2xl space-y-6">
+						<div className="space-y-2">
+							<Label htmlFor="image">Container Image</Label>
 							<Input
-								value={command.join(" ")}
-								onChange={(e) => setCommand(e.target.value.split(" "))}
-							/>
-						</div>
-						<div className="grid gap-2">
-							<Label>Arguments (space-separated)</Label>
-							<Input
-								value={args.join(" ")}
-								onChange={(e) => setArgs(e.target.value.split(" "))}
+								id="image"
+								value={image}
+								onChange={(e) => setImage(e.target.value)}
+								placeholder="e.g., nginx:latest"
 							/>
 						</div>
 						<div className="space-y-2">
+							<Label htmlFor="command">Command (space-separated)</Label>
+							<Input
+								id="command"
+								value={command.join(" ")}
+								onChange={(e) => setCommand(e.target.value.split(" "))}
+								placeholder="e.g., /bin/sh"
+							/>
+						</div>
+						<div className="space-y-2">
+							<Label htmlFor="args">Arguments (space-separated)</Label>
+							<Input
+								id="args"
+								value={args.join(" ")}
+								onChange={(e) => setArgs(e.target.value.split(" "))}
+								placeholder="e.g., -c 'echo hello'"
+							/>
+						</div>
+						<div className="space-y-4">
 							<div className="flex items-center justify-between">
-								<Label>Ports</Label>
+								<Label>Container Ports</Label>
 								<Button
 									variant="outline"
 									size="sm"
@@ -390,52 +441,54 @@ function ManagePodPage() {
 									<Plus className="h-4 w-4 mr-1" /> Add Port
 								</Button>
 							</div>
-							{ports.map((p, i) => (
-								<div
-									key={`${p.containerPort}-${i}`}
-									className="flex gap-2 items-end"
-								>
-									<div className="flex-1">
-										<Label className="text-[10px] text-muted-foreground uppercase">
-											Port
-										</Label>
-										<Input
-											type="number"
-											value={p.containerPort}
-											onChange={(e) => {
-												const newPorts = [...ports];
-												newPorts[i].containerPort = Number(e.target.value);
-												setPorts(newPorts);
-											}}
-										/>
-									</div>
-									<div className="flex-1">
-										<Label className="text-[10px] text-muted-foreground uppercase">
-											Name
-										</Label>
-										<Input
-											value={p.name}
-											onChange={(e) => {
-												const newPorts = [...ports];
-												newPorts[i].name = e.target.value;
-												setPorts(newPorts);
-											}}
-										/>
-									</div>
-									<Button
-										variant="ghost"
-										size="icon"
-										onClick={() =>
-											setPorts(ports.filter((_, idx) => idx !== i))
-										}
+							<div className="space-y-3">
+								{ports.map((p, i) => (
+									<div
+										key={`${p.containerPort}-${i}`}
+										className="flex gap-2 items-end"
 									>
-										<X className="h-4 w-4" />
-									</Button>
-								</div>
-							))}
+										<div className="flex-1">
+											<Label className="text-[10px] text-muted-foreground uppercase">
+												Port
+											</Label>
+											<Input
+												type="number"
+												value={p.containerPort}
+												onChange={(e) => {
+													const newPorts = [...ports];
+													newPorts[i].containerPort = Number(e.target.value);
+													setPorts(newPorts);
+												}}
+											/>
+										</div>
+										<div className="flex-1">
+											<Label className="text-[10px] text-muted-foreground uppercase">
+												Name
+											</Label>
+											<Input
+												value={p.name}
+												onChange={(e) => {
+													const newPorts = [...ports];
+													newPorts[i].name = e.target.value;
+													setPorts(newPorts);
+												}}
+											/>
+										</div>
+										<Button
+											variant="ghost"
+											size="icon"
+											onClick={() =>
+												setPorts(ports.filter((_, idx) => idx !== i))
+											}
+										>
+											<X className="h-4 w-4" />
+										</Button>
+									</div>
+								))}
+							</div>
 						</div>
 					</div>
-					<div className="flex justify-end pt-4">
+					<div className="flex justify-end gap-2 pt-4">
 						<Button
 							onClick={() => savePodMutation.mutate()}
 							disabled={savePodMutation.isPending}
@@ -445,29 +498,35 @@ function ManagePodPage() {
 					</div>
 				</TabsContent>
 
-				<TabsContent
-					value="env"
-					className="flex-1 overflow-auto pt-4 space-y-4"
-				>
+				{/* Environment Tab */}
+				<TabsContent value="env" className="flex-1 overflow-auto p-6 space-y-6">
 					<RecreationWarning />
-					<EnvEditor variables={envVars} onChange={setEnvVars} />
-					<div className="pt-4">
-						<RefsEditor
-							clusterId={clusterId}
-							configMapRefs={{
-								env: configMapEnvRefs,
-								envFrom: configMapEnvFromRefs,
-							}}
-							secretRefs={{ env: secretEnvRefs, envFrom: secretEnvFromRefs }}
-							onChange={(r) => {
-								setConfigMapEnvRefs(r.configMapRefs?.env || []);
-								setConfigMapEnvFromRefs(r.configMapRefs?.envFrom || []);
-								setSecretEnvRefs(r.secretRefs?.env || []);
-								setSecretEnvFromRefs(r.secretRefs?.envFrom || []);
-							}}
-						/>
+					<div className="space-y-6">
+						<div>
+							<h3 className="text-sm font-semibold mb-4">
+								Environment Variables
+							</h3>
+							<EnvEditor variables={envVars} onChange={setEnvVars} />
+						</div>
+						<div>
+							<h3 className="text-sm font-semibold mb-4">References</h3>
+							<RefsEditor
+								clusterId={clusterId}
+								configMapRefs={{
+									env: configMapEnvRefs,
+									envFrom: configMapEnvFromRefs,
+								}}
+								secretRefs={{ env: secretEnvRefs, envFrom: secretEnvFromRefs }}
+								onChange={(r) => {
+									setConfigMapEnvRefs(r.configMapRefs?.env || []);
+									setConfigMapEnvFromRefs(r.configMapRefs?.envFrom || []);
+									setSecretEnvRefs(r.secretRefs?.env || []);
+									setSecretEnvFromRefs(r.secretRefs?.envFrom || []);
+								}}
+							/>
+						</div>
 					</div>
-					<div className="flex justify-end pt-4">
+					<div className="flex justify-end gap-2 pt-4">
 						<Button
 							onClick={() => savePodMutation.mutate()}
 							disabled={savePodMutation.isPending}
@@ -477,48 +536,57 @@ function ManagePodPage() {
 					</div>
 				</TabsContent>
 
+				{/* Resources Tab */}
 				<TabsContent
 					value="resources"
-					className="flex-1 overflow-auto pt-4 space-y-4"
+					className="flex-1 overflow-auto p-6 space-y-6"
 				>
 					<RecreationWarning />
-					<div className="grid grid-cols-2 gap-8 max-w-2xl">
+					<div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-2xl">
 						<div className="space-y-4">
-							<h3 className="text-sm font-semibold border-b pb-1">Requests</h3>
-							<div className="grid gap-2">
-								<Label>CPU (m)</Label>
+							<h3 className="text-sm font-semibold border-b pb-2">Requests</h3>
+							<div className="space-y-2">
+								<Label htmlFor="cpu-request">CPU (millicores)</Label>
 								<Input
+									id="cpu-request"
 									value={cpuRequest}
 									onChange={(e) => setCpuRequest(e.target.value)}
+									placeholder="500m"
 								/>
 							</div>
-							<div className="grid gap-2">
-								<Label>Memory (Mi)</Label>
+							<div className="space-y-2">
+								<Label htmlFor="memory-request">Memory (MiB)</Label>
 								<Input
+									id="memory-request"
 									value={memoryRequest}
 									onChange={(e) => setMemoryRequest(e.target.value)}
+									placeholder="256Mi"
 								/>
 							</div>
 						</div>
 						<div className="space-y-4">
-							<h3 className="text-sm font-semibold border-b pb-1">Limits</h3>
-							<div className="grid gap-2">
-								<Label>CPU (m)</Label>
+							<h3 className="text-sm font-semibold border-b pb-2">Limits</h3>
+							<div className="space-y-2">
+								<Label htmlFor="cpu-limit">CPU (millicores)</Label>
 								<Input
+									id="cpu-limit"
 									value={cpuLimit}
 									onChange={(e) => setCpuLimit(e.target.value)}
+									placeholder="1000m"
 								/>
 							</div>
-							<div className="grid gap-2">
-								<Label>Memory (Mi)</Label>
+							<div className="space-y-2">
+								<Label htmlFor="memory-limit">Memory (MiB)</Label>
 								<Input
+									id="memory-limit"
 									value={memoryLimit}
 									onChange={(e) => setMemoryLimit(e.target.value)}
+									placeholder="512Mi"
 								/>
 							</div>
 						</div>
 					</div>
-					<div className="flex justify-end pt-4">
+					<div className="flex justify-end gap-2 pt-4">
 						<Button
 							onClick={() => savePodMutation.mutate()}
 							disabled={savePodMutation.isPending}
@@ -528,13 +596,14 @@ function ManagePodPage() {
 					</div>
 				</TabsContent>
 
+				{/* Labels Tab */}
 				<TabsContent
 					value="labels"
-					className="flex-1 overflow-auto pt-4 space-y-4"
+					className="flex-1 overflow-auto p-6 space-y-6"
 				>
 					<RecreationWarning />
 					<EnvEditor variables={labels} onChange={setLabels} />
-					<div className="flex justify-end pt-4">
+					<div className="flex justify-end gap-2 pt-4">
 						<Button
 							onClick={() => savePodMutation.mutate()}
 							disabled={savePodMutation.isPending}
@@ -544,9 +613,10 @@ function ManagePodPage() {
 					</div>
 				</TabsContent>
 
+				{/* Logs Tab */}
 				<TabsContent
 					value="logs"
-					className="flex-1 overflow-hidden pt-4 border rounded-lg bg-black/5 p-4"
+					className="flex-1 overflow-hidden p-6 flex flex-col"
 				>
 					<PodLogs
 						pod={pod as SchemaStatic<databaseTypes.databaseTypes["k8sPods"]>}
@@ -555,9 +625,10 @@ function ManagePodPage() {
 					/>
 				</TabsContent>
 
+				{/* Terminal Tab */}
 				<TabsContent
 					value="terminal"
-					className="flex-1 overflow-hidden pt-4 border rounded-lg bg-black/5 p-4"
+					className="flex-1 overflow-hidden p-6 flex flex-col"
 				>
 					<PodTerminal
 						pod={pod as SchemaStatic<databaseTypes.databaseTypes["k8sPods"]>}
@@ -590,7 +661,9 @@ export function PodLogs({ pod, clusterId, isActive }: PodLogsProps) {
 		}
 
 		const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-		const backendUrl = new URL(BACKEND_URL);
+		const backendUrl = new URL(
+			`http${protocol.includes("https") ? "s" : ""}://${window.location.host}`,
+		);
 		const ws = new WebSocket(
 			`${protocol}//${backendUrl.host}/api/pods/${clusterId}/logs/${pod.id}`,
 		);
@@ -625,9 +698,9 @@ export function PodLogs({ pod, clusterId, isActive }: PodLogsProps) {
 	}, [logs, autoScroll]);
 
 	return (
-		<div className="h-full flex flex-col">
-			<div className="flex items-center justify-between mb-2">
-				<div className="text-sm font-medium">Live Logs</div>
+		<div className="h-full flex flex-col gap-3">
+			<div className="flex items-center justify-between">
+				<div className="text-sm font-medium">Live Pod Logs</div>
 				<Button
 					variant={autoScroll ? "default" : "outline"}
 					size="sm"
@@ -719,7 +792,9 @@ export function PodTerminal({ pod, clusterId, isActive }: PodTerminalProps) {
 
 			// Connect WebSocket
 			const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-			const backendUrl = new URL(BACKEND_URL);
+			const backendUrl = new URL(
+				`http${protocol.includes("https") ? "s" : ""}://${window.location.host}`,
+			);
 			ws = new WebSocket(
 				`${protocol}//${backendUrl.host}/api/pods/${clusterId}/exec/${pod.id}`,
 			);

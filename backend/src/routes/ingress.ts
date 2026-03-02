@@ -257,6 +257,23 @@ export const ingressRoute = new Elysia({
 					}
 					// ------------------------------
 
+					// Check for existing ingress with same name and namespace
+					const existingIngress = await db.query.k8sIngresses.findFirst({
+						where: {
+							clusterId,
+							name: `${body.serviceName}-route`,
+							namespace: body.namespace,
+						},
+					});
+
+					if (existingIngress) {
+						return ctx.status("Conflict", {
+							success: false,
+							message: "Ingress with this name and namespace already exists",
+							timestamp: Date.now(),
+						});
+					}
+
 					try {
 						await ctx.agentManager.sendCommand(cluster.agent.id, cluster.id, {
 							id: crypto.randomUUID(),
@@ -322,6 +339,7 @@ export const ingressRoute = new Elysia({
 						201: baseResponseSchema(Type.Object(dbSchemaTypes.k8sIngresses)),
 						400: errorResponseSchema,
 						404: errorResponseSchema,
+						Conflict: errorResponseSchema,
 						500: errorResponseSchema,
 					},
 				},

@@ -1,8 +1,23 @@
-import { useQuery } from "@tanstack/react-query";
-import { createFileRoute, Link, useParams } from "@tanstack/react-router";
-import { ArrowLeft, ShieldAlert, ShieldCheck } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+	createFileRoute,
+	Link,
+	useNavigate,
+	useParams,
+} from "@tanstack/react-router";
+import { ArrowLeft, ShieldAlert, ShieldCheck, Trash2 } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from "@/components/ui/dialog";
 import {
 	Table,
 	TableBody,
@@ -23,6 +38,9 @@ function ServiceDetailPage() {
 	const { id, serviceId } = useParams({
 		from: "/dashboard/cluster/$id/services/$serviceId",
 	});
+	const navigate = useNavigate();
+	const queryClient = useQueryClient();
+	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
 	const { data: service, isLoading } = useQuery({
 		queryKey: ["service", id, serviceId],
@@ -49,24 +67,55 @@ function ServiceDetailPage() {
 		},
 	});
 
+	const deleteMutation = useMutation({
+		mutationFn: async () => {
+			const res = await api.api
+				.services({ clusterId: id })({ id: serviceId })
+				.delete();
+			if (res.error) {
+				throw new Error(res.error.value?.message || "Failed to delete service");
+			}
+			return res.data;
+		},
+		onSuccess: () => {
+			toast.success("Service deleted successfully");
+			queryClient.invalidateQueries({ queryKey: ["services", id] });
+			navigate({
+				to: `/dashboard/cluster/$id/services`,
+				params: { id },
+			});
+		},
+		onError: (error) => {
+			toast.error(error.message);
+		},
+	});
+
 	if (isLoading) return <div>Loading service details...</div>;
 	if (!service) return <div>Service not found</div>;
 	const serviceDomain = `${service.name}.${service.namespace}.svc.${cluster?.internalClusterDomain || "cluster.local"}`;
 
 	return (
 		<div className="space-y-6">
-			<div className="flex items-center gap-4">
-				<Link to={`/dashboard/cluster/$id/services`} params={{ id }}>
-					<Button variant="ghost" size="icon">
-						<ArrowLeft className="h-4 w-4" />
-					</Button>
-				</Link>
-				<div>
-					<h2 className="text-3xl font-bold tracking-tight">{service.name}</h2>
-					<p className="text-muted-foreground">
-						Service details and configuration
-					</p>
+			<div className="flex items-center justify-between">
+				<div className="flex items-center gap-4">
+					<Link to={`/dashboard/cluster/$id/services`} params={{ id }}>
+						<Button variant="ghost" size="icon">
+							<ArrowLeft className="h-4 w-4" />
+						</Button>
+					</Link>
+					<div>
+						<h2 className="text-3xl font-bold tracking-tight">
+							{service.name}
+						</h2>
+						<p className="text-muted-foreground">
+							Service details and configuration
+						</p>
+					</div>
 				</div>
+				<Button variant="destructive" onClick={() => setDeleteDialogOpen(true)}>
+					<Trash2 className="h-4 w-4 mr-2" />
+					Delete Service
+				</Button>
 			</div>
 
 			<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -243,6 +292,37 @@ function ServiceDetailPage() {
 					</Table>
 				</CardContent>
 			</Card>
+
+			<Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+				<DialogContent>
+					<DialogHeader>
+						<DialogTitle>Delete Service</DialogTitle>
+						<DialogDescription>
+							Are you sure you want to delete the service "{service.name}"? This
+							action cannot be undone and may affect applications that depend on
+							this service.
+						</DialogDescription>
+					</DialogHeader>
+					<DialogFooter>
+						<Button
+							variant="outline"
+							onClick={() => setDeleteDialogOpen(false)}
+						>
+							Cancel
+						</Button>
+						<Button
+							variant="destructive"
+							onClick={() => {
+								setDeleteDialogOpen(false);
+								deleteMutation.mutate();
+							}}
+							disabled={deleteMutation.isPending}
+						>
+							{deleteMutation.isPending ? "Deleting..." : "Delete Service"}
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
 		</div>
 	);
 }
