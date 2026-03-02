@@ -7,13 +7,35 @@ import RefsEditor, {
 	type ISecretEnvRef,
 } from "@/components/shared/refs-editor";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api, type databaseTypes, type SchemaStatic } from "@/lib/api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, Link, useNavigate, useParams } from "@tanstack/react-router";
-import { AlertTriangle, ArrowLeft, Plus, Trash2, X } from "lucide-react";
+import {
+	createFileRoute,
+	Link,
+	useNavigate,
+	useParams,
+} from "@tanstack/react-router";
+import {
+	AlertTriangle,
+	ArrowLeft,
+	Box,
+	Plus,
+	Settings,
+	Trash2,
+	X,
+} from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -42,6 +64,38 @@ function ManageDeploymentPage() {
 				throw new Error(res.data.message || "Failed to fetch deployment");
 			return res.data.data;
 		},
+	});
+
+	const { data: allPods = [] } = useQuery({
+		queryKey: ["pods", clusterId],
+		queryFn: async () => {
+			const res = await api.api.pods({ clusterId: clusterId }).get();
+			if (res.error) throw res.error;
+			if (!res.data.data)
+				throw new Error(res.data.message || "Failed to fetch pods");
+			return res.data.data;
+		},
+	});
+
+	const deploymentPods = allPods.filter((pod) => {
+		if (!deployment) return false;
+		const selector = deployment.selector
+			? JSON.parse(deployment.selector)
+			: { app: deployment.name };
+
+		let podLabels: Record<string, string> = {};
+		try {
+			if (pod.labels) {
+				podLabels =
+					typeof pod.labels === "string" ? JSON.parse(pod.labels) : pod.labels;
+			}
+		} catch {
+			podLabels = {};
+		}
+
+		return Object.entries(selector).every(
+			([key, value]) => podLabels && podLabels[key] === value,
+		);
 	});
 
 	const [image, setImage] = useState("");
@@ -624,6 +678,80 @@ function ManageDeploymentPage() {
 								? "Updating..."
 								: "Update Deployment"}
 						</Button>
+					</div>
+				</TabsContent>
+
+				{/* Pods Tab */}
+				<TabsContent value="pods" className="flex-1 overflow-auto p-6">
+					<div className="space-y-4">
+						<div className="flex items-center justify-between">
+							<div>
+								<h3 className="text-lg font-semibold">
+									Pods ({deploymentPods.length})
+								</h3>
+								<p className="text-sm text-muted-foreground">
+									Pods managed by this deployment
+								</p>
+							</div>
+						</div>
+
+						<Card>
+							<CardContent className="p-0">
+								<Table>
+									<TableHeader>
+										<TableRow>
+											<TableHead>Name</TableHead>
+											<TableHead>Namespace</TableHead>
+											<TableHead>Status</TableHead>
+											<TableHead>Image</TableHead>
+											<TableHead>CPU / MEM</TableHead>
+											<TableHead className="text-right">Actions</TableHead>
+										</TableRow>
+									</TableHeader>
+									<TableBody>
+										{deploymentPods?.map((pod) => (
+											<TableRow key={pod.id}>
+												<TableCell className="font-medium flex items-center gap-2">
+													<Box className="h-4 w-4 text-blue-500" />
+													{pod.name}
+												</TableCell>
+												<TableCell>{pod.namespace}</TableCell>
+												<TableCell>{pod.status || "Running"}</TableCell>
+												<TableCell
+													className="max-w-[200px] truncate"
+													title={pod.dockerImage}
+												>
+													{pod.dockerImage}
+												</TableCell>
+												<TableCell>
+													{pod.cpuRequest}m / {pod.memoryRequest}Mi
+												</TableCell>
+												<TableCell className="text-right">
+													<Link
+														to="/dashboard/cluster/$id/pods/$podId"
+														params={{
+															id: clusterId,
+															podId: pod.id.toString(),
+														}}
+													>
+														<Button variant="ghost" size="sm">
+															<Settings className="h-4 w-4" />
+														</Button>
+													</Link>
+												</TableCell>
+											</TableRow>
+										))}
+										{(!deploymentPods || deploymentPods.length === 0) && (
+											<TableRow>
+												<TableCell colSpan={6} className="text-center py-4">
+													No pods found for this deployment
+												</TableCell>
+											</TableRow>
+										)}
+									</TableBody>
+								</Table>
+							</CardContent>
+						</Card>
 					</div>
 				</TabsContent>
 
