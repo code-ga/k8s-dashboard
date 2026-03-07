@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { api } from "@/lib/api";
 import { authClient } from "@/lib/auth";
+import { logger } from "../../lib/logger";
 
 export const Route = createFileRoute("/dashboard/settings")({
 	component: DashboardSettings,
@@ -63,7 +64,7 @@ function DashboardSettings() {
 		},
 		onError: (err) => {
 			alert("Failed to update profile");
-			console.error(err);
+			logger.error(err);
 		},
 	});
 

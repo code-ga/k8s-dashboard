@@ -1,3 +1,4 @@
+import { logger } from "../utils/logger";
 import { Type } from "@sinclair/typebox";
 import { eq } from "drizzle-orm";
 import { Elysia } from "elysia";
@@ -79,7 +80,7 @@ export const nodesRoute = new Elysia({ prefix: "/nodes/:clusterId" })
 									joinData = JSON.parse(response.data);
 								}
 							} catch (e) {
-								console.error("Failed to parse join token data JSON:", e);
+								logger.error("Failed to parse join token data JSON:", e);
 								// Fallback if it's just a string or fails
 								joinData.command = response.data;
 							}

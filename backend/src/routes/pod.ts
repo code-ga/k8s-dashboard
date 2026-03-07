@@ -1,3 +1,4 @@
+import { logger } from "../utils/logger";
 /** biome-ignore-all lint/suspicious/noExplicitAny: <explanation> */
 import { Type } from "@sinclair/typebox";
 import { eq, type InferInsertModel } from "drizzle-orm";
@@ -258,7 +259,7 @@ export const podRoute = new Elysia({
 							try {
 								podData.envVariables = decrypt(pod.envVariables);
 							} catch (e) {
-								console.error("Failed to decrypt env vars for pod", pod.id, e);
+								logger.error("Failed to decrypt env vars for pod", pod.id, e);
 								podData.envVariables = ""; // Fail safe
 							}
 						} else {
@@ -370,7 +371,7 @@ export const podRoute = new Elysia({
 							secretRefs: body.secretRefs,
 						});
 					} catch (dbError: any) {
-						console.error("DB Insert Failed:", dbError);
+						logger.error("DB Insert Failed:", dbError);
 						return ctx.status(500, {
 							success: false,
 							message: `Database error: ${dbError.message}`,
@@ -417,7 +418,7 @@ export const podRoute = new Elysia({
 							timestamp: Date.now(),
 						});
 					} catch (agentError: any) {
-						console.error("Agent Command Failed:", agentError);
+						logger.error("Agent Command Failed:", agentError);
 						return ctx.status(200, {
 							success: true,
 							message:
@@ -616,7 +617,7 @@ export const podRoute = new Elysia({
 							timestamp: Date.now(),
 						});
 					} catch (error: any) {
-						console.error("Agent Delete Command Failed:", error);
+						logger.error("Agent Delete Command Failed:", error);
 						// If sendCommand failed, DB already has status 'Terminating'
 						// Dashboard will show it as terminating and sync will eventually catch up
 						return ctx.status(200, {
@@ -718,7 +719,7 @@ export const podRoute = new Elysia({
 							});
 						}
 					} catch (dbError: any) {
-						console.error("DB Update Failed:", dbError);
+						logger.error("DB Update Failed:", dbError);
 						return ctx.status(500, {
 							success: false,
 							message: `Database update failed: ${dbError.message}`,
@@ -732,7 +733,7 @@ export const podRoute = new Elysia({
 						try {
 							finalEnv = JSON.parse(decrypt(pod.envVariables));
 						} catch (e) {
-							console.error("Failed to decrypt env for pod", pod.id, e);
+							logger.error("Failed to decrypt env for pod", pod.id, e);
 						}
 					}
 
@@ -760,7 +761,7 @@ export const podRoute = new Elysia({
 							timestamp: Date.now(),
 						});
 					} catch (error: any) {
-						console.error("Agent Update Command Failed:", error);
+						logger.error("Agent Update Command Failed:", error);
 						return ctx.status(200, {
 							success: true,
 							message:
@@ -896,12 +897,12 @@ export const podRoute = new Elysia({
 					// Assume it works.
 					const { clusterId, podId } = ws.data.params;
 					const profile = ws.data.profile;
-					console.log("Cluster ID:", clusterId);
-					console.log("Pod ID:", podId);
-					console.log("Profile:", profile);
+					logger.info("Cluster ID:", clusterId);
+					logger.info("Pod ID:", podId);
+					logger.info("Profile:", profile);
 
 					if (!clusterId || !podId) {
-						console.log("Missing params");
+						logger.info("Missing params");
 						ws.send("Missing params");
 						ws.close();
 						return;
@@ -916,7 +917,7 @@ export const podRoute = new Elysia({
 					});
 
 					if (!pod) {
-						console.log("Pod not found");
+						logger.info("Pod not found");
 						ws.send("Pod not found");
 						ws.close();
 						return;
@@ -927,7 +928,7 @@ export const podRoute = new Elysia({
 						"manager",
 					]);
 					if (!isManager && pod.ownerId !== profile?.id) {
-						console.log("Unauthorized");
+						logger.info("Unauthorized");
 						ws.send("Unauthorized");
 						ws.close();
 						return;
@@ -939,7 +940,7 @@ export const podRoute = new Elysia({
 					});
 
 					if (!cluster || !cluster.agent) {
-						console.log("Cluster/Agent not found");
+						logger.info("Cluster/Agent not found");
 						ws.send("Cluster/Agent not found");
 						ws.close();
 						return;
@@ -957,7 +958,7 @@ export const podRoute = new Elysia({
 						tailLines: 100,
 						follow: true,
 					});
-					console.log("Payload:", payload);
+					logger.info("Payload:", payload);
 
 					try {
 						// Command Type 9: STREAM_LOGS
@@ -968,7 +969,7 @@ export const podRoute = new Elysia({
 							payload,
 							ws,
 						);
-						console.log("Stream ID:", streamId);
+						logger.info("Stream ID:", streamId);
 						// Store streamId in ws.data for cleanup
 						// ws.data.streamId = streamId;
 						// ws.data.agentId = cluster.agent.id;
@@ -980,14 +981,14 @@ export const podRoute = new Elysia({
 							agentId: Number(cluster.agent.id),
 						});
 					} catch (e: any) {
-						console.log("Error starting stream:", e);
+						logger.info("Error starting stream:", e);
 						ws.send(`Error starting stream: ${e.message}`);
 						ws.close();
 					}
 				},
 				close: async (ws) => {
 					const data = ws.data.websocketData.get(ws.id);
-					console.log("Closing stream", data);
+					logger.info("Closing stream", data);
 					if (data) {
 						await ws.data.agentManager.stopStream(data.streamId);
 						ws.data.websocketData.delete(ws.id);
@@ -1001,12 +1002,12 @@ export const podRoute = new Elysia({
 				open: async (ws) => {
 					const { clusterId, podId } = ws.data.params;
 					const profile = ws.data.profile;
-					console.log("Cluster ID:", clusterId);
-					console.log("Pod ID:", podId);
-					console.log("Profile:", profile);
+					logger.info("Cluster ID:", clusterId);
+					logger.info("Pod ID:", podId);
+					logger.info("Profile:", profile);
 
 					if (!clusterId || !podId) {
-						console.log("Missing params");
+						logger.info("Missing params");
 						ws.send("Missing params");
 						ws.close();
 						return;
@@ -1020,7 +1021,7 @@ export const podRoute = new Elysia({
 					});
 
 					if (!pod) {
-						console.log("Pod not found");
+						logger.info("Pod not found");
 						ws.send("Pod not found");
 						ws.close();
 						return;
@@ -1030,7 +1031,7 @@ export const podRoute = new Elysia({
 						"manager",
 					]);
 					if (!isManager && pod.ownerId !== profile?.id) {
-						console.log("Unauthorized");
+						logger.info("Unauthorized");
 						ws.send("Unauthorized");
 						ws.close();
 						return;
@@ -1042,7 +1043,7 @@ export const podRoute = new Elysia({
 					});
 
 					if (!cluster || !cluster.agent) {
-						console.log("Cluster/Agent not found");
+						logger.info("Cluster/Agent not found");
 						ws.send("Cluster/Agent not found");
 						ws.close();
 						return;
@@ -1056,7 +1057,7 @@ export const podRoute = new Elysia({
 						command: ["/bin/sh"],
 						// container?
 					});
-					console.log("Payload:", payload);
+					logger.info("Payload:", payload);
 
 					try {
 						// Command Type 10: EXEC
@@ -1067,7 +1068,7 @@ export const podRoute = new Elysia({
 							payload,
 							ws,
 						);
-						console.log("Stream ID:", streamId);
+						logger.info("Stream ID:", streamId);
 						// ws.data.streamId = streamId;
 						// ws.data.agentId = cluster.agent.id;
 						ws.data.websocketData.set(ws.id, {
@@ -1078,7 +1079,7 @@ export const podRoute = new Elysia({
 							agentId: Number(cluster.agent.id),
 						});
 					} catch (e: any) {
-						console.log("Error starting stream:", e);
+						logger.info("Error starting stream:", e);
 						ws.send(`Error starting stream: ${e.message}`);
 						ws.close();
 					}

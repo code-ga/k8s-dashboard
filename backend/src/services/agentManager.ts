@@ -1,3 +1,4 @@
+import { logger } from "../utils/logger";
 import { eq } from "drizzle-orm";
 import Elysia, { type Context } from "elysia";
 import type { Prettify, RouteSchema } from "elysia/types";
@@ -46,7 +47,7 @@ export class AgentManager extends EventEmitter<EventMap> {
 	constructor() {
 		super();
 		this.instanceId = crypto.randomUUID();
-		console.log(`AgentManager initialized with instanceId: ${this.instanceId}`);
+		logger.info(`AgentManager initialized with instanceId: ${this.instanceId}`);
 		this.pendingCommandIntervalId = this.pendingCommandInterval();
 	}
 
@@ -55,13 +56,13 @@ export class AgentManager extends EventEmitter<EventMap> {
 		ws: Prettify<ElysiaWS<Omit<Context, "body">, RouteSchema>>,
 	) {
 		this.connections.set(agentId, ws);
-		console.log(`Agent ${agentId} registered`);
+		logger.info(`Agent ${agentId} registered`);
 		await this.processPendingCommands(agentId);
 	}
 
 	removeConnection(agentId: number) {
 		this.connections.delete(agentId);
-		console.log(`Agent ${agentId} disconnected`);
+		logger.info(`Agent ${agentId} disconnected`);
 	}
 
 	private pendingCommandInterval() {
@@ -74,7 +75,7 @@ export class AgentManager extends EventEmitter<EventMap> {
 	}
 
 	async processPendingCommands(agentId: number) {
-		console.log(`Processing pending commands for agent ${agentId}...`);
+		logger.info(`Processing pending commands for agent ${agentId}...`);
 		const pendingDbCommands = await db.query.agentCommands.findMany({
 			where: {
 				agentId,
@@ -90,7 +91,7 @@ export class AgentManager extends EventEmitter<EventMap> {
 			const dbCmd = pendingDbCommands.shift();
 			if (!dbCmd) break;
 
-			console.log(`Sending command ${dbCmd.id} to agent ${agentId}`);
+			logger.info(`Sending command ${dbCmd.id} to agent ${agentId}`);
 
 			const command = dbCmd.payload as Command;
 			// Ensure ID matches
@@ -99,7 +100,7 @@ export class AgentManager extends EventEmitter<EventMap> {
 			// We don't await the result of send here to process all in order,
 			// but we do fire and forget the send logic which might fail if connection drops
 			this._sendPayload(agentId, command, dbCmd.id).catch((err) => {
-				console.error(`Failed to send pending command ${dbCmd.id}:`, err);
+				logger.error(`Failed to send pending command ${dbCmd.id}:`, err);
 			});
 		}
 	}
@@ -126,7 +127,7 @@ export class AgentManager extends EventEmitter<EventMap> {
 				status: "pending",
 			})
 			.returning();
-		console.log(`Command ${command.id} sent to agent ${agentId}`);
+		logger.info(`Command ${command.id} sent to agent ${agentId}`);
 
 		return this._sendPayload(agentId, command, command.id);
 	}
@@ -140,7 +141,7 @@ export class AgentManager extends EventEmitter<EventMap> {
 		const ws = this.connections.get(agentId);
 
 		if (!ws) {
-			console.log(
+			logger.info(
 				`Agent ${agentId} not connected, command ${commandId} queued.`,
 			);
 			// Validate payload to ensure it matches Command expectations if needed,
@@ -154,7 +155,7 @@ export class AgentManager extends EventEmitter<EventMap> {
 			} as CommandResponse;
 		}
 
-		console.log("Sending payload:", command);
+		logger.info("Sending payload:", command);
 		const payload = ServerPayload.encode({ command }).finish();
 
 		// Update to 'sent'
@@ -265,11 +266,9 @@ export class AgentManager extends EventEmitter<EventMap> {
 				pending.reject(new Error(response.error || "Unknown agent error"));
 			}
 		} else {
-			// Check if we have this command in DB and it's pending (maybe server restarted)
-			// If it's in DB but not in memory, we just update DB (which we did above)
-			// and emit event.
-			console.log(
-				`Received response for command ID: ${response.id} (not in pending map)`,
+			logger.warn(
+				`Received response for command ID: ${response.id} but no pending request found (possibly timed out or server restarted)`,
+				{ responseId: response.id, success: response.success }
 			);
 		}
 	}
@@ -313,7 +312,7 @@ export class AgentManager extends EventEmitter<EventMap> {
 			});
 			return streamId;
 		} catch (error) {
-			console.error("Failed to start stream:", error);
+			logger.error("Failed to start stream:", error);
 			this.streamSessions.delete(streamId);
 			throw error;
 		}
@@ -321,7 +320,7 @@ export class AgentManager extends EventEmitter<EventMap> {
 
 	async stopStream(streamId: string) {
 		const session = this.streamSessions.get(streamId);
-		console.log(`Stopping stream ${streamId} for agent ${session?.agentId}`);
+		logger.info(`Stopping stream ${streamId} for agent ${session?.agentId}`);
 		if (session) {
 			// Notify agent to close stream
 			await this.sendStreamDataToAgent(session.agentId, {
@@ -339,7 +338,7 @@ export class AgentManager extends EventEmitter<EventMap> {
 
 	handleStreamData(data: StreamData) {
 		const session = this.streamSessions.get(data.streamId);
-		// console.log(
+		// logger.info(
 		// 	`Handling stream data for streamId: ${data.streamId} `,
 		// 	data,
 		// 	" session found: ",
@@ -363,13 +362,13 @@ export class AgentManager extends EventEmitter<EventMap> {
 
 		if (data.data && data.data.length > 0) {
 			try {
-				console.log(
+				logger.info(
 					`Forwarding stream data to user for streamId: ${data.streamId}`,
 				);
 				const buffer = Buffer.from(data.data);
 				session.userWs.send(buffer);
 			} catch (e) {
-				console.error("Failed to send data to user", e);
+				logger.error("Failed to send data to user", e);
 				this.stopStream(data.streamId);
 			}
 		}

@@ -1,3 +1,4 @@
+import { logger } from "../utils/logger";
 import { Type } from "@sinclair/typebox";
 import { eq } from "drizzle-orm";
 import { Elysia } from "elysia";
@@ -81,7 +82,7 @@ export const configmapRoute = new Elysia({
 							const decrypted = decrypt(cmData.data);
 							cmData.data = JSON.parse(decrypted);
 						} catch (e) {
-							console.error("Failed to decrypt configmap data", cm.id, e);
+							logger.error("Failed to decrypt configmap data", cm.id, e);
 						}
 					}
 					if (cmData.binaryData) {
@@ -89,11 +90,11 @@ export const configmapRoute = new Elysia({
 							const decrypted = decrypt(cmData.binaryData);
 							cmData.binaryData = JSON.parse(decrypted);
 						} catch (e) {
-							console.error("Failed to decrypt configmap binaryData", cm.id, e);
+							logger.error("Failed to decrypt configmap binaryData", cm.id, e);
 						}
 					}
 
-					console.log(cmData);
+					logger.info(cmData);
 
 					return ctx.status(200, {
 						success: true,

@@ -26,6 +26,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api, type databaseTypes, type SchemaStatic } from "@/lib/api";
 import "xterm/css/xterm.css";
 import { BACKEND_URL } from "../../../../../constants";
+import { logger } from "../../../../../lib/logger";
 
 export const Route = createFileRoute("/dashboard/cluster/$id/pods/$podId")({
 	component: ManagePodPage,
@@ -88,7 +89,7 @@ function ManagePodPage() {
 					Object.entries(parsed).map(([name, value]) => ({ name, value })),
 				);
 			} catch (_e) {
-				console.error("Failed to parse env variables", _e);
+				logger.error("Failed to parse env variables", _e);
 				setEnvVars([]);
 			}
 			setPorts(pod.ports || []);
@@ -679,7 +680,7 @@ export function PodLogs({ pod, clusterId, isActive }: PodLogsProps) {
 		};
 
 		ws.onerror = (error) => {
-			console.error("WebSocket error:", error);
+			logger.error("WebSocket error:", error);
 			toast.error("Failed to connect to log stream");
 		};
 
@@ -782,7 +783,7 @@ export function PodTerminal({ pod, clusterId, isActive }: PodTerminalProps) {
 				try {
 					fitAddon.fit();
 				} catch (e) {
-					console.warn("Fit error:", e);
+					logger.warn("Fit error:", e);
 				}
 			}
 

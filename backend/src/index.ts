@@ -1,3 +1,4 @@
+import { logger } from "./utils/logger";
 import dotenv from "dotenv";
 
 dotenv.config({ path: "../.env" });
@@ -33,9 +34,17 @@ export const app = new Elysia()
 	.use(apiRouter)
 	.listen(port);
 
-console.log(`Listening on ${app.server?.url}`);
+logger.info(`Listening on ${app.server?.url}`);
+
+process.on("uncaughtException", (error) => {
+	logger.fatal("Uncaught Exception", { error: error.message, stack: error.stack });
+	process.exit(1);
+});
+
+process.on("unhandledRejection", (reason, promise) => {
+	logger.error("Unhandled Rejection at:", { promise, reason });
+});
 
 export type App = typeof app;
 export * as databaseTypes from "./database/type";
 export * as requestTypes from "./types";
-

@@ -30,6 +30,7 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { api } from "@/lib/api";
+import { logger } from "../../../../lib/logger";
 
 export const Route = createFileRoute("/dashboard/cluster/$id/nodes")({
 	component: ClusterNodes,
@@ -65,7 +66,7 @@ function ClusterNodes() {
 			setIsJoinDialogOpen(true);
 		},
 		onError: (err) => {
-			console.error(err);
+			logger.error(err);
 			toast.error("Failed to fetch join token");
 		},
 	});
@@ -85,7 +86,7 @@ function ClusterNodes() {
 			toast.success("Node deletion initiated");
 		},
 		onError: (err) => {
-			console.error(err);
+			logger.error(err);
 			toast.error("Failed to delete node");
 		},
 	});

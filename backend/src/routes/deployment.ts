@@ -1,3 +1,4 @@
+import { logger } from "../utils/logger";
 /** biome-ignore-all lint/suspicious/noExplicitAny: <explanation> */
 import { Type } from "@sinclair/typebox";
 import { eq, type InferInsertModel, type InferSelectModel } from "drizzle-orm";
@@ -175,7 +176,7 @@ export const deploymentRoute = new Elysia({
 							try {
 								depData.envVariables = decrypt(deployment.envVariables);
 							} catch (e) {
-								console.error(
+								logger.error(
 									"Failed to decrypt env vars for deployment",
 									deployment.id,
 									e,
@@ -304,7 +305,7 @@ export const deploymentRoute = new Elysia({
 							},
 						);
 					} catch (dbError: any) {
-						console.error("DB Insert Deployment Failed:", dbError);
+						logger.error("DB Insert Deployment Failed:", dbError);
 						return ctx.status(500, {
 							success: false,
 							message: `Database error: ${dbError.message}`,
@@ -323,14 +324,14 @@ export const deploymentRoute = new Elysia({
 							try {
 								configMapRefsObj = configMapRefs;
 							} catch (e) {
-								console.error("Failed to parse configMapRefs", e);
+								logger.error("Failed to parse configMapRefs", e);
 							}
 						}
 						if (secretRefs) {
 							try {
 								secretRefsObj = secretRefs;
 							} catch (e) {
-								console.error("Failed to parse secretRefs", e);
+								logger.error("Failed to parse secretRefs", e);
 							}
 						}
 
@@ -369,7 +370,7 @@ export const deploymentRoute = new Elysia({
 							timestamp: Date.now(),
 						});
 					} catch (agentError: any) {
-						console.error("Agent Command Failed:", agentError);
+						logger.error("Agent Command Failed:", agentError);
 						return ctx.status(200, {
 							success: true,
 							message:
@@ -647,7 +648,7 @@ export const deploymentRoute = new Elysia({
 								);
 							}
 						} catch (dbError: any) {
-							console.error("DB Update Failed", dbError);
+							logger.error("DB Update Failed", dbError);
 							return ctx.status(500, {
 								success: false,
 								message: `DB Update Failed: ${dbError.message}`,
@@ -661,7 +662,7 @@ export const deploymentRoute = new Elysia({
 							try {
 								finalEnv = JSON.parse(decrypt(deployment.envVariables));
 							} catch (e) {
-								console.error("Decrypt fail", e);
+								logger.error("Decrypt fail", e);
 							}
 						}
 
@@ -670,7 +671,7 @@ export const deploymentRoute = new Elysia({
 							try {
 								finalConfigMapRefs = deployment.configMapRefs;
 							} catch (e) {
-								console.error("Failed to parse configMapRefs", e);
+								logger.error("Failed to parse configMapRefs", e);
 							}
 						}
 
@@ -679,7 +680,7 @@ export const deploymentRoute = new Elysia({
 							try {
 								finalSecretRefs = deployment.secretRefs;
 							} catch (e) {
-								console.error("Failed to parse secretRefs", e);
+								logger.error("Failed to parse secretRefs", e);
 							}
 						}
 
@@ -1094,7 +1095,7 @@ export const deploymentRoute = new Elysia({
 					// However, AgentService syncs pods.
 					// If we don't have status, we just pick the first one.
 					const targetPod = pods[0];
-					console.log("targetPod", targetPod);
+					logger.info("targetPod", targetPod);
 					if (!targetPod) {
 						ws.send("No pods found for this deployment");
 						ws.close();
@@ -1147,7 +1148,7 @@ export const deploymentRoute = new Elysia({
 						} else {
 							// Fallback if not decorated yet?
 							// We need to decorate. I'll make sure to add it.
-							console.error("websocketData missing in context");
+							logger.error("websocketData missing in context");
 							ws.close();
 						}
 					} catch (e: any) {

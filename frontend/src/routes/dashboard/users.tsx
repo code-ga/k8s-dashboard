@@ -16,6 +16,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { api, type databaseTypes } from "@/lib/api";
+import { logger } from "../../lib/logger";
 
 export const Route = createFileRoute("/dashboard/users")({
 	component: UserManagement,
@@ -68,7 +69,7 @@ function UserManagement() {
 		},
 		onError: (err) => {
 			alert("Failed to add role");
-			console.error(err);
+			logger.error(err);
 		},
 	});
 
@@ -94,7 +95,7 @@ function UserManagement() {
 		},
 		onError: (err) => {
 			alert("Failed to remove role");
-			console.error(err);
+			logger.error(err);
 		},
 	});
 

@@ -1,3 +1,4 @@
+import { logger } from "../utils/logger";
 import { Type } from "@sinclair/typebox";
 import { eq } from "drizzle-orm";
 import { Elysia } from "elysia";
@@ -81,11 +82,11 @@ export const secretRoute = new Elysia({
 							const decrypted = decrypt(secretData.data);
 							secretData.data = JSON.parse(decrypted);
 						} catch (e) {
-							console.error("Failed to decrypt secret data", secret.id, e);
+							logger.error("Failed to decrypt secret data", secret.id, e);
 						}
 					}
 
-					console.log(secretData);
+					logger.info(secretData);
 
 					return ctx.status(200, {
 						success: true,

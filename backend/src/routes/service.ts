@@ -1,3 +1,4 @@
+import { logger } from "../utils/logger";
 import { Type } from "@sinclair/typebox";
 import { eq } from "drizzle-orm";
 import { Elysia } from "elysia";
@@ -208,7 +209,7 @@ export const serviceRoute = new Elysia({
 							});
 						}
 					} catch (dbError: any) {
-						console.error("DB Insert Failed:", dbError);
+						logger.error("DB Insert Failed:", dbError);
 						return ctx.status(500, {
 							success: false,
 							message: `Database error: ${dbError.message}`,

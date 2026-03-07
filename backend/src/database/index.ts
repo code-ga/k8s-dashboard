@@ -1,3 +1,4 @@
+import { logger } from "../utils/logger";
 // import { PGlite } from "@electric-sql/pglite";
 
 import path from "node:path";
@@ -20,12 +21,12 @@ if (!isProduction) {
 	// For Electric, we need to initialize the database
 	// This is not needed for production with a real Postgres database
 	try {
-		console.log("Running migrations...");
+		logger.info("Running migrations...");
 		await migrate(db, {
 			migrationsFolder: path.join(__dirname, "../../drizzle"),
 		});
-		console.log("Migrations complete.");
+		logger.info("Migrations complete.");
 	} catch (error) {
-		console.error("Error running migrations:", error);
+		logger.error("Error running migrations:", error);
 	}
 }

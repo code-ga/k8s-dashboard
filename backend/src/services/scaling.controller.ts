@@ -1,3 +1,4 @@
+import { logger } from "../utils/logger";
 import { and, eq, gt } from "drizzle-orm";
 import { Command_CommandType } from "../../pb-generated/agent-backend/websocket";
 import { db } from "../database";
@@ -13,7 +14,7 @@ export class ScalingController {
 			() => this.checkIdleDeployments(),
 			checkIntervalMs,
 		);
-		console.log("Scaling Controller started.");
+		logger.info("Scaling Controller started.");
 	}
 
 	stop() {
@@ -52,7 +53,7 @@ export class ScalingController {
 				const idleTimeSeconds = (now.getTime() - lastAccessed.getTime()) / 1000;
 
 				if (idleTimeSeconds > dep.idleTimeoutSeconds) {
-					console.log(
+					logger.info(
 						`Scaling down idle deployment: ${dep.name} in namespace ${dep.namespace}`,
 					);
 
@@ -70,7 +71,7 @@ export class ScalingController {
 							.set({ replicas: 0 })
 							.where(eq(k8sDeployments.id, dep.id));
 					} catch (err) {
-						console.error(`Failed to scale down deployment ${dep.name}:`, err);
+						logger.error(`Failed to scale down deployment ${dep.name}:`, err);
 					}
 				}
 			}
@@ -94,7 +95,7 @@ export class ScalingController {
 
 			for (const row of forcedRunning) {
 				const dep = row.deployment;
-				console.log(
+				logger.info(
 					`Enforcing 'Always Running' for: ${dep.name} in namespace ${dep.namespace}`,
 				);
 
@@ -112,11 +113,11 @@ export class ScalingController {
 						.set({ replicas: 1, lastAccessedAt: new Date() })
 						.where(eq(k8sDeployments.id, dep.id));
 				} catch (err) {
-					console.error(`Failed to enforce running for ${dep.name}:`, err);
+					logger.error(`Failed to enforce running for ${dep.name}:`, err);
 				}
 			}
 		} catch (error) {
-			console.error("Error in ScalingController check:", error);
+			logger.error("Error in ScalingController check:", error);
 		}
 	}
 
@@ -147,7 +148,7 @@ export class ScalingController {
 			return;
 		}
 
-		console.log(`Waking up deployment: ${dep.name}`);
+		logger.info(`Waking up deployment: ${dep.name}`);
 
 		await agentManager.sendCommand(row.agentId, row.clusterId, {
 			id: crypto.randomUUID(),

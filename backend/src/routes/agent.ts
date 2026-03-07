@@ -1,3 +1,4 @@
+import { logger } from "../utils/logger";
 import { Type } from "@sinclair/typebox";
 import { eq } from "drizzle-orm";
 import Elysia from "elysia";
@@ -169,7 +170,7 @@ export const agentRoute = new Elysia({ prefix: "/agents" })
 					open: async (ctx) => {
 						const cluster = ctx.data.cluster;
 						const agent = ctx.data.agent;
-						console.log(
+						logger.info(
 							`Agent ${agent.id} connected for cluster ${cluster.name} (${cluster.id})`,
 						);
 						ctx.data.agentManager.emit("agent/connected", {
@@ -182,17 +183,17 @@ export const agentRoute = new Elysia({ prefix: "/agents" })
 					message: async (ws, message) => {
 						const cluster = ws.data.cluster;
 						const agent = ws.data.agent;
-						console.log(
+						logger.info(
 							`Received message from agent ${agent.id} for cluster ${cluster.name} (${cluster.id})`,
 						);
 						// if (!cluster || !agent) {
-						// 	console.log("No cluster or agent info in WebSocket context");
+						// 	logger.info("No cluster or agent info in WebSocket context");
 						// 	return;
 						// }
 
 						// Message is expected to be Uint8Array (binary)
 						if (!(message instanceof Uint8Array) && !Buffer.isBuffer(message)) {
-							console.log("Received non-binary message");
+							logger.info("Received non-binary message");
 							return;
 						}
 
@@ -251,7 +252,7 @@ export const agentRoute = new Elysia({ prefix: "/agents" })
 								}
 								ws.data.cluster = cluster[0];
 								ws.data.agent = agent[0];
-								console.log(
+								logger.info(
 									`Agent ${agent[0].id} connected for cluster ${cluster[0].name} (${cluster[0].id})`,
 								);
 								ws.data.agentManager.emit("agent/connected", {
@@ -264,7 +265,7 @@ export const agentRoute = new Elysia({ prefix: "/agents" })
 							// Handle other message types similarly
 							// ...
 						} catch (error) {
-							console.error(
+							logger.error(
 								`Failed to decode or process message from cluster ${cluster.name} (${cluster.id}):`,
 								error,
 							);
@@ -273,7 +274,7 @@ export const agentRoute = new Elysia({ prefix: "/agents" })
 					close: async (ctx) => {
 						const cluster = ctx.data.cluster;
 						const agent = ctx.data.agent;
-						console.log(
+						logger.info(
 							`Agent ${agent.id} disconnected for cluster ${cluster.name} (${cluster.id})`,
 						);
 						ctx.data.agentManager.emit("agent/disconnected", {

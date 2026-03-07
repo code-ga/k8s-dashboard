@@ -1,3 +1,4 @@
+import { logger } from "../utils/logger";
 import { Type } from "@sinclair/typebox";
 import { eq } from "drizzle-orm";
 import { Elysia } from "elysia";
@@ -180,7 +181,7 @@ export const ingressRoute = new Elysia({
 									? "TCP"
 									: body.protocol.toUpperCase()
 							) as "TCP" | "UDP";
-							console.log(svcProtocol);
+							logger.info(svcProtocol);
 							// Create Service in DB
 							const [svc] = await db
 								.insert(schema.k8sServices)

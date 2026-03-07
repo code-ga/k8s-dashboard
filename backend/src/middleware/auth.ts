@@ -1,3 +1,4 @@
+import { logger } from "../utils/logger";
 import { eq } from "drizzle-orm";
 import Elysia, { type Static } from "elysia";
 import { db } from "../database";
@@ -11,8 +12,8 @@ export const authenticationMiddleware = new Elysia({
 }).macro({
 	userAuth: (config: { requiredProfile: boolean }) => ({
 		async resolve({ status, request: { headers, url } }) {
-			console.log("Authentication middleware");
-			console.log("Path: ", url);
+			logger.info("Authentication middleware");
+			logger.info("Path: ", url);
 			const session = await auth.api.getSession({
 				headers,
 			});
@@ -34,14 +35,14 @@ export const authenticationMiddleware = new Elysia({
 
 	agentAuth: {
 		async resolve({ status, request: { headers } }) {
-			console.log("Agent authentication middleware");
+			logger.info("Agent authentication middleware");
 			const authenticationHeader = headers.get("Authorization");
-			console.log("Authentication header: ", authenticationHeader);
+			logger.info("Authentication header: ", authenticationHeader);
 			if (!authenticationHeader || !authenticationHeader.startsWith("Bot ")) {
 				return status(401);
 			}
 			const token = authenticationHeader.replace("Bot ", "").trim();
-			console.log("Received token: ", token);
+			logger.info("Received token: ", token);
 			const agent = await db
 				.select()
 				.from(schema.clusterAgent)
@@ -49,7 +50,7 @@ export const authenticationMiddleware = new Elysia({
 				.limit(1);
 			
 			if (agent.length === 0 || !agent[0]) {
-				console.log("Agent not found");
+				logger.info("Agent not found");
 				return status(401);
 			}
 			const cluster = await db
@@ -58,7 +59,7 @@ export const authenticationMiddleware = new Elysia({
 				.where(eq(schema.k8sCluster.agentId, agent[0].id))
 				.limit(1);
 			if (cluster.length === 0 || !cluster[0]) {
-				console.log("Cluster not found");
+				logger.info("Cluster not found");
 				return status(401);
 			}
 			return {

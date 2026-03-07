@@ -39,6 +39,7 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { BACKEND_URL } from "../../../../../constants";
+import { logger } from "../../../../../lib/logger";
 
 export const Route = createFileRoute(
 	"/dashboard/cluster/$id/deployments/$deploymentId",
@@ -142,7 +143,7 @@ function ManageDeploymentPage() {
 					setEnvVars([]);
 				}
 			} catch (_e) {
-				console.error("Failed to parse env variables", _e);
+				logger.error("Failed to parse env variables", _e);
 				setEnvVars([]);
 			}
 			setPorts(deployment.ports || []);
@@ -817,7 +818,7 @@ export function DeploymentLogs({
 		};
 
 		ws.onerror = (error) => {
-			console.error("WebSocket error:", error);
+			logger.error("WebSocket error:", error);
 			toast.error("Failed to connect to log stream");
 		};
 

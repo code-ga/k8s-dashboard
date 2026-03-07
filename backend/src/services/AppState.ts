@@ -1,3 +1,4 @@
+import { logger } from "../utils/logger";
 import { eq } from "drizzle-orm";
 import Elysia from "elysia";
 import { db } from "../database";
@@ -9,7 +10,7 @@ export class AppStateService {
 	appState!: AppState;
 	constructor() {
 		this.instanceId = crypto.randomUUID();
-		console.log(`AppState initialized with instanceId: ${this.instanceId}`);
+		logger.info(`AppState initialized with instanceId: ${this.instanceId}`);
 		this.loadAppState();
 	}
 
