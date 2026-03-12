@@ -6,7 +6,7 @@ import { Elysia } from "elysia";
 import { db } from "../database";
 import { schema } from "../database/schema";
 import { dbSchemaTypes, type SchemaStatic } from "../database/type";
-import { authenticationMiddleware, checkPermission } from "../middleware/auth";
+import { authenticationMiddleware } from "../middleware/auth";
 import { agentManagerService } from "../services/agentManager";
 import { baseResponseSchema, errorResponseSchema } from "../types";
 import { decrypt, encrypt } from "../utils/crypto";
@@ -52,56 +52,55 @@ export const podRoute = new Elysia({
 	.use(authenticationMiddleware)
 	.use(agentManagerService)
 	.decorate("websocketData", new Map<string, WebSocketData>())
-	.guard({ roleAuth: ["manager"] }, (app) =>
-		app.get(
-			"/all",
-			async (ctx) => {
-				const { clusterId } = ctx.params;
-				if (!clusterId) {
-					return ctx.status(400, {
-						success: false,
-						message: "Cluster ID is required",
-						timestamp: Date.now(),
-					});
-				}
-				const cluster = await db.query.k8sCluster.findFirst({
-					where: {
-						id: Number(clusterId),
-					},
-				});
-				if (!cluster) {
-					return ctx.status(404, {
-						success: false,
-						message: "Cluster not found",
-						timestamp: Date.now(),
-					});
-				}
-				const pods = await db.query.k8sPods.findMany({
-					where: {
-						clusterId: Number(clusterId),
-					},
-				});
-				return ctx.status(200, {
-					success: true,
-					message: "Pod fetched successfully",
-					data: pods,
-					timestamp: Date.now(),
-				});
-			},
-			{
-				detail: { tags: ["Pods"] },
-				response: {
-					200: baseResponseSchema(
-						Type.Array(Type.Object(dbSchemaTypes.k8sPods)),
-					),
-					404: errorResponseSchema,
-					400: errorResponseSchema,
-				},
-			},
-		),
-	)
 	.guard({ userAuth: { requiredProfile: true } }, (app) =>
 		app
+			.get(
+				"/all",
+				async (ctx) => {
+					const { clusterId } = ctx.params;
+					if (!clusterId) {
+						return ctx.status(400, {
+							success: false,
+							message: "Cluster ID is required",
+							timestamp: Date.now(),
+						});
+					}
+					const cluster = await db.query.k8sCluster.findFirst({
+						where: {
+							id: Number(clusterId),
+						},
+					});
+					if (!cluster) {
+						return ctx.status(404, {
+							success: false,
+							message: "Cluster not found",
+							timestamp: Date.now(),
+						});
+					}
+					const pods = await db.query.k8sPods.findMany({
+						where: {
+							clusterId: Number(clusterId),
+						},
+					});
+					return ctx.status(200, {
+						success: true,
+						message: "Pod fetched successfully",
+						data: pods,
+						timestamp: Date.now(),
+					});
+				},
+				{
+					detail: { tags: ["Pods"] },
+					roleAuth: "pod:manage",
+					response: {
+						200: baseResponseSchema(
+							Type.Array(Type.Object(dbSchemaTypes.k8sPods)),
+						),
+						404: errorResponseSchema,
+						400: errorResponseSchema,
+					},
+				},
+			)
 			.get(
 				"/",
 				async (ctx) => {
@@ -140,6 +139,7 @@ export const podRoute = new Elysia({
 				},
 				{
 					detail: { tags: ["Pods"] },
+					roleAuth: "pod:read",
 					response: {
 						200: baseResponseSchema(
 							Type.Array(Type.Object(dbSchemaTypes.k8sPods)),
@@ -190,6 +190,7 @@ export const podRoute = new Elysia({
 				},
 				{
 					detail: { tags: ["Pods"] },
+					roleAuth: "pod:read",
 					response: {
 						200: baseResponseSchema(
 							Type.Array(Type.Object({ namespace: Type.String() })),
@@ -210,9 +211,7 @@ export const podRoute = new Elysia({
 							timestamp: Date.now(),
 						});
 					}
-					const isManager = checkPermission(ctx.profile?.permission || [], [
-						"manager",
-					]);
+					const isManager = ctx.userPermissions.has("pod:manage");
 					const pod = await db.query.k8sPods.findFirst({
 						where: isManager
 							? { id: Number(id), clusterId: Number(clusterId) }
@@ -250,9 +249,6 @@ export const podRoute = new Elysia({
 
 					if (podData.envVariables) {
 						// Only decrypt if user is owner or manager
-						const isManager = checkPermission(ctx.profile?.permission || [], [
-							"manager",
-						]);
 						const isOwner = pod.ownerId === ctx.profile?.id;
 
 						if (isManager || isOwner) {
@@ -276,6 +272,7 @@ export const podRoute = new Elysia({
 				},
 				{
 					detail: { tags: ["Pods"] },
+					roleAuth: "pod:read",
 					response: {
 						200: baseResponseSchema(
 							Type.Object({
@@ -429,6 +426,7 @@ export const podRoute = new Elysia({
 				},
 				{
 					detail: { tags: ["Pods"] },
+					roleAuth: "pod:create",
 					body: Type.Object({
 						name: Type.String(),
 						namespace: Type.String(),
@@ -631,6 +629,7 @@ export const podRoute = new Elysia({
 				},
 				{
 					detail: { tags: ["Pods"] },
+					roleAuth: "pod:delete",
 					response: {
 						200: baseResponseSchema(Type.Object(dbSchemaTypes.k8sPods)),
 						404: errorResponseSchema,
@@ -678,7 +677,7 @@ export const podRoute = new Elysia({
 					}
 
 					// Update DB record
-					const bodyAny = body as any;
+					const bodyAny = body;
 					const updateData: any = {
 						updatedAt: new Date(),
 					};
@@ -772,6 +771,7 @@ export const podRoute = new Elysia({
 				},
 				{
 					detail: { tags: ["Pods"] },
+					roleAuth: "pod:update",
 					body: Type.Object({
 						image: Type.Optional(Type.String()),
 						command: Type.Optional(Type.Array(Type.String())),
@@ -889,6 +889,7 @@ export const podRoute = new Elysia({
 			)
 			.ws("/logs/:podId", {
 				detail: { tags: ["Pods"] },
+				roleAuth: "pod:read",
 				open: async (ws) => {
 					// 1. Auth & Validation (ws.data context)
 					// Elysia WS handling of auth can be tricky if not guarded.
@@ -924,9 +925,9 @@ export const podRoute = new Elysia({
 					}
 
 					// Permission Check
-					const isManager = checkPermission(profile?.permission || [], [
-						"manager",
-					]);
+					const isManager =
+						ws.data.userPermissions.has("pod:manage") ||
+						ws.data.userPermissions.has("pod:read");
 					if (!isManager && pod.ownerId !== profile?.id) {
 						logger.info("Unauthorized");
 						ws.send("Unauthorized");
@@ -984,6 +985,7 @@ export const podRoute = new Elysia({
 						logger.info("Error starting stream:", e);
 						ws.send(`Error starting stream: ${e.message}`);
 						ws.close();
+						return;
 					}
 				},
 				close: async (ws) => {
@@ -999,6 +1001,7 @@ export const podRoute = new Elysia({
 			})
 			.ws("/exec/:podId", {
 				detail: { tags: ["Pods"] },
+				roleAuth: "pod:read",
 				open: async (ws) => {
 					const { clusterId, podId } = ws.data.params;
 					const profile = ws.data.profile;
@@ -1027,9 +1030,9 @@ export const podRoute = new Elysia({
 						return;
 					}
 
-					const isManager = checkPermission(profile?.permission || [], [
-						"manager",
-					]);
+					const isManager =
+						ws.data.userPermissions.has("pod:manage") ||
+						ws.data.userPermissions.has("pod:update");
 					if (!isManager && pod.ownerId !== profile?.id) {
 						logger.info("Unauthorized");
 						ws.send("Unauthorized");

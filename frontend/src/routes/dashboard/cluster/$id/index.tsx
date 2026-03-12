@@ -26,6 +26,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { api } from "@/lib/api";
 import { BACKEND_URL } from "../../../../constants";
+import { usePermissions } from "@/hooks/use-permissions";
 
 export const Route = createFileRoute("/dashboard/cluster/$id/")({
 	component: ClusterOverview,
@@ -34,6 +35,7 @@ export const Route = createFileRoute("/dashboard/cluster/$id/")({
 function ClusterOverview() {
 	const { id } = useParams({ from: "/dashboard/cluster/$id/" });
 	const queryClient = useQueryClient();
+	const { can } = usePermissions();
 	const [acmeEmail, setAcmeEmail] = useState("");
 
 	const { data: cluster, isLoading } = useQuery({
@@ -271,6 +273,7 @@ function ClusterOverview() {
 								variant="default"
 								onClick={() => updateAcmeEmailMutation.mutate()}
 								disabled={
+									!can("cluster:manage") ||
 									updateAcmeEmailMutation.isPending ||
 									!acmeEmail ||
 									acmeEmail === cluster?.acmeEmail
@@ -279,6 +282,11 @@ function ClusterOverview() {
 								{updateAcmeEmailMutation.isPending ? "Updating..." : "Update"}
 							</Button>
 						</div>
+						{!can("cluster:manage") && (
+							<p className="text-xs text-destructive mt-1">
+								You do not have permission to update ACME settings.
+							</p>
+						)}
 						<p className="text-xs text-muted-foreground">
 							Email address for Let's Encrypt certificate notifications and
 							recovery

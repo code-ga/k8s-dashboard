@@ -1,6 +1,6 @@
 // ALERT: user table only for auth, profile table for user data
 
-import { defineRelations } from "drizzle-orm";
+import { defineRelations, is } from "drizzle-orm";
 import {
 	boolean,
 	integer,
@@ -72,12 +72,21 @@ export const verification = pgTable("verification", {
 		.$onUpdate(() => /* @__PURE__ */ new Date())
 		.notNull(),
 });
-export const permissionEnum = pgEnum("permission", [
-	"user",
-	"manager",
-	"default-account",
-	"admin",
-]);
+export const role = pgTable("role", {
+	id: text("id")
+		.primaryKey()
+		.$defaultFn(() => crypto.randomUUID()),
+	name: text("name").notNull().unique().unique(),
+	description: text("description"),
+	permissions: text("permissions").array().default([]).notNull(), // ["cluster:read", ...]
+	profileIds: text("profile_ids").array().default([]).notNull(), // relation to profile table, a role can belong to multiple profiles
+	isDefault: boolean("is_default").default(false).notNull(),
+	adminRole: boolean("admin_role").default(false).notNull(), // whether this role is the admin role with all permissions
+	createdAt: timestamp("created_at").defaultNow().notNull(),
+	updatedAt: timestamp("updated_at")
+		.$onUpdate(() => new Date())
+		.notNull(),
+});
 export const profile = pgTable("profile", {
 	id: text("id")
 		.primaryKey()
@@ -89,7 +98,12 @@ export const profile = pgTable("profile", {
 	createdAt: timestamp("created_at").defaultNow().notNull(),
 
 	username: text("username").notNull(),
-	permission: permissionEnum().array().default(["user"]).notNull(),
+	rolesIDs: text("roles")
+		.array()
+		.default([])
+		.notNull(), // relation to role table (FKs on arrays not supported by PG directly)
+
+	isSystemDefault: boolean("is_system_default").default(false).notNull(),
 
 	updatedAt: timestamp("updated_at")
 		.$onUpdate(() => /* @__PURE__ */ new Date())
@@ -419,6 +433,9 @@ export const k8sIngresses = pgTable(
 				onDelete: "set null",
 			})
 			.notNull(),
+		ownerId: text("owner_id").references(() => profile.id, {
+			onDelete: "set null",
+		}),
 		serviceName: text("service_name"),
 		domain: text("domain"),
 		port: integer("port"), // gateway port
@@ -771,6 +788,7 @@ export const schema = {
 	account,
 	verification,
 	profile,
+	role,
 	k8sCluster,
 	clusterAgent,
 	k8sPods,
@@ -873,6 +891,7 @@ export const schemaRelations = defineRelations(schema, (r) => ({
 			to: r.k8sIngresses.serviceId,
 		}),
 	},
+	// ... (skipping to relations block)
 	k8sIngresses: {
 		cluster: r.one.k8sCluster({
 			from: r.k8sIngresses.clusterId,
@@ -882,7 +901,12 @@ export const schemaRelations = defineRelations(schema, (r) => ({
 			from: r.k8sIngresses.serviceId,
 			to: r.k8sServices.id,
 		}),
+		owner: r.one.profile({
+			from: r.k8sIngresses.ownerId,
+			to: r.profile.id,
+		}),
 	},
+	// ...
 	k8sClusterNode: {
 		cluster: r.one.k8sCluster({
 			from: r.k8sClusterNode.clusterId,
@@ -914,6 +938,16 @@ export const schemaRelations = defineRelations(schema, (r) => ({
 		user: r.one.user({
 			from: r.profile.userId,
 			to: r.user.id,
+		}),
+		roles: r.many.role({
+			from: r.profile.id,
+			to: r.role.profileIds,
+		}),
+	},
+	role: {
+		profiles: r.many.profile({
+			from: r.role.profileIds,
+			to: r.profile.id,
 		}),
 	},
 	user: {

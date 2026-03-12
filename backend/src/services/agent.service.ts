@@ -1,10 +1,6 @@
-import { logger } from "../utils/logger";
 import { and, eq, type InferInsertModel, isNull, or } from "drizzle-orm";
 import YAML from "yaml";
-import type {
-	Heartbeat,
-	// Command,
-} from "../../pb-generated/agent-backend/websocket"; // Check imports carefully
+import type { Heartbeat } from "../../pb-generated/agent-backend/websocket"; // Check imports carefully
 import { Command_CommandType } from "../../pb-generated/agent-backend/websocket";
 import { db } from "../database";
 import {
@@ -17,6 +13,7 @@ import {
 	k8sIngresses,
 	k8sPods,
 	k8sSecrets,
+	profile,
 	schema,
 } from "../database/schema";
 import { decrypt, encrypt } from "../utils/crypto";
@@ -25,6 +22,7 @@ import {
 	generateIngressRouteManifest,
 	generatePodManifest,
 } from "../utils/k8s-manifest";
+import { logger } from "../utils/logger";
 import {
 	deleteDeploymentPorts,
 	deletePodPorts,
@@ -38,11 +36,13 @@ export class AgentService {
 	// ─── Helpers ──────────────────────────────────────────────────────────────
 
 	private async findDefaultOwner() {
-		return db.query.profile.findFirst({
-			where: {
-				permission: { arrayContains: ["default-account"] },
-			},
-		});
+		const profiles = await db
+			.select()
+			.from(profile)
+			.where(eq(profile.isSystemDefault, true))
+			.limit(1);
+
+		return profiles[0];
 	}
 
 	private buildDeploymentManifest(
@@ -164,7 +164,9 @@ export class AgentService {
 						.set(nodeData)
 						.where(eq(k8sClusterNode.id, existingNode[0].id));
 				} else {
-					await db.insert(k8sClusterNode).values({ ...nodeData, autoCreated: true });
+					await db
+						.insert(k8sClusterNode)
+						.values({ ...nodeData, autoCreated: true });
 				}
 			}
 		} catch (error) {
@@ -202,7 +204,10 @@ export class AgentService {
 						);
 				}
 
-				const depData: Omit<InferInsertModel<typeof k8sDeployments>, "ownerId"> = {
+				const depData: Omit<
+					InferInsertModel<typeof k8sDeployments>,
+					"ownerId"
+				> = {
 					clusterId,
 					name: dep.name,
 					namespace: dep.namespace,
@@ -263,12 +268,17 @@ export class AgentService {
 			}
 
 			// Cleanup: remove auto-created deployments no longer present
-			const heartbeatUids = new Set(deployments.map((d) => d.uid).filter(Boolean));
+			const heartbeatUids = new Set(
+				deployments.map((d) => d.uid).filter(Boolean),
+			);
 			const autoCreated = await db
 				.select()
 				.from(k8sDeployments)
 				.where(
-					and(eq(k8sDeployments.clusterId, clusterId), eq(k8sDeployments.autoCreated, true)),
+					and(
+						eq(k8sDeployments.clusterId, clusterId),
+						eq(k8sDeployments.autoCreated, true),
+					),
 				);
 			for (const dep of autoCreated) {
 				if (dep.k8sUid && !heartbeatUids.has(dep.k8sUid)) {
@@ -304,7 +314,11 @@ export class AgentService {
 					);
 
 				if (nodeResult.length === 0 || !nodeResult[0]) {
-					logger.error(`Node ${pod.nodeName} not found for pod ${pod.name}`, { clusterId, podName: pod.name, nodeName: pod.nodeName });
+					logger.error(`Node ${pod.nodeName} not found for pod ${pod.name}`, {
+						clusterId,
+						podName: pod.name,
+						nodeName: pod.nodeName,
+					});
 					continue;
 				}
 				const node = nodeResult[0];
@@ -469,7 +483,10 @@ export class AgentService {
 				} else {
 					const defaultOwner = await this.findDefaultOwner();
 					if (!defaultOwner) {
-						logger.error("Default owner not found for service syncing", { clusterId, svcName: svc.name });
+						logger.error("Default owner not found for service syncing", {
+							clusterId,
+							svcName: svc.name,
+						});
 					} else {
 						svcData.ownerId = defaultOwner.id;
 					}
@@ -570,7 +587,9 @@ export class AgentService {
 		}
 
 		// Cleanup: remove auto-created configmaps no longer present
-		const heartbeatUids = new Set(configMaps.map((cm) => cm.uid).filter(Boolean));
+		const heartbeatUids = new Set(
+			configMaps.map((cm) => cm.uid).filter(Boolean),
+		);
 		const autoCreated = await db
 			.select()
 			.from(k8sConfigMaps)
@@ -680,7 +699,10 @@ export class AgentService {
 			.where(
 				and(
 					eq(k8sDeployments.clusterId, clusterId),
-					or(isNull(k8sDeployments.autoCreated), eq(k8sDeployments.autoCreated, false)),
+					or(
+						isNull(k8sDeployments.autoCreated),
+						eq(k8sDeployments.autoCreated, false),
+					),
 				),
 			);
 
@@ -692,7 +714,9 @@ export class AgentService {
 			);
 
 			if (!match) {
-				logger.info(`Missing Deployment: ${dbDep.name} in ${dbDep.namespace}. Creating...`);
+				logger.info(
+					`Missing Deployment: ${dbDep.name} in ${dbDep.namespace}. Creating...`,
+				);
 				const envVars = this.decryptEnvVars(dbDep.envVariables, dbDep.name);
 				await agentManager.sendCommand(agentId, clusterId, {
 					id: "",
@@ -754,12 +778,16 @@ export class AgentService {
 
 			if (!match) {
 				if (dbPod.status === "Terminating") {
-					logger.info(`Pod ${dbPod.name} is missing and was terminating. Cleaning up DB.`);
+					logger.info(
+						`Pod ${dbPod.name} is missing and was terminating. Cleaning up DB.`,
+					);
 					await db.delete(k8sPods).where(eq(k8sPods.id, dbPod.id));
 					continue;
 				}
 
-				logger.info(`Missing Pod: ${dbPod.name} in ${dbPod.namespace}. Restoring...`);
+				logger.info(
+					`Missing Pod: ${dbPod.name} in ${dbPod.namespace}. Restoring...`,
+				);
 				const envVars = this.decryptEnvVars(dbPod.envVariables, dbPod.name);
 				await agentManager.sendCommand(agentId, clusterId, {
 					id: "",
@@ -772,7 +800,9 @@ export class AgentService {
 			}
 
 			if (match.dockerImage !== dbPod.dockerImage) {
-				logger.info(`Syncing Pod ${dbPod.name}: Image mismatch (${match.dockerImage} vs ${dbPod.dockerImage})`);
+				logger.info(
+					`Syncing Pod ${dbPod.name}: Image mismatch (${match.dockerImage} vs ${dbPod.dockerImage})`,
+				);
 				const envVars = this.decryptEnvVars(dbPod.envVariables, dbPod.name);
 				await agentManager.sendCommand(agentId, clusterId, {
 					id: "",
@@ -786,7 +816,9 @@ export class AgentService {
 
 			// Re-send DELETE if pod persists but is marked Terminating in DB
 			if (dbPod.status === "Terminating") {
-				logger.info(`Pod ${dbPod.name} persists but is Terminating in DB. Re-sending delete.`);
+				logger.info(
+					`Pod ${dbPod.name} persists but is Terminating in DB. Re-sending delete.`,
+				);
 				await agentManager.sendCommand(agentId, clusterId, {
 					id: "",
 					type: 6, // DELETE_POD
@@ -829,7 +861,9 @@ export class AgentService {
 			);
 
 			if (!match) {
-				logger.info(`Missing Service: ${dbSvc.name} in ${dbSvc.namespace}. Restoring...`);
+				logger.info(
+					`Missing Service: ${dbSvc.name} in ${dbSvc.namespace}. Restoring...`,
+				);
 
 				const manifest = {
 					apiVersion: "v1",
@@ -873,7 +907,10 @@ export class AgentService {
 			.where(
 				and(
 					eq(k8sConfigMaps.clusterId, clusterId),
-					or(isNull(k8sConfigMaps.autoCreated), eq(k8sConfigMaps.autoCreated, false)),
+					or(
+						isNull(k8sConfigMaps.autoCreated),
+						eq(k8sConfigMaps.autoCreated, false),
+					),
 				),
 			);
 
@@ -885,7 +922,9 @@ export class AgentService {
 			);
 
 			if (!match) {
-				logger.info(`Missing ConfigMap: ${dbCm.name} in ${dbCm.namespace}. Restoring...`);
+				logger.info(
+					`Missing ConfigMap: ${dbCm.name} in ${dbCm.namespace}. Restoring...`,
+				);
 
 				let data: Record<string, string> | undefined;
 				if (dbCm.data) {
@@ -901,7 +940,11 @@ export class AgentService {
 					try {
 						binaryData = JSON.parse(decrypt(dbCm.binaryData));
 					} catch (e) {
-						logger.error("Failed to decrypt configmap binaryData", dbCm.name, e);
+						logger.error(
+							"Failed to decrypt configmap binaryData",
+							dbCm.name,
+							e,
+						);
 					}
 				}
 
@@ -954,7 +997,9 @@ export class AgentService {
 			);
 
 			if (!match) {
-				logger.info(`Missing Secret: ${dbSecret.name} in ${dbSecret.namespace}. Restoring...`);
+				logger.info(
+					`Missing Secret: ${dbSecret.name} in ${dbSecret.namespace}. Restoring...`,
+				);
 
 				let data: Record<string, string> | undefined;
 				if (dbSecret.data) {
@@ -1086,7 +1131,10 @@ export class AgentService {
 			.where(
 				and(
 					eq(k8sIngresses.clusterId, clusterId),
-					or(isNull(k8sIngresses.autoCreated), eq(k8sIngresses.autoCreated, false)),
+					or(
+						isNull(k8sIngresses.autoCreated),
+						eq(k8sIngresses.autoCreated, false),
+					),
 				),
 			);
 
@@ -1114,7 +1162,9 @@ export class AgentService {
 			const internalPort = service.ports[0].port;
 			const protocol = (ingress.protocol || "http") as "http" | "tcp" | "udp";
 
-			logger.info(`Missing Ingress: ${ingress.name} in ${ingress.namespace}. Restoring...`);
+			logger.info(
+				`Missing Ingress: ${ingress.name} in ${ingress.namespace}. Restoring...`,
+			);
 
 			const manifest = generateIngressRouteManifest({
 				name: ingress.name,
@@ -1175,20 +1225,51 @@ export class AgentService {
 
 		// 2. Sync resources from heartbeat → DB
 		if (heartbeat.nodes) await this.syncNodes(cluster.id, heartbeat.nodes);
-		if (heartbeat.deployments) await this.syncDeployments(cluster.id, heartbeat.deployments);
+		if (heartbeat.deployments)
+			await this.syncDeployments(cluster.id, heartbeat.deployments);
 		if (heartbeat.pods) await this.syncPods(cluster.id, heartbeat.pods);
-		if (heartbeat.services) await this.syncServices(cluster.id, heartbeat.services);
-		if (heartbeat.configMaps) await this.syncConfigMaps(cluster.id, heartbeat.configMaps);
-		if (heartbeat.secrets) await this.syncSecrets(cluster.id, heartbeat.secrets);
-		if (heartbeat.ingresses) await this.syncIngresses(cluster.id, heartbeat.ingresses);
+		if (heartbeat.services)
+			await this.syncServices(cluster.id, heartbeat.services);
+		if (heartbeat.configMaps)
+			await this.syncConfigMaps(cluster.id, heartbeat.configMaps);
+		if (heartbeat.secrets)
+			await this.syncSecrets(cluster.id, heartbeat.secrets);
+		if (heartbeat.ingresses)
+			await this.syncIngresses(cluster.id, heartbeat.ingresses);
 
 		// 3. Validate DB state → cluster (one command per heartbeat cycle)
-		if (await this.validateDeployments(agentId, cluster.id, heartbeat, agentManager)) return;
-		if (await this.validatePods(agentId, cluster.id, heartbeat, agentManager)) return;
-		if (await this.validateServices(agentId, cluster.id, heartbeat, agentManager)) return;
-		if (await this.validateConfigMaps(agentId, cluster.id, heartbeat, agentManager)) return;
-		if (await this.validateSecrets(agentId, cluster.id, heartbeat, agentManager)) return;
-		if (await this.validateIngresses(agentId, cluster.id, heartbeat, agentManager)) return;
+		if (
+			await this.validateDeployments(
+				agentId,
+				cluster.id,
+				heartbeat,
+				agentManager,
+			)
+		)
+			return;
+		if (await this.validatePods(agentId, cluster.id, heartbeat, agentManager))
+			return;
+		if (
+			await this.validateServices(agentId, cluster.id, heartbeat, agentManager)
+		)
+			return;
+		if (
+			await this.validateConfigMaps(
+				agentId,
+				cluster.id,
+				heartbeat,
+				agentManager,
+			)
+		)
+			return;
+		if (
+			await this.validateSecrets(agentId, cluster.id, heartbeat, agentManager)
+		)
+			return;
+		if (
+			await this.validateIngresses(agentId, cluster.id, heartbeat, agentManager)
+		)
+			return;
 	}
 
 	// ─── Other methods ─────────────────────────────────────────────────────────

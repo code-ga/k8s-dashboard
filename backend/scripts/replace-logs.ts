@@ -24,7 +24,7 @@ async function processDirectory(dirPath: string) {
       
       if (hasConsoleLog || hasConsoleError || hasConsoleWarn || hasConsoleInfo) {
         // Calculate relative path to logger
-        let relativeToSrc = path.relative(path.dirname(fullPath), path.join(__dirname, '../src/utils/logger')).replace(/\\/g, '/');
+        const relativeToSrc = path.relative(path.dirname(fullPath), path.join(__dirname, '../src/utils/logger')).replace(/\\/g, '/');
         const importPath = relativeToSrc.startsWith('.') ? relativeToSrc : `./${relativeToSrc}`;
         
         // Add import if not present

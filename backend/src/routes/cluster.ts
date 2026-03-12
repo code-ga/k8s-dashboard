@@ -12,22 +12,28 @@ export const clusterRoute = new Elysia({ prefix: "/cluster" })
 	.use(authenticationMiddleware)
 	.use(agentManagerService)
 	.guard({ userAuth: { requiredProfile: false } }, (app) =>
-		app.get("/", async (ctx) => {
-			const clusters = await db.select().from(schema.k8sCluster);
-			return ctx.status(200, {
-				success: true,
-				message: "Cluster fetched successfully",
-				data: clusters,
-				timestamp: Date.now(),
-			});
-		}),
+		app.get(
+			"/",
+			async (ctx) => {
+				const clusters = await db.select().from(schema.k8sCluster);
+				return ctx.status(200, {
+					success: true,
+					message: "Cluster fetched successfully",
+					data: clusters,
+					timestamp: Date.now(),
+				});
+			},
+			{
+				roleAuth: "cluster:read",
+			},
+		),
 	)
 	.guard(
 		{
 			userAuth: {
 				requiredProfile: true,
 			},
-			roleAuth: ["manager"],
+			// roleAuth: "cluster:read",
 		},
 		(app) =>
 			app
@@ -90,6 +96,7 @@ export const clusterRoute = new Elysia({ prefix: "/cluster" })
 							),
 							acmeEmail: Type.Optional(dbSchemaTypes.k8sCluster.acmeEmail),
 						}),
+						roleAuth: "cluster:create",
 					},
 				)
 				.get(
@@ -112,6 +119,7 @@ export const clusterRoute = new Elysia({ prefix: "/cluster" })
 								Type.Array(Type.Object(dbSchemaTypes.k8sCluster)),
 							),
 						},
+						roleAuth: "cluster:read",
 					},
 				)
 				.patch(
@@ -162,6 +170,7 @@ export const clusterRoute = new Elysia({ prefix: "/cluster" })
 								acmeEmail: dbSchemaTypes.k8sCluster.acmeEmail,
 							}),
 						),
+						roleAuth: "cluster:update",
 					},
 				)
 				.delete(
@@ -193,6 +202,7 @@ export const clusterRoute = new Elysia({ prefix: "/cluster" })
 							200: baseResponseSchema(Type.Object(dbSchemaTypes.k8sCluster)),
 							404: errorResponseSchema,
 						},
+						roleAuth: "cluster:delete",
 					},
 				)
 				.get(
@@ -224,6 +234,7 @@ export const clusterRoute = new Elysia({ prefix: "/cluster" })
 							200: baseResponseSchema(Type.Object(dbSchemaTypes.k8sCluster)),
 							404: errorResponseSchema,
 						},
+						roleAuth: "cluster:read",
 					},
 				)
 				.get(
@@ -273,6 +284,7 @@ export const clusterRoute = new Elysia({ prefix: "/cluster" })
 							),
 							404: errorResponseSchema,
 						},
+						roleAuth: "cluster:read",
 					},
 				),
 	);

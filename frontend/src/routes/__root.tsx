@@ -5,6 +5,7 @@ import {
 	createRootRouteWithContext,
 	Outlet,
 	useLocation,
+	useNavigate,
 } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import { Toaster } from "sonner";
@@ -22,10 +23,15 @@ interface MyRouterContext {
 export const Route = createRootRouteWithContext<MyRouterContext>()({
 	component: () => {
 		const location = useLocation();
+		const navigate = useNavigate();
 		const isLoginPage = location.pathname === "/login";
 
 		const { data: session } = authClient.useSession();
-		const { data: profile } = useQuery({
+		const {
+			data: profile,
+			error: profileError,
+			isPending: isProfileLoading,
+		} = useQuery({
 			queryKey: ["profile", session?.user?.id],
 			queryFn: async () => {
 				const res = await api.api.profile.me.get();
@@ -33,17 +39,29 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 				return res.data.data;
 			},
 			enabled: !!session?.user?.id,
+			retry: false,
 		});
 
-		const role = (profile?.permission?.[0] as any) || "viewer";
+		// const role = profile?.rolesIDs?.[0] || "viewer";
+		const role = profile?.username || "viewer";
 
-		if (isLoginPage) {
+		if (isLoginPage || location.pathname === "/onboarding") {
 			return (
 				<ThemeProvider defaultTheme="dark" storageKey="k8s-dashboard-theme">
 					<Outlet />
 					<Toaster position="top-center" richColors />
 				</ThemeProvider>
 			);
+		}
+
+		if (
+			session &&
+			!isProfileLoading &&
+			profileError &&
+			(profileError as any).status === 404
+		) {
+			navigate({ to: "/onboarding" });
+			return null;
 		}
 
 		return (

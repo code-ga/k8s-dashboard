@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/table";
 import type { databaseTypes, SchemaStatic } from "@/lib/api";
 import { api } from "@/lib/api";
+import { usePermissions } from "@/hooks/use-permissions";
 
 export const Route = createFileRoute("/dashboard/cluster/$id/ingresses/")({
 	component: ClusterIngresses,
@@ -24,6 +25,7 @@ type Ingress = SchemaStatic<databaseTypes.databaseTypes["k8sIngresses"]>;
 
 function ClusterIngresses() {
 	const { id } = useParams({ from: "/dashboard/cluster/$id/ingresses/" });
+	const { can } = usePermissions();
 	const queryClient = useQueryClient();
 
 	const { data: ingresses, isLoading } = useQuery({
@@ -73,7 +75,7 @@ function ClusterIngresses() {
 				</div>
 			</div>
 			<div className="flex justify-end">
-				<CreateIngressDialog clusterId={id} />
+				{can("ingress:create") && <CreateIngressDialog clusterId={id} />}
 			</div>
 
 			<Card>
@@ -132,27 +134,33 @@ function ClusterIngresses() {
 												to="/dashboard/cluster/$id/ingresses/$ingressId"
 												params={{ id, ingressId: ing.id.toString() }}
 											>
-												<Button variant="ghost" size="icon">
+												<Button
+													variant="ghost"
+													size="icon"
+													disabled={!can("ingress:read") && !can("ingress:manage")}
+												>
 													<Settings className="h-4 w-4" />
 												</Button>
 											</Link>
-											<Button
-												variant="ghost"
-												size="icon"
-												className="text-destructive hover:text-destructive hover:bg-destructive/10"
-												onClick={() => {
-													if (
-														confirm(
-															"Are you sure you want to delete this ingress?",
-														)
-													) {
-														deleteMutation.mutate(ing.id);
-													}
-												}}
-												disabled={deleteMutation.isPending}
-											>
-												<Trash2 className="h-4 w-4" />
-											</Button>
+											{(can("ingress:delete") || can("ingress:manage")) && (
+												<Button
+													variant="ghost"
+													size="icon"
+													className="text-destructive hover:text-destructive hover:bg-destructive/10"
+													onClick={() => {
+														if (
+															confirm(
+																"Are you sure you want to delete this ingress?",
+															)
+														) {
+															deleteMutation.mutate(ing.id);
+														}
+													}}
+													disabled={deleteMutation.isPending}
+												>
+													<Trash2 className="h-4 w-4" />
+												</Button>
+											)}
 										</div>
 									</TableCell>
 								</TableRow>

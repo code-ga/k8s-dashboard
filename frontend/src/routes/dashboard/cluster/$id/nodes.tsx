@@ -30,7 +30,7 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { api } from "@/lib/api";
-import { logger } from "../../../../lib/logger";
+import { usePermissions } from "@/hooks/use-permissions";
 
 export const Route = createFileRoute("/dashboard/cluster/$id/nodes")({
 	component: ClusterNodes,
@@ -38,6 +38,7 @@ export const Route = createFileRoute("/dashboard/cluster/$id/nodes")({
 
 function ClusterNodes() {
 	const { id } = useParams({ from: "/dashboard/cluster/$id/nodes" });
+	const { can } = usePermissions();
 	const queryClient = useQueryClient();
 	const [isJoinDialogOpen, setIsJoinDialogOpen] = useState(false);
 
@@ -66,7 +67,7 @@ function ClusterNodes() {
 			setIsJoinDialogOpen(true);
 		},
 		onError: (err) => {
-			logger.error(err);
+			console.error(err);
 			toast.error("Failed to fetch join token");
 		},
 	});
@@ -86,7 +87,7 @@ function ClusterNodes() {
 			toast.success("Node deletion initiated");
 		},
 		onError: (err) => {
-			logger.error(err);
+			console.error(err);
 			toast.error("Failed to delete node");
 		},
 	});
@@ -110,10 +111,12 @@ function ClusterNodes() {
 					<h2 className="text-3xl font-bold tracking-tight">Nodes</h2>
 					<p className="text-muted-foreground">Manage cluster nodes</p>
 				</div>
-				<Button onClick={() => fetchJoinToken()} disabled={isFetchingToken}>
-					<Plus className="h-4 w-4 mr-2" />
-					Add Node
-				</Button>
+				{can("node:manage") && (
+					<Button onClick={() => fetchJoinToken()} disabled={isFetchingToken}>
+						<Plus className="h-4 w-4 mr-2" />
+						Add Node
+					</Button>
+				)}
 			</div>
 
 			<Card>
@@ -191,20 +194,24 @@ function ClusterNodes() {
 										{node.ramUsage} / {node.ramCapacity}
 									</TableCell>
 									<TableCell className="text-right">
-										<Button
-											variant="ghost"
-											size="icon"
-											className="text-destructive hover:bg-destructive/10"
-											onClick={() => {
-												if (
-													confirm("Are you sure you want to delete this node?")
-												) {
-													deleteNodeMutation.mutate(node.id);
-												}
-											}}
-										>
-											<Trash2 className="h-4 w-4" />
-										</Button>
+										{can("node:manage") && (
+											<Button
+												variant="ghost"
+												size="icon"
+												className="text-destructive hover:bg-destructive/10"
+												onClick={() => {
+													if (
+														confirm(
+															"Are you sure you want to delete this node?",
+														)
+													) {
+														deleteNodeMutation.mutate(node.id);
+													}
+												}}
+											>
+												<Trash2 className="h-4 w-4" />
+											</Button>
+										)}
 									</TableCell>
 								</TableRow>
 							))}

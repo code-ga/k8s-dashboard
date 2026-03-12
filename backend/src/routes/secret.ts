@@ -6,7 +6,7 @@ import { Command_CommandType } from "../../pb-generated/agent-backend/websocket"
 import { db } from "../database";
 import { schema } from "../database/schema";
 import { dbSchemaTypes } from "../database/type";
-import { authenticationMiddleware, checkPermission } from "../middleware/auth";
+import { authenticationMiddleware } from "../middleware/auth";
 import { agentManagerService } from "../services/agentManager";
 import { baseResponseSchema, errorResponseSchema } from "../types";
 import { decrypt, encrypt } from "../utils/crypto";
@@ -43,6 +43,7 @@ export const secretRoute = new Elysia({
 				},
 				{
 					detail: { tags: ["Secrets"] },
+					roleAuth: "secret:read",
 					response: {
 						200: baseResponseSchema(
 							Type.Array(Type.Object(dbSchemaTypes.k8sSecrets)),
@@ -56,9 +57,9 @@ export const secretRoute = new Elysia({
 				"/:id",
 				async (ctx) => {
 					const { id } = ctx.params;
-					const isManager = checkPermission(ctx.profile?.permission || [], [
-						"manager",
-					]);
+					const isManager =
+						ctx.userPermissions.has("secret:manage") ||
+						ctx.userPermissions.has("secret:read"); // Allowing manage/read
 					const secret = await db.query.k8sSecrets.findFirst({
 						where: isManager
 							? { id: Number(id) }
@@ -97,6 +98,7 @@ export const secretRoute = new Elysia({
 				},
 				{
 					detail: { tags: ["Secrets"] },
+					roleAuth: "secret:read",
 					response: {
 						200: baseResponseSchema(
 							Type.Object({
@@ -166,6 +168,13 @@ export const secretRoute = new Elysia({
 							updatedAt: new Date(),
 						})
 						.returning();
+					if (!newSecret) {
+						return ctx.status(500, {
+							success: false,
+							message: "Failed to create secret",
+							timestamp: Date.now(),
+						});
+					}
 
 					try {
 						const response = await ctx.agentManager.sendCommand(
@@ -185,7 +194,6 @@ export const secretRoute = new Elysia({
 								targetName: body.name,
 							},
 						);
-
 						return ctx.status(201, {
 							success: true,
 							message: "Secret creation initiated",
@@ -196,13 +204,14 @@ export const secretRoute = new Elysia({
 						return ctx.status(201, {
 							success: true,
 							message: "Secret created in DB but agent unreachable",
-							data: newSecret as any,
+							data: newSecret,
 							timestamp: Date.now(),
 						});
 					}
 				},
 				{
 					detail: { tags: ["Secrets"] },
+					roleAuth: "secret:create",
 					body: Type.Object({
 						name: Type.String(),
 						namespace: Type.String(),
@@ -213,12 +222,13 @@ export const secretRoute = new Elysia({
 					response: {
 						201: baseResponseSchema(
 							Type.Object({
-								...(dbSchemaTypes.k8sSecrets as any),
+								...dbSchemaTypes.k8sSecrets,
 								agentResponse: Type.Optional(Type.String()),
 							}),
 						),
 						401: errorResponseSchema,
 						404: errorResponseSchema,
+						500: errorResponseSchema,
 					},
 				},
 			)
@@ -279,6 +289,13 @@ export const secretRoute = new Elysia({
 						})
 						.where(eq(schema.k8sSecrets.id, id))
 						.returning();
+					if (!updatedSecret) {
+						return ctx.status(500, {
+							success: false,
+							message: "Failed to update secret",
+							timestamp: Date.now(),
+						});
+					}
 
 					try {
 						const response = await ctx.agentManager.sendCommand(
@@ -309,13 +326,14 @@ export const secretRoute = new Elysia({
 						return ctx.status(200, {
 							success: true,
 							message: "Secret updated in DB but agent unreachable",
-							data: updatedSecret as any,
+							data: updatedSecret,
 							timestamp: Date.now(),
 						});
 					}
 				},
 				{
 					detail: { tags: ["Secrets"] },
+					roleAuth: "secret:update",
 					body: Type.Object({
 						type: Type.Optional(Type.String()),
 						data: Type.Optional(Type.Record(Type.String(), Type.String())),
@@ -324,7 +342,7 @@ export const secretRoute = new Elysia({
 					response: {
 						200: baseResponseSchema(
 							Type.Object({
-								...(dbSchemaTypes.k8sSecrets as any),
+								...dbSchemaTypes.k8sSecrets,
 								agentResponse: Type.Optional(Type.String()),
 							}),
 						),
@@ -396,6 +414,7 @@ export const secretRoute = new Elysia({
 				},
 				{
 					detail: { tags: ["Secrets"] },
+					roleAuth: "secret:delete",
 					response: {
 						200: baseResponseSchema(Type.Null()),
 						404: errorResponseSchema,

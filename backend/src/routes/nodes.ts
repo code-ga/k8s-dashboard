@@ -21,7 +21,6 @@ export const nodesRoute = new Elysia({ prefix: "/nodes/:clusterId" })
 			userAuth: {
 				requiredProfile: true,
 			},
-			roleAuth: ["manager"],
 		},
 		(app) =>
 			app
@@ -109,6 +108,7 @@ export const nodesRoute = new Elysia({ prefix: "/nodes/:clusterId" })
 						detail: {
 							tags: ["Nodes"],
 						},
+						roleAuth: "node:manage",
 						response: {
 							200: baseResponseSchema(
 								Type.Object({
@@ -196,6 +196,7 @@ export const nodesRoute = new Elysia({ prefix: "/nodes/:clusterId" })
 						detail: {
 							tags: ["Nodes"],
 						},
+						roleAuth: "node:delete",
 						response: {
 							200: baseResponseSchema(
 								Type.Object(dbSchemaTypes.k8sClusterNode),
@@ -240,6 +241,7 @@ export const nodesRoute = new Elysia({ prefix: "/nodes/:clusterId" })
 						detail: {
 							tags: ["Nodes"],
 						},
+						roleAuth: "node:update",
 						body: Type.Partial(
 							Type.Object({
 								name: dbSchemaTypes.k8sClusterNode.name,
@@ -283,6 +285,7 @@ export const nodesRoute = new Elysia({ prefix: "/nodes/:clusterId" })
 						detail: {
 							tags: ["Nodes"],
 						},
+						roleAuth: "node:read",
 						response: {
 							200: baseResponseSchema(
 								Type.Array(Type.Object(dbSchemaTypes.k8sClusterNode)),

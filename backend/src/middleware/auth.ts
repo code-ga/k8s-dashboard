@@ -1,11 +1,14 @@
-import { logger } from "../utils/logger";
 import { eq } from "drizzle-orm";
-import Elysia, { type Static } from "elysia";
+import Elysia from "elysia";
+import {
+	evaluatePermissionFilter,
+	resolveUserPermissions,
+	type PermissionFilter,
+} from "../constants/permissions";
 import { db } from "../database";
 import { schema } from "../database/schema";
-import type { dbSchemaTypes } from "../database/type";
 import { auth } from "../libs/auths/auth.config";
-import { isAllElementsPresent } from "../utils/array";
+import { logger } from "../utils/logger";
 
 export const authenticationMiddleware = new Elysia({
 	name: "authentication",
@@ -48,7 +51,7 @@ export const authenticationMiddleware = new Elysia({
 				.from(schema.clusterAgent)
 				.where(eq(schema.clusterAgent.token, token))
 				.limit(1);
-			
+
 			if (agent.length === 0 || !agent[0]) {
 				logger.info("Agent not found");
 				return status(401);
@@ -64,44 +67,34 @@ export const authenticationMiddleware = new Elysia({
 			}
 			return {
 				agent: agent[0],
-				cluster: cluster[0],
+				cluster: cluster[0], 
 			};
 		},
 	},
-	roleAuth: (permissions: Static<typeof dbSchemaTypes.profile.permission>) => ({
+	roleAuth: (filter: PermissionFilter) => ({
 		async resolve({ status, request: { headers } }) {
-			const session = await auth.api.getSession({
-				headers,
-			});
-
+			const session = await auth.api.getSession({ headers });
 			if (!session) return status(401);
 
-			const userProfile = await db
-				.select()
-				.from(schema.profile)
-				.where(eq(schema.profile.userId, session.user.id));
-			if (!userProfile || !userProfile[0]) return status(401);
+			const profile = await db.query.profile.findFirst({
+				where: { userId: session.user.id },
+			});
+			if (!profile) return status(401);
 
-			const userPermissions = userProfile[0].permission;
-			if (!userPermissions) return status(401);
-			if (checkPermission(userPermissions, permissions)) {
-				return {
-					user: session.user,
-					session: session.session,
-					permission: userPermissions,
-					profile: userProfile[0],
-				};
-			}
-			return status(403);
+			const userPermissions = await resolveUserPermissions(profile.rolesIDs);
+			if (!evaluatePermissionFilter(userPermissions, filter))
+				return status(403);
+
+			return {
+				user: session.user,
+				session: session.session,
+				profile,
+				userPermissions, // Set<Permission> available in route handlers
+			};
+		},
+		detail: {
+			tags: ["auth"],
+			"x-permission": filter, // picked up by /route-permissions endpoint
 		},
 	}),
 });
-
-export const checkPermission = (
-	userPermissions: Static<typeof dbSchemaTypes.profile.permission>,
-	permissions: Static<typeof dbSchemaTypes.profile.permission>,
-) => {
-	if (!userPermissions) return false;
-	if (userPermissions.includes("admin")) return true;
-	return isAllElementsPresent(permissions, userPermissions);
-};

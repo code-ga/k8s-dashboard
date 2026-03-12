@@ -56,6 +56,7 @@ export const ingressRoute = new Elysia({
 				},
 				{
 					detail: { tags: ["Ingresses"] },
+					roleAuth: "ingress:read",
 					response: {
 						200: baseResponseSchema(Type.Array(ingressWithServiceSchema)),
 					},
@@ -65,11 +66,18 @@ export const ingressRoute = new Elysia({
 				"/:id",
 				async (ctx) => {
 					const { clusterId, id } = ctx.params;
+					// Check authorization: user must be manager or ingress owner
+					const isManager =
+						(ctx as any).userPermissions.has("ingress:manage") ||
+						(ctx as any).userPermissions.has("ingress:read");
 					const ingress = await db.query.k8sIngresses.findFirst({
-						where: {
-							id: Number(id),
-							clusterId: Number(clusterId),
-						},
+						where: isManager
+							? { id: Number(id), clusterId: Number(clusterId) }
+							: {
+									id: Number(id),
+									clusterId: Number(clusterId),
+									ownerId: ctx.profile?.id ?? "NONE",
+								},
 						with: {
 							service: true,
 						},
@@ -92,6 +100,7 @@ export const ingressRoute = new Elysia({
 				},
 				{
 					detail: { tags: ["Ingresses"] },
+					roleAuth: "ingress:read",
 					response: {
 						200: baseResponseSchema(ingressWithServiceSchema),
 						404: errorResponseSchema,
@@ -322,6 +331,7 @@ export const ingressRoute = new Elysia({
 				},
 				{
 					detail: { tags: ["Ingresses"] },
+					roleAuth: "ingress:create",
 					body: Type.Object({
 						serviceName: Type.String(),
 						namespace: Type.String(),
@@ -424,6 +434,7 @@ export const ingressRoute = new Elysia({
 				},
 				{
 					detail: { tags: ["Ingresses"] },
+					roleAuth: "ingress:delete",
 					response: {
 						200: baseResponseSchema(Type.Object(dbSchemaTypes.k8sIngresses)),
 						404: errorResponseSchema,

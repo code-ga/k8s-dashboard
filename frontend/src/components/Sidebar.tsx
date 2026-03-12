@@ -15,17 +15,19 @@ import {
 	Users,
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
-import { hasPermission, type Role } from "@/config/permissions";
 import { cn } from "@/lib/utils";
+import { usePermissions } from "@/hooks/use-permissions";
+import type { PermissionFilter } from "@/lib/permission-matcher";
 
 interface SidebarProps {
-	role: Role;
+	role: string;
 	className?: string;
 }
 
 export function Sidebar({ role, className }: SidebarProps) {
 	const { pathname } = useLocation();
 	const { id: clusterId } = useParams({ strict: false }) as { id?: string };
+	const { can } = usePermissions();
 
 	const isInCluster =
 		pathname.includes(`/dashboard/cluster/${clusterId}`) && clusterId;
@@ -35,94 +37,90 @@ export function Sidebar({ role, className }: SidebarProps) {
 			to: "/dashboard",
 			label: "Clusters",
 			icon: Server,
-			resource: "cluster",
-			action: "view",
+			permission: "cluster:read" as PermissionFilter,
 			exact: true,
 		},
 		{
 			to: "/dashboard/users",
 			label: "Users",
 			icon: Users,
-			resource: "users",
-			action: "view",
+			permission: "user:read" as PermissionFilter,
 			exact: false,
 		},
 		{
 			to: "/dashboard/settings",
 			label: "Settings",
 			icon: Settings,
-			resource: "settings",
-			action: "view",
+			permission: "cluster:manage" as PermissionFilter, // Adjusted example
 			exact: false,
 		},
-	] as const;
+		{
+			to: "/dashboard/roles",
+			label: "Roles",
+			icon: Shield,
+			permission: "role:read" as PermissionFilter,
+			exact: false,
+		}
+	];
 
 	const clusterLinks = [
 		{
 			to: `/dashboard/cluster/${clusterId}`,
 			label: "Overview",
 			icon: LayoutDashboard,
-			resource: "cluster",
-			action: "view",
+			permission: "cluster:read" as PermissionFilter,
 			exact: true,
 		},
 		{
 			to: `/dashboard/cluster/${clusterId}/nodes`,
 			label: "Nodes",
 			icon: Cpu,
-			resource: "cluster",
-			action: "view",
+			permission: "node:read" as PermissionFilter,
 			exact: false,
 		},
 		{
 			to: `/dashboard/cluster/${clusterId}/pods`,
 			label: "Pods",
 			icon: Box,
-			resource: "cluster",
-			action: "view",
+			permission: "pod:read" as PermissionFilter,
 			exact: false,
 		},
 		{
 			to: `/dashboard/cluster/${clusterId}/deployments`,
 			label: "Deployments",
 			icon: Layers,
-			resource: "cluster",
-			action: "view",
+			permission: "deployment:read" as PermissionFilter,
 			exact: false,
 		},
 		{
 			to: `/dashboard/cluster/${clusterId}/services`,
 			label: "Services",
 			icon: Network,
-			resource: "cluster",
-			action: "view",
+			permission: "service:read" as PermissionFilter,
 			exact: false,
 		},
 		{
 			to: `/dashboard/cluster/${clusterId}/ingresses`,
 			label: "Ingresses",
 			icon: Shield,
-			resource: "cluster",
-			action: "view",
+			permission: "ingress:read" as PermissionFilter,
 			exact: false,
 		},
 		{
 			to: `/dashboard/cluster/${clusterId}/configmaps`,
 			label: "ConfigMaps",
 			icon: FileJson,
-			resource: "cluster",
-			action: "view",
+			permission: "configmap:read" as PermissionFilter,
 			exact: false,
 		},
 		{
 			to: `/dashboard/cluster/${clusterId}/secrets`,
 			label: "Secrets",
 			icon: Lock,
-			resource: "cluster",
-			action: "view",
+			permission: "secret:read" as PermissionFilter,
 			exact: false,
 		},
-	] as const;
+	];
 
 	const links = isInCluster ? clusterLinks : globalLinks;
 
@@ -160,9 +158,7 @@ export function Sidebar({ role, className }: SidebarProps) {
 
 				<nav className="grid items-start px-2 text-sm font-medium lg:px-4 space-y-1">
 					{links.map((link) => {
-						if (
-							!hasPermission(role, link.resource as any, link.action as any)
-						) {
+						if (!can(link.permission)) {
 							return null;
 						}
 
@@ -205,7 +201,7 @@ export function Sidebar({ role, className }: SidebarProps) {
 					</p>
 					<div className="flex items-center gap-2">
 						<div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold text-xs capitalize">
-							{role[0]}
+							{role}
 						</div>
 						<div className="flex flex-col">
 							<span className="text-xs font-semibold capitalize">{role}</span>

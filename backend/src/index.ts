@@ -9,8 +9,12 @@ import { Elysia } from "elysia";
 import { OpenAPI } from "./libs/auths/openAPI";
 import { apiRouter } from "./routes";
 import { scalingController } from "./services/scaling.controller";
+import { generateSeedRoles } from "./utils/role";
 
 scalingController.start();
+await generateSeedRoles();
+
+import { getPermissionsGrouped } from "./constants/permissions";
 
 const port = process.env.PORT || 3001;
 
@@ -30,14 +34,41 @@ export const app = new Elysia()
 			},
 		}),
 	)
-
 	.use(apiRouter)
-	.listen(port);
+	.get("/permissions", async (_) => {
+		return {
+			success: true,
+			message: "Permissions fetched successfully",
+			data: getPermissionsGrouped(),
+			timestamp: Date.now(),
+		};
+	})
+	.get("/route-permissions", async (ctx: any) => {
+		const permissions = (ctx.app as any).routes.map((route: any) => {
+			// Extract roleAuth from hooks
+			return {
+				method: route.method,
+				path: route.path,
+				permission: (route.hooks.detail as any)?.["x-permission"],
+			};
+		});
+		return {
+			success: true,
+			message: "Route permissions fetched successfully",
+			data: permissions,
+			timestamp: Date.now(),
+		};
+	});
+
+app.listen(port);
 
 logger.info(`Listening on ${app.server?.url}`);
 
 process.on("uncaughtException", (error) => {
-	logger.fatal("Uncaught Exception", { error: error.message, stack: error.stack });
+	logger.fatal("Uncaught Exception", {
+		error: error.message,
+		stack: error.stack,
+	});
 	process.exit(1);
 });
 

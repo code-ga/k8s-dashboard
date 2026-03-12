@@ -36,6 +36,7 @@ import {
 } from "@/components/ui/table";
 import type { databaseTypes, SchemaStatic } from "@/lib/api";
 import { api } from "@/lib/api";
+import { usePermissions } from "@/hooks/use-permissions";
 
 export const Route = createFileRoute("/dashboard/cluster/$id/deployments/")({
 	component: ClusterDeployments,
@@ -88,6 +89,12 @@ function ScaleSettingsDialog({
 
 	const isAutoScaling = form.watch("isAutoScaling");
 	const isAlwaysRunning = form.watch("isAlwaysRunning");
+
+	const { can } = usePermissions();
+
+	if (!can("deployment:update") && !can("deployment:manage")) {
+		return null;
+	}
 
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
@@ -239,11 +246,13 @@ function ClusterDeployments() {
 						</p>
 					</div>
 				</div>
-				<Link to="/dashboard/cluster/$id/deployments/create" params={{ id }}>
-					<Button>
-						<Plus className="mr-2 h-4 w-4" /> Create Deployment
-					</Button>
-				</Link>
+				{can("deployment:create") && (
+					<Link to="/dashboard/cluster/$id/deployments/create" params={{ id }}>
+						<Button>
+							<Plus className="mr-2 h-4 w-4" /> Create Deployment
+						</Button>
+					</Link>
+				)}
 			</div>
 
 			<Card>
@@ -299,7 +308,13 @@ function ClusterDeployments() {
 											to="/dashboard/cluster/$id/deployments/$deploymentId"
 											params={{ id, deploymentId: dep.id.toString() }}
 										>
-											<Button variant="ghost" size="sm">
+											<Button
+												variant="ghost"
+												size="sm"
+												disabled={
+													!can("deployment:read") && !can("deployment:manage")
+												}
+											>
 												<Settings className="h-4 w-4" />
 											</Button>
 										</Link>

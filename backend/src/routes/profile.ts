@@ -1,6 +1,5 @@
-import type { Static } from "@sinclair/typebox";
 import { Type } from "@sinclair/typebox";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import Elysia from "elysia";
 import { db } from "../database";
 import { schema } from "../database/schema";
@@ -8,7 +7,8 @@ import { dbSchemaTypes, type SchemaStatic } from "../database/type";
 import { authenticationMiddleware } from "../middleware/auth";
 import { appStateService } from "../services/AppState";
 import { baseResponseSchema, errorResponseSchema } from "../types";
-import { isAllElementsPresent } from "../utils/array";
+import { resolveUserPermissions } from "../constants/permissions";
+import { getInitialRoleIds } from "../utils/role";
 
 export const profileRouter = new Elysia({
 	prefix: "/profile",
@@ -27,11 +27,13 @@ export const profileRouter = new Elysia({
 				.get(
 					"/me",
 					async (ctx) => {
-						const profile = await db
-							.select()
-							.from(schema.profile)
-							.where(eq(schema.profile.userId, ctx.user.id));
-						if (!profile || profile.length === 0 || !profile[0]) {
+						const profiles = await db.query.profile.findFirst({
+							where: {
+								userId: ctx.user.id,
+							},
+						});
+						const profile = profiles;
+						if (!profile) {
 							return ctx.status(404, {
 								status: 404,
 								message: "Profile not found",
@@ -41,7 +43,7 @@ export const profileRouter = new Elysia({
 						}
 						return ctx.status(200, {
 							status: 200,
-							data: profile[0],
+							data: profile,
 							message: "Profile fetched successfully",
 							timestamp: Date.now(),
 							success: true,
@@ -52,7 +54,47 @@ export const profileRouter = new Elysia({
 							description: "Get Profile",
 						},
 						response: {
-							200: baseResponseSchema(Type.Object(dbSchemaTypes.profile)),
+							200: baseResponseSchema(
+								Type.Object({ ...dbSchemaTypes.profile }),
+							),
+							404: errorResponseSchema,
+						},
+					},
+				)
+				.get(
+					"/my-permissions",
+					async (ctx) => {
+						const profiles = await db
+							.select()
+							.from(schema.profile)
+							.where(eq(schema.profile.userId, ctx.user.id))
+							.limit(1);
+						const profile = profiles[0];
+						if (!profile) {
+							return ctx.status(404, {
+								status: 404,
+								message: "Profile not found",
+								timestamp: Date.now(),
+								success: false,
+							});
+						}
+						const userPermissions = await resolveUserPermissions(
+							profile.rolesIDs,
+						);
+						return ctx.status(200, {
+							status: 200,
+							data: Array.from(userPermissions),
+							message: "Permissions fetched successfully",
+							timestamp: Date.now(),
+							success: true,
+						});
+					},
+					{
+						detail: {
+							description: "Get Current User Permissions",
+						},
+						response: {
+							200: baseResponseSchema(Type.Array(Type.String())),
 							404: errorResponseSchema,
 						},
 					},
@@ -63,8 +105,9 @@ export const profileRouter = new Elysia({
 						const alreadyExists = await db
 							.select()
 							.from(schema.profile)
-							.where(eq(schema.profile.userId, ctx.user.id));
-						if (alreadyExists && alreadyExists.length > 0) {
+							.where(eq(schema.profile.userId, ctx.user.id))
+							.limit(1);
+						if (alreadyExists.length > 0) {
 							return ctx.status(400, {
 								status: 400,
 								message: "Profile already exists",
@@ -73,18 +116,14 @@ export const profileRouter = new Elysia({
 							});
 						}
 						const appState = await ctx.appState.getAppState();
-						const permission = [] as Static<
-							typeof dbSchemaTypes.profile.permission
-						>; // admin will be assigned later
-						if (appState.createNewAdmin) {
-							permission.push("admin");
-						}
+						const roleIds = await getInitialRoleIds(appState.createNewAdmin);
 						const profile = await db
 							.insert(schema.profile)
 							.values({
 								userId: ctx.user.id,
 								username: ctx.body.username,
-								permission: permission,
+								rolesIDs: roleIds,
+								isSystemDefault: appState.createNewAdmin,
 							})
 							.returning();
 						if (!profile || !profile[0]) {
@@ -95,9 +134,11 @@ export const profileRouter = new Elysia({
 								success: false,
 							});
 						}
-						ctx.appState.updateAppState({
-							createNewAdmin: false,
-						});
+						if (appState.createNewAdmin) {
+							await ctx.appState.updateAppState({
+								createNewAdmin: false,
+							});
+						}
 						return ctx.status(201, {
 							status: 201,
 							data: profile[0],
@@ -113,6 +154,7 @@ export const profileRouter = new Elysia({
 						response: {
 							201: baseResponseSchema(Type.Object(dbSchemaTypes.profile)),
 							400: errorResponseSchema,
+							500: errorResponseSchema,
 						},
 					},
 				)
@@ -121,7 +163,11 @@ export const profileRouter = new Elysia({
 					async (ctx) => {
 						const profile = await db
 							.update(schema.profile)
-							.set({ userId: ctx.user.id, username: ctx.body.username })
+							.set({
+								userId: ctx.user.id,
+								username: ctx.body.username,
+								updatedAt: new Date(),
+							})
 							.where(eq(schema.profile.userId, ctx.user.id))
 							.returning();
 						if (!profile || !profile[0]) {
@@ -155,11 +201,13 @@ export const profileRouter = new Elysia({
 					async (ctx) => {
 						const query = ctx.query;
 						if ("profileId" in query) {
-							const profile = await db
+							const profiles = await db
 								.select()
 								.from(schema.profile)
-								.where(eq(schema.profile.id, query.profileId));
-							if (!profile || !profile[0]) {
+								.where(eq(schema.profile.id, query.profileId))
+								.limit(1);
+							const profile = profiles[0];
+							if (!profile) {
 								return ctx.status(400, {
 									status: 400,
 									message: "Profile not found",
@@ -169,18 +217,20 @@ export const profileRouter = new Elysia({
 							}
 							return ctx.status(200, {
 								status: 200,
-								data: profile[0],
+								data: profile,
 								message: "Profile fetched successfully",
 								timestamp: Date.now(),
 								success: true,
 							});
 						}
 						if ("userId" in query) {
-							const profile = await db
+							const profiles = await db
 								.select()
 								.from(schema.profile)
-								.where(eq(schema.profile.userId, query.userId));
-							if (!profile || !profile[0]) {
+								.where(eq(schema.profile.userId, query.userId))
+								.limit(1);
+							const profile = profiles[0];
+							if (!profile) {
 								return ctx.status(400, {
 									status: 400,
 									message: "Profile not found",
@@ -190,7 +240,7 @@ export const profileRouter = new Elysia({
 							}
 							return ctx.status(200, {
 								status: 200,
-								data: profile[0],
+								data: profile,
 								message: "Profile fetched successfully",
 								timestamp: Date.now(),
 								success: true,
@@ -218,181 +268,9 @@ export const profileRouter = new Elysia({
 						},
 					},
 				),
-		// .delete("/", async ({ user }) => {
-		// 	const profile = await db
-		// 		.delete(schema.profile)
-		// 		.where(eq(schema.profile.userId, user.id))
-		// 		.returning();
-		// 	return profile;
-		// }),
 	)
-	.guard({ roleAuth: ["manager"] }, (app) =>
+	.guard({ userAuth: { requiredProfile: true } }, (app) =>
 		app
-			.patch(
-				"/add_role",
-				async (ctx) => {
-					const targetUserId = ctx.body.userId || ctx.user.id;
-					const alreadyHasRole = await db
-						.select()
-						.from(schema.profile)
-						.where(eq(schema.profile.userId, targetUserId));
-					if (!alreadyHasRole || !alreadyHasRole[0]) {
-						return ctx.status(400, {
-							status: 400,
-							message: "Profile not found",
-							timestamp: Date.now(),
-							success: false,
-						});
-					}
-					const permissionSet = new Set([
-						...alreadyHasRole[0].permission,
-						...ctx.body.permission,
-					]);
-					if (
-						ctx.body.permission.includes("admin") &&
-						!alreadyHasRole[0].permission.includes("admin")
-					) {
-						// Optionally allow managers to add admin if they are admin?
-						// For now, let's keep the logic simple or just warn.
-						// The original code was:
-						// return ctx.status(400, { message: "Profile already has admin role" });
-						// Wait, current logic prevents adding "admin" if already has it? No.
-						// "if (ctx.body.permission.includes("admin") && !alreadyHasRole[0].permission.includes("admin"))" ??
-						// Actually line 246-249 in original: checking if we are ADDING admin?
-						// Wait, the original logic was:
-						// if (includes("admin") && !alreadyHas_admin) ... ERROR?
-						// "Profile already has admin role" -> this error message implies the opposite check.
-						// If I try to add "admin" and user DOES NOT have it, it returns "Already has admin role"? That's a bug in original code or I misread.
-
-						// Original:
-						// if (ctx.body.permission.includes("admin") && !alreadyHasRole[0].permission.includes("admin")) {
-						//    return ... "Profile already has admin role"
-						// }
-						// This logic seems reversed or the message is wrong.
-						// If I *add* admin, and they *don't* have it, it errors? So I CANNOT add admin?
-						// This might be a safeguard to prevent managers from creating admins.
-						// I will preserve this logic for now but fix the target user.
-
-						return ctx.status(400, {
-							status: 400,
-							message: "Cannot verify admin privilege or action not allowed",
-							timestamp: Date.now(),
-							success: false,
-						});
-					}
-					if (permissionSet.size === alreadyHasRole[0].permission.length) {
-						return ctx.status(400, {
-							status: 400,
-							message: "Profile already has all the roles",
-							timestamp: Date.now(),
-							success: false,
-						});
-					}
-					const profile = await db
-						.update(schema.profile)
-						.set({
-							userId: targetUserId,
-							permission: [...permissionSet],
-						})
-						.where(eq(schema.profile.userId, targetUserId))
-						.returning();
-					if (!profile || !profile[0]) {
-						return ctx.status(400, {
-							status: 400,
-							message: "Profile not updated",
-							timestamp: Date.now(),
-							success: false,
-						});
-					}
-					return ctx.status(200, {
-						status: 200,
-						data: profile[0],
-						message: "Profile updated successfully",
-						timestamp: Date.now(),
-						success: true,
-					});
-				},
-				{
-					body: Type.Object({
-						permission: dbSchemaTypes.profile.permission,
-						userId: Type.Optional(dbSchemaTypes.profile.userId),
-					}),
-					response: {
-						200: baseResponseSchema(Type.Object(dbSchemaTypes.profile)),
-						400: errorResponseSchema,
-					},
-					roleAuth: ["manager"],
-				},
-			)
-			.patch(
-				"/remove_role",
-				async (ctx) => {
-					const targetUserId = ctx.body.userId || ctx.user.id;
-					const alreadyHasRole = await db
-						.select()
-						.from(schema.profile)
-						.where(eq(schema.profile.userId, targetUserId));
-					if (!alreadyHasRole || !alreadyHasRole[0]) {
-						return ctx.status(400, {
-							status: 400,
-							message: "Profile not found",
-							timestamp: Date.now(),
-							success: false,
-						});
-					}
-					if (
-						!isAllElementsPresent(
-							ctx.body.permission,
-							alreadyHasRole[0].permission,
-						)
-					) {
-						return ctx.status(400, {
-							status: 400,
-							message: "Profile does not have the role",
-							timestamp: Date.now(),
-							success: false,
-						});
-					}
-					const permissionSet = new Set(alreadyHasRole[0].permission);
-					for (const permission of ctx.body.permission) {
-						permissionSet.delete(permission);
-					}
-					const profile = await db
-						.update(schema.profile)
-						.set({
-							userId: targetUserId,
-							permission: [...permissionSet],
-						})
-						.where(eq(schema.profile.userId, targetUserId))
-						.returning();
-					if (!profile || !profile[0]) {
-						return ctx.status(400, {
-							status: 400,
-							message: "Profile not updated",
-							timestamp: Date.now(),
-							success: false,
-						});
-					}
-					return ctx.status(200, {
-						status: 200,
-						data: profile[0],
-						message: "Profile updated successfully",
-						timestamp: Date.now(),
-						success: true,
-					});
-				},
-				{
-					body: Type.Object({
-						permission: dbSchemaTypes.profile.permission,
-						userId: Type.Optional(dbSchemaTypes.profile.userId),
-					}),
-					response: {
-						200: baseResponseSchema(Type.Object(dbSchemaTypes.profile)),
-						400: errorResponseSchema,
-					},
-					roleAuth: ["manager"],
-				},
-			)
 			.get(
 				"/list-user",
 				async (ctx) => {
@@ -412,7 +290,7 @@ export const profileRouter = new Elysia({
 						),
 						400: errorResponseSchema,
 					},
-					roleAuth: ["manager"],
+					roleAuth: "user:read",
 				},
 			)
 			.get(
@@ -461,30 +339,7 @@ export const profileRouter = new Elysia({
 						),
 						400: errorResponseSchema,
 					},
-					roleAuth: ["manager"],
-				},
-			)
-			.get(
-				"/available-role",
-				async (ctx) => {
-					const roles: string[] = [];
-					dbSchemaTypes.profile.permission.items.anyOf.forEach((role) => {
-						roles.push(role.const);
-					});
-					return ctx.status(200, {
-						status: 200,
-						data: roles,
-						message: "Roles fetched successfully",
-						timestamp: Date.now(),
-						success: true,
-					});
-				},
-				{
-					response: {
-						200: baseResponseSchema(Type.Array(Type.String())),
-						400: errorResponseSchema,
-					},
-					roleAuth: ["manager"],
+					roleAuth: "user:read",
 				},
 			),
 	);

@@ -29,7 +29,8 @@ export default function Header() {
 		setIsMobileMenuOpen(false);
 	}, [pathname]);
 
-	const role = (profile?.permission?.[0] as any) || "viewer";
+	// const role = profile?.rolesIDs?.[0] || "viewer";
+	const role = profile?.username || "viewer";
 
 	return (
 		<>

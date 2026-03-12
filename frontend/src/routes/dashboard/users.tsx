@@ -15,8 +15,10 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { api, type databaseTypes } from "@/lib/api";
-import { logger } from "../../lib/logger";
+import { api } from "@/lib/api";
+import { toast } from "sonner";
+import { usePermissions } from "@/hooks/use-permissions";
+import { RoleBadge } from "@/components/RoleBadge";
 
 export const Route = createFileRoute("/dashboard/users")({
 	component: UserManagement,
@@ -24,25 +26,23 @@ export const Route = createFileRoute("/dashboard/users")({
 
 function UserManagement() {
 	const queryClient = useQueryClient();
+	const { can } = usePermissions();
+
 	const { data: users, isLoading } = useQuery({
 		queryKey: ["users"],
 		queryFn: async () => {
 			const res = await api.api.profile["list-user"].get();
-			if (res.error) throw res.error;
-			if (!res.data.data)
-				throw new Error(res.data.message || "Failed to fetch users");
+			if (res.error) throw new Error(res.error.value.message);
 			return res.data.data;
 		},
 	});
 
 	// Fetch available roles
 	const { data: availableRoles } = useQuery({
-		queryKey: ["roles"],
+		queryKey: ["available-roles"],
 		queryFn: async () => {
-			const res = await api.api.profile["available-role"].get();
-			if (res.error) throw res.error;
-			if (!res.data.data)
-				throw new Error(res.data.message || "Failed to fetch roles");
+			const res = await api.api.role.available.get();
+			if (res.error) throw new Error(res.error.value.message);
 			return res.data.data;
 		},
 	});
@@ -50,63 +50,59 @@ function UserManagement() {
 	const addRoleMutation = useMutation({
 		mutationFn: async ({
 			userId,
-			permission,
+			roleId,
 		}: {
 			userId: string;
-			permission: Static<
-				databaseTypes.databaseTypes["profile"]["permission"]
-			>[number];
+			roleId: string;
 		}) => {
-			const res = await api.api.profile.add_role.patch({
+			const res = await api.api.role["assign-to-user"].patch({
 				userId,
-				permission: [permission],
+				roleIds: [roleId],
 			});
-			if (res.error) throw res.error;
+			if (res.error) throw new Error(String(res.error.value));
 			return res.data;
 		},
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["users"] });
+			toast.success("Role assigned successfully");
 		},
 		onError: (err) => {
-			alert("Failed to add role");
-			logger.error(err);
+			toast.error(err.message);
 		},
 	});
 
 	const removeRoleMutation = useMutation({
 		mutationFn: async ({
 			userId,
-			permission,
+			roleId,
 		}: {
 			userId: string;
-			permission: Static<
-				databaseTypes.databaseTypes["profile"]["permission"]
-			>[number];
+			roleId: string;
 		}) => {
-			const res = await api.api.profile.remove_role.patch({
+			const res = await api.api.role["remove-from-user"].patch({
 				userId,
-				permission: [permission],
+				roleIds: [roleId],
 			});
-			if (res.error) throw res.error;
+			if (res.error) throw new Error(String(res.error.value));
 			return res.data;
 		},
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["users"] });
+			toast.success("Role removed successfully");
 		},
 		onError: (err) => {
-			alert("Failed to remove role");
-			logger.error(err);
+			toast.error(err.message);
 		},
 	});
 
 	if (isLoading) return <div>Loading users...</div>;
 
 	return (
-		<div className="space-y-6">
+		<div className="space-y-6 p-6">
 			<div>
 				<h2 className="text-3xl font-bold tracking-tight">User Management</h2>
 				<p className="text-muted-foreground">
-					Manage user roles and permissions.
+					Manage user permissions by assigning roles.
 				</p>
 			</div>
 
@@ -119,50 +115,51 @@ function UserManagement() {
 						</CardHeader>
 						<CardContent>
 							<div className="flex flex-wrap gap-2 items-center">
-								<span className="text-sm font-medium mr-2">Roles:</span>
-								{user.permission.map((role) => (
-									<div
-										key={role}
-										className="flex items-center gap-1 bg-secondary rounded-full px-3 py-1 text-xs"
+								<span className="text-sm font-medium mr-2">Assigned Roles:</span>
+								{user.rolesIDs.map((roleId) => (
+									<RoleBadge
+										key={roleId}
+										roleId={roleId}
+										className="bg-secondary rounded-full px-3 py-1 text-xs"
 									>
-										{role}
-										{/** biome-ignore lint/a11y/useButtonType: <explanation> */}
-										<button
-											onClick={() =>
-												removeRoleMutation.mutate({
-													userId: user.userId,
-													permission: role,
-												})
-											}
-											className="text-muted-foreground hover:text-destructive transition-colors ml-1"
-											aria-label={`Remove ${role} role`}
-										>
-											&times;
-										</button>
-									</div>
+										{can("user:manage") && (
+											<button
+												onClick={() =>
+													removeRoleMutation.mutate({
+														userId: user.userId,
+														roleId: roleId,
+													})
+												}
+												className="text-muted-foreground hover:text-destructive transition-colors ml-1"
+												aria-label={`Remove role ${roleId}`}
+											>
+												&times;
+											</button>
+										)}
+									</RoleBadge>
 								))}
 
-								<Select
-									onValueChange={(val) =>
-										addRoleMutation.mutate({
-											userId: user.userId,
-											permission: val as Static<
-												databaseTypes.databaseTypes["profile"]["permission"]
-											>[number],
-										})
-									}
-								>
-									<SelectTrigger className="w-[130px] h-7 text-xs rounded-full">
-										<SelectValue placeholder="Add role" />
-									</SelectTrigger>
-									<SelectContent>
-										{availableRoles?.map((role) => (
-											<SelectItem key={role} value={role}>
-												{role}
-											</SelectItem>
-										))}
-									</SelectContent>
-								</Select>
+								{can("user:manage") && (
+									<Select
+										onValueChange={(val) =>
+											addRoleMutation.mutate({
+												userId: user.userId,
+												roleId: val,
+											})
+										}
+									>
+										<SelectTrigger className="w-[130px] h-7 text-xs rounded-full">
+											<SelectValue placeholder="Add role" />
+										</SelectTrigger>
+										<SelectContent>
+											{availableRoles?.map((role) => (
+												<SelectItem key={role.id} value={role.id}>
+													{role.name}
+												</SelectItem>
+											))}
+										</SelectContent>
+									</Select>
+								)}
 							</div>
 						</CardContent>
 					</Card>

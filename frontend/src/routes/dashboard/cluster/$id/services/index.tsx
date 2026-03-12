@@ -50,6 +50,7 @@ import {
 } from "@/components/ui/table";
 import type { databaseTypes, SchemaStatic } from "@/lib/api";
 import { api } from "@/lib/api";
+import { usePermissions } from "@/hooks/use-permissions";
 
 export const Route = createFileRoute("/dashboard/cluster/$id/services/")({
 	component: ClusterServices,
@@ -66,6 +67,7 @@ function ExposureDialog({
 }) {
 	const [open, setOpen] = useState(false);
 	const queryClient = useQueryClient();
+	const { can } = usePermissions();
 
 	// Find if there is an existing ingress for this service
 	const ingress = (service as any).ingresses?.[0];
@@ -222,7 +224,7 @@ function ExposureDialog({
 						/>
 
 						<DialogFooter className="gap-2">
-							{ingress && (
+							{ingress && (can("ingress:delete") || can("ingress:manage")) && (
 								<Button
 									type="button"
 									variant="destructive"
@@ -234,9 +236,11 @@ function ExposureDialog({
 									De-expose
 								</Button>
 							)}
-							<Button type="submit" disabled={exposeMutation.isPending}>
-								{ingress ? "Update" : "Expose"}
-							</Button>
+							{(can("ingress:create") || can("ingress:manage") || (ingress && can("ingress:update"))) && (
+								<Button type="submit" disabled={exposeMutation.isPending}>
+									{ingress ? "Update" : "Expose"}
+								</Button>
+							)}
 						</DialogFooter>
 					</form>
 				</Form>
@@ -247,6 +251,7 @@ function ExposureDialog({
 
 function ClusterServices() {
 	const { id } = useParams({ from: "/dashboard/cluster/$id/services/" });
+	const { can } = usePermissions();
 	const queryClient = useQueryClient();
 
 	const { data: services, isLoading } = useQuery({
@@ -295,7 +300,7 @@ function ClusterServices() {
 				</div>
 			</div>
 			<div className="flex justify-end">
-				<CreateServiceDialog clusterId={id} />
+				{can("service:create") && <CreateServiceDialog clusterId={id} />}
 			</div>
 
 			<Card>
@@ -368,27 +373,33 @@ function ClusterServices() {
 												params={{ id, serviceId: svc.id.toString() }}
 												className="text-blue-500 hover:underline"
 											>
-												<Button variant="ghost" size="icon">
+												<Button
+													variant="ghost"
+													size="icon"
+													disabled={!can("service:read") && !can("service:manage")}
+												>
 													<Eye className="h-4 w-4" />
 												</Button>
 											</Link>
-											<Button
-												variant="ghost"
-												size="icon"
-												className="text-destructive hover:text-destructive hover:bg-destructive/10"
-												onClick={() => {
-													if (
-														confirm(
-															"Are you sure you want to delete this service? This will break any ingress routes pointing to it.",
-														)
-													) {
-														deleteMutation.mutate(svc.id);
-													}
-												}}
-												disabled={deleteMutation.isPending}
-											>
-												<Trash2 className="h-4 w-4" />
-											</Button>
+											{(can("service:delete") || can("service:manage")) && (
+												<Button
+													variant="ghost"
+													size="icon"
+													className="text-destructive hover:text-destructive hover:bg-destructive/10"
+													onClick={() => {
+														if (
+															confirm(
+																"Are you sure you want to delete this service? This will break any ingress routes pointing to it.",
+															)
+														) {
+															deleteMutation.mutate(svc.id);
+														}
+													}}
+													disabled={deleteMutation.isPending}
+												>
+													<Trash2 className="h-4 w-4" />
+												</Button>
+											)}
 										</div>
 									</TableCell>
 								</TableRow>

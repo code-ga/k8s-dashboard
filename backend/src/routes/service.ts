@@ -18,49 +18,10 @@ export const serviceRoute = new Elysia({
 })
 	.use(authenticationMiddleware)
 	.use(agentManagerService)
-	.guard({ roleAuth: ["manager"] }, (app) =>
-		app.get(
-			"/all",
-			async (ctx) => {
-				const { clusterId } = ctx.params;
-				if (!clusterId) {
-					return ctx.status(400, {
-						success: false,
-						message: "Cluster ID is required",
-						timestamp: Date.now(),
-					});
-				}
-				const services = await db.query.k8sServices.findMany({
-					// where: eq(schema.k8sServices.clusterId, Number(clusterId)),
-					where: {
-						clusterId: Number(clusterId),
-					},
-					with: {
-						ingresses: true,
-					},
-				});
-				return ctx.status(200, {
-					success: true,
-					message: "Services fetched successfully",
-					data: services,
-					timestamp: Date.now(),
-				});
-			},
-			{
-				detail: { tags: ["Services"] },
-				response: {
-					200: baseResponseSchema(
-						Type.Array(Type.Object(dbSchemaTypes.k8sServices)),
-					),
-					400: errorResponseSchema,
-				},
-			},
-		),
-	)
 	.guard({ userAuth: { requiredProfile: true } }, (app) =>
 		app
 			.get(
-				"/",
+				"/all",
 				async (ctx) => {
 					const { clusterId } = ctx.params;
 					if (!clusterId) {
@@ -70,15 +31,9 @@ export const serviceRoute = new Elysia({
 							timestamp: Date.now(),
 						});
 					}
-
 					const services = await db.query.k8sServices.findMany({
-						// where: and(
-						// 	eq(schema.k8sServices.clusterId, Number(clusterId)),
-						// 	eq(schema.k8sServices.ownerId, ctx.profile.id),
-						// ),
 						where: {
 							clusterId: Number(clusterId),
-							ownerId: ctx.profile.id,
 						},
 						with: {
 							ingresses: true,
@@ -93,6 +48,46 @@ export const serviceRoute = new Elysia({
 				},
 				{
 					detail: { tags: ["Services"] },
+					roleAuth: "service:manage" as any,
+					response: {
+						200: baseResponseSchema(
+							Type.Array(Type.Object(dbSchemaTypes.k8sServices)),
+						),
+						400: errorResponseSchema,
+					},
+				},
+			)
+			.get(
+				"/",
+				async (ctx) => {
+					const { clusterId } = ctx.params;
+					if (!clusterId) {
+						return ctx.status(400, {
+							success: false,
+							message: "Cluster ID is required",
+							timestamp: Date.now(),
+						});
+					}
+
+					const services = await db.query.k8sServices.findMany({
+						where: {
+							clusterId: Number(clusterId),
+							ownerId: ctx.profile?.id ?? "",
+						},
+						with: {
+							ingresses: true,
+						},
+					});
+					return ctx.status(200, {
+						success: true,
+						message: "Services fetched successfully",
+						data: services,
+						timestamp: Date.now(),
+					});
+				},
+				{
+					detail: { tags: ["Services"] },
+					roleAuth: "service:read" as any,
 					response: {
 						200: baseResponseSchema(
 							Type.Array(
@@ -119,15 +114,22 @@ export const serviceRoute = new Elysia({
 							timestamp: Date.now(),
 						});
 					}
+
+					// Logic to check if user can see this service
+					const isManager =
+						((ctx as any).userPermissions as any).has(
+							"service:manage" as any,
+						) ||
+						((ctx as any).userPermissions as any).has("service:read" as any);
+
 					const service = await db.query.k8sServices.findFirst({
-						// where: and(
-						// 	eq(schema.k8sServices.id, Number(id)),
-						// 	eq(schema.k8sServices.clusterId, Number(clusterId)),
-						// ),
-						where: {
-							id: Number(id),
-							clusterId: Number(clusterId),
-						},
+						where: isManager
+							? { id: Number(id), clusterId: Number(clusterId) }
+							: {
+									id: Number(id),
+									clusterId: Number(clusterId),
+									ownerId: ctx.profile?.id ?? "",
+								},
 						with: {
 							ingresses: true,
 						},
@@ -148,6 +150,7 @@ export const serviceRoute = new Elysia({
 				},
 				{
 					detail: { tags: ["Services"] },
+					roleAuth: "service:read" as any,
 					response: {
 						200: baseResponseSchema(
 							Type.Object({
@@ -167,7 +170,6 @@ export const serviceRoute = new Elysia({
 					const body = ctx.body;
 
 					const cluster = await db.query.k8sCluster.findFirst({
-						// where: eq(schema.k8sCluster.id, clusterId),
 						where: {
 							id: clusterId,
 						},
@@ -191,7 +193,7 @@ export const serviceRoute = new Elysia({
 							.insert(schema.k8sServices)
 							.values({
 								clusterId: cluster.id,
-								ownerId: ctx.profile.id,
+								ownerId: ctx.profile?.id ?? "",
 								name: body.name,
 								namespace: body.namespace,
 								type: body.type,
@@ -253,6 +255,7 @@ export const serviceRoute = new Elysia({
 				},
 				{
 					detail: { tags: ["Services"] },
+					roleAuth: "service:create" as any,
 					body: Type.Object({
 						name: Type.String(),
 						namespace: Type.String(),
@@ -289,15 +292,17 @@ export const serviceRoute = new Elysia({
 					const svcId = Number(ctx.params.id);
 					const clusterId = Number(ctx.params.clusterId);
 
+					// Check access
+					const isManager = ctx.userPermissions.has("service:delete");
+
 					const service = await db.query.k8sServices.findFirst({
-						// where: and(
-						// 	eq(schema.k8sServices.id, svcId),
-						// 	eq(schema.k8sServices.clusterId, clusterId),
-						// ),
-						where: {
-							id: svcId,
-							clusterId: clusterId,
-						},
+						where: isManager
+							? { id: svcId, clusterId: clusterId }
+							: {
+									id: svcId,
+									clusterId: clusterId,
+									ownerId: ctx.profile?.id ?? "",
+								},
 					});
 
 					if (!service) {
@@ -309,7 +314,6 @@ export const serviceRoute = new Elysia({
 					}
 
 					const cluster = await db.query.k8sCluster.findFirst({
-						// where: eq(schema.k8sCluster.id, clusterId),
 						where: {
 							id: clusterId,
 						},
@@ -353,6 +357,7 @@ export const serviceRoute = new Elysia({
 				},
 				{
 					detail: { tags: ["Services"] },
+					roleAuth: "service:delete",
 					response: {
 						200: baseResponseSchema(Type.Object(dbSchemaTypes.k8sServices)),
 						404: errorResponseSchema,
@@ -382,6 +387,7 @@ export const serviceRoute = new Elysia({
 				},
 				{
 					detail: { tags: ["Services"] },
+					roleAuth: "service:read" as any, // wake requires read at least, or maybe manage?
 					params: Type.Object({
 						clusterId: Type.String(),
 						deploymentId: Type.String(),

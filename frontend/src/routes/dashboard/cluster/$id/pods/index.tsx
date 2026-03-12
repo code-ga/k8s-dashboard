@@ -12,6 +12,7 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { api } from "@/lib/api";
+import { usePermissions } from "@/hooks/use-permissions";
 
 export const Route = createFileRoute("/dashboard/cluster/$id/pods/")({
 	component: ClusterPods,
@@ -19,6 +20,7 @@ export const Route = createFileRoute("/dashboard/cluster/$id/pods/")({
 
 function ClusterPods() {
 	const { id } = useParams({ from: "/dashboard/cluster/$id/pods/" });
+	const { can } = usePermissions();
 
 	const { data: pods, isLoading } = useQuery({
 		queryKey: ["pods", id],
@@ -49,11 +51,13 @@ function ClusterPods() {
 						</p>
 					</div>
 				</div>
-				<Link to="/dashboard/cluster/$id/pods/create" params={{ id }}>
-					<Button>
-						<Plus className="mr-2 h-4 w-4" /> Create Pod
-					</Button>
-				</Link>
+				{can("pod:create") && (
+					<Link to="/dashboard/cluster/$id/pods/create" params={{ id }}>
+						<Button>
+							<Plus className="mr-2 h-4 w-4" /> Create Pod
+						</Button>
+					</Link>
+				)}
 			</div>
 
 			<Card>
@@ -92,7 +96,11 @@ function ClusterPods() {
 											to="/dashboard/cluster/$id/pods/$podId"
 											params={{ id, podId: pod.id.toString() }}
 										>
-											<Button variant="ghost" size="sm">
+											<Button
+												variant="ghost"
+												size="sm"
+												disabled={!can("pod:read") && !can("pod:manage")}
+											>
 												<Settings className="h-4 w-4" />
 											</Button>
 										</Link>

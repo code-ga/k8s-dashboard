@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { api } from "@/lib/api";
+import { usePermissions } from "@/hooks/use-permissions";
 
 export const Route = createFileRoute("/dashboard/cluster/$id/edit")({
 	component: EditCluster,
@@ -24,6 +25,7 @@ function EditCluster() {
 	const { id } = Route.useParams();
 	const navigate = useNavigate();
 	const queryClient = useQueryClient();
+	const { can } = usePermissions();
 
 	const { data: cluster, isLoading } = useQuery({
 		queryKey: ["cluster", id],
@@ -99,6 +101,20 @@ function EditCluster() {
 
 	if (isLoading) return <div>Loading cluster...</div>;
 	if (!cluster) return <div>Cluster not found</div>;
+
+	if (!can("cluster:manage")) {
+		return (
+			<div className="flex flex-col items-center justify-center h-[50vh] space-y-4">
+				<h1 className="text-2xl font-bold">Unauthorized</h1>
+				<p className="text-muted-foreground">
+					You do not have permission to edit this cluster.
+				</p>
+				<Link to="/dashboard/cluster/$id" params={{ id }}>
+					<Button>Go Back</Button>
+				</Link>
+			</div>
+		);
+	}
 
 	return (
 		<div className="space-y-6">
@@ -281,7 +297,7 @@ function EditCluster() {
 								{([canSubmit, isSubmitting]) => (
 									<Button
 										type="submit"
-										disabled={!canSubmit || isSubmitting}
+										disabled={!canSubmit || isSubmitting || !can("cluster:manage")}
 										className="gap-2"
 									>
 										<Save className="h-4 w-4" />

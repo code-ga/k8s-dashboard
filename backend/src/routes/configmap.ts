@@ -1,4 +1,3 @@
-import { logger } from "../utils/logger";
 import { Type } from "@sinclair/typebox";
 import { eq } from "drizzle-orm";
 import { Elysia } from "elysia";
@@ -6,11 +5,12 @@ import { Command_CommandType } from "../../pb-generated/agent-backend/websocket"
 import { db } from "../database";
 import { schema } from "../database/schema";
 import { dbSchemaTypes } from "../database/type";
-import { authenticationMiddleware, checkPermission } from "../middleware/auth";
+import { authenticationMiddleware } from "../middleware/auth";
 import { agentManagerService } from "../services/agentManager";
 import { baseResponseSchema, errorResponseSchema } from "../types";
 import { decrypt, encrypt } from "../utils/crypto";
 import { generateConfigMapManifest } from "../utils/k8s-manifest";
+import { logger } from "../utils/logger";
 
 export const configmapRoute = new Elysia({
 	prefix: "/configmaps/:clusterId",
@@ -18,7 +18,7 @@ export const configmapRoute = new Elysia({
 })
 	.use(authenticationMiddleware)
 	.use(agentManagerService)
-	.guard({ roleAuth: ["user"] }, (app) =>
+	.guard({ userAuth: { requiredProfile: true } }, (app) =>
 		app
 			.get(
 				"/",
@@ -39,6 +39,7 @@ export const configmapRoute = new Elysia({
 				},
 				{
 					detail: { tags: ["ConfigMaps"] },
+					roleAuth: "configmap:read",
 					response: {
 						200: baseResponseSchema(
 							Type.Array(
@@ -56,9 +57,7 @@ export const configmapRoute = new Elysia({
 				"/:id",
 				async (ctx) => {
 					const { id } = ctx.params;
-					const isManager = checkPermission(ctx.profile?.permission || [], [
-						"manager",
-					]);
+					const isManager = ctx.userPermissions.has("configmap:read");
 					const cm = await db.query.k8sConfigMaps.findFirst({
 						where: isManager
 							? { id: Number(id) }
@@ -105,6 +104,7 @@ export const configmapRoute = new Elysia({
 				},
 				{
 					detail: { tags: ["ConfigMaps"] },
+					roleAuth: "configmap:read",
 					response: {
 						200: baseResponseSchema(
 							Type.Object({
@@ -220,6 +220,7 @@ export const configmapRoute = new Elysia({
 				},
 				{
 					detail: { tags: ["ConfigMaps"] },
+					roleAuth: "configmap:create",
 					body: Type.Object({
 						name: Type.String(),
 						namespace: Type.String(),
@@ -340,6 +341,7 @@ export const configmapRoute = new Elysia({
 				},
 				{
 					detail: { tags: ["ConfigMaps"] },
+					roleAuth: "configmap:update",
 					body: Type.Object({
 						data: Type.Optional(Type.Record(Type.String(), Type.String())),
 						binaryData: Type.Optional(
@@ -422,6 +424,7 @@ export const configmapRoute = new Elysia({
 				},
 				{
 					detail: { tags: ["ConfigMaps"] },
+					roleAuth: "configmap:delete",
 					response: {
 						200: baseResponseSchema(Type.Null()),
 						404: errorResponseSchema,

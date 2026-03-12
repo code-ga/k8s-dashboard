@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { api } from "@/lib/api";
 import { authClient } from "@/lib/auth";
 import { logger } from "../../lib/logger";
+import { RoleBadge } from "@/components/RoleBadge";
 
 export const Route = createFileRoute("/dashboard/settings")({
 	component: DashboardSettings,
@@ -104,13 +105,8 @@ function DashboardSettings() {
 						<div className="space-y-2">
 							<Label>Role</Label>
 							<div className="flex gap-2">
-								{profile?.permission.map((p) => (
-									<span
-										key={p}
-										className="px-2 py-1 bg-secondary rounded-md text-sm"
-									>
-										{p}
-									</span>
+								{profile?.rolesIDs.map((p) => (
+									<RoleBadge key={p} roleId={p} />
 								))}
 							</div>
 						</div>

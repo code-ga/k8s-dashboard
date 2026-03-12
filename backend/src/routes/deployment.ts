@@ -1,5 +1,3 @@
-import { logger } from "../utils/logger";
-/** biome-ignore-all lint/suspicious/noExplicitAny: <explanation> */
 import { Type } from "@sinclair/typebox";
 import { eq, type InferInsertModel, type InferSelectModel } from "drizzle-orm";
 import { Elysia } from "elysia";
@@ -7,11 +5,12 @@ import { Command_CommandType } from "../../pb-generated/agent-backend/websocket"
 import { db } from "../database";
 import { schema } from "../database/schema";
 import { dbSchemaTypes, type SchemaStatic } from "../database/type";
-import { authenticationMiddleware, checkPermission } from "../middleware/auth";
+import { authenticationMiddleware } from "../middleware/auth";
 import { agentManagerService } from "../services/agentManager";
 import { baseResponseSchema, errorResponseSchema } from "../types";
 import { decrypt, encrypt } from "../utils/crypto";
 import { generateDeploymentManifest } from "../utils/k8s-manifest";
+import { logger } from "../utils/logger";
 import {
 	fetchAllDeploymentResourceRefs,
 	insertAllDeploymentResourceRefs,
@@ -38,43 +37,42 @@ export const deploymentRoute = new Elysia({
 	.use(authenticationMiddleware)
 	.use(agentManagerService)
 	.decorate("websocketData", new Map<string, any>())
-	.guard({ roleAuth: ["manager"] }, (app) =>
-		app.get(
-			"/all",
-			async (ctx) => {
-				const { clusterId } = ctx.params;
-				if (!clusterId) {
-					return ctx.status(400, {
-						success: false,
-						message: "Cluster ID is required",
-						timestamp: Date.now(),
-					});
-				}
-				const deployments = await db.query.k8sDeployments.findMany({
-					where: {
-						clusterId: Number(clusterId),
-					},
-				});
-				return ctx.status(200, {
-					success: true,
-					message: "Deployments fetched successfully",
-					data: deployments,
-					timestamp: Date.now(),
-				});
-			},
-			{
-				detail: { tags: ["Deployments"] },
-				response: {
-					200: baseResponseSchema(
-						Type.Array(Type.Object(dbSchemaTypes.k8sDeployments)),
-					),
-					400: errorResponseSchema,
-				},
-			},
-		),
-	)
 	.guard({ userAuth: { requiredProfile: true } }, (app) =>
 		app
+			.get(
+				"/all",
+				async (ctx) => {
+					const { clusterId } = ctx.params;
+					if (!clusterId) {
+						return ctx.status(400, {
+							success: false,
+							message: "Cluster ID is required",
+							timestamp: Date.now(),
+						});
+					}
+					const deployments = await db.query.k8sDeployments.findMany({
+						where: {
+							clusterId: Number(clusterId),
+						},
+					});
+					return ctx.status(200, {
+						success: true,
+						message: "Deployments fetched successfully",
+						data: deployments,
+						timestamp: Date.now(),
+					});
+				},
+				{
+					detail: { tags: ["Deployments"] },
+					roleAuth: "deployment:manage",
+					response: {
+						200: baseResponseSchema(
+							Type.Array(Type.Object(dbSchemaTypes.k8sDeployments)),
+						),
+						400: errorResponseSchema,
+					},
+				},
+			)
 			.get(
 				"/",
 				async (ctx) => {
@@ -106,6 +104,7 @@ export const deploymentRoute = new Elysia({
 				},
 				{
 					detail: { tags: ["Deployments"] },
+					roleAuth: "deployment:read",
 					response: {
 						200: baseResponseSchema(
 							Type.Array(Type.Object(dbSchemaTypes.k8sDeployments)),
@@ -125,9 +124,9 @@ export const deploymentRoute = new Elysia({
 							timestamp: Date.now(),
 						});
 					}
-					const isManager = checkPermission(ctx.profile?.permission || [], [
-						"manager",
-					]);
+					const isManager =
+						ctx.userPermissions.has("deployment:manage") ||
+						ctx.userPermissions.has("deployment:read");
 					const deployment = await db.query.k8sDeployments.findFirst({
 						where: isManager
 							? { id: Number(id), clusterId: Number(clusterId) }
@@ -166,10 +165,6 @@ export const deploymentRoute = new Elysia({
 					};
 
 					if (depData.envVariables) {
-						// Only decrypt if user is owner or manager
-						const isManager = checkPermission(ctx.profile?.permission || [], [
-							"manager",
-						]);
 						const isOwner = deployment.ownerId === ctx.profile?.id;
 
 						if (isManager || isOwner) {
@@ -196,6 +191,7 @@ export const deploymentRoute = new Elysia({
 				},
 				{
 					detail: { tags: ["Deployments"] },
+					roleAuth: "deployment:read",
 					response: {
 						200: baseResponseSchema(Type.Object(dbSchemaTypes.k8sDeployments)),
 						404: errorResponseSchema,
@@ -381,6 +377,7 @@ export const deploymentRoute = new Elysia({
 				},
 				{
 					detail: { tags: ["Deployments"] },
+					roleAuth: "deployment:create",
 					body: Type.Object({
 						name: Type.String(),
 						namespace: Type.String(),
@@ -744,6 +741,7 @@ export const deploymentRoute = new Elysia({
 				},
 				{
 					detail: { tags: ["Deployments"] },
+					roleAuth: "deployment:update",
 					body: Type.Object({
 						replicas: Type.Optional(Type.Number()),
 						image: Type.Optional(Type.String()),
@@ -875,9 +873,9 @@ export const deploymentRoute = new Elysia({
 					}
 
 					// Check authorization: user must be manager or deployment owner
-					const isManager = checkPermission(ctx.profile?.permission || [], [
-						"manager",
-					]);
+					const isManager =
+						ctx.userPermissions.has("deployment:manage") ||
+						ctx.userPermissions.has("deployment:read");
 					const deployment = await db.query.k8sDeployments.findFirst({
 						where: isManager
 							? { id: Number(id), clusterId: Number(clusterId) }
@@ -921,6 +919,7 @@ export const deploymentRoute = new Elysia({
 				},
 				{
 					detail: { tags: ["Deployments"] },
+					roleAuth: "deployment:read",
 					response: {
 						200: baseResponseSchema(
 							Type.Array(Type.Object(dbSchemaTypes.k8sPods)),
@@ -1023,6 +1022,7 @@ export const deploymentRoute = new Elysia({
 			)
 			.ws("/logs/:id", {
 				detail: { tags: ["Deployments"] },
+				roleAuth: "deployment:read",
 				open: async (ws) => {
 					// 1. Auth & Validation (ws.data context)
 					const { clusterId, id } = ws.data.params;
@@ -1049,9 +1049,9 @@ export const deploymentRoute = new Elysia({
 					}
 
 					// Permission Check
-					const isManager = checkPermission(profile?.permission || [], [
-						"manager",
-					]);
+					const isManager =
+						(ws.data as any).userPermissions.has("deployment:manage") ||
+						(ws.data as any).userPermissions.has("deployment:read");
 					if (!isManager && deployment.ownerId !== profile?.id) {
 						ws.send("Unauthorized");
 						ws.close();

@@ -4,7 +4,7 @@ import { Server } from "lucide-react";
 import { CreateClusterDialog } from "@/components/cluster/create-cluster-dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { api } from "@/lib/api";
-import { authClient } from "@/lib/auth";
+import { usePermissions } from "@/hooks/use-permissions";
 
 export const Route = createFileRoute("/dashboard/")({
 	component: DashboardIndex,
@@ -22,34 +22,10 @@ function DashboardIndex() {
 		},
 	});
 
-	// We can also check permission here if we want to show/hide the create button
-	// But for now let's just use session to verify if they are at least manager?
-	// Wait, we need the profile role. DashboardLayout fetches it but doesn't pass it down explicitly.
-	// We can refetch or use context?
-	// Ideally, `DashboardLayout` should put profile in a Route Context.
-	// But strictly, we can check permissions by fetching profile again (cached) or using a dedicated hook.
+	const { can, isLoading: isLoadingPermissions } = usePermissions();
+	const canCreate = can("cluster:create");
 
-	// For now we will just show the button and let backend reject if not allowed,
-	// OR we can fetch profile here too (it will be cached by React Query).
-
-	const { data: session } = authClient.useSession();
-	const { data: profile, isLoading: isLoadingProfile } = useQuery({
-		queryKey: ["profile", session?.user?.id],
-		queryFn: async () => {
-			const res = await api.api.profile.me.get();
-			if (res.error) throw res.error;
-			if (!res.data.data)
-				throw new Error(res.data.message || "Failed to fetch profile");
-			return res.data.data;
-		},
-		enabled: !!session?.user?.id,
-	});
-
-	const permissions = (profile?.permission as string[]) || [];
-	const canCreate =
-		permissions.includes("manager") || permissions.includes("admin");
-
-	if (isLoading || isLoadingProfile) return <div>Loading clusters...</div>;
+	if (isLoading || isLoadingPermissions) return <div>Loading clusters...</div>;
 
 	return (
 		<div className="space-y-6">

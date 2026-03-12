@@ -12,6 +12,7 @@ import { podRoute } from "./pod";
 import { profileRouter } from "./profile";
 import { secretRoute } from "./secret";
 import { serviceRoute } from "./service";
+import { roleRoute } from "./role";
 
 const apiRouter = new Elysia({ prefix: "/api" })
 	.use(agentManagerService)
@@ -26,6 +27,7 @@ const apiRouter = new Elysia({ prefix: "/api" })
 	.use(serviceRoute)
 	.use(ingressRoute)
 	.use(configmapRoute)
-	.use(secretRoute);
+	.use(secretRoute)
+	.use(roleRoute);
 
 export { apiRouter };

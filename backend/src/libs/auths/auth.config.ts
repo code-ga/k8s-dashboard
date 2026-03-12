@@ -45,29 +45,6 @@ export const auth = betterAuth({
 	},
 	secret: process.env.BETTER_AUTH_SECRET!,
 	plugins: [openAPI()],
-	// on user account creation, create the role for the user
-	databaseHooks: {
-		user: {
-			create: {
-				after: async (user) => {
-					// if this is the first user, create the admin role for the user
-					if (user.id === "1") {
-						await db.insert(schema.profile).values({
-							userId: user.id,
-							username: user.email,
-							permission: ["admin", "default-account"],
-						});
-					} else {
-						await db.insert(schema.profile).values({
-							userId: user.id,
-							username: user.email,
-							permission: [], // admin will be assigned later
-						});
-					}
-				},
-			},
-		},
-	},
 	advanced: {
 		cookies: {
 			session_token: {
