@@ -439,9 +439,15 @@ export const generateIngressRouteManifest = (dto: IngressRouteDTO): string => {
 				name: dto.name,
 				namespace: dto.namespace,
 				labels: dto.labels,
+				annotations: {
+					"traefik.ingress.kubernetes.io/router.tls": "true",
+				},
 			},
 			spec: {
 				entryPoints: ["web", "websecure"],
+				tls: {
+					certResolver: "letsencrypt",
+				},
 				routes: [
 					{
 						match: `Host(\`${dto.domain}\`)`,
