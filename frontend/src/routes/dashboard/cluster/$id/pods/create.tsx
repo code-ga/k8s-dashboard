@@ -28,7 +28,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { api } from "@/lib/api";
+import { api, getEdenErrorMessage } from "@/lib/api";
 
 export const Route = createFileRoute("/dashboard/cluster/$id/pods/create")({
 	component: CreatePodPage,
@@ -123,7 +123,7 @@ function CreatePodPage() {
 			});
 
 			if (res.error) {
-				throw new Error(res.error.value?.message || "Failed to create pod");
+				throw new Error(getEdenErrorMessage(res.error));
 			}
 
 			return res.data;

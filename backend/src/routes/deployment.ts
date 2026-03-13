@@ -17,6 +17,16 @@ import {
 	updateAllDeploymentResourceRefs,
 } from "../utils/resource-refs";
 
+type WebSocketDataValue = {
+	clusterId: number;
+	streamId: string;
+	podId: number;
+	agentId: number;
+	type: number;
+	rows: number;
+	cols: number;
+};
+
 const parseCpuStr = (cpu: string): number => {
 	if (cpu.endsWith("m")) return parseInt(cpu);
 	return parseFloat(cpu) * 1000;
@@ -36,7 +46,7 @@ export const deploymentRoute = new Elysia({
 })
 	.use(authenticationMiddleware)
 	.use(agentManagerService)
-	.decorate("websocketData", new Map<string, any>())
+	.decorate("websocketData", new Map<string, unknown>())
 	.guard({ userAuth: { requiredProfile: true } }, (app) =>
 		app
 			.get(
@@ -203,7 +213,7 @@ export const deploymentRoute = new Elysia({
 				"/",
 				async (ctx) => {
 					const clusterId = Number(ctx.params.clusterId);
-					const bodyAny = ctx.body;
+					const body = ctx.body;
 
 					const cluster = await db.query.k8sCluster.findFirst({
 						where: {
@@ -223,14 +233,9 @@ export const deploymentRoute = new Elysia({
 					}
 
 					// 1. Prepare Data
-					const envEncrypted = bodyAny.env
-						? encrypt(JSON.stringify(bodyAny.env))
+					const envEncrypted = body.env
+						? encrypt(JSON.stringify(body.env))
 						: "";
-
-					const configMapRefs = bodyAny.configMapRefs
-						? bodyAny.configMapRefs
-						: null;
-					const secretRefs = bodyAny.secretRefs ? bodyAny.secretRefs : null;
 
 					let newDeployment:
 						| SchemaStatic<typeof dbSchemaTypes.k8sDeployments>
@@ -248,33 +253,31 @@ export const deploymentRoute = new Elysia({
 						const createData: InferInsertModel<typeof schema.k8sDeployments> = {
 							clusterId: cluster.id,
 							ownerId: ctx.profile.id,
-							name: bodyAny.name,
-							namespace: bodyAny.namespace,
-							replicas: bodyAny.replicas,
+							name: body.name,
+							namespace: body.namespace,
+							replicas: body.replicas,
 							availableReplicas: 0,
-							unavailableReplicas: bodyAny.replicas,
-							dockerImage: bodyAny.image,
-							labels: bodyAny.labels ? JSON.stringify(bodyAny.labels) : null,
-							selector: bodyAny.selector
-								? JSON.stringify(bodyAny.selector)
-								: null,
+							unavailableReplicas: body.replicas,
+							dockerImage: body.image,
+							labels: body.labels ? JSON.stringify(body.labels) : null,
+							selector: body.selector ? JSON.stringify(body.selector) : null,
 							envVariables: envEncrypted,
-							command: bodyAny.command ? bodyAny.command.join(" ") : "",
-							args: bodyAny.args ? bodyAny.args.join(" ") : "",
+							command: body.command ? body.command.join(" ") : "",
+							args: body.args ? body.args.join(" ") : "",
 							ports: [], // Now stored in normalized tables
 							configMapRefs: { env: [], envFrom: [], volumes: [] }, // Legacy field
 							secretRefs: { env: [], envFrom: [], volumes: [] }, // Legacy field
-							cpuRequest: bodyAny.resources?.requests?.cpu
-								? parseCpuStr(bodyAny.resources.requests.cpu)
+							cpuRequest: body.resources?.requests?.cpu
+								? parseCpuStr(body.resources.requests.cpu)
 								: 0,
-							cpuLimit: bodyAny.resources?.limits?.cpu
-								? parseCpuStr(bodyAny.resources.limits.cpu)
+							cpuLimit: body.resources?.limits?.cpu
+								? parseCpuStr(body.resources.limits.cpu)
 								: 0,
-							memoryRequest: bodyAny.resources?.requests?.memory
-								? parseMemoryStr(bodyAny.resources.requests.memory)
+							memoryRequest: body.resources?.requests?.memory
+								? parseMemoryStr(body.resources.requests.memory)
 								: 0,
-							memoryLimit: bodyAny.resources?.limits?.memory
-								? parseMemoryStr(bodyAny.resources.limits.memory)
+							memoryLimit: body.resources?.limits?.memory
+								? parseMemoryStr(body.resources.limits.memory)
 								: 0,
 							updatedAt: new Date(),
 						};
@@ -294,17 +297,19 @@ export const deploymentRoute = new Elysia({
 						// Insert resource refs into normalized tables
 						await insertAllDeploymentResourceRefs(
 							newDeployment.id,
-							bodyAny.ports || [],
+							body.ports || [],
 							{
-								configMapRefs: bodyAny.configMapRefs,
-								secretRefs: bodyAny.secretRefs,
+								configMapRefs: body.configMapRefs,
+								secretRefs: body.secretRefs,
 							},
 						);
-					} catch (dbError: any) {
+					} catch (dbError) {
 						logger.error("DB Insert Deployment Failed:", dbError);
+						const message =
+							dbError instanceof Error ? dbError.message : String(dbError);
 						return ctx.status(500, {
 							success: false,
-							message: `Database error: ${dbError.message}`,
+							message: `Database error: ${message}`,
 							timestamp: Date.now(),
 						});
 					}
@@ -314,37 +319,20 @@ export const deploymentRoute = new Elysia({
 							throw new Error("Deployment not created");
 						}
 
-						let configMapRefsObj: any;
-						let secretRefsObj: any;
-						if (configMapRefs) {
-							try {
-								configMapRefsObj = configMapRefs;
-							} catch (e) {
-								logger.error("Failed to parse configMapRefs", e);
-							}
-						}
-						if (secretRefs) {
-							try {
-								secretRefsObj = secretRefs;
-							} catch (e) {
-								logger.error("Failed to parse secretRefs", e);
-							}
-						}
-
 						const manifest = generateDeploymentManifest({
-							name: bodyAny.name,
-							namespace: bodyAny.namespace,
-							image: bodyAny.image,
-							replicas: bodyAny.replicas,
-							command: bodyAny.command,
-							args: bodyAny.args,
-							env: bodyAny.env, // Plaintext
-							ports: bodyAny.ports,
-							resources: bodyAny.resources,
-							labels: bodyAny.labels,
-							selector: bodyAny.selector,
-							configMapRefs: configMapRefsObj,
-							secretRefs: secretRefsObj,
+							name: body.name,
+							namespace: body.namespace,
+							image: body.image,
+							replicas: body.replicas,
+							command: body.command,
+							args: body.args,
+							env: body.env, // Plaintext
+							ports: body.ports,
+							resources: body.resources,
+							labels: body.labels,
+							selector: body.selector,
+							configMapRefs: body.configMapRefs,
+							secretRefs: body.secretRefs,
 						});
 
 						const response = await ctx.agentManager.sendCommand(
@@ -354,8 +342,8 @@ export const deploymentRoute = new Elysia({
 								id: globalThis.crypto.randomUUID(),
 								type: Command_CommandType.CREATE_DEPLOYMENT,
 								payload: manifest,
-								targetNamespace: bodyAny.namespace,
-								targetName: bodyAny.name,
+								targetNamespace: body.namespace,
+								targetName: body.name,
 							},
 						);
 
@@ -365,7 +353,7 @@ export const deploymentRoute = new Elysia({
 							data: { ...newDeployment, agentResponse: response.data },
 							timestamp: Date.now(),
 						});
-					} catch (agentError: any) {
+					} catch (agentError) {
 						logger.error("Agent Command Failed:", agentError);
 						return ctx.status(200, {
 							success: true,
@@ -510,7 +498,7 @@ export const deploymentRoute = new Elysia({
 				async (ctx) => {
 					const clusterId = Number(ctx.params.clusterId);
 					const depId = Number(ctx.params.id);
-					const bodyAny = ctx.body;
+					const body = ctx.body;
 
 					const cluster = await db.query.k8sCluster.findFirst({
 						where: {
@@ -557,15 +545,15 @@ export const deploymentRoute = new Elysia({
 					let payload = "";
 
 					if (
-						bodyAny.replicas !== undefined &&
-						!bodyAny.image &&
-						!bodyAny.resources &&
-						!bodyAny.configMapRefs &&
-						!bodyAny.secretRefs
+						body.replicas !== undefined &&
+						!body.image &&
+						!body.resources &&
+						!body.configMapRefs &&
+						!body.secretRefs
 					) {
 						// User intends to scale
 						commandType = Command_CommandType.SCALE_DEPLOYMENT;
-						payload = String(bodyAny.replicas);
+						payload = String(body.replicas);
 					} else {
 						// User intends to update spec
 						// We need to reconstruct the manifest.
@@ -586,42 +574,41 @@ export const deploymentRoute = new Elysia({
 						> = {
 							updatedAt: new Date(),
 						};
-						if (bodyAny.image) updateData.dockerImage = bodyAny.image;
-						if (bodyAny.replicas !== undefined)
-							updateData.replicas = bodyAny.replicas;
-						if (bodyAny.env) {
-							updateData.envVariables = encrypt(JSON.stringify(bodyAny.env));
+						if (body.image) updateData.dockerImage = body.image;
+						if (body.replicas !== undefined)
+							updateData.replicas = body.replicas;
+						if (body.env) {
+							updateData.envVariables = encrypt(JSON.stringify(body.env));
 						}
 						// labels, selector updates? Schema stores stringified.
-						if (bodyAny.labels)
-							updateData.labels = JSON.stringify(bodyAny.labels);
-						if (bodyAny.selector)
-							updateData.selector = JSON.stringify(bodyAny.selector);
-						if (bodyAny.command) updateData.command = bodyAny.command.join(" ");
-						if (bodyAny.args) updateData.args = bodyAny.args.join(" ");
-						if (bodyAny.resources) {
-							if (bodyAny.resources.requests?.cpu)
+						if (body.labels) updateData.labels = JSON.stringify(body.labels);
+						if (body.selector)
+							updateData.selector = JSON.stringify(body.selector);
+						if (body.command) updateData.command = body.command.join(" ");
+						if (body.args) updateData.args = body.args.join(" ");
+						if (body.resources) {
+							if (body.resources.requests?.cpu)
 								updateData.cpuRequest = parseCpuStr(
-									bodyAny.resources.requests.cpu,
+									body.resources.requests.cpu,
 								);
-							if (bodyAny.resources.requests?.memory)
+							if (body.resources.requests?.memory)
 								updateData.memoryRequest = parseMemoryStr(
-									bodyAny.resources.requests.memory,
+									body.resources.requests.memory,
 								);
-							if (bodyAny.resources.limits?.cpu)
-								updateData.cpuLimit = parseCpuStr(bodyAny.resources.limits.cpu);
-							if (bodyAny.resources.limits?.memory)
+							if (body.resources.limits?.cpu)
+								updateData.cpuLimit = parseCpuStr(body.resources.limits.cpu);
+							if (body.resources.limits?.memory)
 								updateData.memoryLimit = parseMemoryStr(
-									bodyAny.resources.limits.memory,
+									body.resources.limits.memory,
 								);
 						}
 
-						if (bodyAny.isAutoScaling !== undefined)
-							updateData.isAutoScaling = bodyAny.isAutoScaling;
-						if (bodyAny.isAlwaysRunning !== undefined)
-							updateData.isAlwaysRunning = bodyAny.isAlwaysRunning;
-						if (bodyAny.idleTimeoutSeconds !== undefined)
-							updateData.idleTimeoutSeconds = bodyAny.idleTimeoutSeconds;
+						if (body.isAutoScaling !== undefined)
+							updateData.isAutoScaling = body.isAutoScaling;
+						if (body.isAlwaysRunning !== undefined)
+							updateData.isAlwaysRunning = body.isAlwaysRunning;
+						if (body.idleTimeoutSeconds !== undefined)
+							updateData.idleTimeoutSeconds = body.idleTimeoutSeconds;
 
 						try {
 							await db
@@ -630,31 +617,25 @@ export const deploymentRoute = new Elysia({
 								.where(eq(schema.k8sDeployments.id, depId));
 
 							// Update resource refs in normalized tables if provided
-							if (
-								bodyAny.ports ||
-								bodyAny.configMapRefs ||
-								bodyAny.secretRefs
-							) {
-								await updateAllDeploymentResourceRefs(
-									depId,
-									bodyAny.ports || [],
-									{
-										configMapRefs: bodyAny.configMapRefs,
-										secretRefs: bodyAny.secretRefs,
-									},
-								);
+							if (body.ports || body.configMapRefs || body.secretRefs) {
+								await updateAllDeploymentResourceRefs(depId, body.ports || [], {
+									configMapRefs: body.configMapRefs,
+									secretRefs: body.secretRefs,
+								});
 							}
-						} catch (dbError: any) {
+						} catch (dbError) {
 							logger.error("DB Update Failed", dbError);
+							const message =
+								dbError instanceof Error ? dbError.message : String(dbError);
 							return ctx.status(500, {
 								success: false,
-								message: `DB Update Failed: ${dbError.message}`,
+								message: `DB Update Failed: ${message}`,
 								timestamp: Date.now(),
 							});
 						}
 
 						// Re-calculate payload with correct Env/ConfigMap/Secret preservation
-						let finalEnv = bodyAny.env;
+						let finalEnv = body.env;
 						if (!finalEnv && deployment.envVariables) {
 							try {
 								finalEnv = JSON.parse(decrypt(deployment.envVariables));
@@ -663,7 +644,7 @@ export const deploymentRoute = new Elysia({
 							}
 						}
 
-						let finalConfigMapRefs = bodyAny.configMapRefs;
+						let finalConfigMapRefs = body.configMapRefs;
 						if (!finalConfigMapRefs && deployment.configMapRefs) {
 							try {
 								finalConfigMapRefs = deployment.configMapRefs;
@@ -672,7 +653,7 @@ export const deploymentRoute = new Elysia({
 							}
 						}
 
-						let finalSecretRefs = bodyAny.secretRefs;
+						let finalSecretRefs = body.secretRefs;
 						if (!finalSecretRefs && deployment.secretRefs) {
 							try {
 								finalSecretRefs = deployment.secretRefs;
@@ -690,18 +671,18 @@ export const deploymentRoute = new Elysia({
 							payload = generateDeploymentManifest({
 								name: deployment.name,
 								namespace: deployment.namespace,
-								image: bodyAny.image || deployment.dockerImage || "",
-								replicas: bodyAny.replicas ?? deployment.replicas,
+								image: body.image || deployment.dockerImage || "",
+								replicas: body.replicas ?? deployment.replicas,
 								env: finalEnv,
 								configMapRefs: finalConfigMapRefs,
 								secretRefs: finalSecretRefs,
 								labels:
-									bodyAny.labels ||
+									body.labels ||
 									(deployment.labels
 										? JSON.parse(deployment.labels)
 										: undefined),
 								selector:
-									bodyAny.selector ||
+									body.selector ||
 									(deployment.selector
 										? JSON.parse(deployment.selector)
 										: undefined),
@@ -731,10 +712,12 @@ export const deploymentRoute = new Elysia({
 							data: response.data,
 							timestamp: Date.now(),
 						});
-					} catch (error: any) {
+					} catch (error) {
+						const message =
+							error instanceof Error ? error.message : String(error);
 						return ctx.status(500, {
 							success: false,
-							message: `Agent error: ${error.message}`,
+							message: `Agent error: ${message}`,
 							timestamp: Date.now(),
 						});
 					}
@@ -1003,10 +986,12 @@ export const deploymentRoute = new Elysia({
 							data: deployment,
 							timestamp: Date.now(),
 						});
-					} catch (error: any) {
+					} catch (error) {
+						const message =
+							error instanceof Error ? error.message : String(error);
 						return ctx.status(500, {
 							success: false,
-							message: `Agent error: ${error.message}`,
+							message: `Agent error: ${message}`,
 							timestamp: Date.now(),
 						});
 					}
@@ -1050,8 +1035,8 @@ export const deploymentRoute = new Elysia({
 
 					// Permission Check
 					const isManager =
-						(ws.data as any).userPermissions.has("deployment:manage") ||
-						(ws.data as any).userPermissions.has("deployment:read");
+						ws.data.userPermissions.has("deployment:manage") ||
+						ws.data.userPermissions.has("deployment:read");
 					if (!isManager && deployment.ownerId !== profile?.id) {
 						ws.send("Unauthorized");
 						ws.close();
@@ -1151,14 +1136,19 @@ export const deploymentRoute = new Elysia({
 							logger.error("websocketData missing in context");
 							ws.close();
 						}
-					} catch (e: any) {
-						ws.send(`Error starting stream: ${e.message}`);
+					} catch (e) {
+						logger.info("Error starting stream:", e);
+						const message = e instanceof Error ? e.message : String(e);
+						ws.send(`Error starting stream: ${message}`);
 						ws.close();
+						return;
 					}
 				},
 				close: async (ws) => {
 					if (ws.data.websocketData) {
-						const data = ws.data.websocketData.get(ws.id);
+						const data = ws.data.websocketData.get(ws.id) as
+							| WebSocketDataValue
+							| undefined;
 						if (data) {
 							await ws.data.agentManager.stopStream(data.streamId);
 							ws.data.websocketData.delete(ws.id);

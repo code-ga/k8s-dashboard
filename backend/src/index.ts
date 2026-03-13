@@ -5,7 +5,7 @@ dotenv.config({ path: "../.env" });
 
 import { cors } from "@elysiajs/cors";
 import { openapi } from "@elysiajs/openapi";
-import { Elysia } from "elysia";
+import { Elysia, type AnyElysia } from "elysia";
 import { OpenAPI } from "./libs/auths/openAPI";
 import { apiRouter } from "./routes";
 import { scalingController } from "./services/scaling.controller";
@@ -34,31 +34,34 @@ export const app = new Elysia()
 			},
 		}),
 	)
-	.use(apiRouter)
-	.get("/permissions", async (_) => {
+	.use(apiRouter);
+
+app.get("/permissions", async (_) => {
+	return {
+		success: true,
+		message: "Permissions fetched successfully",
+		data: getPermissionsGrouped(),
+		timestamp: Date.now(),
+	};
+});
+
+app.get("/route-permissions", async (_ctx) => {
+	const permissions = (app as AnyElysia).routes.map((route) => {
+		// Extract roleAuth from hooks
 		return {
-			success: true,
-			message: "Permissions fetched successfully",
-			data: getPermissionsGrouped(),
-			timestamp: Date.now(),
-		};
-	})
-	.get("/route-permissions", async (ctx: any) => {
-		const permissions = (ctx.app as any).routes.map((route: any) => {
-			// Extract roleAuth from hooks
-			return {
-				method: route.method,
-				path: route.path,
-				permission: (route.hooks.detail as any)?.["x-permission"],
-			};
-		});
-		return {
-			success: true,
-			message: "Route permissions fetched successfully",
-			data: permissions,
-			timestamp: Date.now(),
+			method: route.method,
+			path: route.path,
+			permission: (route.hooks.detail as { "x-permission"?: string } | undefined)
+				?.["x-permission"],
 		};
 	});
+	return {
+		success: true,
+		message: "Route permissions fetched successfully",
+		data: permissions,
+		timestamp: Date.now(),
+	};
+});
 
 app.listen(port);
 
@@ -79,3 +82,8 @@ process.on("unhandledRejection", (reason, promise) => {
 export type App = typeof app;
 export * as databaseTypes from "./database/type";
 export * as requestTypes from "./types";
+export {
+	type Permission,
+	type PermissionFilter,
+	PermissionGroupSchema,
+} from "./constants/permissions";

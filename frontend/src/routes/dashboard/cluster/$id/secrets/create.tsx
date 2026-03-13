@@ -28,7 +28,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { api } from "@/lib/api";
+import { api, getEdenErrorMessage } from "@/lib/api";
 
 export const Route = createFileRoute("/dashboard/cluster/$id/secrets/create")({
 	component: CreateSecretPage,
@@ -65,7 +65,7 @@ function CreateSecretPage() {
 			});
 
 			if (res.error) {
-				throw new Error(res.error.value?.message || "Failed to create Secret");
+				throw new Error(getEdenErrorMessage(res.error));
 			}
 
 			return res.data;

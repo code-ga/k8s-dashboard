@@ -12,7 +12,14 @@ export function usePermissions() {
 		queryKey: ["my-permissions"],
 		queryFn: async () => {
 			const res = await api.api.profile["my-permissions"].get();
-			if (res.error) throw new Error(res.error.value.message);
+			if (res.error) {
+				const errorValue = res.error.value;
+				const message =
+					typeof errorValue === "object" && errorValue !== null && "message" in errorValue
+						? (errorValue as { message: string }).message
+						: String(errorValue);
+				throw new Error(message);
+			}
 			return new Set(res.data.data as Permission[]);
 		},
 		staleTime: 5 * 60 * 1000, // 5 minutes

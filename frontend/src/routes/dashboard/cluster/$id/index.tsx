@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { api } from "@/lib/api";
+import { api, getEdenErrorMessage } from "@/lib/api";
 import { BACKEND_URL } from "../../../../constants";
 import { usePermissions } from "@/hooks/use-permissions";
 
@@ -66,9 +66,8 @@ function ClusterOverview() {
 				acmeEmail,
 			});
 			if (res.error) {
-				throw new Error(
-					res.error.value?.message || "Failed to update ACME email",
-				);
+				const message = getEdenErrorMessage(res.error);
+				throw new Error(message);
 			}
 			return res.data;
 		},

@@ -20,7 +20,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Plus, Shield, Check, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { useState } from "react";
 import { usePermissions } from "@/hooks/use-permissions";
 
 export const Route = createFileRoute("/dashboard/roles")({
@@ -35,14 +34,23 @@ function RolesPage() {
 		queryKey: ["roles"],
 		queryFn: async () => {
 			const res = await api.api.role.get();
-			if (res.error) throw new Error(res.error.value.message);
+			if (res.error) {
+				const errorValue = res.error.value;
+				const message =
+					typeof errorValue === "object" && errorValue !== null && "message" in errorValue
+						? (errorValue as { message: string }).message
+						: String(errorValue);
+				throw new Error(message);
+			}
 			return res.data.data;
 		},
 	});
 
 	const setDefaultMutation = useMutation({
-		mutationFn: async (id: number) => {
-			const res = await api.api.role["set-default"].post({ id });
+		mutationFn: async (id: number | string) => {
+			const res = await api.api.role({ id: String(id) })["set-default"].patch({
+				isDefault: true,
+			});
 			if (res.error) throw new Error(String(res.error.value));
 			return res.data;
 		},

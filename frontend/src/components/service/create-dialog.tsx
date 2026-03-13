@@ -88,9 +88,7 @@ export function CreateServiceDialog({
 				});
 
 			if (res.error) {
-				throw new Error(
-					(res.error.value as any)?.message || "Failed to create service",
-				);
+				throw new Error(res.error.value?.message || "Failed to create service");
 			}
 
 			return res.data;

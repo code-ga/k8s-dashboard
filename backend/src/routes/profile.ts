@@ -1,5 +1,5 @@
 import { Type } from "@sinclair/typebox";
-import { eq, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import Elysia from "elysia";
 import { db } from "../database";
 import { schema } from "../database/schema";

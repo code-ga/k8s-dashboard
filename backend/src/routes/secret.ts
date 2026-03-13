@@ -404,10 +404,12 @@ export const secretRoute = new Elysia({
 							data: null,
 							timestamp: Date.now(),
 						});
-					} catch (e: any) {
+					} catch (e) {
+						logger.error("Failed to delete secret:", e);
+						const message = e instanceof Error ? e.message : String(e);
 						return ctx.status(500, {
 							success: false,
-							message: `Failed to delete secret: ${e.message}`,
+							message: `Failed to delete secret: ${message}`,
 							timestamp: Date.now(),
 						});
 					}

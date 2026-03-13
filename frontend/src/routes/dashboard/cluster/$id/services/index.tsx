@@ -56,7 +56,9 @@ export const Route = createFileRoute("/dashboard/cluster/$id/services/")({
 	component: ClusterServices,
 });
 
-type Service = SchemaStatic<databaseTypes.databaseTypes["k8sServices"]>;
+type Service = SchemaStatic<databaseTypes.databaseTypes["k8sServices"]> & {
+	ingresses?: SchemaStatic<databaseTypes.databaseTypes["k8sIngresses"]>[];
+};
 
 function ExposureDialog({
 	service,
@@ -70,20 +72,19 @@ function ExposureDialog({
 	const { can } = usePermissions();
 
 	// Find if there is an existing ingress for this service
-	const ingress = (service as any).ingresses?.[0];
+	const ingress = service.ingresses?.[0];
 
 	const form = useForm({
 		defaultValues: {
 			protocol: (ingress?.protocol as "http" | "tcp" | "udp") || "http",
 			domain: ingress?.domain || "",
-			internalPort:
-				ingress?.internalPort || (service.ports as any[])?.[0]?.port || 80,
+			internalPort: ingress?.internalPort || (service.ports as any[])?.[0]?.port || 80,
 		},
 	});
 
 	const exposeMutation = useMutation({
 		mutationFn: async (values: any) => {
-			const res = await (api.api.ingresses as any)({ clusterId }).expose.post({
+			const res = await api.api.ingresses({ clusterId }).expose.post({
 				serviceName: service.name,
 				namespace: service.namespace,
 				protocol: values.protocol,
@@ -106,14 +107,16 @@ function ExposureDialog({
 	const deExposeMutation = useMutation({
 		mutationFn: async () => {
 			// Find the ingress associated with this service and port
-			const ingress = (service as any).ingresses?.find(
+			const ingress = service.ingresses?.find(
 				(i: any) => i.protocol === form.getValues().protocol,
 			);
 			if (!ingress) throw new Error("No matching ingress found to delete");
 
-			const res = await (api.api.ingresses as any)({ clusterId })({
-				id: String(ingress.id),
-			}).delete();
+			const res = await api.api
+				.ingresses({ clusterId })({
+					id: String(ingress.id),
+				})
+				.delete();
 			if (res.error) throw res.error;
 			return res.data;
 		},
@@ -236,7 +239,9 @@ function ExposureDialog({
 									De-expose
 								</Button>
 							)}
-							{(can("ingress:create") || can("ingress:manage") || (ingress && can("ingress:update"))) && (
+							{(can("ingress:create") ||
+								can("ingress:manage") ||
+								(ingress && can("ingress:update"))) && (
 								<Button type="submit" disabled={exposeMutation.isPending}>
 									{ingress ? "Update" : "Expose"}
 								</Button>
@@ -376,7 +381,9 @@ function ClusterServices() {
 												<Button
 													variant="ghost"
 													size="icon"
-													disabled={!can("service:read") && !can("service:manage")}
+													disabled={
+														!can("service:read") && !can("service:manage")
+													}
 												>
 													<Eye className="h-4 w-4" />
 												</Button>

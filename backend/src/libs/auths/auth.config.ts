@@ -5,7 +5,6 @@ import { FRONTEND_URLs } from "../../constants";
 import { db } from "../../database";
 import {
 	account,
-	schema,
 	session,
 	user,
 	verification,

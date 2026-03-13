@@ -73,9 +73,7 @@ export function ExposeDialog({
 				});
 
 			if (res.error) {
-				throw new Error(
-					(res.error.value as any)?.message || "Failed to expose service",
-				);
+				throw new Error(res.error.value?.message || "Failed to expose service");
 			}
 
 			return res.data;

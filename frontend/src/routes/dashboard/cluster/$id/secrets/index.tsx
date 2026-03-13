@@ -27,7 +27,7 @@ function ClusterSecrets() {
 			if (res.error) throw res.error;
 			if (!res.data.data)
 				throw new Error(res.data.message || "Failed to fetch secrets");
-			return res.data.data as any[];
+			return res.data.data;
 		},
 	});
 

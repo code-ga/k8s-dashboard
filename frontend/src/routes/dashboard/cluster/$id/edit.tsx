@@ -14,7 +14,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { api } from "@/lib/api";
+import { api, getEdenErrorMessage } from "@/lib/api";
 import { usePermissions } from "@/hooks/use-permissions";
 
 export const Route = createFileRoute("/dashboard/cluster/$id/edit")({
@@ -57,9 +57,9 @@ function EditCluster() {
 					.filter(Boolean),
 				enableS3Service: values.enableS3Service,
 				acmeEmail: values.acmeEmail || null,
-			} as any);
+			});
 			if (res.error) {
-				throw new Error(res.error.value?.message || "Failed to update cluster");
+				throw new Error(getEdenErrorMessage(res.error));
 			}
 			return res.data;
 		},
@@ -297,7 +297,9 @@ function EditCluster() {
 								{([canSubmit, isSubmitting]) => (
 									<Button
 										type="submit"
-										disabled={!canSubmit || isSubmitting || !can("cluster:manage")}
+										disabled={
+											!canSubmit || isSubmitting || !can("cluster:manage")
+										}
 										className="gap-2"
 									>
 										<Save className="h-4 w-4" />

@@ -21,7 +21,7 @@ import type { EnvVar } from "@/components/shared/env-editor";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { api } from "@/lib/api";
+import { api, getEdenErrorMessage } from "@/lib/api";
 
 export const Route = createFileRoute(
 	"/dashboard/cluster/$id/secrets/$secretId",
@@ -91,7 +91,7 @@ function ManageSecretPage() {
 				labels: labelData,
 			});
 			if (res.error) {
-				throw new Error(res.error.value?.message || "Failed to update secret");
+				throw new Error(getEdenErrorMessage(res.error));
 			}
 			return res.data;
 		},
@@ -141,7 +141,7 @@ function ManageSecretPage() {
 				.secrets({ clusterId })({ id: secretId })
 				.delete();
 			if (res.error) {
-				throw new Error(res.error.value?.message || "Failed to delete secret");
+				throw new Error(getEdenErrorMessage(res.error));
 			}
 			return res.data;
 		},

@@ -1,4 +1,3 @@
-import { logger } from "../utils/logger";
 import { Type } from "@sinclair/typebox";
 import { eq } from "drizzle-orm";
 import { Elysia } from "elysia";
@@ -11,6 +10,7 @@ import { agentManagerService } from "../services/agentManager";
 import { scalingController } from "../services/scaling.controller";
 import { baseResponseSchema, errorResponseSchema } from "../types";
 import { generateServiceManifest } from "../utils/k8s-manifest";
+import { logger } from "../utils/logger";
 
 export const serviceRoute = new Elysia({
 	prefix: "/services/:clusterId",
@@ -48,7 +48,7 @@ export const serviceRoute = new Elysia({
 				},
 				{
 					detail: { tags: ["Services"] },
-					roleAuth: "service:manage" as any,
+					roleAuth: "service:manage",
 					response: {
 						200: baseResponseSchema(
 							Type.Array(Type.Object(dbSchemaTypes.k8sServices)),
@@ -87,7 +87,7 @@ export const serviceRoute = new Elysia({
 				},
 				{
 					detail: { tags: ["Services"] },
-					roleAuth: "service:read" as any,
+					roleAuth: "service:read",
 					response: {
 						200: baseResponseSchema(
 							Type.Array(
@@ -116,11 +116,10 @@ export const serviceRoute = new Elysia({
 					}
 
 					// Logic to check if user can see this service
+					const userPermissions = ctx.userPermissions as Set<string>;
 					const isManager =
-						((ctx as any).userPermissions as any).has(
-							"service:manage" as any,
-						) ||
-						((ctx as any).userPermissions as any).has("service:read" as any);
+						userPermissions.has("service:manage") ||
+						userPermissions.has("service:read");
 
 					const service = await db.query.k8sServices.findFirst({
 						where: isManager
@@ -150,7 +149,7 @@ export const serviceRoute = new Elysia({
 				},
 				{
 					detail: { tags: ["Services"] },
-					roleAuth: "service:read" as any,
+					roleAuth: "service:read",
 					response: {
 						200: baseResponseSchema(
 							Type.Object({
@@ -210,11 +209,13 @@ export const serviceRoute = new Elysia({
 								timestamp: Date.now(),
 							});
 						}
-					} catch (dbError: any) {
+					} catch (dbError) {
 						logger.error("DB Insert Failed:", dbError);
+						const message =
+							dbError instanceof Error ? dbError.message : String(dbError);
 						return ctx.status(500, {
 							success: false,
-							message: `Database error: ${dbError.message}`,
+							message: `Database error: ${message}`,
 							timestamp: Date.now(),
 						});
 					}
@@ -243,7 +244,8 @@ export const serviceRoute = new Elysia({
 							data: newSvc,
 							timestamp: Date.now(),
 						});
-					} catch (error: any) {
+					} catch (error) {
+						logger.error("Agent Command Failed:", error);
 						return ctx.status(200, {
 							success: true,
 							message:
@@ -255,7 +257,7 @@ export const serviceRoute = new Elysia({
 				},
 				{
 					detail: { tags: ["Services"] },
-					roleAuth: "service:create" as any,
+					roleAuth: "service:create",
 					body: Type.Object({
 						name: Type.String(),
 						namespace: Type.String(),
@@ -347,10 +349,13 @@ export const serviceRoute = new Elysia({
 							data: service,
 							timestamp: Date.now(),
 						});
-					} catch (error: any) {
+					} catch (error) {
+						logger.error("Agent Delete Command Failed:", error);
+						const message =
+							error instanceof Error ? error.message : String(error);
 						return ctx.status(500, {
 							success: false,
-							message: `Agent error: ${error.message}`,
+							message: `Agent error: ${message}`,
 							timestamp: Date.now(),
 						});
 					}
@@ -377,17 +382,20 @@ export const serviceRoute = new Elysia({
 							message: "Deployment waking up",
 							timestamp: Date.now(),
 						});
-					} catch (error: any) {
+					} catch (error) {
+						logger.error("Wake up Failed:", error);
+						const message =
+							error instanceof Error ? error.message : String(error);
 						return ctx.status(500, {
 							success: false,
-							message: `Wake up error: ${error.message}`,
+							message: `Wake up error: ${message}`,
 							timestamp: Date.now(),
 						});
 					}
 				},
 				{
 					detail: { tags: ["Services"] },
-					roleAuth: "service:read" as any, // wake requires read at least, or maybe manage?
+					roleAuth: "service:read", // wake requires read at least, or maybe manage?
 					params: Type.Object({
 						clusterId: Type.String(),
 						deploymentId: Type.String(),

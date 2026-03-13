@@ -121,20 +121,8 @@ export interface PermissionGroup {
 }
 
 // typebox of permissions for route definitions
-
-const resourceKeys = Object.keys(RESOURCE_DEFINITIONS);
-
-export const ResourceKeySchema = Type.Union(
-	resourceKeys.map((r) => Type.Literal(r)),
-);
-const permissionLiterals = Object.entries(RESOURCE_DEFINITIONS).flatMap(
-	([resource, def]) =>
-		Object.keys(def.actions).map((action) => `${resource}:${action}`),
-);
-
-export const PermissionSchema = Type.Union(
-	permissionLiterals.map((p) => Type.Literal(p)),
-);
+export const ResourceKeySchema = Type.String();
+export const PermissionSchema = Type.String();
 export const PermissionMetaSchema = Type.Object({
 	id: PermissionSchema,
 	resource: ResourceKeySchema,

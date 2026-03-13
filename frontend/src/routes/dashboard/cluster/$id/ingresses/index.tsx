@@ -31,7 +31,7 @@ function ClusterIngresses() {
 	const { data: ingresses, isLoading } = useQuery({
 		queryKey: ["ingresses", id],
 		queryFn: async () => {
-			const res = await (api.api.ingresses as any)({ clusterId: id }).get();
+			const res = await api.api.ingresses({ clusterId: id }).get();
 			if (res.error) throw res.error;
 			if (!res.data.data)
 				throw new Error(res.data.message || "Failed to fetch ingresses");
@@ -41,9 +41,11 @@ function ClusterIngresses() {
 
 	const deleteMutation = useMutation({
 		mutationFn: async (ingressId: number) => {
-			const res = await (api.api.ingresses as any)({ clusterId: id })({
-				id: String(ingressId),
-			}).delete();
+			const res = await api.api
+				.ingresses({ clusterId: id })({
+					id: String(ingressId),
+				})
+				.delete();
 			if (res.error) throw res.error;
 			return res.data;
 		},
@@ -137,7 +139,9 @@ function ClusterIngresses() {
 												<Button
 													variant="ghost"
 													size="icon"
-													disabled={!can("ingress:read") && !can("ingress:manage")}
+													disabled={
+														!can("ingress:read") && !can("ingress:manage")
+													}
 												>
 													<Settings className="h-4 w-4" />
 												</Button>

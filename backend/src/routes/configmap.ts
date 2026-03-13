@@ -414,10 +414,12 @@ export const configmapRoute = new Elysia({
 							data: null,
 							timestamp: Date.now(),
 						});
-					} catch (e: any) {
+					} catch (e) {
+						logger.error("Failed to delete ConfigMap:", e);
+						const message = e instanceof Error ? e.message : String(e);
 						return ctx.status(500, {
 							success: false,
-							message: `Failed to delete ConfigMap: ${e.message}`,
+							message: `Failed to delete ConfigMap: ${message}`,
 							timestamp: Date.now(),
 						});
 					}

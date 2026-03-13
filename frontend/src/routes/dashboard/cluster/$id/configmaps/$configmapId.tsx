@@ -12,7 +12,7 @@ import type { EnvVar } from "@/components/shared/env-editor";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { api } from "@/lib/api";
+import { api, getEdenErrorMessage } from "@/lib/api";
 
 export const Route = createFileRoute(
 	"/dashboard/cluster/$id/configmaps/$configmapId",
@@ -41,7 +41,7 @@ function ManageConfigMapPage() {
 			if (res.error) throw res.error;
 			if (!res.data.data)
 				throw new Error(res.data.message || "Failed to fetch config map");
-			return res.data.data as any;
+			return res.data.data;
 		},
 	});
 
@@ -92,9 +92,7 @@ function ManageConfigMapPage() {
 					labels: labelData,
 				});
 			if (res.error) {
-				throw new Error(
-					res.error.value?.message || "Failed to update config map",
-				);
+				throw new Error(getEdenErrorMessage(res.error));
 			}
 			return res.data;
 		},
@@ -150,9 +148,7 @@ function ManageConfigMapPage() {
 				.configmaps({ clusterId })({ id: configmapId })
 				.delete();
 			if (res.error) {
-				throw new Error(
-					res.error.value?.message || "Failed to delete config map",
-				);
+				throw new Error(getEdenErrorMessage(res.error));
 			}
 			return res.data;
 		},

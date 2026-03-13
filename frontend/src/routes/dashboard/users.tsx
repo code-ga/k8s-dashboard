@@ -1,4 +1,3 @@
-import type { Static } from "@sinclair/typebox";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import {
@@ -15,7 +14,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { api } from "@/lib/api";
+import { api, getEdenErrorMessage } from "@/lib/api";
 import { toast } from "sonner";
 import { usePermissions } from "@/hooks/use-permissions";
 import { RoleBadge } from "@/components/RoleBadge";
@@ -32,7 +31,9 @@ function UserManagement() {
 		queryKey: ["users"],
 		queryFn: async () => {
 			const res = await api.api.profile["list-user"].get();
-			if (res.error) throw new Error(res.error.value.message);
+			if (res.error) {
+				throw new Error(getEdenErrorMessage(res.error));
+			}
 			return res.data.data;
 		},
 	});
@@ -41,8 +42,10 @@ function UserManagement() {
 	const { data: availableRoles } = useQuery({
 		queryKey: ["available-roles"],
 		queryFn: async () => {
-			const res = await api.api.role.available.get();
-			if (res.error) throw new Error(res.error.value.message);
+			const res = await api.api.role.get();
+			if (res.error) {
+				throw new Error(getEdenErrorMessage(res.error));
+			}
 			return res.data.data;
 		},
 	});
@@ -59,7 +62,7 @@ function UserManagement() {
 				userId,
 				roleIds: [roleId],
 			});
-			if (res.error) throw new Error(String(res.error.value));
+			if (res.error) throw new Error(getEdenErrorMessage(res.error));
 			return res.data;
 		},
 		onSuccess: () => {
@@ -83,7 +86,7 @@ function UserManagement() {
 				userId,
 				roleIds: [roleId],
 			});
-			if (res.error) throw new Error(String(res.error.value));
+			if (res.error) throw new Error(getEdenErrorMessage(res.error));
 			return res.data;
 		},
 		onSuccess: () => {
@@ -107,7 +110,7 @@ function UserManagement() {
 			</div>
 
 			<div className="grid gap-4">
-				{users?.map((user) => (
+				{users?.map((user: any) => (
 					<Card key={user.userId}>
 						<CardHeader className="pb-2">
 							<CardTitle>{user.username}</CardTitle>
@@ -116,7 +119,7 @@ function UserManagement() {
 						<CardContent>
 							<div className="flex flex-wrap gap-2 items-center">
 								<span className="text-sm font-medium mr-2">Assigned Roles:</span>
-								{user.rolesIDs.map((roleId) => (
+								{user.rolesIDs.map((roleId: string) => (
 									<RoleBadge
 										key={roleId}
 										roleId={roleId}

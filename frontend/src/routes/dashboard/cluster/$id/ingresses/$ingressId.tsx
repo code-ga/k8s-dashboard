@@ -27,9 +27,11 @@ function IngressDetailPage() {
 	const { data: ingress, isLoading } = useQuery({
 		queryKey: ["ingress", id, ingressId],
 		queryFn: async () => {
-			const res = await (api.api.ingresses as any)({ clusterId: id })({
-				id: ingressId,
-			}).get();
+			const res = await api.api
+				.ingresses({ clusterId: id })({
+					id: ingressId,
+				})
+				.get();
 			if (res.error) throw res.error;
 			if (!res.data.data)
 				throw new Error(res.data.message || "Failed to fetch ingress");
@@ -39,9 +41,11 @@ function IngressDetailPage() {
 
 	const deleteMutation = useMutation({
 		mutationFn: async () => {
-			const res = await (api.api.ingresses as any)({ clusterId: id })({
-				id: ingressId,
-			}).delete();
+			const res = await api.api
+				.ingresses({ clusterId: id })({
+					id: ingressId,
+				})
+				.delete();
 			if (res.error) throw res.error;
 			return res.data;
 		},
@@ -148,7 +152,7 @@ function IngressDetailPage() {
 									id,
 									serviceId: ingress.serviceId
 										? ingress.serviceId.toString()
-										: ingress.serviceName, // Fallback if ID is missing (though backend sends it)
+										: ingress.serviceName || "", // Fallback if ID is missing (though backend sends it)
 								}}
 							>
 								<Button variant="outline" size="sm">

@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { api } from "@/lib/api";
+import { api, getEdenErrorMessage } from "@/lib/api";
 
 export const Route = createFileRoute(
 	"/dashboard/cluster/$id/configmaps/create",
@@ -58,9 +58,8 @@ function CreateConfigMapPage() {
 			});
 
 			if (res.error) {
-				throw new Error(
-					res.error.value?.message || "Failed to create ConfigMap",
-				);
+				const message = getEdenErrorMessage(res.error);
+				throw new Error(message);
 			}
 
 			return res.data;

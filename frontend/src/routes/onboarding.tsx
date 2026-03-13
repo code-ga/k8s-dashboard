@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { api } from "@/lib/api";
+import { api, getEdenErrorMessage } from "@/lib/api";
 import { authClient } from "@/lib/auth";
 import { Loader2, UserCircle } from "lucide-react";
 
@@ -32,7 +32,7 @@ function OnboardingPage() {
 		mutationFn: async (username: string) => {
 			const res = await api.api.profile.post({ username });
 			if (res.error) {
-				throw new Error(res.error.value?.message || "Failed to create profile");
+				throw new Error(getEdenErrorMessage(res.error));
 			}
 			return res.data;
 		},

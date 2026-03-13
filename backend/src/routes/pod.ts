@@ -1,5 +1,4 @@
 import { logger } from "../utils/logger";
-/** biome-ignore-all lint/suspicious/noExplicitAny: <explanation> */
 import { Type } from "@sinclair/typebox";
 import { eq, type InferInsertModel } from "drizzle-orm";
 import { Elysia } from "elysia";
@@ -367,11 +366,12 @@ export const podRoute = new Elysia({
 							configMapRefs: body.configMapRefs,
 							secretRefs: body.secretRefs,
 						});
-					} catch (dbError: any) {
+					} catch (dbError) {
 						logger.error("DB Insert Failed:", dbError);
+						const message = dbError instanceof Error ? dbError.message : String(dbError);
 						return ctx.status(500, {
 							success: false,
-							message: `Database error: ${dbError.message}`,
+							message: `Database error: ${message}`,
 							timestamp: Date.now(),
 						});
 					}
@@ -381,7 +381,6 @@ export const podRoute = new Elysia({
 						if (!newPod) {
 							throw new Error("Pod not created");
 						}
-						const bodyAny = body;
 						const manifest = generatePodManifest({
 							name: body.name,
 							namespace: body.namespace,
@@ -392,8 +391,8 @@ export const podRoute = new Elysia({
 							ports: body.ports,
 							resources: body.resources,
 							labels: body.labels,
-							configMapRefs: bodyAny.configMapRefs,
-							secretRefs: bodyAny.secretRefs,
+							configMapRefs: body.configMapRefs,
+							secretRefs: body.secretRefs,
 						});
 
 						const response = await ctx.agentManager.sendCommand(
@@ -414,7 +413,7 @@ export const podRoute = new Elysia({
 							data: { ...newPod, agentResponse: response.data },
 							timestamp: Date.now(),
 						});
-					} catch (agentError: any) {
+					} catch (agentError) {
 						logger.error("Agent Command Failed:", agentError);
 						return ctx.status(200, {
 							success: true,
@@ -614,7 +613,7 @@ export const podRoute = new Elysia({
 							data: pod,
 							timestamp: Date.now(),
 						});
-					} catch (error: any) {
+					} catch (error) {
 						logger.error("Agent Delete Command Failed:", error);
 						// If sendCommand failed, DB already has status 'Terminating'
 						// Dashboard will show it as terminating and sync will eventually catch up
@@ -677,8 +676,7 @@ export const podRoute = new Elysia({
 					}
 
 					// Update DB record
-					const bodyAny = body;
-					const updateData: any = {
+					const updateData: Partial<InferInsertModel<typeof schema.k8sPods>> = {
 						updatedAt: new Date(),
 					};
 					if (body.image) updateData.dockerImage = body.image;
@@ -711,17 +709,18 @@ export const podRoute = new Elysia({
 							.where(eq(schema.k8sPods.id, podId));
 
 						// Update resource refs in normalized tables if provided
-						if (body.ports || bodyAny.configMapRefs || bodyAny.secretRefs) {
+						if (body.ports || body.configMapRefs || body.secretRefs) {
 							await updateAllPodResourceRefs(podId, body.ports || [], {
-								configMapRefs: bodyAny.configMapRefs,
-								secretRefs: bodyAny.secretRefs,
+								configMapRefs: body.configMapRefs,
+								secretRefs: body.secretRefs,
 							});
 						}
-					} catch (dbError: any) {
+					} catch (dbError) {
 						logger.error("DB Update Failed:", dbError);
+						const message = dbError instanceof Error ? dbError.message : String(dbError);
 						return ctx.status(500, {
 							success: false,
-							message: `Database update failed: ${dbError.message}`,
+							message: `Database update failed: ${message}`,
 							timestamp: Date.now(),
 						});
 					}
@@ -759,7 +758,7 @@ export const podRoute = new Elysia({
 							data: response.data,
 							timestamp: Date.now(),
 						});
-					} catch (error: any) {
+					} catch (error) {
 						logger.error("Agent Update Command Failed:", error);
 						return ctx.status(200, {
 							success: true,
@@ -981,9 +980,10 @@ export const podRoute = new Elysia({
 							podId: Number(podId),
 							agentId: Number(cluster.agent.id),
 						});
-					} catch (e: any) {
+					} catch (e) {
 						logger.info("Error starting stream:", e);
-						ws.send(`Error starting stream: ${e.message}`);
+						const message = e instanceof Error ? e.message : String(e);
+						ws.send(`Error starting stream: ${message}`);
 						ws.close();
 						return;
 					}
@@ -1081,9 +1081,10 @@ export const podRoute = new Elysia({
 							podId: Number(podId),
 							agentId: Number(cluster.agent.id),
 						});
-					} catch (e: any) {
+					} catch (e) {
 						logger.info("Error starting stream:", e);
-						ws.send(`Error starting stream: ${e.message}`);
+						const message = e instanceof Error ? e.message : String(e);
+						ws.send(`Error starting stream: ${message}`);
 						ws.close();
 					}
 				},

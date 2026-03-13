@@ -19,7 +19,7 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { api, type databaseTypes, type SchemaStatic } from "@/lib/api";
+import { api, getEdenErrorMessage, type databaseTypes, type SchemaStatic } from "@/lib/api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
 	createFileRoute,
@@ -239,9 +239,8 @@ function ManageDeploymentPage() {
 					ports: ports.length > 0 ? ports : undefined,
 				});
 			if (res.error) {
-				throw new Error(
-					res.error.value?.message || "Failed to update deployment",
-				);
+				const message = getEdenErrorMessage(res.error);
+				throw new Error(message);
 			}
 			return res.data;
 		},
@@ -263,9 +262,8 @@ function ManageDeploymentPage() {
 				.deployments({ clusterId })({ id: deploymentId.toString() })
 				.delete();
 			if (res.error) {
-				throw new Error(
-					res.error.value?.message || "Failed to delete deployment",
-				);
+				const message = getEdenErrorMessage(res.error);
+				throw new Error(message);
 			}
 			return res.data;
 		},

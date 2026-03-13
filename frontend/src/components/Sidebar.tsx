@@ -170,7 +170,7 @@ export function Sidebar({ role, className }: SidebarProps) {
 						return (
 							<Link
 								key={link.to}
-								to={link.to as any}
+								to={link.to}
 								className={cn(
 									"flex items-center gap-3 rounded-lg px-3 py-2.5 transition-all duration-200 group",
 									isActive

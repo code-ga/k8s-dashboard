@@ -65,7 +65,7 @@ export function BreadcrumbNav() {
 									</span>
 								) : (
 									<Link
-										to={url as any}
+										to={url}
 										className="hover:text-foreground transition-colors truncate max-w-[100px] block"
 									>
 										{label}

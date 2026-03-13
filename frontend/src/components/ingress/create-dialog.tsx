@@ -85,9 +85,10 @@ export function CreateIngressDialog({
 				});
 
 			if (res.error) {
-				throw new Error(
-					(res.error.value as any)?.message || "Failed to create ingress",
-				);
+				if (typeof res.error.value === "string") {
+					throw new Error(res.error.value);
+				}
+				throw new Error(res.error.value?.message || "Failed to create ingress");
 			}
 
 			return res.data;

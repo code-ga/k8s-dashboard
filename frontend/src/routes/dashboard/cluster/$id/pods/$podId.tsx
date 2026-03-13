@@ -23,7 +23,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { api, type databaseTypes, type SchemaStatic } from "@/lib/api";
+import { api, getEdenErrorMessage, type databaseTypes, type SchemaStatic } from "@/lib/api";
 import "xterm/css/xterm.css";
 import { BACKEND_URL } from "../../../../../constants";
 import { logger } from "../../../../../lib/logger";
@@ -143,7 +143,7 @@ function ManagePodPage() {
 				.pods({ clusterId })({ id: podId.toString() })
 				.delete();
 			if (res.error) {
-				throw new Error(res.error.value?.message || "Failed to delete pod");
+				throw new Error(getEdenErrorMessage(res.error));
 			}
 			return res.data;
 		},
@@ -215,7 +215,7 @@ function ManagePodPage() {
 					ports: ports.length > 0 ? ports : undefined,
 				});
 			if (res.error) {
-				throw new Error(res.error.value?.message || "Failed to update pod");
+				throw new Error(getEdenErrorMessage(res.error));
 			}
 			return res.data;
 		},

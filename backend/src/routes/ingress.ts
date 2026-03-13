@@ -20,7 +20,15 @@ const ingressWithServiceSchema = Type.Object({
 	service: Type.Union([
 		Type.Object({
 			...dbSchemaTypes.k8sServices,
-			ports: Type.Any(),
+			ports: Type.Array(
+				Type.Object({
+					port: Type.Number(),
+					targetPort: Type.Number(),
+					nodePort: Type.Optional(Type.Number()),
+					protocol: Type.Optional(Type.Union([Type.Literal("TCP"), Type.Literal("UDP")])),
+					name: Type.Optional(Type.String()),
+				}),
+			),
 		}),
 		Type.Null(),
 	]),
@@ -68,8 +76,8 @@ export const ingressRoute = new Elysia({
 					const { clusterId, id } = ctx.params;
 					// Check authorization: user must be manager or ingress owner
 					const isManager =
-						(ctx as any).userPermissions.has("ingress:manage") ||
-						(ctx as any).userPermissions.has("ingress:read");
+						ctx.userPermissions.has("ingress:manage") ||
+						ctx.userPermissions.has("ingress:read");
 					const ingress = await db.query.k8sIngresses.findFirst({
 						where: isManager
 							? { id: Number(id), clusterId: Number(clusterId) }
@@ -302,6 +310,7 @@ export const ingressRoute = new Elysia({
 								serviceName: body.serviceName,
 								domain: body.domain,
 								port: externalPort,
+								internalPort: body.internalPort,
 								protocol: body.protocol,
 								updatedAt: new Date(),
 								serviceId: serviceId,

@@ -22,7 +22,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { api } from "@/lib/api";
+import { api, getEdenErrorMessage } from "@/lib/api";
 import RefsEditor, {
 	type IConfigMapEnvFromRef,
 	type IConfigMapEnvRef,
@@ -161,9 +161,7 @@ function CreateDeploymentPage() {
 			});
 
 			if (res.error) {
-				throw new Error(
-					res.error.value?.message || "Failed to create deployment",
-				);
+				throw new Error(getEdenErrorMessage(res.error));
 			}
 
 			return res.data;
@@ -174,9 +172,6 @@ function CreateDeploymentPage() {
 				to: `/dashboard/cluster/$id/deployments`,
 				params: { id: clusterId },
 			});
-		},
-		onError: (error) => {
-			toast.error(error.message);
 		},
 	});
 

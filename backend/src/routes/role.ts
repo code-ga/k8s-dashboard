@@ -1,7 +1,11 @@
 import { Type } from "@sinclair/typebox";
 import { eq, inArray } from "drizzle-orm";
 import { Elysia } from "elysia";
-import { getPermissionsGrouped } from "../constants/permissions";
+import {
+	type Permission,
+	PermissionGroupSchema,
+	getPermissionsGrouped,
+} from "../constants/permissions";
 import { db } from "../database";
 import { schema } from "../database/schema";
 import { dbSchemaTypes } from "../database/type";
@@ -85,7 +89,7 @@ export const roleRoute = new Elysia({ prefix: "/role" })
 							}
 							// check does permission have in both user permissions and predefined permissions
 							const userRequestedPermission = ctx.userPermissions.has(
-								perm as any,
+								perm as Permission,
 							);
 							if (!userRequestedPermission) {
 								return ctx.status(403, {
@@ -213,7 +217,7 @@ export const roleRoute = new Elysia({ prefix: "/role" })
 								}
 								// check does permission have in both user permissions and predefined permissions
 								const userRequestedPermission = ctx.userPermissions.has(
-									perm as any,
+									perm as Permission,
 								);
 								if (!userRequestedPermission) {
 									return ctx.status(403, {
@@ -358,7 +362,7 @@ export const roleRoute = new Elysia({ prefix: "/role" })
 					{
 						roleAuth: "role:read",
 						response: {
-							200: baseResponseSchema(Type.Array(Type.Any())),
+							200: baseResponseSchema(Type.Array(PermissionGroupSchema)),
 							404: errorResponseSchema,
 						},
 					},

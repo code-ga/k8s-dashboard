@@ -21,7 +21,7 @@ export const authenticationMiddleware = new Elysia({
 				headers,
 			});
 
-			if (!session) return status(401);
+			if (!session) return status(401, { success: false, message: "Unauthorized" });
 			const profile = await db.query.profile.findFirst({
 				where: {
 					userId: session.user.id,
@@ -42,7 +42,7 @@ export const authenticationMiddleware = new Elysia({
 			const authenticationHeader = headers.get("Authorization");
 			logger.info("Authentication header: ", authenticationHeader);
 			if (!authenticationHeader || !authenticationHeader.startsWith("Bot ")) {
-				return status(401);
+				return status(401, { success: false, message: "Unauthorized" });
 			}
 			const token = authenticationHeader.replace("Bot ", "").trim();
 			logger.info("Received token: ", token);
@@ -54,7 +54,7 @@ export const authenticationMiddleware = new Elysia({
 
 			if (agent.length === 0 || !agent[0]) {
 				logger.info("Agent not found");
-				return status(401);
+				return status(401, { success: false, message: "Unauthorized" });
 			}
 			const cluster = await db
 				.select()
@@ -63,7 +63,7 @@ export const authenticationMiddleware = new Elysia({
 				.limit(1);
 			if (cluster.length === 0 || !cluster[0]) {
 				logger.info("Cluster not found");
-				return status(401);
+				return status(401, { success: false, message: "Unauthorized" });
 			}
 			return {
 				agent: agent[0],
@@ -74,16 +74,16 @@ export const authenticationMiddleware = new Elysia({
 	roleAuth: (filter: PermissionFilter) => ({
 		async resolve({ status, request: { headers } }) {
 			const session = await auth.api.getSession({ headers });
-			if (!session) return status(401);
+			if (!session) return status(401, { success: false, message: "Unauthorized" });
 
 			const profile = await db.query.profile.findFirst({
 				where: { userId: session.user.id },
 			});
-			if (!profile) return status(401);
+			if (!profile) return status(401, { success: false, message: "Unauthorized" });
 
 			const userPermissions = await resolveUserPermissions(profile.rolesIDs);
 			if (!evaluatePermissionFilter(userPermissions, filter))
-				return status(403);
+				return status(403, { success: false, message: "Forbidden" });
 
 			return {
 				user: session.user,

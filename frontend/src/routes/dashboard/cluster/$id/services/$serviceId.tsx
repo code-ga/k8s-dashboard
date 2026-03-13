@@ -26,7 +26,7 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import { api } from "@/lib/api";
+import { api, getEdenErrorMessage } from "@/lib/api";
 
 export const Route = createFileRoute(
 	"/dashboard/cluster/$id/services/$serviceId",
@@ -73,7 +73,7 @@ function ServiceDetailPage() {
 				.services({ clusterId: id })({ id: serviceId })
 				.delete();
 			if (res.error) {
-				throw new Error(res.error.value?.message || "Failed to delete service");
+				throw new Error(getEdenErrorMessage(res.error));
 			}
 			return res.data;
 		},

@@ -216,6 +216,7 @@ import {
 
 function ClusterDeployments() {
 	const { id } = useParams({ from: "/dashboard/cluster/$id/deployments/" });
+	const { can } = usePermissions();
 
 	const { data: deployments, isLoading } = useQuery({
 		queryKey: ["deployments", id],

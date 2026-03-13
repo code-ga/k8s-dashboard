@@ -1,6 +1,6 @@
 // ALERT: user table only for auth, profile table for user data
 
-import { defineRelations, is } from "drizzle-orm";
+import { defineRelations } from "drizzle-orm";
 import {
 	boolean,
 	integer,
@@ -439,6 +439,7 @@ export const k8sIngresses = pgTable(
 		serviceName: text("service_name"),
 		domain: text("domain"),
 		port: integer("port"), // gateway port
+		internalPort: integer("internal_port"), // service port
 		protocol: text("protocol"), // http | tcp | udp
 		path: text("path"),
 		k8sUid: text("k8s_uid"),
