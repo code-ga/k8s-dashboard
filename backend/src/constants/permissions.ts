@@ -206,8 +206,13 @@ export async function resolveUserPermissions(
 		},
 	});
 	const perms = new Set<Permission>();
-	for (const role of roles)
+	for (const role of roles) {
 		for (const p of role.permissions) perms.add(p as Permission);
+		if (role.adminRole) {
+			// Admin role has all permissions
+			getAllPermissions().map((p) => perms.add(p.id));
+		}
+	}
 	return perms;
 }
 
