@@ -23,6 +23,12 @@ export const Route = createFileRoute("/dashboard/users")({
 	component: UserManagement,
 });
 
+interface UserProfile {
+	userId: string;
+	username: string;
+	rolesIDs: string[];
+}
+
 function UserManagement() {
 	const queryClient = useQueryClient();
 	const { can } = usePermissions();
@@ -110,7 +116,7 @@ function UserManagement() {
 			</div>
 
 			<div className="grid gap-4">
-				{users?.map((user: any) => (
+				{users?.map((user: UserProfile) => (
 					<Card key={user.userId}>
 						<CardHeader className="pb-2">
 							<CardTitle>{user.username}</CardTitle>
@@ -127,6 +133,7 @@ function UserManagement() {
 									>
 										{can("user:manage") && (
 											<button
+												type="button"
 												onClick={() =>
 													removeRoleMutation.mutate({
 														userId: user.userId,
