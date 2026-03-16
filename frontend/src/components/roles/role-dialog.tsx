@@ -107,7 +107,7 @@ export function RoleDialog({ open, onOpenChange, role }: RoleDialogProps) {
 			toast.error(`Failed to create role: ${error.message}`);
 		},
 	});
-
+	
 	const updateMutation = useMutation({
 		mutationFn: async (values: RoleFormValues) => {
 			if (!role) throw new Error("No role to update");

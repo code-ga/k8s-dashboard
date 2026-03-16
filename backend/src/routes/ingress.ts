@@ -25,7 +25,9 @@ const ingressWithServiceSchema = Type.Object({
 					port: Type.Number(),
 					targetPort: Type.Number(),
 					nodePort: Type.Optional(Type.Number()),
-					protocol: Type.Optional(Type.Union([Type.Literal("TCP"), Type.Literal("UDP")])),
+					protocol: Type.Optional(
+						Type.Union([Type.Literal("TCP"), Type.Literal("UDP")]),
+					),
 					name: Type.Optional(Type.String()),
 				}),
 			),

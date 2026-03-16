@@ -94,6 +94,9 @@ Applications are isolated by default. The agent enforces `NetworkPolicies` that 
 ### 3. Pipeline Injection
 When a user deploys via `docker-compose.yml`, the agent parses it and automatically injects `DATABASE_URL` and `S3_BUCKET` environment variables into the containers based on the auto-provisioned resources.
 
+### 4. Persistence for Certificates
+The agent configures Traefik to store its `acme.json` (Let's Encrypt certificates) on a shared PVC with `ReadWriteMany` (RWX) access mode. This ensures that certificate data is shared across multiple nodes and remains persistent across restarts and backups. (Note: Requires a storage class that supports RWX).
+
 ---
 
 ## 📝 License

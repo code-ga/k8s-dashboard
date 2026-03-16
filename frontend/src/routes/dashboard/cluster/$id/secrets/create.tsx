@@ -43,6 +43,27 @@ const secretSchema = z.object({
 	type: z.string(),
 });
 
+/**
+ * CreateSecretPage component for creating a new Kubernetes Secret.
+ *
+ * Manages the creation of a Secret resource with name, namespace, type, and key-value data pairs.
+ * Handles form submission, API communication, and navigation after successful creation.
+ *
+ * @component
+ * @returns {JSX.Element} A page containing:
+ * - Navigation header with back button
+ * - Secret configuration form with fields for name, namespace, and type selection
+ * - Environment variable editor for secret data key-value pairs
+ * - Action buttons for cancellation and submission
+ *
+ * @remarks
+ * - Uses TanStack Router for navigation and route parameters
+ * - Integrates TanStack Form for form state management and validation
+ * - Uses React Query (useMutation) for async API calls
+ * - Display success/error toasts upon completion or failure
+ * - Re-renders occur when: component mounts, route params change, form state updates, dataVars changes, or mutation state changes
+ * - Each function call creates a new component instance; re-renders within the instance lifecycle depend on state/prop changes
+ */
 function CreateSecretPage() {
 	const { id: clusterId } = useParams({
 		from: "/dashboard/cluster/$id/secrets/create",

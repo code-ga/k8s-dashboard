@@ -98,10 +98,7 @@ export const profile = pgTable("profile", {
 	createdAt: timestamp("created_at").defaultNow().notNull(),
 
 	username: text("username").notNull(),
-	rolesIDs: text("roles")
-		.array()
-		.default([])
-		.notNull(), // relation to role table (FKs on arrays not supported by PG directly)
+	rolesIDs: text("roles").array().default([]).notNull(), // relation to role table (FKs on arrays not supported by PG directly)
 
 	isSystemDefault: boolean("is_system_default").default(false).notNull(),
 

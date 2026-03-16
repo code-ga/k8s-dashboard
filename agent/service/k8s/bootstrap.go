@@ -108,7 +108,7 @@ func (kc *K8sClient) EnsureGatewayInstalled() error {
 		"persistence": map[string]interface{}{
 			"enabled":    true,
 			"name":       "data",
-			"accessMode": "ReadWriteOnce",
+			"accessMode": "ReadWriteMany",
 			"size":       "128Mi",
 			"path":       "/data",
 		},
@@ -162,7 +162,7 @@ func (kc *K8sClient) applyK3sTraefikConfig(acmeEmail string) error {
 persistence:
   enabled: true
   name: data
-  accessMode: ReadWriteOnce
+  accessMode: ReadWriteMany
   size: 128Mi
   path: /data
 `, acmeEmail)

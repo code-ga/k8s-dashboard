@@ -23,7 +23,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { api, getEdenErrorMessage, type databaseTypes, type SchemaStatic } from "@/lib/api";
+import {
+	api,
+	getEdenErrorMessage,
+	type databaseTypes,
+	type SchemaStatic,
+} from "@/lib/api";
 import "xterm/css/xterm.css";
 import { BACKEND_URL } from "../../../../../constants";
 import { logger } from "../../../../../lib/logger";
@@ -792,9 +797,7 @@ export function PodTerminal({ pod, clusterId, isActive }: PodTerminalProps) {
 
 			// Connect WebSocket
 			const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-			const backendUrl = new URL(
-				`http${protocol.includes("https") ? "s" : ""}://${window.location.host}`,
-			);
+			const backendUrl = new URL(BACKEND_URL);
 			ws = new WebSocket(
 				`${protocol}//${backendUrl.host}/api/pods/${clusterId}/exec/${pod.id}`,
 			);
