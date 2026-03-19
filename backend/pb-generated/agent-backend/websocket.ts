@@ -170,6 +170,7 @@ export interface Deployment {
   memoryLimit: number;
   ports: ContainerPort[];
   annotations: { [key: string]: string };
+  templateAnnotations: { [key: string]: string };
 }
 
 export interface Deployment_LabelsEntry {
@@ -183,6 +184,11 @@ export interface Deployment_SelectorEntry {
 }
 
 export interface Deployment_AnnotationsEntry {
+  key: string;
+  value: string;
+}
+
+export interface Deployment_TemplateAnnotationsEntry {
   key: string;
   value: string;
 }
@@ -1966,6 +1972,7 @@ function createBaseDeployment(): Deployment {
     memoryLimit: 0,
     ports: [],
     annotations: {},
+    templateAnnotations: {},
   };
 }
 
@@ -2024,6 +2031,9 @@ export const Deployment: MessageFns<Deployment> = {
     }
     globalThis.Object.entries(message.annotations).forEach(([key, value]: [string, string]) => {
       Deployment_AnnotationsEntry.encode({ key: key as any, value }, writer.uint32(146).fork()).join();
+    });
+    globalThis.Object.entries(message.templateAnnotations).forEach(([key, value]: [string, string]) => {
+      Deployment_TemplateAnnotationsEntry.encode({ key: key as any, value }, writer.uint32(154).fork()).join();
     });
     return writer;
   },
@@ -2188,6 +2198,17 @@ export const Deployment: MessageFns<Deployment> = {
           }
           continue;
         }
+        case 19: {
+          if (tag !== 154) {
+            break;
+          }
+
+          const entry19 = Deployment_TemplateAnnotationsEntry.decode(reader, reader.uint32());
+          if (entry19.value !== undefined) {
+            message.templateAnnotations[entry19.key] = entry19.value;
+          }
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -2275,6 +2296,23 @@ export const Deployment: MessageFns<Deployment> = {
           {},
         )
         : {},
+      templateAnnotations: isObject(object.templateAnnotations)
+        ? (globalThis.Object.entries(object.templateAnnotations) as [string, any][]).reduce(
+          (acc: { [key: string]: string }, [key, value]: [string, any]) => {
+            acc[key] = globalThis.String(value);
+            return acc;
+          },
+          {},
+        )
+        : isObject(object.template_annotations)
+        ? (globalThis.Object.entries(object.template_annotations) as [string, any][]).reduce(
+          (acc: { [key: string]: string }, [key, value]: [string, any]) => {
+            acc[key] = globalThis.String(value);
+            return acc;
+          },
+          {},
+        )
+        : {},
     };
   },
 
@@ -2352,6 +2390,15 @@ export const Deployment: MessageFns<Deployment> = {
         });
       }
     }
+    if (message.templateAnnotations) {
+      const entries = globalThis.Object.entries(message.templateAnnotations) as [string, string][];
+      if (entries.length > 0) {
+        obj.templateAnnotations = {};
+        entries.forEach(([k, v]) => {
+          obj.templateAnnotations[k] = v;
+        });
+      }
+    }
     return obj;
   },
 
@@ -2402,6 +2449,13 @@ export const Deployment: MessageFns<Deployment> = {
       },
       {},
     );
+    message.templateAnnotations = (globalThis.Object.entries(object.templateAnnotations ?? {}) as [string, string][])
+      .reduce((acc: { [key: string]: string }, [key, value]: [string, string]) => {
+        if (value !== undefined) {
+          acc[key] = globalThis.String(value);
+        }
+        return acc;
+      }, {});
     return message;
   },
 };
@@ -2628,6 +2682,86 @@ export const Deployment_AnnotationsEntry: MessageFns<Deployment_AnnotationsEntry
   },
   fromPartial<I extends Exact<DeepPartial<Deployment_AnnotationsEntry>, I>>(object: I): Deployment_AnnotationsEntry {
     const message = createBaseDeployment_AnnotationsEntry();
+    message.key = object.key ?? "";
+    message.value = object.value ?? "";
+    return message;
+  },
+};
+
+function createBaseDeployment_TemplateAnnotationsEntry(): Deployment_TemplateAnnotationsEntry {
+  return { key: "", value: "" };
+}
+
+export const Deployment_TemplateAnnotationsEntry: MessageFns<Deployment_TemplateAnnotationsEntry> = {
+  encode(message: Deployment_TemplateAnnotationsEntry, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.key !== "") {
+      writer.uint32(10).string(message.key);
+    }
+    if (message.value !== "") {
+      writer.uint32(18).string(message.value);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): Deployment_TemplateAnnotationsEntry {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseDeployment_TemplateAnnotationsEntry();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.key = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.value = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): Deployment_TemplateAnnotationsEntry {
+    return {
+      key: isSet(object.key) ? globalThis.String(object.key) : "",
+      value: isSet(object.value) ? globalThis.String(object.value) : "",
+    };
+  },
+
+  toJSON(message: Deployment_TemplateAnnotationsEntry): unknown {
+    const obj: any = {};
+    if (message.key !== "") {
+      obj.key = message.key;
+    }
+    if (message.value !== "") {
+      obj.value = message.value;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<Deployment_TemplateAnnotationsEntry>, I>>(
+    base?: I,
+  ): Deployment_TemplateAnnotationsEntry {
+    return Deployment_TemplateAnnotationsEntry.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<Deployment_TemplateAnnotationsEntry>, I>>(
+    object: I,
+  ): Deployment_TemplateAnnotationsEntry {
+    const message = createBaseDeployment_TemplateAnnotationsEntry();
     message.key = object.key ?? "";
     message.value = object.value ?? "";
     return message;

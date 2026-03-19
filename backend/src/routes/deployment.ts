@@ -280,6 +280,9 @@ export const deploymentRoute = new Elysia({
 								? parseMemoryStr(body.resources.limits.memory)
 								: 0,
 							annotations: body.annotations ? body.annotations : undefined,
+							templateAnnotations: body.templateAnnotations
+								? body.templateAnnotations
+								: undefined,
 							updatedAt: new Date(),
 						};
 						if (body.isAutoScaling !== undefined)
@@ -341,6 +344,7 @@ export const deploymentRoute = new Elysia({
 							configMapRefs: body.configMapRefs,
 							secretRefs: body.secretRefs,
 							annotations: body.annotations || undefined,
+							templateAnnotations: body.templateAnnotations || undefined,
 						});
 
 						const response = await ctx.agentManager.sendCommand(
@@ -489,6 +493,9 @@ export const deploymentRoute = new Elysia({
 						annotations: Type.Optional(
 							Type.Record(Type.String(), Type.String()),
 						),
+						templateAnnotations: Type.Optional(
+							Type.Record(Type.String(), Type.String()),
+						),
 						isAutoScaling: Type.Optional(Type.Boolean()),
 						isAlwaysRunning: Type.Optional(Type.Boolean()),
 						idleTimeoutSeconds: Type.Optional(Type.Number()),
@@ -617,6 +624,8 @@ export const deploymentRoute = new Elysia({
 								);
 						}
 						if (body.annotations) updateData.annotations = body.annotations;
+						if (body.templateAnnotations)
+							updateData.templateAnnotations = body.templateAnnotations;
 
 						if (body.isAutoScaling !== undefined)
 							updateData.isAutoScaling = body.isAutoScaling;
@@ -735,6 +744,7 @@ export const deploymentRoute = new Elysia({
 									},
 								},
 								annotations: newDeployment.annotations,
+								templateAnnotations: newDeployment.templateAnnotations,
 								args: newDeployment.args.split(" "),
 								command: newDeployment.command.split(" "),
 								// Still missing command/args/ports from DB if they aren't stored
@@ -781,6 +791,9 @@ export const deploymentRoute = new Elysia({
 						image: Type.Optional(Type.String()),
 						labels: Type.Optional(Type.Record(Type.String(), Type.String())),
 						selector: Type.Optional(Type.Record(Type.String(), Type.String())),
+						templateAnnotations: Type.Optional(
+							Type.Record(Type.String(), Type.String()),
+						),
 						// Adding other fields effectively means replacing them if provided
 						resources: Type.Optional(
 							Type.Object({
@@ -1249,18 +1262,94 @@ export const deploymentRoute = new Elysia({
 					}
 
 					try {
-						const agent = await ctx.data.agentManager.getAgent(
+						const updateData = {
+							templateAnnotations: {
+								...(deployment.templateAnnotations as Record<string, string>),
+								"k8s.dashboard.io/redeployed-at": new Date().toISOString(),
+							},
+							updatedAt: new Date(),
+						};
+
+						const [newDeployment] = await db
+							.update(schema.k8sDeployments)
+							.set(updateData)
+							.where(eq(schema.k8sDeployments.id, depId))
+							.returning();
+						if (!newDeployment) {
+							throw new Error("Failed to update deployment");
+						}
+
+						let finalEnv = undefined;
+						if (newDeployment.envVariables) {
+							try {
+								finalEnv = JSON.parse(decrypt(newDeployment.envVariables));
+							} catch (e) {
+								logger.error("Decrypt fail", e);
+							}
+						}
+
+						const payload = generateDeploymentManifest({
+							name: newDeployment.name,
+							namespace: newDeployment.namespace,
+							image: newDeployment.dockerImage || "",
+							replicas: newDeployment.replicas,
+							env: finalEnv,
+							configMapRefs: newDeployment.configMapRefs || undefined,
+							secretRefs: newDeployment.secretRefs || undefined,
+							labels: newDeployment.labels
+								? JSON.parse(newDeployment.labels)
+								: undefined,
+							selector: newDeployment.selector
+								? JSON.parse(newDeployment.selector)
+								: undefined,
+							ports: newDeployment.ports,
+							resources: {
+								requests: {
+									cpu: newDeployment.cpuRequest
+										? `${newDeployment.cpuRequest}m`
+										: undefined,
+									memory: newDeployment.memoryRequest
+										? `${newDeployment.memoryRequest}Mi`
+										: undefined,
+								},
+								limits: {
+									cpu: newDeployment.cpuLimit
+										? `${newDeployment.cpuLimit}m`
+										: undefined,
+									memory: newDeployment.memoryLimit
+										? `${newDeployment.memoryLimit}Mi`
+										: undefined,
+								},
+							},
+							annotations: newDeployment.annotations as Record<string, string>,
+							templateAnnotations: newDeployment.templateAnnotations as Record<
+								string,
+								string
+							>,
+							args: newDeployment.args
+								? newDeployment.args.split(" ")
+								: undefined,
+							command: newDeployment.command
+								? newDeployment.command.split(" ")
+								: undefined,
+						});
+
+						const response = await ctx.agentManager.sendCommand(
 							cluster.agent.id,
-						);
-						const result = await agent.reDeploy(
-							deployment.name,
-							deployment.namespace,
+							cluster.id,
+							{
+								id: globalThis.crypto.randomUUID(),
+								type: Command_CommandType.EDIT_RESOURCE,
+								payload: payload,
+								targetNamespace: newDeployment.namespace,
+								targetName: newDeployment.name,
+							},
 						);
 						return ctx.status(200, {
 							success: true,
 							message: "Deployment re-deployed",
 							timestamp: Date.now(),
-							data: result,
+							data: response.data,
 						});
 					} catch (e) {
 						logger.error("Error re-deploying deployment:", e);

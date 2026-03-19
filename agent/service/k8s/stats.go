@@ -381,6 +381,7 @@ func (kc *K8sClient) GetFullClusterState() (*pb.Heartbeat, error) {
 			MemoryLimit:         memLim,
 			Ports:               pbPorts,
 			Annotations:         dep.Annotations,
+			TemplateAnnotations: dep.Spec.Template.Annotations,
 		})
 
 	}

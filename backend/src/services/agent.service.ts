@@ -234,6 +234,7 @@ export class AgentService {
 						memoryLimit: Number(dep.memoryLimit),
 						updatedAt: new Date(),
 						annotations: dep.annotations || {},
+						templateAnnotations: dep.templateAnnotations || {},
 					};
 
 					const existingRecord = existing[0];

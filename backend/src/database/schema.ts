@@ -285,6 +285,10 @@ export const k8sDeployments = pgTable(
 			.default({})
 			.notNull()
 			.$type<Record<string, string>>(), // JSON string
+		templateAnnotations: jsonb("template_annotations")
+			.default({})
+			.notNull()
+			.$type<Record<string, string>>(), // JSON string
 		k8sUid: text("k8s_uid"),
 		idleTimeoutSeconds: integer("idle_timeout_seconds").default(0).notNull(),
 		lastAccessedAt: timestamp("last_accessed_at"),

@@ -134,6 +134,7 @@ message Deployment {
   int64 memory_limit = 16;
   repeated ContainerPort ports = 17;
   map<string, string> annotations = 18;
+  map<string, string> template_annotations = 19;
 }
 
 message Pod {

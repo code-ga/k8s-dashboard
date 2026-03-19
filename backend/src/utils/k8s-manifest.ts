@@ -67,6 +67,7 @@ export interface DeploymentDTO {
 	configMapRefs?: ConfigMapRef;
 	secretRefs?: SecretRef;
 	annotations?: Record<string, string>;
+	templateAnnotations?: Record<string, string>;
 }
 
 export interface ServicePortDTO {
@@ -234,6 +235,7 @@ export const generatePodManifest = (dto: PodDTO): string => {
 				{
 					name: dto.name,
 					image: dto.image,
+					imagePullPolicy: "Always",
 					command: dto.command,
 					args: dto.args,
 					env: envVars.length > 0 ? envVars : undefined,
@@ -382,12 +384,14 @@ export const generateDeploymentManifest = (dto: DeploymentDTO): string => {
 			template: {
 				metadata: {
 					labels: { ...labels, ...selector }, // Ensure selector matches template labels
+					annotations: dto.templateAnnotations,
 				},
 				spec: {
 					containers: [
 						{
 							name: dto.name,
 							image: dto.image,
+							imagePullPolicy: "Always",
 							command: dto.command,
 							args: dto.args,
 							env: envVars.length > 0 ? envVars : undefined,

@@ -962,17 +962,18 @@ type Deployment struct {
 	DockerImage string `protobuf:"bytes,8,opt,name=docker_image,json=dockerImage,proto3" json:"docker_image,omitempty"`
 	Uid         string `protobuf:"bytes,9,opt,name=uid,proto3" json:"uid,omitempty"`
 	// New fields for full parity
-	Command       string            `protobuf:"bytes,10,opt,name=command,proto3" json:"command,omitempty"`
-	Args          string            `protobuf:"bytes,11,opt,name=args,proto3" json:"args,omitempty"`
-	EnvVariables  string            `protobuf:"bytes,12,opt,name=env_variables,json=envVariables,proto3" json:"env_variables,omitempty"`
-	CpuRequest    int64             `protobuf:"varint,13,opt,name=cpu_request,json=cpuRequest,proto3" json:"cpu_request,omitempty"`
-	CpuLimit      int64             `protobuf:"varint,14,opt,name=cpu_limit,json=cpuLimit,proto3" json:"cpu_limit,omitempty"`
-	MemoryRequest int64             `protobuf:"varint,15,opt,name=memory_request,json=memoryRequest,proto3" json:"memory_request,omitempty"`
-	MemoryLimit   int64             `protobuf:"varint,16,opt,name=memory_limit,json=memoryLimit,proto3" json:"memory_limit,omitempty"`
-	Ports         []*ContainerPort  `protobuf:"bytes,17,rep,name=ports,proto3" json:"ports,omitempty"`
-	Annotations   map[string]string `protobuf:"bytes,18,rep,name=annotations,proto3" json:"annotations,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Command             string            `protobuf:"bytes,10,opt,name=command,proto3" json:"command,omitempty"`
+	Args                string            `protobuf:"bytes,11,opt,name=args,proto3" json:"args,omitempty"`
+	EnvVariables        string            `protobuf:"bytes,12,opt,name=env_variables,json=envVariables,proto3" json:"env_variables,omitempty"`
+	CpuRequest          int64             `protobuf:"varint,13,opt,name=cpu_request,json=cpuRequest,proto3" json:"cpu_request,omitempty"`
+	CpuLimit            int64             `protobuf:"varint,14,opt,name=cpu_limit,json=cpuLimit,proto3" json:"cpu_limit,omitempty"`
+	MemoryRequest       int64             `protobuf:"varint,15,opt,name=memory_request,json=memoryRequest,proto3" json:"memory_request,omitempty"`
+	MemoryLimit         int64             `protobuf:"varint,16,opt,name=memory_limit,json=memoryLimit,proto3" json:"memory_limit,omitempty"`
+	Ports               []*ContainerPort  `protobuf:"bytes,17,rep,name=ports,proto3" json:"ports,omitempty"`
+	Annotations         map[string]string `protobuf:"bytes,18,rep,name=annotations,proto3" json:"annotations,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	TemplateAnnotations map[string]string `protobuf:"bytes,19,rep,name=template_annotations,json=templateAnnotations,proto3" json:"template_annotations,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *Deployment) Reset() {
@@ -1127,6 +1128,13 @@ func (x *Deployment) GetPorts() []*ContainerPort {
 func (x *Deployment) GetAnnotations() map[string]string {
 	if x != nil {
 		return x.Annotations
+	}
+	return nil
+}
+
+func (x *Deployment) GetTemplateAnnotations() map[string]string {
+	if x != nil {
+		return x.TemplateAnnotations
 	}
 	return nil
 }
@@ -2078,7 +2086,7 @@ const file_agent_backend_websocket_proto_rawDesc = "" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1a>\n" +
 	"\x10AnnotationsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xe2\x06\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x87\b\n" +
 	"\n" +
 	"Deployment\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1c\n" +
@@ -2100,7 +2108,8 @@ const file_agent_backend_websocket_proto_rawDesc = "" +
 	"\x0ememory_request\x18\x0f \x01(\x03R\rmemoryRequest\x12!\n" +
 	"\fmemory_limit\x18\x10 \x01(\x03R\vmemoryLimit\x12(\n" +
 	"\x05ports\x18\x11 \x03(\v2\x12.api.ContainerPortR\x05ports\x12B\n" +
-	"\vannotations\x18\x12 \x03(\v2 .api.Deployment.AnnotationsEntryR\vannotations\x1a9\n" +
+	"\vannotations\x18\x12 \x03(\v2 .api.Deployment.AnnotationsEntryR\vannotations\x12[\n" +
+	"\x14template_annotations\x18\x13 \x03(\v2(.api.Deployment.TemplateAnnotationsEntryR\x13templateAnnotations\x1a9\n" +
 	"\vLabelsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1a;\n" +
@@ -2108,6 +2117,9 @@ const file_agent_backend_websocket_proto_rawDesc = "" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1a>\n" +
 	"\x10AnnotationsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1aF\n" +
+	"\x18TemplateAnnotationsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xe2\x05\n" +
 	"\x03Pod\x12\x12\n" +
@@ -2280,7 +2292,7 @@ func file_agent_backend_websocket_proto_rawDescGZIP() []byte {
 }
 
 var file_agent_backend_websocket_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_agent_backend_websocket_proto_msgTypes = make([]protoimpl.MessageInfo, 37)
+var file_agent_backend_websocket_proto_msgTypes = make([]protoimpl.MessageInfo, 38)
 var file_agent_backend_websocket_proto_goTypes = []any{
 	(StreamData_StreamDataType)(0), // 0: api.StreamData.StreamDataType
 	(Command_CommandType)(0),       // 1: api.Command.CommandType
@@ -2307,20 +2319,21 @@ var file_agent_backend_websocket_proto_goTypes = []any{
 	nil,                            // 22: api.Deployment.LabelsEntry
 	nil,                            // 23: api.Deployment.SelectorEntry
 	nil,                            // 24: api.Deployment.AnnotationsEntry
-	nil,                            // 25: api.Pod.LabelsEntry
-	nil,                            // 26: api.Pod.AnnotationsEntry
-	nil,                            // 27: api.Service.SelectorEntry
-	nil,                            // 28: api.Service.LabelsEntry
-	nil,                            // 29: api.Service.AnnotationsEntry
-	nil,                            // 30: api.ConfigMap.DataEntry
-	nil,                            // 31: api.ConfigMap.BinaryDataEntry
-	nil,                            // 32: api.ConfigMap.LabelsEntry
-	nil,                            // 33: api.ConfigMap.AnnotationsEntry
-	nil,                            // 34: api.Secret.DataEntry
-	nil,                            // 35: api.Secret.LabelsEntry
-	nil,                            // 36: api.Secret.AnnotationsEntry
-	nil,                            // 37: api.Ingress.LabelsEntry
-	nil,                            // 38: api.Ingress.AnnotationsEntry
+	nil,                            // 25: api.Deployment.TemplateAnnotationsEntry
+	nil,                            // 26: api.Pod.LabelsEntry
+	nil,                            // 27: api.Pod.AnnotationsEntry
+	nil,                            // 28: api.Service.SelectorEntry
+	nil,                            // 29: api.Service.LabelsEntry
+	nil,                            // 30: api.Service.AnnotationsEntry
+	nil,                            // 31: api.ConfigMap.DataEntry
+	nil,                            // 32: api.ConfigMap.BinaryDataEntry
+	nil,                            // 33: api.ConfigMap.LabelsEntry
+	nil,                            // 34: api.ConfigMap.AnnotationsEntry
+	nil,                            // 35: api.Secret.DataEntry
+	nil,                            // 36: api.Secret.LabelsEntry
+	nil,                            // 37: api.Secret.AnnotationsEntry
+	nil,                            // 38: api.Ingress.LabelsEntry
+	nil,                            // 39: api.Ingress.AnnotationsEntry
 }
 var file_agent_backend_websocket_proto_depIdxs = []int32{
 	6,  // 0: api.AgentPayload.heartbeat:type_name -> api.Heartbeat
@@ -2344,28 +2357,29 @@ var file_agent_backend_websocket_proto_depIdxs = []int32{
 	23, // 18: api.Deployment.selector:type_name -> api.Deployment.SelectorEntry
 	9,  // 19: api.Deployment.ports:type_name -> api.ContainerPort
 	24, // 20: api.Deployment.annotations:type_name -> api.Deployment.AnnotationsEntry
-	9,  // 21: api.Pod.ports:type_name -> api.ContainerPort
-	25, // 22: api.Pod.labels:type_name -> api.Pod.LabelsEntry
-	26, // 23: api.Pod.annotations:type_name -> api.Pod.AnnotationsEntry
-	27, // 24: api.Service.selector:type_name -> api.Service.SelectorEntry
-	28, // 25: api.Service.labels:type_name -> api.Service.LabelsEntry
-	13, // 26: api.Service.ports:type_name -> api.ServicePort
-	29, // 27: api.Service.annotations:type_name -> api.Service.AnnotationsEntry
-	30, // 28: api.ConfigMap.data:type_name -> api.ConfigMap.DataEntry
-	31, // 29: api.ConfigMap.binary_data:type_name -> api.ConfigMap.BinaryDataEntry
-	32, // 30: api.ConfigMap.labels:type_name -> api.ConfigMap.LabelsEntry
-	33, // 31: api.ConfigMap.annotations:type_name -> api.ConfigMap.AnnotationsEntry
-	34, // 32: api.Secret.data:type_name -> api.Secret.DataEntry
-	35, // 33: api.Secret.labels:type_name -> api.Secret.LabelsEntry
-	36, // 34: api.Secret.annotations:type_name -> api.Secret.AnnotationsEntry
-	37, // 35: api.Ingress.labels:type_name -> api.Ingress.LabelsEntry
-	38, // 36: api.Ingress.annotations:type_name -> api.Ingress.AnnotationsEntry
-	1,  // 37: api.Command.type:type_name -> api.Command.CommandType
-	38, // [38:38] is the sub-list for method output_type
-	38, // [38:38] is the sub-list for method input_type
-	38, // [38:38] is the sub-list for extension type_name
-	38, // [38:38] is the sub-list for extension extendee
-	0,  // [0:38] is the sub-list for field type_name
+	25, // 21: api.Deployment.template_annotations:type_name -> api.Deployment.TemplateAnnotationsEntry
+	9,  // 22: api.Pod.ports:type_name -> api.ContainerPort
+	26, // 23: api.Pod.labels:type_name -> api.Pod.LabelsEntry
+	27, // 24: api.Pod.annotations:type_name -> api.Pod.AnnotationsEntry
+	28, // 25: api.Service.selector:type_name -> api.Service.SelectorEntry
+	29, // 26: api.Service.labels:type_name -> api.Service.LabelsEntry
+	13, // 27: api.Service.ports:type_name -> api.ServicePort
+	30, // 28: api.Service.annotations:type_name -> api.Service.AnnotationsEntry
+	31, // 29: api.ConfigMap.data:type_name -> api.ConfigMap.DataEntry
+	32, // 30: api.ConfigMap.binary_data:type_name -> api.ConfigMap.BinaryDataEntry
+	33, // 31: api.ConfigMap.labels:type_name -> api.ConfigMap.LabelsEntry
+	34, // 32: api.ConfigMap.annotations:type_name -> api.ConfigMap.AnnotationsEntry
+	35, // 33: api.Secret.data:type_name -> api.Secret.DataEntry
+	36, // 34: api.Secret.labels:type_name -> api.Secret.LabelsEntry
+	37, // 35: api.Secret.annotations:type_name -> api.Secret.AnnotationsEntry
+	38, // 36: api.Ingress.labels:type_name -> api.Ingress.LabelsEntry
+	39, // 37: api.Ingress.annotations:type_name -> api.Ingress.AnnotationsEntry
+	1,  // 38: api.Command.type:type_name -> api.Command.CommandType
+	39, // [39:39] is the sub-list for method output_type
+	39, // [39:39] is the sub-list for method input_type
+	39, // [39:39] is the sub-list for extension type_name
+	39, // [39:39] is the sub-list for extension extendee
+	0,  // [0:39] is the sub-list for field type_name
 }
 
 func init() { file_agent_backend_websocket_proto_init() }
@@ -2389,7 +2403,7 @@ func file_agent_backend_websocket_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agent_backend_websocket_proto_rawDesc), len(file_agent_backend_websocket_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   37,
+			NumMessages:   38,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
