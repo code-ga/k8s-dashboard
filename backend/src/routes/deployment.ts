@@ -279,8 +279,15 @@ export const deploymentRoute = new Elysia({
 							memoryLimit: body.resources?.limits?.memory
 								? parseMemoryStr(body.resources.limits.memory)
 								: 0,
+							annotations: body.annotations ? body.annotations : undefined,
 							updatedAt: new Date(),
 						};
+						if (body.isAutoScaling !== undefined)
+							createData.isAutoScaling = body.isAutoScaling;
+						if (body.isAlwaysRunning !== undefined)
+							createData.isAlwaysRunning = body.isAlwaysRunning;
+						if (body.idleTimeoutSeconds !== undefined)
+							createData.idleTimeoutSeconds = body.idleTimeoutSeconds;
 
 						[newDeployment] = await db
 							.insert(schema.k8sDeployments)
@@ -333,6 +340,7 @@ export const deploymentRoute = new Elysia({
 							selector: body.selector,
 							configMapRefs: body.configMapRefs,
 							secretRefs: body.secretRefs,
+							annotations: body.annotations || undefined,
 						});
 
 						const response = await ctx.agentManager.sendCommand(
@@ -478,6 +486,12 @@ export const deploymentRoute = new Elysia({
 						),
 						labels: Type.Optional(Type.Record(Type.String(), Type.String())),
 						selector: Type.Optional(Type.Record(Type.String(), Type.String())),
+						annotations: Type.Optional(
+							Type.Record(Type.String(), Type.String()),
+						),
+						isAutoScaling: Type.Optional(Type.Boolean()),
+						isAlwaysRunning: Type.Optional(Type.Boolean()),
+						idleTimeoutSeconds: Type.Optional(Type.Number()),
 					}),
 					response: {
 						201: baseResponseSchema(
@@ -602,6 +616,7 @@ export const deploymentRoute = new Elysia({
 									body.resources.limits.memory,
 								);
 						}
+						if (body.annotations) updateData.annotations = body.annotations;
 
 						if (body.isAutoScaling !== undefined)
 							updateData.isAutoScaling = body.isAutoScaling;
@@ -609,12 +624,16 @@ export const deploymentRoute = new Elysia({
 							updateData.isAlwaysRunning = body.isAlwaysRunning;
 						if (body.idleTimeoutSeconds !== undefined)
 							updateData.idleTimeoutSeconds = body.idleTimeoutSeconds;
-
+						let newDeployment:
+							| InferSelectModel<typeof schema.k8sDeployments>
+							| undefined = undefined;
 						try {
-							await db
+							newDeployment = await db
 								.update(schema.k8sDeployments)
 								.set(updateData)
-								.where(eq(schema.k8sDeployments.id, depId));
+								.where(eq(schema.k8sDeployments.id, depId))
+								.returning()
+								.then((res) => res[0]);
 
 							// Update resource refs in normalized tables if provided
 							if (body.ports || body.configMapRefs || body.secretRefs) {
@@ -633,7 +652,13 @@ export const deploymentRoute = new Elysia({
 								timestamp: Date.now(),
 							});
 						}
-
+						if (!newDeployment) {
+							return ctx.status(500, {
+								success: false,
+								message: "Failed to update deployment",
+								timestamp: Date.now(),
+							});
+						}
 						// Re-calculate payload with correct Env/ConfigMap/Secret preservation
 						let finalEnv = body.env;
 						if (!finalEnv && deployment.envVariables) {
@@ -686,6 +711,32 @@ export const deploymentRoute = new Elysia({
 									(deployment.selector
 										? JSON.parse(deployment.selector)
 										: undefined),
+								ports: newDeployment.ports,
+								resources: {
+									requests: {
+										cpu:
+											body.resources?.requests?.cpu ||
+											newDeployment.cpuRequest ||
+											"0",
+										memory:
+											body.resources?.requests?.memory ||
+											newDeployment.memoryRequest ||
+											"0",
+									},
+									limits: {
+										cpu:
+											body.resources?.limits?.cpu ||
+											newDeployment.cpuLimit ||
+											"0",
+										memory:
+											body.resources?.limits?.memory ||
+											newDeployment.memoryLimit ||
+											"0",
+									},
+								},
+								annotations: newDeployment.annotations,
+								args: newDeployment.args.split(" "),
+								command: newDeployment.command.split(" "),
 								// Still missing command/args/ports from DB if they aren't stored
 								// This is a known limitation of the current Schema.
 								// Detailed restoration requires schema updates.
@@ -831,6 +882,9 @@ export const deploymentRoute = new Elysia({
 									name: Type.Optional(Type.String()),
 								}),
 							),
+						),
+						annotations: Type.Optional(
+							Type.Record(Type.String(), Type.String()),
 						),
 						isAutoScaling: Type.Optional(Type.Boolean()),
 						isAlwaysRunning: Type.Optional(Type.Boolean()),
@@ -1155,5 +1209,77 @@ export const deploymentRoute = new Elysia({
 						}
 					}
 				},
-			}),
+			})
+			.post(
+				"/re-deploy/:id",
+				async (ctx) => {
+					const depId = Number(ctx.params.id);
+					const clusterId = Number(ctx.params.clusterId);
+
+					const deployment = await db.query.k8sDeployments.findFirst({
+						where: {
+							id: depId,
+							clusterId: clusterId,
+						},
+					});
+
+					if (!deployment) {
+						return ctx.status(404, {
+							success: false,
+							message: "Deployment not found",
+							timestamp: Date.now(),
+						});
+					}
+
+					const cluster = await db.query.k8sCluster.findFirst({
+						where: {
+							id: clusterId,
+						},
+						with: {
+							agent: true,
+						},
+					});
+
+					if (!cluster || !cluster.agent) {
+						return ctx.status(404, {
+							success: false,
+							message: "Cluster not found",
+							timestamp: Date.now(),
+						});
+					}
+
+					try {
+						const agent = await ctx.data.agentManager.getAgent(
+							cluster.agent.id,
+						);
+						const result = await agent.reDeploy(
+							deployment.name,
+							deployment.namespace,
+						);
+						return ctx.status(200, {
+							success: true,
+							message: "Deployment re-deployed",
+							timestamp: Date.now(),
+							data: result,
+						});
+					} catch (e) {
+						logger.error("Error re-deploying deployment:", e);
+						const message = e instanceof Error ? e.message : String(e);
+						return ctx.status(500, {
+							success: false,
+							message: `Error re-deploying deployment: ${message}`,
+							timestamp: Date.now(),
+						});
+					}
+				},
+				{
+					detail: { tags: ["Deployments"] },
+					roleAuth: "deployment:update",
+					response: {
+						200: baseResponseSchema(Type.Optional(Type.String())),
+						404: errorResponseSchema,
+						500: errorResponseSchema,
+					},
+				},
+			),
 	);

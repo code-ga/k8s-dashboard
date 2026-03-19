@@ -199,6 +199,7 @@ export const serviceRoute = new Elysia({
 								selector: JSON.stringify(body.selector),
 								labels: JSON.stringify(body.labels || {}),
 								ports: body.ports,
+								annotations: body.annotations || {},
 								updatedAt: new Date(),
 							})
 							.returning();
@@ -228,6 +229,7 @@ export const serviceRoute = new Elysia({
 							selector: body.selector,
 							ports: body.ports,
 							labels: body.labels,
+							annotations: body.annotations,
 						});
 
 						await ctx.agentManager.sendCommand(cluster.agent.id, cluster.id, {
@@ -279,6 +281,9 @@ export const serviceRoute = new Elysia({
 							}),
 						),
 						labels: Type.Optional(Type.Record(Type.String(), Type.String())),
+						annotations: Type.Optional(
+							Type.Record(Type.String(), Type.String()),
+						),
 					}),
 					response: {
 						201: baseResponseSchema(Type.Object(dbSchemaTypes.k8sServices)),

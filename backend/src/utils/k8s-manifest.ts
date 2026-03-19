@@ -6,12 +6,12 @@ export interface ResourceResources {
 	// memoryRequest?: string; // e.g., "128Mi"
 	// memoryLimit?: string;
 	requests?: {
-		cpu?: string;
-		memory?: string;
+		cpu?: string | number; // Allow both string (e.g., "100m") and number (e.g., 0.1)
+		memory?: string | number; // Allow both string (e.g., "128Mi") and number (e.g., 134217728)
 	};
 	limits?: {
-		cpu?: string;
-		memory?: string;
+		cpu?: string | number;
+		memory?: string | number;
 	};
 }
 
@@ -45,6 +45,7 @@ export interface PodDTO {
 	args?: string[];
 	env?: Record<string, string>;
 	ports?: { containerPort: number; name?: string }[];
+	annotations?: Record<string, string>;
 	resources?: ResourceResources;
 	labels?: Record<string, string>;
 	configMapRefs?: ConfigMapRef;
@@ -65,6 +66,7 @@ export interface DeploymentDTO {
 	selector?: Record<string, string>;
 	configMapRefs?: ConfigMapRef;
 	secretRefs?: SecretRef;
+	annotations?: Record<string, string>;
 }
 
 export interface ServicePortDTO {
@@ -82,6 +84,7 @@ export interface ServiceDTO {
 	selector: Record<string, string>;
 	ports: ServicePortDTO[];
 	labels?: Record<string, string>;
+	annotations?: Record<string, string>;
 }
 
 export interface IngressRouteDTO {
@@ -93,6 +96,8 @@ export interface IngressRouteDTO {
 	serviceName: string;
 	domain?: string;
 	labels?: Record<string, string>;
+	tls?: boolean; // Only applicable for HTTP routes
+	annotations?: Record<string, string>;
 }
 
 export interface ConfigMapDTO {
@@ -101,6 +106,7 @@ export interface ConfigMapDTO {
 	data?: Record<string, string>;
 	binaryData?: Record<string, string>;
 	labels?: Record<string, string>;
+	annotations?: Record<string, string>;
 }
 
 export interface SecretDTO {
@@ -109,6 +115,7 @@ export interface SecretDTO {
 	type?: string;
 	data?: Record<string, string>;
 	labels?: Record<string, string>;
+	annotations?: Record<string, string>;
 }
 
 export const generatePodManifest = (dto: PodDTO): string => {
@@ -220,6 +227,7 @@ export const generatePodManifest = (dto: PodDTO): string => {
 			name: dto.name,
 			namespace: dto.namespace,
 			labels: dto.labels || { app: dto.name },
+			annotations: dto.annotations,
 		},
 		spec: {
 			containers: [
@@ -364,6 +372,7 @@ export const generateDeploymentManifest = (dto: DeploymentDTO): string => {
 			name: dto.name,
 			namespace: dto.namespace,
 			labels: labels,
+			annotations: dto.annotations,
 		},
 		spec: {
 			replicas: dto.replicas,
@@ -415,6 +424,7 @@ export const generateServiceManifest = (dto: ServiceDTO): string => {
 			name: dto.name,
 			namespace: dto.namespace,
 			labels: dto.labels || { app: dto.name },
+			annotations: dto.annotations,
 		},
 		spec: {
 			type: dto.type,
@@ -440,11 +450,13 @@ export const generateIngressRouteManifest = (dto: IngressRouteDTO): string => {
 				namespace: dto.namespace,
 				labels: dto.labels,
 				annotations: {
-					"traefik.ingress.kubernetes.io/router.tls": "true",
+					"traefik.ingress.kubernetes.io/router.tls":
+						dto.tls === false ? "false" : "true",
+					...dto.annotations,
 				},
 			},
 			spec: {
-				entryPoints: ["web", "websecure"],
+				entryPoints: dto.tls === false ? ["web"] : ["web", "websecure"],
 				tls: {
 					certResolver: "letsencrypt",
 				},
@@ -529,6 +541,7 @@ export const generateConfigMapManifest = (dto: ConfigMapDTO): string => {
 			name: dto.name,
 			namespace: dto.namespace,
 			labels: dto.labels,
+			annotations: dto.annotations,
 		},
 		data: dto.data,
 		binaryData: dto.binaryData,
@@ -545,6 +558,7 @@ export const generateSecretManifest = (dto: SecretDTO): string => {
 			name: dto.name,
 			namespace: dto.namespace,
 			labels: dto.labels,
+			annotations: dto.annotations,
 		},
 		data: dto.data || {}, // Already base64 encoded
 	};

@@ -202,6 +202,10 @@ export const k8sClusterNode = pgTable(
 		status: text("status").notNull().default("Unknown"),
 		roles: text("roles").array().notNull().default([]),
 		publicIp: text("public_ip"), // the public ip of node if node is in cloud
+		annotations: jsonb("annotations")
+			.default({})
+			.notNull()
+			.$type<Record<string, string>>(), // JSON string
 		createdAt: timestamp("created_at").defaultNow().notNull(),
 		updatedAt: timestamp("updated_at")
 			.$onUpdate(() => /* @__PURE__ */ new Date())
@@ -277,11 +281,15 @@ export const k8sDeployments = pgTable(
 		updatedAt: timestamp("updated_at")
 			.$onUpdate(() => /* @__PURE__ */ new Date())
 			.notNull(),
+		annotations: jsonb("annotations")
+			.default({})
+			.notNull()
+			.$type<Record<string, string>>(), // JSON string
 		k8sUid: text("k8s_uid"),
 		idleTimeoutSeconds: integer("idle_timeout_seconds").default(0).notNull(),
 		lastAccessedAt: timestamp("last_accessed_at"),
 		isAutoScaling: boolean("is_auto_scaling").default(false).notNull(),
-		isAlwaysRunning: boolean("is_always_running").default(false).notNull(),
+		isAlwaysRunning: boolean("is_always_running").default(true).notNull(),
 
 		autoCreated: boolean("is_auto_created").default(false).notNull(), // create by agent when it detects a deployment not in DB
 	},
@@ -326,6 +334,10 @@ export const k8sPods = pgTable(
 		args: text("args").default("").notNull(),
 		envVariables: text("env_variables").notNull(),
 		labels: text("labels").default("").notNull(), // JSON string
+		annotations: jsonb("annotations")
+			.default({})
+			.notNull()
+			.$type<Record<string, string>>(), // JSON string
 
 		// ports: jsonb("ports").$type<any>().default([]).notNull(),
 
@@ -397,7 +409,11 @@ export const k8sServices = pgTable(
 		clusterIp: text("cluster_ip"),
 		selector: text("selector"), // JSON string
 		labels: text("labels").notNull(),
-		ports: jsonb("ports").$type<any[]>().notNull(), // Array of ServicePortDTO
+		annotations: jsonb("annotations")
+			.default({})
+			.notNull()
+			.$type<Record<string, string>>(), // JSON string
+		ports: jsonb("ports").$type<any[]>().default([]).notNull(), // Array of ServicePortDTO
 
 		createdAt: timestamp("created_at").defaultNow().notNull(),
 		updatedAt: timestamp("updated_at")
@@ -439,6 +455,14 @@ export const k8sIngresses = pgTable(
 		internalPort: integer("internal_port"), // service port
 		protocol: text("protocol"), // http | tcp | udp
 		path: text("path"),
+		annotations: jsonb("annotations")
+			.default({})
+			.notNull()
+			.$type<Record<string, string>>(), // JSON string
+		labels: jsonb("labels")
+			.default({})
+			.notNull()
+			.$type<Record<string, string>>(), // JSON string
 		k8sUid: text("k8s_uid"),
 		createdAt: timestamp("created_at").defaultNow().notNull(),
 		updatedAt: timestamp("updated_at")
@@ -471,6 +495,10 @@ export const k8sConfigMaps = pgTable(
 		data: text("data"), // Encrypted JSON string
 		binaryData: text("binary_data"), // Encrypted JSON string of base64
 		labels: text("labels"), // JSON string
+		annotations: jsonb("annotations")
+			.default({})
+			.notNull()
+			.$type<Record<string, string>>(), // JSON string
 		k8sUid: text("k8s_uid"),
 		createdAt: timestamp("created_at").defaultNow().notNull(),
 		updatedAt: timestamp("updated_at")
@@ -502,6 +530,10 @@ export const k8sSecrets = pgTable(
 		type: text("type"),
 		data: text("data"), // Encrypted JSON string
 		labels: text("labels"), // JSON string
+		annotations: jsonb("annotations")
+			.default({})
+			.notNull()
+			.$type<Record<string, string>>(), // JSON string
 		k8sUid: text("k8s_uid"),
 		createdAt: timestamp("created_at").defaultNow().notNull(),
 		updatedAt: timestamp("updated_at")

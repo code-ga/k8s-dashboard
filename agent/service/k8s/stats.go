@@ -112,6 +112,10 @@ func (kc *K8sClient) GetFullClusterState() (*pb.Heartbeat, error) {
 				break
 			}
 		}
+		annotations := make(map[string]string)
+		for k, v := range node.Annotations {
+			annotations[k] = v
+		}
 
 		pbNodes = append(pbNodes, &pb.Node{
 			Name:        node.Name,
@@ -121,6 +125,7 @@ func (kc *K8sClient) GetFullClusterState() (*pb.Heartbeat, error) {
 			Uid:         string(node.UID),
 			Status:      status,
 			Roles:       roles,
+			Annotations:  annotations,
 			// CpuUsage: ... (requires metrics server or manual aggregation)
 			// RamUsage: ...
 		})
@@ -261,6 +266,7 @@ func (kc *K8sClient) GetFullClusterState() (*pb.Heartbeat, error) {
 			CpuUsage:      podMetricsMap[fmt.Sprintf("%s/%s", pod.Namespace, pod.Name)]["cpu"],
 			RamUsage:      podMetricsMap[fmt.Sprintf("%s/%s", pod.Namespace, pod.Name)]["memory"],
 			Labels:        pod.Labels,
+			Annotations:   pod.Annotations,
 		})
 
 	}
@@ -290,6 +296,7 @@ func (kc *K8sClient) GetFullClusterState() (*pb.Heartbeat, error) {
 			Uid:       string(scv.UID),
 			Labels:    scv.Labels,
 			Ports:     ports,
+			Annotations: scv.Annotations,
 		})
 	}
 
@@ -373,6 +380,7 @@ func (kc *K8sClient) GetFullClusterState() (*pb.Heartbeat, error) {
 			MemoryRequest:       memReq,
 			MemoryLimit:         memLim,
 			Ports:               pbPorts,
+			Annotations:         dep.Annotations,
 		})
 
 	}
@@ -393,6 +401,7 @@ func (kc *K8sClient) GetFullClusterState() (*pb.Heartbeat, error) {
 				Uid:        string(cm.UID),
 				Labels:     cm.Labels,
 				Immutable:  cm.Immutable != nil && *cm.Immutable,
+				Annotations: cm.Annotations,
 			})
 		}
 	}
@@ -413,6 +422,8 @@ func (kc *K8sClient) GetFullClusterState() (*pb.Heartbeat, error) {
 				Uid:       string(sec.UID),
 				Labels:    sec.Labels,
 				Immutable: sec.Immutable != nil && *sec.Immutable,
+				Annotations: sec.Annotations,
+				// Note: We do not include the decoded secret data for security reasons.
 			})
 		}
 	}

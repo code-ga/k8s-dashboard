@@ -57,6 +57,7 @@ export class AgentService {
 			labels: dbDep.labels ? JSON.parse(dbDep.labels) : undefined,
 			selector: dbDep.selector ? JSON.parse(dbDep.selector) : undefined,
 			ports: dbDep.ports,
+			annotations: dbDep.annotations,
 			env: envVars,
 			command: dbDep.command ? dbDep.command.split(" ") : undefined,
 			args: dbDep.args ? dbDep.args.split(" ") : undefined,
@@ -83,6 +84,7 @@ export class AgentService {
 			image: dbPod.dockerImage,
 			command: dbPod.command ? dbPod.command.split(" ") : undefined,
 			args: dbPod.args ? dbPod.args.split(" ") : undefined,
+			annotations: dbPod.annotations,
 			labels:
 				dbPod.labels && dbPod.labels !== ""
 					? JSON.parse(dbPod.labels)
@@ -156,13 +158,15 @@ export class AgentService {
 					status: node.status || "Unknown",
 					roles: node.roles || [],
 					updatedAt: new Date(),
+					annotations: node.annotations || {},
 				};
 
-				if (existingNode.length > 0 && existingNode[0]?.k8sUid) {
+				const existingRecord = existingNode[0];
+				if (existingRecord) {
 					await db
 						.update(k8sClusterNode)
 						.set(nodeData)
-						.where(eq(k8sClusterNode.id, existingNode[0].id));
+						.where(eq(k8sClusterNode.id, existingRecord.id));
 				} else {
 					await db
 						.insert(k8sClusterNode)
@@ -226,9 +230,11 @@ export class AgentService {
 					memoryRequest: Number(dep.memoryRequest),
 					memoryLimit: Number(dep.memoryLimit),
 					updatedAt: new Date(),
+					annotations: dep.annotations || {},
 				};
 
-				if (existing.length > 0 && existing[0]?.k8sUid) {
+				const existingRecord = existing[0];
+				if (existingRecord) {
 					await db
 						.update(k8sDeployments)
 						.set({
@@ -237,9 +243,9 @@ export class AgentService {
 							k8sUid: dep.uid,
 							updatedAt: new Date(),
 						})
-						.where(eq(k8sDeployments.id, existing[0].id));
+						.where(eq(k8sDeployments.id, existingRecord.id));
 
-					const deploymentId = existing[0].id;
+					const deploymentId = existingRecord.id;
 					await deleteDeploymentPorts(deploymentId);
 					if (dep.ports && dep.ports.length > 0) {
 						const ports: PortRef[] = dep.ports.map((p) => ({
@@ -364,10 +370,11 @@ export class AgentService {
 					cpuUsage: Number(pod.cpuUsage),
 					memoryUsage: Number(pod.ramUsage),
 					updatedAt: new Date(),
+					annotations: pod.annotations || {},
 				};
 
-				if (existingPodResult.length > 0 && existingPodResult[0]?.k8sUid) {
-					const existingPod = existingPodResult[0];
+				const existingPod = existingPodResult[0];
+				if (existingPod) {
 					const newStatus =
 						existingPod.status === "Terminating"
 							? "Terminating"
@@ -473,13 +480,15 @@ export class AgentService {
 					labels: JSON.stringify(svc.labels),
 					ports: svc.ports,
 					updatedAt: new Date(),
+					annotations: svc.annotations || {},
 				};
 
-				if (existingSvc.length > 0 && existingSvc[0]?.k8sUid) {
+				const existingRecord = existingSvc[0];
+				if (existingRecord) {
 					await db
 						.update(schema.k8sServices)
 						.set(svcData)
-						.where(eq(schema.k8sServices.id, existingSvc[0].id));
+						.where(eq(schema.k8sServices.id, existingRecord.id));
 				} else {
 					const defaultOwner = await this.findDefaultOwner();
 					if (!defaultOwner) {
@@ -570,9 +579,10 @@ export class AgentService {
 				labels: JSON.stringify(cm.labels),
 				k8sUid: cm.uid,
 				updatedAt: new Date(),
+				annotations: cm.annotations || {},
 			};
 
-			if (existing.length > 0 && existing[0]?.k8sUid) {
+			if (existing.length > 0 && existing[0]) {
 				await db
 					.update(k8sConfigMaps)
 					.set(cmData)
@@ -650,9 +660,10 @@ export class AgentService {
 				labels: JSON.stringify(sec.labels),
 				k8sUid: sec.uid,
 				updatedAt: new Date(),
+				annotations: sec.annotations || {},
 			};
 
-			if (existing.length > 0 && existing[0]?.k8sUid) {
+			if (existing.length > 0 && existing[0]) {
 				await db
 					.update(k8sSecrets)
 					.set(secData)
@@ -872,6 +883,8 @@ export class AgentService {
 						name: dbSvc.name,
 						namespace: dbSvc.namespace,
 						labels: dbSvc.labels ? JSON.parse(dbSvc.labels) : {},
+						annotations: dbSvc.annotations || {},
+						// OwnerReferences could be added here if we want to link it to a Deployment/Pod
 					},
 					spec: {
 						type: dbSvc.type || "ClusterIP",
@@ -958,6 +971,8 @@ export class AgentService {
 							name: dbCm.name,
 							namespace: dbCm.namespace,
 							labels: dbCm.labels ? JSON.parse(dbCm.labels) : {},
+							annotations: dbCm.annotations || {},
+							// OwnerReferences could be added here if we want to link it to a Deployment/Pod
 						},
 						data,
 						binaryData,
@@ -1021,12 +1036,19 @@ export class AgentService {
 							name: dbSecret.name,
 							namespace: dbSecret.namespace,
 							labels: dbSecret.labels ? JSON.parse(dbSecret.labels) : {},
+							annotations: dbSecret.annotations || {},
 						},
 						data,
 					}),
 					targetNamespace: dbSecret.namespace,
 					targetName: dbSecret.name,
 				});
+
+				// Add audit log for secret restoration
+				logger.info(
+					`Restoring Secret: ${dbSecret.name} in ${dbSecret.namespace}`,
+					{ secretType: dbSecret.type, clusterId, agentId },
+				);
 				return true;
 			}
 		}
@@ -1083,13 +1105,28 @@ export class AgentService {
 				k8sUid: ing.uid,
 				updatedAt: new Date(),
 				...(service ? { serviceId: service.id } : {}),
+				annotations: ing.annotations || {},
+				labels: ing.labels || {},
+				ownerId: null, // No owner for ingresses since they don't have a controller we can link to
+				// We can consider linking to the service's ownerId in the future if needed
 			};
 
-			if (existing.length > 0 && existing[0]?.k8sUid) {
+			const existingRecord = existing[0];
+			if (existingRecord) {
 				await db
 					.update(k8sIngresses)
-					.set({ k8sUid: ing.uid, updatedAt: new Date() })
-					.where(eq(k8sIngresses.id, existing[0].id));
+					.set({
+						k8sUid: ing.uid,
+						updatedAt: new Date(),
+						...(service ? { serviceId: service.id } : {}),
+						// Also sync snapshot fields from heartbeat
+						protocol: ing.protocol,
+						port: ing.port || null,
+						serviceName: ing.serviceName,
+						domain: ing.domain || null,
+						path: ing.path || null,
+					})
+					.where(eq(k8sIngresses.id, existingRecord.id));
 			} else if (service) {
 				// Only auto-create if we can resolve the serviceId (required FK)
 				await db.insert(k8sIngresses).values({
@@ -1173,6 +1210,8 @@ export class AgentService {
 				port: ingress.port || 0,
 				internalPort,
 				serviceName: ingress.serviceName || service.name,
+				annotations: ingress.annotations || {},
+				labels: ingress.labels || {},
 				domain: ingress.domain || undefined,
 			});
 

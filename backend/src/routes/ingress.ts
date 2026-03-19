@@ -1,6 +1,6 @@
 import { logger } from "../utils/logger";
 import { Type } from "@sinclair/typebox";
-import { eq } from "drizzle-orm";
+import { eq, type InferInsertModel } from "drizzle-orm";
 import { Elysia } from "elysia";
 import { Command_CommandType } from "../../pb-generated/agent-backend/websocket";
 import { db } from "../database";
@@ -180,6 +180,8 @@ export const ingressRoute = new Elysia({
 						internalPort: body.internalPort,
 						serviceName: body.serviceName,
 						domain: body.domain,
+						labels: body.labels,
+						annotations: body.annotations,
 					});
 
 					// --- SERVICE CREATION LOGIC ---
@@ -302,21 +304,24 @@ export const ingressRoute = new Elysia({
 							targetNamespace: body.namespace,
 							targetName: `${body.serviceName}-route`,
 						});
-
+						const ingressData: InferInsertModel<typeof schema.k8sIngresses> = {
+							clusterId,
+							name: `${body.serviceName}-route`,
+							namespace: body.namespace,
+							serviceName: body.serviceName,
+							domain: body.domain,
+							port: externalPort,
+							internalPort: body.internalPort,
+							protocol: body.protocol,
+							updatedAt: new Date(),
+							serviceId: serviceId,
+							ownerId: ctx.profile?.id,
+							labels: body.labels || {},
+							annotations: body.annotations || {},
+						};
 						const [newIngress] = await db
 							.insert(schema.k8sIngresses)
-							.values({
-								clusterId,
-								name: `${body.serviceName}-route`,
-								namespace: body.namespace,
-								serviceName: body.serviceName,
-								domain: body.domain,
-								port: externalPort,
-								internalPort: body.internalPort,
-								protocol: body.protocol,
-								updatedAt: new Date(),
-								serviceId: serviceId,
-							})
+							.values(ingressData)
 							.returning();
 						if (!newIngress) {
 							return ctx.status(500, {
@@ -356,6 +361,9 @@ export const ingressRoute = new Elysia({
 						domain: Type.Optional(Type.String()),
 						selector: Type.Optional(Type.Record(Type.String(), Type.String())),
 						labels: Type.Optional(Type.Record(Type.String(), Type.String())),
+						annotations: Type.Optional(
+							Type.Record(Type.String(), Type.String()),
+						),
 					}),
 					response: {
 						201: baseResponseSchema(Type.Object(dbSchemaTypes.k8sIngresses)),

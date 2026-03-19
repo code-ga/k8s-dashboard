@@ -134,9 +134,15 @@ export interface Node {
   uid: string;
   status: string;
   roles: string[];
+  annotations: { [key: string]: string };
 }
 
 export interface Node_LabelsEntry {
+  key: string;
+  value: string;
+}
+
+export interface Node_AnnotationsEntry {
   key: string;
   value: string;
 }
@@ -163,6 +169,7 @@ export interface Deployment {
   memoryRequest: number;
   memoryLimit: number;
   ports: ContainerPort[];
+  annotations: { [key: string]: string };
 }
 
 export interface Deployment_LabelsEntry {
@@ -171,6 +178,11 @@ export interface Deployment_LabelsEntry {
 }
 
 export interface Deployment_SelectorEntry {
+  key: string;
+  value: string;
+}
+
+export interface Deployment_AnnotationsEntry {
   key: string;
   value: string;
 }
@@ -200,9 +212,15 @@ export interface Pod {
   /** New field for parity */
   labels: { [key: string]: string };
   args: string;
+  annotations: { [key: string]: string };
 }
 
 export interface Pod_LabelsEntry {
+  key: string;
+  value: string;
+}
+
+export interface Pod_AnnotationsEntry {
   key: string;
   value: string;
 }
@@ -228,6 +246,7 @@ export interface Service {
   uid: string;
   labels: { [key: string]: string };
   ports: ServicePort[];
+  annotations: { [key: string]: string };
 }
 
 export interface Service_SelectorEntry {
@@ -240,6 +259,11 @@ export interface Service_LabelsEntry {
   value: string;
 }
 
+export interface Service_AnnotationsEntry {
+  key: string;
+  value: string;
+}
+
 export interface ConfigMap {
   name: string;
   namespace: string;
@@ -248,6 +272,7 @@ export interface ConfigMap {
   uid: string;
   labels: { [key: string]: string };
   immutable: boolean;
+  annotations: { [key: string]: string };
 }
 
 export interface ConfigMap_DataEntry {
@@ -265,6 +290,11 @@ export interface ConfigMap_LabelsEntry {
   value: string;
 }
 
+export interface ConfigMap_AnnotationsEntry {
+  key: string;
+  value: string;
+}
+
 export interface Secret {
   name: string;
   namespace: string;
@@ -273,6 +303,7 @@ export interface Secret {
   uid: string;
   labels: { [key: string]: string };
   immutable: boolean;
+  annotations: { [key: string]: string };
 }
 
 export interface Secret_DataEntry {
@@ -281,6 +312,11 @@ export interface Secret_DataEntry {
 }
 
 export interface Secret_LabelsEntry {
+  key: string;
+  value: string;
+}
+
+export interface Secret_AnnotationsEntry {
   key: string;
   value: string;
 }
@@ -303,9 +339,15 @@ export interface Ingress {
   /** Kubernetes UID of the IngressRoute resource */
   uid: string;
   labels: { [key: string]: string };
+  annotations: { [key: string]: string };
 }
 
 export interface Ingress_LabelsEntry {
+  key: string;
+  value: string;
+}
+
+export interface Ingress_AnnotationsEntry {
   key: string;
   value: string;
 }
@@ -1480,6 +1522,7 @@ function createBaseNode(): Node {
     uid: "",
     status: "",
     roles: [],
+    annotations: {},
   };
 }
 
@@ -1512,6 +1555,9 @@ export const Node: MessageFns<Node> = {
     for (const v of message.roles) {
       writer.uint32(74).string(v!);
     }
+    globalThis.Object.entries(message.annotations).forEach(([key, value]: [string, string]) => {
+      Node_AnnotationsEntry.encode({ key: key as any, value }, writer.uint32(82).fork()).join();
+    });
     return writer;
   },
 
@@ -1597,6 +1643,17 @@ export const Node: MessageFns<Node> = {
           message.roles.push(reader.string());
           continue;
         }
+        case 10: {
+          if (tag !== 82) {
+            break;
+          }
+
+          const entry10 = Node_AnnotationsEntry.decode(reader, reader.uint32());
+          if (entry10.value !== undefined) {
+            message.annotations[entry10.key] = entry10.value;
+          }
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -1643,6 +1700,15 @@ export const Node: MessageFns<Node> = {
       roles: globalThis.Array.isArray(object?.roles)
         ? object.roles.map((e: any) => globalThis.String(e))
         : [],
+      annotations: isObject(object.annotations)
+        ? (globalThis.Object.entries(object.annotations) as [string, any][]).reduce(
+          (acc: { [key: string]: string }, [key, value]: [string, any]) => {
+            acc[key] = globalThis.String(value);
+            return acc;
+          },
+          {},
+        )
+        : {},
     };
   },
 
@@ -1681,6 +1747,15 @@ export const Node: MessageFns<Node> = {
     if (message.roles?.length) {
       obj.roles = message.roles;
     }
+    if (message.annotations) {
+      const entries = globalThis.Object.entries(message.annotations) as [string, string][];
+      if (entries.length > 0) {
+        obj.annotations = {};
+        entries.forEach(([k, v]) => {
+          obj.annotations[k] = v;
+        });
+      }
+    }
     return obj;
   },
 
@@ -1706,6 +1781,15 @@ export const Node: MessageFns<Node> = {
     message.uid = object.uid ?? "";
     message.status = object.status ?? "";
     message.roles = object.roles?.map((e) => e) || [];
+    message.annotations = (globalThis.Object.entries(object.annotations ?? {}) as [string, string][]).reduce(
+      (acc: { [key: string]: string }, [key, value]: [string, string]) => {
+        if (value !== undefined) {
+          acc[key] = globalThis.String(value);
+        }
+        return acc;
+      },
+      {},
+    );
     return message;
   },
 };
@@ -1786,6 +1870,82 @@ export const Node_LabelsEntry: MessageFns<Node_LabelsEntry> = {
   },
 };
 
+function createBaseNode_AnnotationsEntry(): Node_AnnotationsEntry {
+  return { key: "", value: "" };
+}
+
+export const Node_AnnotationsEntry: MessageFns<Node_AnnotationsEntry> = {
+  encode(message: Node_AnnotationsEntry, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.key !== "") {
+      writer.uint32(10).string(message.key);
+    }
+    if (message.value !== "") {
+      writer.uint32(18).string(message.value);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): Node_AnnotationsEntry {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseNode_AnnotationsEntry();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.key = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.value = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): Node_AnnotationsEntry {
+    return {
+      key: isSet(object.key) ? globalThis.String(object.key) : "",
+      value: isSet(object.value) ? globalThis.String(object.value) : "",
+    };
+  },
+
+  toJSON(message: Node_AnnotationsEntry): unknown {
+    const obj: any = {};
+    if (message.key !== "") {
+      obj.key = message.key;
+    }
+    if (message.value !== "") {
+      obj.value = message.value;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<Node_AnnotationsEntry>, I>>(base?: I): Node_AnnotationsEntry {
+    return Node_AnnotationsEntry.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<Node_AnnotationsEntry>, I>>(object: I): Node_AnnotationsEntry {
+    const message = createBaseNode_AnnotationsEntry();
+    message.key = object.key ?? "";
+    message.value = object.value ?? "";
+    return message;
+  },
+};
+
 function createBaseDeployment(): Deployment {
   return {
     name: "",
@@ -1805,6 +1965,7 @@ function createBaseDeployment(): Deployment {
     memoryRequest: 0,
     memoryLimit: 0,
     ports: [],
+    annotations: {},
   };
 }
 
@@ -1861,6 +2022,9 @@ export const Deployment: MessageFns<Deployment> = {
     for (const v of message.ports) {
       ContainerPort.encode(v!, writer.uint32(138).fork()).join();
     }
+    globalThis.Object.entries(message.annotations).forEach(([key, value]: [string, string]) => {
+      Deployment_AnnotationsEntry.encode({ key: key as any, value }, writer.uint32(146).fork()).join();
+    });
     return writer;
   },
 
@@ -2013,6 +2177,17 @@ export const Deployment: MessageFns<Deployment> = {
           message.ports.push(ContainerPort.decode(reader, reader.uint32()));
           continue;
         }
+        case 18: {
+          if (tag !== 146) {
+            break;
+          }
+
+          const entry18 = Deployment_AnnotationsEntry.decode(reader, reader.uint32());
+          if (entry18.value !== undefined) {
+            message.annotations[entry18.key] = entry18.value;
+          }
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -2091,6 +2266,15 @@ export const Deployment: MessageFns<Deployment> = {
       ports: globalThis.Array.isArray(object?.ports)
         ? object.ports.map((e: any) => ContainerPort.fromJSON(e))
         : [],
+      annotations: isObject(object.annotations)
+        ? (globalThis.Object.entries(object.annotations) as [string, any][]).reduce(
+          (acc: { [key: string]: string }, [key, value]: [string, any]) => {
+            acc[key] = globalThis.String(value);
+            return acc;
+          },
+          {},
+        )
+        : {},
     };
   },
 
@@ -2159,6 +2343,15 @@ export const Deployment: MessageFns<Deployment> = {
     if (message.ports?.length) {
       obj.ports = message.ports.map((e) => ContainerPort.toJSON(e));
     }
+    if (message.annotations) {
+      const entries = globalThis.Object.entries(message.annotations) as [string, string][];
+      if (entries.length > 0) {
+        obj.annotations = {};
+        entries.forEach(([k, v]) => {
+          obj.annotations[k] = v;
+        });
+      }
+    }
     return obj;
   },
 
@@ -2200,6 +2393,15 @@ export const Deployment: MessageFns<Deployment> = {
     message.memoryRequest = object.memoryRequest ?? 0;
     message.memoryLimit = object.memoryLimit ?? 0;
     message.ports = object.ports?.map((e) => ContainerPort.fromPartial(e)) || [];
+    message.annotations = (globalThis.Object.entries(object.annotations ?? {}) as [string, string][]).reduce(
+      (acc: { [key: string]: string }, [key, value]: [string, string]) => {
+        if (value !== undefined) {
+          acc[key] = globalThis.String(value);
+        }
+        return acc;
+      },
+      {},
+    );
     return message;
   },
 };
@@ -2356,6 +2558,82 @@ export const Deployment_SelectorEntry: MessageFns<Deployment_SelectorEntry> = {
   },
 };
 
+function createBaseDeployment_AnnotationsEntry(): Deployment_AnnotationsEntry {
+  return { key: "", value: "" };
+}
+
+export const Deployment_AnnotationsEntry: MessageFns<Deployment_AnnotationsEntry> = {
+  encode(message: Deployment_AnnotationsEntry, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.key !== "") {
+      writer.uint32(10).string(message.key);
+    }
+    if (message.value !== "") {
+      writer.uint32(18).string(message.value);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): Deployment_AnnotationsEntry {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseDeployment_AnnotationsEntry();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.key = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.value = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): Deployment_AnnotationsEntry {
+    return {
+      key: isSet(object.key) ? globalThis.String(object.key) : "",
+      value: isSet(object.value) ? globalThis.String(object.value) : "",
+    };
+  },
+
+  toJSON(message: Deployment_AnnotationsEntry): unknown {
+    const obj: any = {};
+    if (message.key !== "") {
+      obj.key = message.key;
+    }
+    if (message.value !== "") {
+      obj.value = message.value;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<Deployment_AnnotationsEntry>, I>>(base?: I): Deployment_AnnotationsEntry {
+    return Deployment_AnnotationsEntry.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<Deployment_AnnotationsEntry>, I>>(object: I): Deployment_AnnotationsEntry {
+    const message = createBaseDeployment_AnnotationsEntry();
+    message.key = object.key ?? "";
+    message.value = object.value ?? "";
+    return message;
+  },
+};
+
 function createBasePod(): Pod {
   return {
     name: "",
@@ -2376,6 +2654,7 @@ function createBasePod(): Pod {
     ramUsage: 0,
     labels: {},
     args: "",
+    annotations: {},
   };
 }
 
@@ -2435,6 +2714,9 @@ export const Pod: MessageFns<Pod> = {
     if (message.args !== "") {
       writer.uint32(146).string(message.args);
     }
+    globalThis.Object.entries(message.annotations).forEach(([key, value]: [string, string]) => {
+      Pod_AnnotationsEntry.encode({ key: key as any, value }, writer.uint32(154).fork()).join();
+    });
     return writer;
   },
 
@@ -2592,6 +2874,17 @@ export const Pod: MessageFns<Pod> = {
           message.args = reader.string();
           continue;
         }
+        case 19: {
+          if (tag !== 154) {
+            break;
+          }
+
+          const entry19 = Pod_AnnotationsEntry.decode(reader, reader.uint32());
+          if (entry19.value !== undefined) {
+            message.annotations[entry19.key] = entry19.value;
+          }
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -2667,6 +2960,15 @@ export const Pod: MessageFns<Pod> = {
         )
         : {},
       args: isSet(object.args) ? globalThis.String(object.args) : "",
+      annotations: isObject(object.annotations)
+        ? (globalThis.Object.entries(object.annotations) as [string, any][]).reduce(
+          (acc: { [key: string]: string }, [key, value]: [string, any]) => {
+            acc[key] = globalThis.String(value);
+            return acc;
+          },
+          {},
+        )
+        : {},
     };
   },
 
@@ -2732,6 +3034,15 @@ export const Pod: MessageFns<Pod> = {
     if (message.args !== "") {
       obj.args = message.args;
     }
+    if (message.annotations) {
+      const entries = globalThis.Object.entries(message.annotations) as [string, string][];
+      if (entries.length > 0) {
+        obj.annotations = {};
+        entries.forEach(([k, v]) => {
+          obj.annotations[k] = v;
+        });
+      }
+    }
     return obj;
   },
 
@@ -2766,6 +3077,15 @@ export const Pod: MessageFns<Pod> = {
       {},
     );
     message.args = object.args ?? "";
+    message.annotations = (globalThis.Object.entries(object.annotations ?? {}) as [string, string][]).reduce(
+      (acc: { [key: string]: string }, [key, value]: [string, string]) => {
+        if (value !== undefined) {
+          acc[key] = globalThis.String(value);
+        }
+        return acc;
+      },
+      {},
+    );
     return message;
   },
 };
@@ -2840,6 +3160,82 @@ export const Pod_LabelsEntry: MessageFns<Pod_LabelsEntry> = {
   },
   fromPartial<I extends Exact<DeepPartial<Pod_LabelsEntry>, I>>(object: I): Pod_LabelsEntry {
     const message = createBasePod_LabelsEntry();
+    message.key = object.key ?? "";
+    message.value = object.value ?? "";
+    return message;
+  },
+};
+
+function createBasePod_AnnotationsEntry(): Pod_AnnotationsEntry {
+  return { key: "", value: "" };
+}
+
+export const Pod_AnnotationsEntry: MessageFns<Pod_AnnotationsEntry> = {
+  encode(message: Pod_AnnotationsEntry, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.key !== "") {
+      writer.uint32(10).string(message.key);
+    }
+    if (message.value !== "") {
+      writer.uint32(18).string(message.value);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): Pod_AnnotationsEntry {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBasePod_AnnotationsEntry();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.key = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.value = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): Pod_AnnotationsEntry {
+    return {
+      key: isSet(object.key) ? globalThis.String(object.key) : "",
+      value: isSet(object.value) ? globalThis.String(object.value) : "",
+    };
+  },
+
+  toJSON(message: Pod_AnnotationsEntry): unknown {
+    const obj: any = {};
+    if (message.key !== "") {
+      obj.key = message.key;
+    }
+    if (message.value !== "") {
+      obj.value = message.value;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<Pod_AnnotationsEntry>, I>>(base?: I): Pod_AnnotationsEntry {
+    return Pod_AnnotationsEntry.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<Pod_AnnotationsEntry>, I>>(object: I): Pod_AnnotationsEntry {
+    const message = createBasePod_AnnotationsEntry();
     message.key = object.key ?? "";
     message.value = object.value ?? "";
     return message;
@@ -2979,7 +3375,18 @@ export const ServicePort: MessageFns<ServicePort> = {
 };
 
 function createBaseService(): Service {
-  return { name: "", namespace: "", type: "", clusterIp: "", selector: {}, domain: "", uid: "", labels: {}, ports: [] };
+  return {
+    name: "",
+    namespace: "",
+    type: "",
+    clusterIp: "",
+    selector: {},
+    domain: "",
+    uid: "",
+    labels: {},
+    ports: [],
+    annotations: {},
+  };
 }
 
 export const Service: MessageFns<Service> = {
@@ -3011,6 +3418,9 @@ export const Service: MessageFns<Service> = {
     for (const v of message.ports) {
       ServicePort.encode(v!, writer.uint32(74).fork()).join();
     }
+    globalThis.Object.entries(message.annotations).forEach(([key, value]: [string, string]) => {
+      Service_AnnotationsEntry.encode({ key: key as any, value }, writer.uint32(82).fork()).join();
+    });
     return writer;
   },
 
@@ -3099,6 +3509,17 @@ export const Service: MessageFns<Service> = {
           message.ports.push(ServicePort.decode(reader, reader.uint32()));
           continue;
         }
+        case 10: {
+          if (tag !== 82) {
+            break;
+          }
+
+          const entry10 = Service_AnnotationsEntry.decode(reader, reader.uint32());
+          if (entry10.value !== undefined) {
+            message.annotations[entry10.key] = entry10.value;
+          }
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -3141,6 +3562,15 @@ export const Service: MessageFns<Service> = {
       ports: globalThis.Array.isArray(object?.ports)
         ? object.ports.map((e: any) => ServicePort.fromJSON(e))
         : [],
+      annotations: isObject(object.annotations)
+        ? (globalThis.Object.entries(object.annotations) as [string, any][]).reduce(
+          (acc: { [key: string]: string }, [key, value]: [string, any]) => {
+            acc[key] = globalThis.String(value);
+            return acc;
+          },
+          {},
+        )
+        : {},
     };
   },
 
@@ -3185,6 +3615,15 @@ export const Service: MessageFns<Service> = {
     if (message.ports?.length) {
       obj.ports = message.ports.map((e) => ServicePort.toJSON(e));
     }
+    if (message.annotations) {
+      const entries = globalThis.Object.entries(message.annotations) as [string, string][];
+      if (entries.length > 0) {
+        obj.annotations = {};
+        entries.forEach(([k, v]) => {
+          obj.annotations[k] = v;
+        });
+      }
+    }
     return obj;
   },
 
@@ -3218,6 +3657,15 @@ export const Service: MessageFns<Service> = {
       {},
     );
     message.ports = object.ports?.map((e) => ServicePort.fromPartial(e)) || [];
+    message.annotations = (globalThis.Object.entries(object.annotations ?? {}) as [string, string][]).reduce(
+      (acc: { [key: string]: string }, [key, value]: [string, string]) => {
+        if (value !== undefined) {
+          acc[key] = globalThis.String(value);
+        }
+        return acc;
+      },
+      {},
+    );
     return message;
   },
 };
@@ -3374,8 +3822,84 @@ export const Service_LabelsEntry: MessageFns<Service_LabelsEntry> = {
   },
 };
 
+function createBaseService_AnnotationsEntry(): Service_AnnotationsEntry {
+  return { key: "", value: "" };
+}
+
+export const Service_AnnotationsEntry: MessageFns<Service_AnnotationsEntry> = {
+  encode(message: Service_AnnotationsEntry, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.key !== "") {
+      writer.uint32(10).string(message.key);
+    }
+    if (message.value !== "") {
+      writer.uint32(18).string(message.value);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): Service_AnnotationsEntry {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseService_AnnotationsEntry();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.key = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.value = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): Service_AnnotationsEntry {
+    return {
+      key: isSet(object.key) ? globalThis.String(object.key) : "",
+      value: isSet(object.value) ? globalThis.String(object.value) : "",
+    };
+  },
+
+  toJSON(message: Service_AnnotationsEntry): unknown {
+    const obj: any = {};
+    if (message.key !== "") {
+      obj.key = message.key;
+    }
+    if (message.value !== "") {
+      obj.value = message.value;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<Service_AnnotationsEntry>, I>>(base?: I): Service_AnnotationsEntry {
+    return Service_AnnotationsEntry.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<Service_AnnotationsEntry>, I>>(object: I): Service_AnnotationsEntry {
+    const message = createBaseService_AnnotationsEntry();
+    message.key = object.key ?? "";
+    message.value = object.value ?? "";
+    return message;
+  },
+};
+
 function createBaseConfigMap(): ConfigMap {
-  return { name: "", namespace: "", data: {}, binaryData: {}, uid: "", labels: {}, immutable: false };
+  return { name: "", namespace: "", data: {}, binaryData: {}, uid: "", labels: {}, immutable: false, annotations: {} };
 }
 
 export const ConfigMap: MessageFns<ConfigMap> = {
@@ -3401,6 +3925,9 @@ export const ConfigMap: MessageFns<ConfigMap> = {
     if (message.immutable !== false) {
       writer.uint32(56).bool(message.immutable);
     }
+    globalThis.Object.entries(message.annotations).forEach(([key, value]: [string, string]) => {
+      ConfigMap_AnnotationsEntry.encode({ key: key as any, value }, writer.uint32(66).fork()).join();
+    });
     return writer;
   },
 
@@ -3476,6 +4003,17 @@ export const ConfigMap: MessageFns<ConfigMap> = {
           message.immutable = reader.bool();
           continue;
         }
+        case 8: {
+          if (tag !== 66) {
+            break;
+          }
+
+          const entry8 = ConfigMap_AnnotationsEntry.decode(reader, reader.uint32());
+          if (entry8.value !== undefined) {
+            message.annotations[entry8.key] = entry8.value;
+          }
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -3526,6 +4064,15 @@ export const ConfigMap: MessageFns<ConfigMap> = {
         )
         : {},
       immutable: isSet(object.immutable) ? globalThis.Boolean(object.immutable) : false,
+      annotations: isObject(object.annotations)
+        ? (globalThis.Object.entries(object.annotations) as [string, any][]).reduce(
+          (acc: { [key: string]: string }, [key, value]: [string, any]) => {
+            acc[key] = globalThis.String(value);
+            return acc;
+          },
+          {},
+        )
+        : {},
     };
   },
 
@@ -3570,6 +4117,15 @@ export const ConfigMap: MessageFns<ConfigMap> = {
     if (message.immutable !== false) {
       obj.immutable = message.immutable;
     }
+    if (message.annotations) {
+      const entries = globalThis.Object.entries(message.annotations) as [string, string][];
+      if (entries.length > 0) {
+        obj.annotations = {};
+        entries.forEach(([k, v]) => {
+          obj.annotations[k] = v;
+        });
+      }
+    }
     return obj;
   },
 
@@ -3609,6 +4165,15 @@ export const ConfigMap: MessageFns<ConfigMap> = {
       {},
     );
     message.immutable = object.immutable ?? false;
+    message.annotations = (globalThis.Object.entries(object.annotations ?? {}) as [string, string][]).reduce(
+      (acc: { [key: string]: string }, [key, value]: [string, string]) => {
+        if (value !== undefined) {
+          acc[key] = globalThis.String(value);
+        }
+        return acc;
+      },
+      {},
+    );
     return message;
   },
 };
@@ -3841,8 +4406,84 @@ export const ConfigMap_LabelsEntry: MessageFns<ConfigMap_LabelsEntry> = {
   },
 };
 
+function createBaseConfigMap_AnnotationsEntry(): ConfigMap_AnnotationsEntry {
+  return { key: "", value: "" };
+}
+
+export const ConfigMap_AnnotationsEntry: MessageFns<ConfigMap_AnnotationsEntry> = {
+  encode(message: ConfigMap_AnnotationsEntry, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.key !== "") {
+      writer.uint32(10).string(message.key);
+    }
+    if (message.value !== "") {
+      writer.uint32(18).string(message.value);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ConfigMap_AnnotationsEntry {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseConfigMap_AnnotationsEntry();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.key = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.value = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): ConfigMap_AnnotationsEntry {
+    return {
+      key: isSet(object.key) ? globalThis.String(object.key) : "",
+      value: isSet(object.value) ? globalThis.String(object.value) : "",
+    };
+  },
+
+  toJSON(message: ConfigMap_AnnotationsEntry): unknown {
+    const obj: any = {};
+    if (message.key !== "") {
+      obj.key = message.key;
+    }
+    if (message.value !== "") {
+      obj.value = message.value;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<ConfigMap_AnnotationsEntry>, I>>(base?: I): ConfigMap_AnnotationsEntry {
+    return ConfigMap_AnnotationsEntry.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<ConfigMap_AnnotationsEntry>, I>>(object: I): ConfigMap_AnnotationsEntry {
+    const message = createBaseConfigMap_AnnotationsEntry();
+    message.key = object.key ?? "";
+    message.value = object.value ?? "";
+    return message;
+  },
+};
+
 function createBaseSecret(): Secret {
-  return { name: "", namespace: "", data: {}, type: "", uid: "", labels: {}, immutable: false };
+  return { name: "", namespace: "", data: {}, type: "", uid: "", labels: {}, immutable: false, annotations: {} };
 }
 
 export const Secret: MessageFns<Secret> = {
@@ -3868,6 +4509,9 @@ export const Secret: MessageFns<Secret> = {
     if (message.immutable !== false) {
       writer.uint32(56).bool(message.immutable);
     }
+    globalThis.Object.entries(message.annotations).forEach(([key, value]: [string, string]) => {
+      Secret_AnnotationsEntry.encode({ key: key as any, value }, writer.uint32(66).fork()).join();
+    });
     return writer;
   },
 
@@ -3940,6 +4584,17 @@ export const Secret: MessageFns<Secret> = {
           message.immutable = reader.bool();
           continue;
         }
+        case 8: {
+          if (tag !== 66) {
+            break;
+          }
+
+          const entry8 = Secret_AnnotationsEntry.decode(reader, reader.uint32());
+          if (entry8.value !== undefined) {
+            message.annotations[entry8.key] = entry8.value;
+          }
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -3974,6 +4629,15 @@ export const Secret: MessageFns<Secret> = {
         )
         : {},
       immutable: isSet(object.immutable) ? globalThis.Boolean(object.immutable) : false,
+      annotations: isObject(object.annotations)
+        ? (globalThis.Object.entries(object.annotations) as [string, any][]).reduce(
+          (acc: { [key: string]: string }, [key, value]: [string, any]) => {
+            acc[key] = globalThis.String(value);
+            return acc;
+          },
+          {},
+        )
+        : {},
     };
   },
 
@@ -4012,6 +4676,15 @@ export const Secret: MessageFns<Secret> = {
     if (message.immutable !== false) {
       obj.immutable = message.immutable;
     }
+    if (message.annotations) {
+      const entries = globalThis.Object.entries(message.annotations) as [string, string][];
+      if (entries.length > 0) {
+        obj.annotations = {};
+        entries.forEach(([k, v]) => {
+          obj.annotations[k] = v;
+        });
+      }
+    }
     return obj;
   },
 
@@ -4043,6 +4716,15 @@ export const Secret: MessageFns<Secret> = {
       {},
     );
     message.immutable = object.immutable ?? false;
+    message.annotations = (globalThis.Object.entries(object.annotations ?? {}) as [string, string][]).reduce(
+      (acc: { [key: string]: string }, [key, value]: [string, string]) => {
+        if (value !== undefined) {
+          acc[key] = globalThis.String(value);
+        }
+        return acc;
+      },
+      {},
+    );
     return message;
   },
 };
@@ -4199,6 +4881,82 @@ export const Secret_LabelsEntry: MessageFns<Secret_LabelsEntry> = {
   },
 };
 
+function createBaseSecret_AnnotationsEntry(): Secret_AnnotationsEntry {
+  return { key: "", value: "" };
+}
+
+export const Secret_AnnotationsEntry: MessageFns<Secret_AnnotationsEntry> = {
+  encode(message: Secret_AnnotationsEntry, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.key !== "") {
+      writer.uint32(10).string(message.key);
+    }
+    if (message.value !== "") {
+      writer.uint32(18).string(message.value);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): Secret_AnnotationsEntry {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseSecret_AnnotationsEntry();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.key = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.value = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): Secret_AnnotationsEntry {
+    return {
+      key: isSet(object.key) ? globalThis.String(object.key) : "",
+      value: isSet(object.value) ? globalThis.String(object.value) : "",
+    };
+  },
+
+  toJSON(message: Secret_AnnotationsEntry): unknown {
+    const obj: any = {};
+    if (message.key !== "") {
+      obj.key = message.key;
+    }
+    if (message.value !== "") {
+      obj.value = message.value;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<Secret_AnnotationsEntry>, I>>(base?: I): Secret_AnnotationsEntry {
+    return Secret_AnnotationsEntry.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<Secret_AnnotationsEntry>, I>>(object: I): Secret_AnnotationsEntry {
+    const message = createBaseSecret_AnnotationsEntry();
+    message.key = object.key ?? "";
+    message.value = object.value ?? "";
+    return message;
+  },
+};
+
 function createBaseIngress(): Ingress {
   return {
     name: "",
@@ -4211,6 +4969,7 @@ function createBaseIngress(): Ingress {
     path: "",
     uid: "",
     labels: {},
+    annotations: {},
   };
 }
 
@@ -4245,6 +5004,9 @@ export const Ingress: MessageFns<Ingress> = {
     }
     globalThis.Object.entries(message.labels).forEach(([key, value]: [string, string]) => {
       Ingress_LabelsEntry.encode({ key: key as any, value }, writer.uint32(82).fork()).join();
+    });
+    globalThis.Object.entries(message.annotations).forEach(([key, value]: [string, string]) => {
+      Ingress_AnnotationsEntry.encode({ key: key as any, value }, writer.uint32(90).fork()).join();
     });
     return writer;
   },
@@ -4339,6 +5101,17 @@ export const Ingress: MessageFns<Ingress> = {
           }
           continue;
         }
+        case 11: {
+          if (tag !== 90) {
+            break;
+          }
+
+          const entry11 = Ingress_AnnotationsEntry.decode(reader, reader.uint32());
+          if (entry11.value !== undefined) {
+            message.annotations[entry11.key] = entry11.value;
+          }
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -4369,6 +5142,15 @@ export const Ingress: MessageFns<Ingress> = {
       uid: isSet(object.uid) ? globalThis.String(object.uid) : "",
       labels: isObject(object.labels)
         ? (globalThis.Object.entries(object.labels) as [string, any][]).reduce(
+          (acc: { [key: string]: string }, [key, value]: [string, any]) => {
+            acc[key] = globalThis.String(value);
+            return acc;
+          },
+          {},
+        )
+        : {},
+      annotations: isObject(object.annotations)
+        ? (globalThis.Object.entries(object.annotations) as [string, any][]).reduce(
           (acc: { [key: string]: string }, [key, value]: [string, any]) => {
             acc[key] = globalThis.String(value);
             return acc;
@@ -4417,6 +5199,15 @@ export const Ingress: MessageFns<Ingress> = {
         });
       }
     }
+    if (message.annotations) {
+      const entries = globalThis.Object.entries(message.annotations) as [string, string][];
+      if (entries.length > 0) {
+        obj.annotations = {};
+        entries.forEach(([k, v]) => {
+          obj.annotations[k] = v;
+        });
+      }
+    }
     return obj;
   },
 
@@ -4435,6 +5226,15 @@ export const Ingress: MessageFns<Ingress> = {
     message.path = object.path ?? "";
     message.uid = object.uid ?? "";
     message.labels = (globalThis.Object.entries(object.labels ?? {}) as [string, string][]).reduce(
+      (acc: { [key: string]: string }, [key, value]: [string, string]) => {
+        if (value !== undefined) {
+          acc[key] = globalThis.String(value);
+        }
+        return acc;
+      },
+      {},
+    );
+    message.annotations = (globalThis.Object.entries(object.annotations ?? {}) as [string, string][]).reduce(
       (acc: { [key: string]: string }, [key, value]: [string, string]) => {
         if (value !== undefined) {
           acc[key] = globalThis.String(value);
@@ -4517,6 +5317,82 @@ export const Ingress_LabelsEntry: MessageFns<Ingress_LabelsEntry> = {
   },
   fromPartial<I extends Exact<DeepPartial<Ingress_LabelsEntry>, I>>(object: I): Ingress_LabelsEntry {
     const message = createBaseIngress_LabelsEntry();
+    message.key = object.key ?? "";
+    message.value = object.value ?? "";
+    return message;
+  },
+};
+
+function createBaseIngress_AnnotationsEntry(): Ingress_AnnotationsEntry {
+  return { key: "", value: "" };
+}
+
+export const Ingress_AnnotationsEntry: MessageFns<Ingress_AnnotationsEntry> = {
+  encode(message: Ingress_AnnotationsEntry, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.key !== "") {
+      writer.uint32(10).string(message.key);
+    }
+    if (message.value !== "") {
+      writer.uint32(18).string(message.value);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): Ingress_AnnotationsEntry {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseIngress_AnnotationsEntry();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.key = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.value = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): Ingress_AnnotationsEntry {
+    return {
+      key: isSet(object.key) ? globalThis.String(object.key) : "",
+      value: isSet(object.value) ? globalThis.String(object.value) : "",
+    };
+  },
+
+  toJSON(message: Ingress_AnnotationsEntry): unknown {
+    const obj: any = {};
+    if (message.key !== "") {
+      obj.key = message.key;
+    }
+    if (message.value !== "") {
+      obj.value = message.value;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<Ingress_AnnotationsEntry>, I>>(base?: I): Ingress_AnnotationsEntry {
+    return Ingress_AnnotationsEntry.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<Ingress_AnnotationsEntry>, I>>(object: I): Ingress_AnnotationsEntry {
+    const message = createBaseIngress_AnnotationsEntry();
     message.key = object.key ?? "";
     message.value = object.value ?? "";
     return message;

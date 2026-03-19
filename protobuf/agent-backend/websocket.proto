@@ -107,6 +107,7 @@ message Node {
   string uid = 7;
   string status = 8;
   repeated string roles = 9;
+  map<string, string> annotations = 10;
 }
 
 message Deployment {
@@ -132,6 +133,7 @@ message Deployment {
   int64 memory_request = 15;
   int64 memory_limit = 16;
   repeated ContainerPort ports = 17;
+  map<string, string> annotations = 18;
 }
 
 message Pod {
@@ -163,6 +165,7 @@ message Pod {
   // New field for parity
   map<string, string> labels = 17;
   string args = 18;
+  map<string, string> annotations = 19;
 }
 
 message ServicePort {
@@ -184,6 +187,7 @@ message Service {
   string uid = 7;
   map<string, string> labels = 8;
   repeated ServicePort ports = 9;
+  map<string, string> annotations = 10;
 }
 
 message ConfigMap {
@@ -194,6 +198,7 @@ message ConfigMap {
   string uid = 5;
   map<string, string> labels = 6;
   bool immutable = 7;
+  map<string, string> annotations = 8;
 }
 
 message Secret {
@@ -204,6 +209,7 @@ message Secret {
   string uid = 5;
   map<string, string> labels = 6;
   bool immutable = 7;
+  map<string, string> annotations = 8;
 }
 
 message Ingress {
@@ -224,6 +230,7 @@ message Ingress {
   // Kubernetes UID of the IngressRoute resource
   string uid = 9;
   map<string, string> labels = 10;
+  map<string, string> annotations = 11;
 }
 
 message Command {

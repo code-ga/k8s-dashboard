@@ -174,6 +174,8 @@ export const configmapRoute = new Elysia({
 							binaryData: encryptedBinaryData,
 							labels: JSON.stringify(body.labels || {}),
 							updatedAt: new Date(),
+							createdAt: new Date(),
+							annotations: body.annotations || {},
 						})
 						.returning();
 					if (!newCm) {
@@ -197,6 +199,7 @@ export const configmapRoute = new Elysia({
 									data: body.data,
 									binaryData: body.binaryData,
 									labels: body.labels,
+									annotations: body.annotations,
 								}),
 								targetNamespace: body.namespace,
 								targetName: body.name,
@@ -229,6 +232,9 @@ export const configmapRoute = new Elysia({
 							Type.Record(Type.String(), Type.String()),
 						), // Base64 encoded in requests
 						labels: Type.Optional(Type.Record(Type.String(), Type.String())),
+						annotations: Type.Optional(
+							Type.Record(Type.String(), Type.String()),
+						),
 					}),
 					response: {
 						201: baseResponseSchema(
@@ -293,6 +299,7 @@ export const configmapRoute = new Elysia({
 							binaryData: encryptedBinaryData,
 							labels: JSON.stringify(body.labels || {}),
 							updatedAt: new Date(),
+							annotations: body.annotations || cm.annotations || {},
 						})
 						.where(eq(schema.k8sConfigMaps.id, id))
 						.returning();
@@ -318,6 +325,7 @@ export const configmapRoute = new Elysia({
 									data: body.data,
 									binaryData: body.binaryData,
 									labels: body.labels,
+									annotations: body.annotations || cm.annotations || {},
 								}),
 								targetNamespace: cm.namespace,
 								targetName: cm.name,
@@ -348,6 +356,9 @@ export const configmapRoute = new Elysia({
 							Type.Record(Type.String(), Type.String()),
 						),
 						labels: Type.Optional(Type.Record(Type.String(), Type.String())),
+						annotations: Type.Optional(
+							Type.Record(Type.String(), Type.String()),
+						),
 					}),
 					response: {
 						200: baseResponseSchema(

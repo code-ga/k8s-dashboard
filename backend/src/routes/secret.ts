@@ -165,6 +165,7 @@ export const secretRoute = new Elysia({
 							type: body.type || "Opaque",
 							data: encryptedData,
 							labels: JSON.stringify(body.labels || {}),
+							annotations: body.annotations || {},
 							updatedAt: new Date(),
 						})
 						.returning();
@@ -189,6 +190,7 @@ export const secretRoute = new Elysia({
 									type: body.type || "Opaque",
 									data: binData,
 									labels: body.labels,
+									annotations: body.annotations,
 								}),
 								targetNamespace: body.namespace,
 								targetName: body.name,
@@ -218,6 +220,9 @@ export const secretRoute = new Elysia({
 						type: Type.Optional(Type.String()),
 						data: Type.Optional(Type.Record(Type.String(), Type.String())),
 						labels: Type.Optional(Type.Record(Type.String(), Type.String())),
+						annotations: Type.Optional(
+							Type.Record(Type.String(), Type.String()),
+						),
 					}),
 					response: {
 						201: baseResponseSchema(
@@ -286,6 +291,7 @@ export const secretRoute = new Elysia({
 							data: encryptedData,
 							labels: JSON.stringify(body.labels || {}),
 							updatedAt: new Date(),
+							annotations: body.annotations || secret.annotations || {},
 						})
 						.where(eq(schema.k8sSecrets.id, id))
 						.returning();
@@ -309,6 +315,7 @@ export const secretRoute = new Elysia({
 									namespace: secret.namespace,
 									type: body.type || secret.type || "Opaque",
 									data: binData,
+									annotations: body.annotations || secret.annotations || {},
 									labels: body.labels,
 								}),
 								targetNamespace: secret.namespace,
@@ -338,6 +345,9 @@ export const secretRoute = new Elysia({
 						type: Type.Optional(Type.String()),
 						data: Type.Optional(Type.Record(Type.String(), Type.String())),
 						labels: Type.Optional(Type.Record(Type.String(), Type.String())),
+						annotations: Type.Optional(
+							Type.Record(Type.String(), Type.String()),
+						),
 					}),
 					response: {
 						200: baseResponseSchema(

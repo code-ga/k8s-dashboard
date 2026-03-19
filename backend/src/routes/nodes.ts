@@ -217,6 +217,7 @@ export const nodesRoute = new Elysia({ prefix: "/nodes/:clusterId" })
 							.set({
 								name,
 								labels: lable,
+								annotations: ctx.body.annotations,
 								updatedAt: new Date(),
 							})
 							.where(eq(schema.k8sClusterNode.id, nodeId))
@@ -245,6 +246,7 @@ export const nodesRoute = new Elysia({ prefix: "/nodes/:clusterId" })
 						body: Type.Partial(
 							Type.Object({
 								name: dbSchemaTypes.k8sClusterNode.name,
+								annotations: dbSchemaTypes.k8sClusterNode.annotations,
 								lable: dbSchemaTypes.k8sClusterNode.labels,
 							}),
 						),

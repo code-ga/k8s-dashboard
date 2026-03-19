@@ -21,6 +21,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/util/retry"
 )
 
 func (k *K8sClient) DeleteDeployment(namespace, deploymentName string) error {
@@ -48,7 +49,6 @@ func (k *K8sClient) ApplyManifest(yamlContent string) error {
 		}
 
 		// 2. Get GVR (Group Version Resource) mapping
-		// This tells the client "where" to send this object
 		gvk := rawObj.GroupVersionKind()
 
 		mapping, err := k.RESTMapper.RESTMapping(gvk.GroupKind(), gvk.Version)
@@ -61,39 +61,38 @@ func (k *K8sClient) ApplyManifest(yamlContent string) error {
 		var dr dynamic.ResourceInterface
 		ns := rawObj.GetNamespace()
 		if ns == "" {
-			// Cluster-scoped resource
 			dr = k.DynamicClient.Resource(gvr)
 		} else {
-			// Namespaced resource
 			dr = k.DynamicClient.Resource(gvr).Namespace(ns)
 		}
 
-		// 4. Apply Logic (Create or Update)
+		// 4. Apply Logic with RetryOnConflict
 		name := rawObj.GetName()
 		fmt.Printf("Applying %s/%s (%s)...\n", gvk.Kind, name, ns)
 
-		// Try to Get existing resource
-		existing, err := dr.Get(k.Context, name, metav1.GetOptions{})
-		if err != nil {
-			if errors.IsNotFound(err) {
-				// CREATE
-				_, err = dr.Create(k.Context, &rawObj, metav1.CreateOptions{})
-				if err != nil {
-					return fmt.Errorf("failed to create %s: %w", name, err)
+		err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			existing, err := dr.Get(k.Context, name, metav1.GetOptions{})
+			if err != nil {
+				if errors.IsNotFound(err) {
+					// CREATE
+					_, err = dr.Create(k.Context, &rawObj, metav1.CreateOptions{})
+					if err != nil {
+						return err
+					}
+					fmt.Printf("Created %s\n", name)
+					return nil
 				}
-				fmt.Printf("Created %s\n", name)
-			} else {
-				return fmt.Errorf("failed to get existing %s: %w", name, err)
+				return err
 			}
-		} else {
-			// UPDATE (Optimistic Locking)
-			// We must set the ResourceVersion of the new obj to match existing to allow update
+
+			// UPDATE with conflict retry
 			rawObj.SetResourceVersion(existing.GetResourceVersion())
 			_, err = dr.Update(k.Context, &rawObj, metav1.UpdateOptions{})
-			if err != nil {
-				return fmt.Errorf("failed to update %s: %w", name, err)
-			}
-			fmt.Printf("Updated %s\n", name)
+			return err
+		})
+
+		if err != nil {
+			return fmt.Errorf("failed to apply %s: %w", name, err)
 		}
 	}
 	return nil

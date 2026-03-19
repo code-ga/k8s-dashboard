@@ -346,6 +346,8 @@ export const podRoute = new Elysia({
 						memoryRequest: 0,
 						memoryLimit: 0,
 						updatedAt: new Date(),
+						labels: JSON.stringify(body.labels), // will be change to jsonb in the future, but for now we keep it as string for simplicity
+						annotations: body.annotations || {}, // that is jsonb in the schema, so we can directly store the object
 					};
 					try {
 						[newPod] = await db
@@ -368,7 +370,8 @@ export const podRoute = new Elysia({
 						});
 					} catch (dbError) {
 						logger.error("DB Insert Failed:", dbError);
-						const message = dbError instanceof Error ? dbError.message : String(dbError);
+						const message =
+							dbError instanceof Error ? dbError.message : String(dbError);
 						return ctx.status(500, {
 							success: false,
 							message: `Database error: ${message}`,
@@ -533,6 +536,9 @@ export const podRoute = new Elysia({
 									),
 								),
 							}),
+						),
+						annotations: Type.Optional(
+							Type.Record(Type.String(), Type.String()),
 						),
 					}),
 					response: {
@@ -701,12 +707,14 @@ export const podRoute = new Elysia({
 								body.resources.limits.memory,
 							);
 					}
+					if (body.annotations) updateData.annotations = body.annotations;
 
 					try {
 						await db
 							.update(schema.k8sPods)
 							.set(updateData)
-							.where(eq(schema.k8sPods.id, podId));
+							.where(eq(schema.k8sPods.id, podId))
+							.returning();
 
 						// Update resource refs in normalized tables if provided
 						if (body.ports || body.configMapRefs || body.secretRefs) {
@@ -717,7 +725,8 @@ export const podRoute = new Elysia({
 						}
 					} catch (dbError) {
 						logger.error("DB Update Failed:", dbError);
-						const message = dbError instanceof Error ? dbError.message : String(dbError);
+						const message =
+							dbError instanceof Error ? dbError.message : String(dbError);
 						return ctx.status(500, {
 							success: false,
 							message: `Database update failed: ${message}`,
@@ -877,6 +886,15 @@ export const podRoute = new Elysia({
 								),
 							}),
 						),
+						annotations: Type.Optional(
+							Type.Record(Type.String(), Type.String()),
+						),
+						// For simplicity, we only allow updating these fields. More can be added as needed.
+						// Note that some fields like name and namespace are immutable in Kubernetes and would require delete+recreate approach.
+						// We will handle that logic in the service layer.
+						// For now, we just trigger a delete command and let sync handle the recreation with updated spec.
+						// In the future, we can implement a smarter update logic that only updates mutable fields without deletion.
+						// But for now, this is simpler.
 					}),
 					response: {
 						200: baseResponseSchema(Type.Optional(Type.String())),
