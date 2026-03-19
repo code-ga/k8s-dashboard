@@ -123,56 +123,58 @@ export class AgentService {
 		nodes: Heartbeat["nodes"],
 	): Promise<void> {
 		try {
-			for (const node of nodes) {
-				let existingNode = await db
-					.select()
-					.from(k8sClusterNode)
-					.where(
-						and(
-							eq(k8sClusterNode.clusterId, clusterId),
-							eq(k8sClusterNode.k8sUid, node.uid),
-						),
-					);
-
-				if (existingNode.length === 0) {
-					existingNode = await db
+			await db.transaction(async () => {
+				for (const node of nodes) {
+					let existingNode = await db
 						.select()
 						.from(k8sClusterNode)
 						.where(
 							and(
 								eq(k8sClusterNode.clusterId, clusterId),
-								eq(k8sClusterNode.name, node.name),
+								eq(k8sClusterNode.k8sUid, node.uid),
 							),
 						);
-				}
 
-				const nodeData: InferInsertModel<typeof k8sClusterNode> = {
-					clusterId,
-					name: node.name,
-					cpuUsage: Number(node.cpuUsage),
-					ramUsage: Number(node.ramUsage),
-					cpuCapacity: Number(node.cpuCapacity),
-					ramCapacity: Number(node.ramCapacity),
-					labels: JSON.stringify(node.labels),
-					k8sUid: node.uid,
-					status: node.status || "Unknown",
-					roles: node.roles || [],
-					updatedAt: new Date(),
-					annotations: node.annotations || {},
-				};
+					if (existingNode.length === 0) {
+						existingNode = await db
+							.select()
+							.from(k8sClusterNode)
+							.where(
+								and(
+									eq(k8sClusterNode.clusterId, clusterId),
+									eq(k8sClusterNode.name, node.name),
+								),
+							);
+					}
 
-				const existingRecord = existingNode[0];
-				if (existingRecord) {
-					await db
-						.update(k8sClusterNode)
-						.set(nodeData)
-						.where(eq(k8sClusterNode.id, existingRecord.id));
-				} else {
-					await db
-						.insert(k8sClusterNode)
-						.values({ ...nodeData, autoCreated: true });
+					const nodeData: InferInsertModel<typeof k8sClusterNode> = {
+						clusterId,
+						name: node.name,
+						cpuUsage: Number(node.cpuUsage),
+						ramUsage: Number(node.ramUsage),
+						cpuCapacity: Number(node.cpuCapacity),
+						ramCapacity: Number(node.ramCapacity),
+						labels: JSON.stringify(node.labels),
+						k8sUid: node.uid,
+						status: node.status || "Unknown",
+						roles: node.roles || [],
+						updatedAt: new Date(),
+						annotations: node.annotations || {},
+					};
+
+					const existingRecord = existingNode[0];
+					if (existingRecord) {
+						await db
+							.update(k8sClusterNode)
+							.set(nodeData)
+							.where(eq(k8sClusterNode.id, existingRecord.id));
+					} else {
+						await db
+							.insert(k8sClusterNode)
+							.values({ ...nodeData, autoCreated: true });
+					}
 				}
-			}
+			});
 		} catch (error) {
 			logger.error("Failed to sync nodes", { clusterId, error });
 			throw error;
@@ -184,113 +186,121 @@ export class AgentService {
 		deployments: Heartbeat["deployments"],
 	): Promise<void> {
 		try {
-			for (const dep of deployments) {
-				let existing = await db
-					.select()
-					.from(k8sDeployments)
-					.where(
-						and(
-							eq(k8sDeployments.clusterId, clusterId),
-							eq(k8sDeployments.k8sUid, dep.uid),
-						),
-					);
-
-				if (existing.length === 0) {
-					existing = await db
+			await db.transaction(async () => {
+				for (const dep of deployments) {
+					let existing = await db
 						.select()
 						.from(k8sDeployments)
 						.where(
 							and(
 								eq(k8sDeployments.clusterId, clusterId),
-								eq(k8sDeployments.name, dep.name),
-								eq(k8sDeployments.namespace, dep.namespace),
+								eq(k8sDeployments.k8sUid, dep.uid),
 							),
 						);
+
+					if (existing.length === 0) {
+						existing = await db
+							.select()
+							.from(k8sDeployments)
+							.where(
+								and(
+									eq(k8sDeployments.clusterId, clusterId),
+									eq(k8sDeployments.name, dep.name),
+									eq(k8sDeployments.namespace, dep.namespace),
+								),
+							);
+					}
+
+					const depData: Omit<
+						InferInsertModel<typeof k8sDeployments>,
+						"ownerId"
+					> = {
+						clusterId,
+						name: dep.name,
+						namespace: dep.namespace,
+						replicas: dep.replicas,
+						availableReplicas: dep.availableReplicas,
+						unavailableReplicas: dep.unavailableReplicas,
+						dockerImage: dep.dockerImage,
+						labels: JSON.stringify(dep.labels),
+						selector: JSON.stringify(dep.selector),
+						k8sUid: dep.uid,
+						command: dep.command,
+						args: dep.args,
+						envVariables: dep.envVariables,
+						cpuRequest: Number(dep.cpuRequest),
+						cpuLimit: Number(dep.cpuLimit),
+						memoryRequest: Number(dep.memoryRequest),
+						memoryLimit: Number(dep.memoryLimit),
+						updatedAt: new Date(),
+						annotations: dep.annotations || {},
+					};
+
+					const existingRecord = existing[0];
+					if (existingRecord) {
+						await db
+							.update(k8sDeployments)
+							.set({
+								availableReplicas: dep.availableReplicas,
+								unavailableReplicas: dep.unavailableReplicas,
+								k8sUid: dep.uid,
+								updatedAt: new Date(),
+							})
+							.where(eq(k8sDeployments.id, existingRecord.id));
+
+						const deploymentId = existingRecord.id;
+						await deleteDeploymentPorts(deploymentId);
+						if (dep.ports && dep.ports.length > 0) {
+							const ports: PortRef[] = dep.ports.map((p) => ({
+								containerPort: p.containerPort,
+								name: p.name,
+							}));
+							await insertDeploymentPorts(ports, deploymentId);
+						}
+					} else {
+						const defaultOwner = await this.findDefaultOwner();
+						if (!defaultOwner) throw new Error("Default account not found");
+
+						const [newDep] = await db
+							.insert(k8sDeployments)
+							.values({
+								...depData,
+								ownerId: defaultOwner.id,
+								autoCreated: true,
+							})
+							.returning();
+
+						if (newDep && dep.ports && dep.ports.length > 0) {
+							const ports: PortRef[] = dep.ports.map((p) => ({
+								containerPort: p.containerPort,
+								name: p.name,
+							}));
+							await insertDeploymentPorts(ports, newDep.id);
+						}
+					}
 				}
 
-				const depData: Omit<
-					InferInsertModel<typeof k8sDeployments>,
-					"ownerId"
-				> = {
-					clusterId,
-					name: dep.name,
-					namespace: dep.namespace,
-					replicas: dep.replicas,
-					availableReplicas: dep.availableReplicas,
-					unavailableReplicas: dep.unavailableReplicas,
-					dockerImage: dep.dockerImage,
-					labels: JSON.stringify(dep.labels),
-					selector: JSON.stringify(dep.selector),
-					k8sUid: dep.uid,
-					command: dep.command,
-					args: dep.args,
-					envVariables: dep.envVariables,
-					cpuRequest: Number(dep.cpuRequest),
-					cpuLimit: Number(dep.cpuLimit),
-					memoryRequest: Number(dep.memoryRequest),
-					memoryLimit: Number(dep.memoryLimit),
-					updatedAt: new Date(),
-					annotations: dep.annotations || {},
-				};
-
-				const existingRecord = existing[0];
-				if (existingRecord) {
-					await db
-						.update(k8sDeployments)
-						.set({
-							availableReplicas: dep.availableReplicas,
-							unavailableReplicas: dep.unavailableReplicas,
-							k8sUid: dep.uid,
-							updatedAt: new Date(),
-						})
-						.where(eq(k8sDeployments.id, existingRecord.id));
-
-					const deploymentId = existingRecord.id;
-					await deleteDeploymentPorts(deploymentId);
-					if (dep.ports && dep.ports.length > 0) {
-						const ports: PortRef[] = dep.ports.map((p) => ({
-							containerPort: p.containerPort,
-							name: p.name,
-						}));
-						await insertDeploymentPorts(ports, deploymentId);
-					}
-				} else {
-					const defaultOwner = await this.findDefaultOwner();
-					if (!defaultOwner) throw new Error("Default account not found");
-
-					const [newDep] = await db
-						.insert(k8sDeployments)
-						.values({ ...depData, ownerId: defaultOwner.id, autoCreated: true })
-						.returning();
-
-					if (newDep && dep.ports && dep.ports.length > 0) {
-						const ports: PortRef[] = dep.ports.map((p) => ({
-							containerPort: p.containerPort,
-							name: p.name,
-						}));
-						await insertDeploymentPorts(ports, newDep.id);
-					}
-				}
-			}
-
-			// Cleanup: remove auto-created deployments no longer present
-			const heartbeatUids = new Set(
-				deployments.map((d) => d.uid).filter(Boolean),
-			);
-			const autoCreated = await db
-				.select()
-				.from(k8sDeployments)
-				.where(
-					and(
-						eq(k8sDeployments.clusterId, clusterId),
-						eq(k8sDeployments.autoCreated, true),
-					),
+				// Cleanup: remove auto-created deployments no longer present
+				const heartbeatUids = new Set(
+					deployments.map((d) => d.uid).filter(Boolean),
 				);
-			for (const dep of autoCreated) {
-				if (dep.k8sUid && !heartbeatUids.has(dep.k8sUid)) {
-					await db.delete(k8sDeployments).where(eq(k8sDeployments.id, dep.id));
+				const autoCreated = await db
+					.select()
+					.from(k8sDeployments)
+					.where(
+						and(
+							eq(k8sDeployments.clusterId, clusterId),
+							eq(k8sDeployments.autoCreated, true),
+						),
+					);
+				for (const dep of autoCreated) {
+					if (dep.k8sUid && !heartbeatUids.has(dep.k8sUid)) {
+						await db
+							.delete(k8sDeployments)
+							.where(eq(k8sDeployments.id, dep.id));
+					}
 				}
-			}
+			});
 		} catch (error) {
 			logger.error("Failed to sync deployments", { clusterId, error });
 			throw error;
@@ -302,138 +312,145 @@ export class AgentService {
 		pods: Heartbeat["pods"],
 	): Promise<void> {
 		try {
-			const defaultOwner = await this.findDefaultOwner();
-			if (!defaultOwner) {
-				logger.error("Default owner not found for pod syncing", { clusterId });
-				return;
-			}
-
-			for (const pod of pods) {
-				const nodeResult = await db
-					.select()
-					.from(k8sClusterNode)
-					.where(
-						and(
-							eq(k8sClusterNode.clusterId, clusterId),
-							eq(k8sClusterNode.name, pod.nodeName),
-						),
-					);
-
-				if (nodeResult.length === 0 || !nodeResult[0]) {
-					logger.error(`Node ${pod.nodeName} not found for pod ${pod.name}`, {
+			await db.transaction(async () => {
+				const defaultOwner = await this.findDefaultOwner();
+				if (!defaultOwner) {
+					logger.error("Default owner not found for pod syncing", {
 						clusterId,
-						podName: pod.name,
-						nodeName: pod.nodeName,
 					});
-					continue;
+					return;
 				}
-				const node = nodeResult[0];
 
-				let existingPodResult = await db
-					.select()
-					.from(k8sPods)
-					.where(
-						and(eq(k8sPods.clusterId, clusterId), eq(k8sPods.k8sUid, pod.uid)),
-					);
+				for (const pod of pods) {
+					const nodeResult = await db
+						.select()
+						.from(k8sClusterNode)
+						.where(
+							and(
+								eq(k8sClusterNode.clusterId, clusterId),
+								eq(k8sClusterNode.name, pod.nodeName),
+							),
+						);
 
-				if (existingPodResult.length === 0) {
-					existingPodResult = await db
+					if (nodeResult.length === 0 || !nodeResult[0]) {
+						logger.error(`Node ${pod.nodeName} not found for pod ${pod.name}`, {
+							clusterId,
+							podName: pod.name,
+							nodeName: pod.nodeName,
+						});
+						continue;
+					}
+					const node = nodeResult[0];
+
+					let existingPodResult = await db
 						.select()
 						.from(k8sPods)
 						.where(
 							and(
 								eq(k8sPods.clusterId, clusterId),
-								eq(k8sPods.name, pod.name),
-								eq(k8sPods.namespace, pod.namespace),
+								eq(k8sPods.k8sUid, pod.uid),
 							),
 						);
-				}
 
-				const podData: InferInsertModel<typeof k8sPods> = {
-					clusterId,
-					deploymentId: null,
-					nodeId: node.id,
-					ownerId: defaultOwner.id,
-					name: pod.name,
-					namespace: pod.namespace,
-					dockerImage: pod.dockerImage,
-					cpuRequest: Number(pod.cpuRequest),
-					cpuLimit: Number(pod.cpuLimit),
-					memoryRequest: Number(pod.memoryRequest),
-					memoryLimit: Number(pod.memoryLimit),
-					command: pod.command,
-					args: pod.args,
-					envVariables: pod.envVariables,
-					labels: JSON.stringify(pod.labels),
-					k8sUid: pod.uid,
-					status: pod.status || "Unknown",
-					cpuUsage: Number(pod.cpuUsage),
-					memoryUsage: Number(pod.ramUsage),
-					updatedAt: new Date(),
-					annotations: pod.annotations || {},
-				};
-
-				const existingPod = existingPodResult[0];
-				if (existingPod) {
-					const newStatus =
-						existingPod.status === "Terminating"
-							? "Terminating"
-							: pod.status || "Unknown";
-
-					await db
-						.update(k8sPods)
-						.set({
-							nodeId: node.id,
-							status: newStatus,
-							cpuUsage: Number(pod.cpuUsage),
-							memoryUsage: Number(pod.ramUsage),
-							k8sUid: pod.uid,
-							updatedAt: new Date(),
-						})
-						.where(eq(k8sPods.id, existingPod.id));
-
-					const podId = existingPod.id;
-					await deletePodPorts(podId);
-					if (pod.ports && pod.ports.length > 0) {
-						const ports: PortRef[] = pod.ports.map((p) => ({
-							containerPort: p.containerPort,
-							name: p.name,
-						}));
-						await insertPodPorts(ports, podId);
+					if (existingPodResult.length === 0) {
+						existingPodResult = await db
+							.select()
+							.from(k8sPods)
+							.where(
+								and(
+									eq(k8sPods.clusterId, clusterId),
+									eq(k8sPods.name, pod.name),
+									eq(k8sPods.namespace, pod.namespace),
+								),
+							);
 					}
-				} else {
-					const [newPod] = await db
-						.insert(k8sPods)
-						.values({ ...podData, autoCreated: true })
-						.returning();
 
-					if (newPod && pod.ports && pod.ports.length > 0) {
-						const ports: PortRef[] = pod.ports.map((p) => ({
-							containerPort: p.containerPort,
-							name: p.name,
-						}));
-						await insertPodPorts(ports, newPod.id);
+					const podData: InferInsertModel<typeof k8sPods> = {
+						clusterId,
+						deploymentId: null,
+						nodeId: node.id,
+						ownerId: defaultOwner.id,
+						name: pod.name,
+						namespace: pod.namespace,
+						dockerImage: pod.dockerImage,
+						cpuRequest: Number(pod.cpuRequest),
+						cpuLimit: Number(pod.cpuLimit),
+						memoryRequest: Number(pod.memoryRequest),
+						memoryLimit: Number(pod.memoryLimit),
+						command: pod.command,
+						args: pod.args,
+						envVariables: pod.envVariables,
+						labels: JSON.stringify(pod.labels),
+						k8sUid: pod.uid,
+						status: pod.status || "Unknown",
+						cpuUsage: Number(pod.cpuUsage),
+						memoryUsage: Number(pod.ramUsage),
+						updatedAt: new Date(),
+						annotations: pod.annotations || {},
+					};
+
+					const existingPod = existingPodResult[0];
+					if (existingPod) {
+						const newStatus =
+							existingPod.status === "Terminating"
+								? "Terminating"
+								: pod.status || "Unknown";
+
+						await db
+							.update(k8sPods)
+							.set({
+								nodeId: node.id,
+								status: newStatus,
+								cpuUsage: Number(pod.cpuUsage),
+								memoryUsage: Number(pod.ramUsage),
+								k8sUid: pod.uid,
+								updatedAt: new Date(),
+							})
+							.where(eq(k8sPods.id, existingPod.id));
+
+						const podId = existingPod.id;
+						await deletePodPorts(podId);
+						if (pod.ports && pod.ports.length > 0) {
+							const ports: PortRef[] = pod.ports.map((p) => ({
+								containerPort: p.containerPort,
+								name: p.name,
+							}));
+							await insertPodPorts(ports, podId);
+						}
+					} else {
+						const [newPod] = await db
+							.insert(k8sPods)
+							.values({ ...podData, autoCreated: true })
+							.returning();
+
+						if (newPod && pod.ports && pod.ports.length > 0) {
+							const ports: PortRef[] = pod.ports.map((p) => ({
+								containerPort: p.containerPort,
+								name: p.name,
+							}));
+							await insertPodPorts(ports, newPod.id);
+						}
 					}
 				}
-			}
 
-			// Cleanup: remove auto-created bare pods no longer present
-			const heartbeatUids = new Set(pods.map((p) => p.uid).filter(Boolean));
-			const autoCreated = await db
-				.select()
-				.from(k8sPods)
-				.where(
-					and(
-						eq(k8sPods.clusterId, clusterId),
-						eq(k8sPods.autoCreated, true),
-						isNull(k8sPods.deploymentId),
-					),
-				);
-			for (const pod of autoCreated) {
-				if (pod.k8sUid && !heartbeatUids.has(pod.k8sUid)) {
-					await db.delete(k8sPods).where(eq(k8sPods.id, pod.id));
+				// Cleanup: remove auto-created bare pods no longer present
+				const heartbeatUids = new Set(pods.map((p) => p.uid).filter(Boolean));
+				const autoCreated = await db
+					.select()
+					.from(k8sPods)
+					.where(
+						and(
+							eq(k8sPods.clusterId, clusterId),
+							eq(k8sPods.autoCreated, true),
+							isNull(k8sPods.deploymentId),
+						),
+					);
+				for (const pod of autoCreated) {
+					if (pod.k8sUid && !heartbeatUids.has(pod.k8sUid)) {
+						await db.delete(k8sPods).where(eq(k8sPods.id, pod.id));
+					}
 				}
-			}
+			});
 		} catch (error) {
 			logger.error("Failed to sync pods", { clusterId, error });
 			throw error;
@@ -445,84 +462,88 @@ export class AgentService {
 		services: Heartbeat["services"],
 	): Promise<void> {
 		try {
-			for (const svc of services) {
-				let existingSvc = await db
-					.select()
-					.from(schema.k8sServices)
-					.where(
-						and(
-							eq(schema.k8sServices.clusterId, clusterId),
-							eq(schema.k8sServices.k8sUid, svc.uid),
-						),
-					);
-
-				if (existingSvc.length === 0) {
-					existingSvc = await db
+			await db.transaction(async () => {
+				for (const svc of services) {
+					let existingSvc = await db
 						.select()
 						.from(schema.k8sServices)
 						.where(
 							and(
 								eq(schema.k8sServices.clusterId, clusterId),
-								eq(schema.k8sServices.name, svc.name),
-								eq(schema.k8sServices.namespace, svc.namespace),
+								eq(schema.k8sServices.k8sUid, svc.uid),
 							),
 						);
-				}
 
-				const svcData: InferInsertModel<typeof schema.k8sServices> = {
-					clusterId,
-					name: svc.name,
-					namespace: svc.namespace,
-					type: svc.type,
-					clusterIp: svc.clusterIp,
-					selector: JSON.stringify(svc.selector),
-					k8sUid: svc.uid,
-					labels: JSON.stringify(svc.labels),
-					ports: svc.ports,
-					updatedAt: new Date(),
-					annotations: svc.annotations || {},
-				};
-
-				const existingRecord = existingSvc[0];
-				if (existingRecord) {
-					await db
-						.update(schema.k8sServices)
-						.set(svcData)
-						.where(eq(schema.k8sServices.id, existingRecord.id));
-				} else {
-					const defaultOwner = await this.findDefaultOwner();
-					if (!defaultOwner) {
-						logger.error("Default owner not found for service syncing", {
-							clusterId,
-							svcName: svc.name,
-						});
-					} else {
-						svcData.ownerId = defaultOwner.id;
+					if (existingSvc.length === 0) {
+						existingSvc = await db
+							.select()
+							.from(schema.k8sServices)
+							.where(
+								and(
+									eq(schema.k8sServices.clusterId, clusterId),
+									eq(schema.k8sServices.name, svc.name),
+									eq(schema.k8sServices.namespace, svc.namespace),
+								),
+							);
 					}
-					await db
-						.insert(schema.k8sServices)
-						.values({ ...svcData, autoCreated: true });
-				}
-			}
 
-			// Cleanup: remove auto-created services no longer present
-			const heartbeatUids = new Set(services.map((s) => s.uid).filter(Boolean));
-			const autoCreated = await db
-				.select()
-				.from(schema.k8sServices)
-				.where(
-					and(
-						eq(schema.k8sServices.clusterId, clusterId),
-						eq(schema.k8sServices.autoCreated, true),
-					),
-				);
-			for (const svc of autoCreated) {
-				if (svc.k8sUid && !heartbeatUids.has(svc.k8sUid)) {
-					await db
-						.delete(schema.k8sServices)
-						.where(eq(schema.k8sServices.id, svc.id));
+					const svcData: InferInsertModel<typeof schema.k8sServices> = {
+						clusterId,
+						name: svc.name,
+						namespace: svc.namespace,
+						type: svc.type,
+						clusterIp: svc.clusterIp,
+						selector: JSON.stringify(svc.selector),
+						k8sUid: svc.uid,
+						labels: JSON.stringify(svc.labels),
+						ports: svc.ports,
+						updatedAt: new Date(),
+						annotations: svc.annotations || {},
+					};
+
+					const existingRecord = existingSvc[0];
+					if (existingRecord) {
+						await db
+							.update(schema.k8sServices)
+							.set(svcData)
+							.where(eq(schema.k8sServices.id, existingRecord.id));
+					} else {
+						const defaultOwner = await this.findDefaultOwner();
+						if (!defaultOwner) {
+							logger.error("Default owner not found for service syncing", {
+								clusterId,
+								svcName: svc.name,
+							});
+						} else {
+							svcData.ownerId = defaultOwner.id;
+						}
+						await db
+							.insert(schema.k8sServices)
+							.values({ ...svcData, autoCreated: true });
+					}
 				}
-			}
+
+				// Cleanup: remove auto-created services no longer present
+				const heartbeatUids = new Set(
+					services.map((s) => s.uid).filter(Boolean),
+				);
+				const autoCreated = await db
+					.select()
+					.from(schema.k8sServices)
+					.where(
+						and(
+							eq(schema.k8sServices.clusterId, clusterId),
+							eq(schema.k8sServices.autoCreated, true),
+						),
+					);
+				for (const svc of autoCreated) {
+					if (svc.k8sUid && !heartbeatUids.has(svc.k8sUid)) {
+						await db
+							.delete(schema.k8sServices)
+							.where(eq(schema.k8sServices.id, svc.id));
+					}
+				}
+			});
 		} catch (error) {
 			logger.error("Failed to sync services", { clusterId, error });
 			throw error;
@@ -533,166 +554,170 @@ export class AgentService {
 		clusterId: number,
 		configMaps: Heartbeat["configMaps"],
 	): Promise<void> {
-		const defaultOwner = await this.findDefaultOwner();
+		await db.transaction(async () => {
+			const defaultOwner = await this.findDefaultOwner();
 
-		for (const cm of configMaps) {
-			let existing = await db
-				.select()
-				.from(k8sConfigMaps)
-				.where(
-					and(
-						eq(k8sConfigMaps.clusterId, clusterId),
-						eq(k8sConfigMaps.k8sUid, cm.uid),
-					),
-				);
-
-			if (existing.length === 0) {
-				existing = await db
+			for (const cm of configMaps) {
+				let existing = await db
 					.select()
 					.from(k8sConfigMaps)
 					.where(
 						and(
 							eq(k8sConfigMaps.clusterId, clusterId),
-							eq(k8sConfigMaps.name, cm.name),
-							eq(k8sConfigMaps.namespace, cm.namespace),
+							eq(k8sConfigMaps.k8sUid, cm.uid),
 						),
 					);
-			}
 
-			const encryptedData = encrypt(JSON.stringify(cm.data));
-
-			let encryptedBinaryData = null;
-			if (cm.binaryData && Object.keys(cm.binaryData).length > 0) {
-				const binData: Record<string, string> = {};
-				for (const [key, val] of Object.entries(cm.binaryData)) {
-					binData[key] = Buffer.from(val).toString("base64");
+				if (existing.length === 0) {
+					existing = await db
+						.select()
+						.from(k8sConfigMaps)
+						.where(
+							and(
+								eq(k8sConfigMaps.clusterId, clusterId),
+								eq(k8sConfigMaps.name, cm.name),
+								eq(k8sConfigMaps.namespace, cm.namespace),
+							),
+						);
 				}
-				encryptedBinaryData = encrypt(JSON.stringify(binData));
+
+				const encryptedData = encrypt(JSON.stringify(cm.data));
+
+				let encryptedBinaryData = null;
+				if (cm.binaryData && Object.keys(cm.binaryData).length > 0) {
+					const binData: Record<string, string> = {};
+					for (const [key, val] of Object.entries(cm.binaryData)) {
+						binData[key] = Buffer.from(val).toString("base64");
+					}
+					encryptedBinaryData = encrypt(JSON.stringify(binData));
+				}
+
+				const cmData: InferInsertModel<typeof k8sConfigMaps> = {
+					clusterId,
+					name: cm.name,
+					namespace: cm.namespace,
+					data: encryptedData,
+					binaryData: encryptedBinaryData,
+					labels: JSON.stringify(cm.labels),
+					k8sUid: cm.uid,
+					updatedAt: new Date(),
+					annotations: cm.annotations || {},
+				};
+
+				if (existing.length > 0 && existing[0]) {
+					await db
+						.update(k8sConfigMaps)
+						.set(cmData)
+						.where(eq(k8sConfigMaps.id, existing[0].id));
+				} else if (defaultOwner) {
+					await db.insert(k8sConfigMaps).values({
+						...cmData,
+						ownerId: defaultOwner.id,
+						autoCreated: true,
+					});
+				}
 			}
 
-			const cmData: InferInsertModel<typeof k8sConfigMaps> = {
-				clusterId,
-				name: cm.name,
-				namespace: cm.namespace,
-				data: encryptedData,
-				binaryData: encryptedBinaryData,
-				labels: JSON.stringify(cm.labels),
-				k8sUid: cm.uid,
-				updatedAt: new Date(),
-				annotations: cm.annotations || {},
-			};
-
-			if (existing.length > 0 && existing[0]) {
-				await db
-					.update(k8sConfigMaps)
-					.set(cmData)
-					.where(eq(k8sConfigMaps.id, existing[0].id));
-			} else if (defaultOwner) {
-				await db.insert(k8sConfigMaps).values({
-					...cmData,
-					ownerId: defaultOwner.id,
-					autoCreated: true,
-				});
-			}
-		}
-
-		// Cleanup: remove auto-created configmaps no longer present
-		const heartbeatUids = new Set(
-			configMaps.map((cm) => cm.uid).filter(Boolean),
-		);
-		const autoCreated = await db
-			.select()
-			.from(k8sConfigMaps)
-			.where(
-				and(
-					eq(k8sConfigMaps.clusterId, clusterId),
-					eq(k8sConfigMaps.autoCreated, true),
-				),
+			// Cleanup: remove auto-created configmaps no longer present
+			const heartbeatUids = new Set(
+				configMaps.map((cm) => cm.uid).filter(Boolean),
 			);
-		for (const cm of autoCreated) {
-			if (cm.k8sUid && !heartbeatUids.has(cm.k8sUid)) {
-				await db.delete(k8sConfigMaps).where(eq(k8sConfigMaps.id, cm.id));
+			const autoCreated = await db
+				.select()
+				.from(k8sConfigMaps)
+				.where(
+					and(
+						eq(k8sConfigMaps.clusterId, clusterId),
+						eq(k8sConfigMaps.autoCreated, true),
+					),
+				);
+			for (const cm of autoCreated) {
+				if (cm.k8sUid && !heartbeatUids.has(cm.k8sUid)) {
+					await db.delete(k8sConfigMaps).where(eq(k8sConfigMaps.id, cm.id));
+				}
 			}
-		}
+		});
 	}
 
 	private async syncSecrets(
 		clusterId: number,
 		secrets: Heartbeat["secrets"],
 	): Promise<void> {
-		const defaultOwner = await this.findDefaultOwner();
+		await db.transaction(async () => {
+			const defaultOwner = await this.findDefaultOwner();
 
-		for (const sec of secrets) {
-			let existing = await db
-				.select()
-				.from(k8sSecrets)
-				.where(
-					and(
-						eq(k8sSecrets.clusterId, clusterId),
-						eq(k8sSecrets.k8sUid, sec.uid),
-					),
-				);
-
-			if (existing.length === 0) {
-				existing = await db
+			for (const sec of secrets) {
+				let existing = await db
 					.select()
 					.from(k8sSecrets)
 					.where(
 						and(
 							eq(k8sSecrets.clusterId, clusterId),
-							eq(k8sSecrets.name, sec.name),
-							eq(k8sSecrets.namespace, sec.namespace),
+							eq(k8sSecrets.k8sUid, sec.uid),
 						),
 					);
+
+				if (existing.length === 0) {
+					existing = await db
+						.select()
+						.from(k8sSecrets)
+						.where(
+							and(
+								eq(k8sSecrets.clusterId, clusterId),
+								eq(k8sSecrets.name, sec.name),
+								eq(k8sSecrets.namespace, sec.namespace),
+							),
+						);
+				}
+
+				const binData: Record<string, string> = {};
+				for (const [key, val] of Object.entries(sec.data)) {
+					binData[key] = Buffer.from(val).toString("base64");
+				}
+
+				const secData: InferInsertModel<typeof k8sSecrets> = {
+					clusterId,
+					name: sec.name,
+					namespace: sec.namespace,
+					type: sec.type,
+					data: encrypt(JSON.stringify(binData)),
+					labels: JSON.stringify(sec.labels),
+					k8sUid: sec.uid,
+					updatedAt: new Date(),
+					annotations: sec.annotations || {},
+				};
+
+				if (existing.length > 0 && existing[0]) {
+					await db
+						.update(k8sSecrets)
+						.set(secData)
+						.where(eq(k8sSecrets.id, existing[0].id));
+				} else if (defaultOwner) {
+					await db.insert(k8sSecrets).values({
+						...secData,
+						ownerId: defaultOwner.id,
+						autoCreated: true,
+					});
+				}
 			}
 
-			const binData: Record<string, string> = {};
-			for (const [key, val] of Object.entries(sec.data)) {
-				binData[key] = Buffer.from(val).toString("base64");
+			// Cleanup: remove auto-created secrets no longer present
+			const heartbeatUids = new Set(secrets.map((s) => s.uid).filter(Boolean));
+			const autoCreated = await db
+				.select()
+				.from(k8sSecrets)
+				.where(
+					and(
+						eq(k8sSecrets.clusterId, clusterId),
+						eq(k8sSecrets.autoCreated, true),
+					),
+				);
+			for (const sec of autoCreated) {
+				if (sec.k8sUid && !heartbeatUids.has(sec.k8sUid)) {
+					await db.delete(k8sSecrets).where(eq(k8sSecrets.id, sec.id));
+				}
 			}
-
-			const secData: InferInsertModel<typeof k8sSecrets> = {
-				clusterId,
-				name: sec.name,
-				namespace: sec.namespace,
-				type: sec.type,
-				data: encrypt(JSON.stringify(binData)),
-				labels: JSON.stringify(sec.labels),
-				k8sUid: sec.uid,
-				updatedAt: new Date(),
-				annotations: sec.annotations || {},
-			};
-
-			if (existing.length > 0 && existing[0]) {
-				await db
-					.update(k8sSecrets)
-					.set(secData)
-					.where(eq(k8sSecrets.id, existing[0].id));
-			} else if (defaultOwner) {
-				await db.insert(k8sSecrets).values({
-					...secData,
-					ownerId: defaultOwner.id,
-					autoCreated: true,
-				});
-			}
-		}
-
-		// Cleanup: remove auto-created secrets no longer present
-		const heartbeatUids = new Set(secrets.map((s) => s.uid).filter(Boolean));
-		const autoCreated = await db
-			.select()
-			.from(k8sSecrets)
-			.where(
-				and(
-					eq(k8sSecrets.clusterId, clusterId),
-					eq(k8sSecrets.autoCreated, true),
-				),
-			);
-		for (const sec of autoCreated) {
-			if (sec.k8sUid && !heartbeatUids.has(sec.k8sUid)) {
-				await db.delete(k8sSecrets).where(eq(k8sSecrets.id, sec.id));
-			}
-		}
+		});
 	}
 
 	// ─── Phase 2: Validate DB state → cluster ─────────────────────────────────
@@ -1060,99 +1085,103 @@ export class AgentService {
 		clusterId: number,
 		ingresses: Heartbeat["ingresses"],
 	): Promise<void> {
-		for (const ing of ingresses) {
-			// Find the linked service by name/namespace to get its DB id
-			const service = await db.query.k8sServices.findFirst({
-				where: {
-					clusterId,
-					name: ing.serviceName,
-					namespace: ing.namespace,
-				},
-			});
+		await db.transaction(async () => {
+			for (const ing of ingresses) {
+				// Find the linked service by name/namespace to get its DB id
+				const service = await db.query.k8sServices.findFirst({
+					where: {
+						clusterId,
+						name: ing.serviceName,
+						namespace: ing.namespace,
+					},
+				});
 
-			let existing = await db
-				.select()
-				.from(k8sIngresses)
-				.where(
-					and(
-						eq(k8sIngresses.clusterId, clusterId),
-						eq(k8sIngresses.k8sUid, ing.uid),
-					),
-				);
-
-			if (existing.length === 0) {
-				existing = await db
+				let existing = await db
 					.select()
 					.from(k8sIngresses)
 					.where(
 						and(
 							eq(k8sIngresses.clusterId, clusterId),
-							eq(k8sIngresses.name, ing.name),
-							eq(k8sIngresses.namespace, ing.namespace),
+							eq(k8sIngresses.k8sUid, ing.uid),
 						),
 					);
+
+				if (existing.length === 0) {
+					existing = await db
+						.select()
+						.from(k8sIngresses)
+						.where(
+							and(
+								eq(k8sIngresses.clusterId, clusterId),
+								eq(k8sIngresses.name, ing.name),
+								eq(k8sIngresses.namespace, ing.namespace),
+							),
+						);
+				}
+
+				const ingData: Partial<InferInsertModel<typeof k8sIngresses>> = {
+					clusterId,
+					name: ing.name,
+					namespace: ing.namespace,
+					protocol: ing.protocol,
+					port: ing.port || null,
+					serviceName: ing.serviceName,
+					domain: ing.domain || null,
+					path: ing.path || null,
+					k8sUid: ing.uid,
+					updatedAt: new Date(),
+					...(service ? { serviceId: service.id } : {}),
+					annotations: ing.annotations || {},
+					labels: ing.labels || {},
+					ownerId: null, // No owner for ingresses since they don't have a controller we can link to
+					// We can consider linking to the service's ownerId in the future if needed
+				};
+
+				const existingRecord = existing[0];
+				if (existingRecord) {
+					await db
+						.update(k8sIngresses)
+						.set({
+							k8sUid: ing.uid,
+							updatedAt: new Date(),
+							...(service ? { serviceId: service.id } : {}),
+							// Also sync snapshot fields from heartbeat
+							protocol: ing.protocol,
+							port: ing.port || null,
+							serviceName: ing.serviceName,
+							domain: ing.domain || null,
+							path: ing.path || null,
+						})
+						.where(eq(k8sIngresses.id, existingRecord.id));
+				} else if (service) {
+					// Only auto-create if we can resolve the serviceId (required FK)
+					await db.insert(k8sIngresses).values({
+						...(ingData as InferInsertModel<typeof k8sIngresses>),
+						serviceId: service.id,
+						autoCreated: true,
+					});
+				}
 			}
 
-			const ingData: Partial<InferInsertModel<typeof k8sIngresses>> = {
-				clusterId,
-				name: ing.name,
-				namespace: ing.namespace,
-				protocol: ing.protocol,
-				port: ing.port || null,
-				serviceName: ing.serviceName,
-				domain: ing.domain || null,
-				path: ing.path || null,
-				k8sUid: ing.uid,
-				updatedAt: new Date(),
-				...(service ? { serviceId: service.id } : {}),
-				annotations: ing.annotations || {},
-				labels: ing.labels || {},
-				ownerId: null, // No owner for ingresses since they don't have a controller we can link to
-				// We can consider linking to the service's ownerId in the future if needed
-			};
-
-			const existingRecord = existing[0];
-			if (existingRecord) {
-				await db
-					.update(k8sIngresses)
-					.set({
-						k8sUid: ing.uid,
-						updatedAt: new Date(),
-						...(service ? { serviceId: service.id } : {}),
-						// Also sync snapshot fields from heartbeat
-						protocol: ing.protocol,
-						port: ing.port || null,
-						serviceName: ing.serviceName,
-						domain: ing.domain || null,
-						path: ing.path || null,
-					})
-					.where(eq(k8sIngresses.id, existingRecord.id));
-			} else if (service) {
-				// Only auto-create if we can resolve the serviceId (required FK)
-				await db.insert(k8sIngresses).values({
-					...(ingData as InferInsertModel<typeof k8sIngresses>),
-					serviceId: service.id,
-					autoCreated: true,
-				});
-			}
-		}
-
-		// Cleanup: remove auto-created ingresses no longer present
-		const heartbeatUids = new Set(ingresses.map((i) => i.uid).filter(Boolean));
-		const autoCreated = await db
-			.select()
-			.from(k8sIngresses)
-			.where(
-				and(
-					eq(k8sIngresses.clusterId, clusterId),
-					eq(k8sIngresses.autoCreated, true),
-				),
+			// Cleanup: remove auto-created ingresses no longer present
+			const heartbeatUids = new Set(
+				ingresses.map((i) => i.uid).filter(Boolean),
 			);
-		for (const ing of autoCreated) {
-			if (ing.k8sUid && !heartbeatUids.has(ing.k8sUid)) {
-				await db.delete(k8sIngresses).where(eq(k8sIngresses.id, ing.id));
+			const autoCreated = await db
+				.select()
+				.from(k8sIngresses)
+				.where(
+					and(
+						eq(k8sIngresses.clusterId, clusterId),
+						eq(k8sIngresses.autoCreated, true),
+					),
+				);
+			for (const ing of autoCreated) {
+				if (ing.k8sUid && !heartbeatUids.has(ing.k8sUid)) {
+					await db.delete(k8sIngresses).where(eq(k8sIngresses.id, ing.id));
+				}
 			}
-		}
+		});
 	}
 
 	/** Returns true if a command was sent. */
@@ -1246,35 +1275,38 @@ export class AgentService {
 			return;
 		}
 
-		// 1. Update cluster stats
-		if (heartbeat.clusterResource) {
-			await db
-				.update(k8sCluster)
-				.set({
-					cpuUsage: Number(heartbeat.clusterResource.cpuUsage),
-					ramUsage: Number(heartbeat.clusterResource.ramUsage),
-					cpuCapacity: Number(heartbeat.clusterResource.cpuCapacity),
-					ramCapacity: Number(heartbeat.clusterResource.ramCapacity),
-					internalClusterDomain: heartbeat.clusterResource.clusterDomain,
-					updatedAt: new Date(),
-					status: "active",
-				})
-				.where(eq(k8sCluster.id, cluster.id));
-		}
+		// 1. Update cluster stats and sync resources in a transaction
+		await db.transaction(async () => {
+			// Update cluster stats
+			if (heartbeat.clusterResource) {
+				await db
+					.update(k8sCluster)
+					.set({
+						cpuUsage: Number(heartbeat.clusterResource.cpuUsage),
+						ramUsage: Number(heartbeat.clusterResource.ramUsage),
+						cpuCapacity: Number(heartbeat.clusterResource.cpuCapacity),
+						ramCapacity: Number(heartbeat.clusterResource.ramCapacity),
+						internalClusterDomain: heartbeat.clusterResource.clusterDomain,
+						updatedAt: new Date(),
+						status: "active",
+					})
+					.where(eq(k8sCluster.id, cluster.id));
+			}
 
-		// 2. Sync resources from heartbeat → DB
-		if (heartbeat.nodes) await this.syncNodes(cluster.id, heartbeat.nodes);
-		if (heartbeat.deployments)
-			await this.syncDeployments(cluster.id, heartbeat.deployments);
-		if (heartbeat.pods) await this.syncPods(cluster.id, heartbeat.pods);
-		if (heartbeat.services)
-			await this.syncServices(cluster.id, heartbeat.services);
-		if (heartbeat.configMaps)
-			await this.syncConfigMaps(cluster.id, heartbeat.configMaps);
-		if (heartbeat.secrets)
-			await this.syncSecrets(cluster.id, heartbeat.secrets);
-		if (heartbeat.ingresses)
-			await this.syncIngresses(cluster.id, heartbeat.ingresses);
+			// 2. Sync resources from heartbeat → DB
+			if (heartbeat.nodes) await this.syncNodes(cluster.id, heartbeat.nodes);
+			if (heartbeat.deployments)
+				await this.syncDeployments(cluster.id, heartbeat.deployments);
+			if (heartbeat.pods) await this.syncPods(cluster.id, heartbeat.pods);
+			if (heartbeat.services)
+				await this.syncServices(cluster.id, heartbeat.services);
+			if (heartbeat.configMaps)
+				await this.syncConfigMaps(cluster.id, heartbeat.configMaps);
+			if (heartbeat.secrets)
+				await this.syncSecrets(cluster.id, heartbeat.secrets);
+			if (heartbeat.ingresses)
+				await this.syncIngresses(cluster.id, heartbeat.ingresses);
+		});
 
 		// 3. Validate DB state → cluster (one command per heartbeat cycle)
 		if (
