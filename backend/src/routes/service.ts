@@ -288,6 +288,7 @@ export const serviceRoute = new Elysia({
 					response: {
 						201: baseResponseSchema(Type.Object(dbSchemaTypes.k8sServices)),
 						200: baseResponseSchema(Type.Object(dbSchemaTypes.k8sServices)),
+						403: errorResponseSchema,
 						404: errorResponseSchema,
 						500: errorResponseSchema,
 					},
@@ -300,7 +301,7 @@ export const serviceRoute = new Elysia({
 					const clusterId = Number(ctx.params.clusterId);
 
 					// Check access
-					const isManager = ctx.userPermissions.has("service:delete");
+					const isManager = ctx.userPermissions.has("service:manage");
 
 					const service = await db.query.k8sServices.findFirst({
 						where: isManager
@@ -316,6 +317,16 @@ export const serviceRoute = new Elysia({
 						return ctx.status(404, {
 							success: false,
 							message: "Service not found",
+							timestamp: Date.now(),
+						});
+					}
+
+					// Ownership Check
+					const isManagerCheck = ctx.userPermissions.has("service:manage");
+					if (!isManagerCheck && service.ownerId !== ctx.profile?.id) {
+						return ctx.status(403, {
+							success: false,
+							message: "Forbidden: You do not own this service",
 							timestamp: Date.now(),
 						});
 					}
@@ -370,6 +381,7 @@ export const serviceRoute = new Elysia({
 					roleAuth: "service:delete",
 					response: {
 						200: baseResponseSchema(Type.Object(dbSchemaTypes.k8sServices)),
+						403: errorResponseSchema,
 						404: errorResponseSchema,
 						500: errorResponseSchema,
 					},
@@ -379,6 +391,33 @@ export const serviceRoute = new Elysia({
 				"/wake/:deploymentId",
 				async (ctx) => {
 					const deploymentId = Number(ctx.params.deploymentId);
+					const clusterId = Number(ctx.params.clusterId);
+
+					// Check deployment ownership
+					const deployment = await db.query.k8sDeployments.findFirst({
+						where: {
+							id: deploymentId,
+							clusterId: clusterId,
+						},
+					});
+
+					if (!deployment) {
+						return ctx.status(404, {
+							success: false,
+							message: "Deployment not found",
+							timestamp: Date.now(),
+						});
+					}
+
+					const isManager = ctx.userPermissions.has("deployment:manage");
+					if (!isManager && deployment.ownerId !== ctx.profile?.id) {
+						return ctx.status(403, {
+							success: false,
+							message: "Forbidden: You do not own this deployment",
+							timestamp: Date.now(),
+						});
+					}
+
 					try {
 						await scalingController.wakeUpDeployment(deploymentId);
 						return ctx.status(200, {
@@ -407,6 +446,8 @@ export const serviceRoute = new Elysia({
 					}),
 					response: {
 						200: baseResponseSchema(Type.Object({})),
+						403: errorResponseSchema,
+						404: errorResponseSchema,
 						500: errorResponseSchema,
 					},
 				},

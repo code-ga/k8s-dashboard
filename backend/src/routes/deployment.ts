@@ -47,6 +47,90 @@ export const deploymentRoute = new Elysia({
 	.use(authenticationMiddleware)
 	.use(agentManagerService)
 	.decorate("websocketData", new Map<string, unknown>())
+	.decorate(
+		"validateResourceRefs",
+		async (
+			clusterId: number,
+			profileId: string,
+			userPermissions: Set<string>,
+			configMapRefs?: {
+				env?: Array<{ configMapName: string }>;
+				envFrom?: Array<{ configMapName: string }>;
+				volumes?: Array<{ configMapName: string }>;
+			},
+			secretRefs?: {
+				env?: Array<{ secretName: string }>;
+				envFrom?: Array<{ secretName: string }>;
+				volumes?: Array<{ secretName: string }>;
+			},
+		) => {
+			if (configMapRefs) {
+				const cmNames = new Set<string>();
+				if (configMapRefs.env) {
+					for (const r of configMapRefs.env) cmNames.add(r.configMapName);
+				}
+				if (configMapRefs.envFrom) {
+					for (const r of configMapRefs.envFrom) cmNames.add(r.configMapName);
+				}
+				if (configMapRefs.volumes) {
+					for (const r of configMapRefs.volumes) cmNames.add(r.configMapName);
+				}
+
+				for (const name of cmNames) {
+					const cm = await db.query.k8sConfigMaps.findFirst({
+						// where: and(
+						// 	eq(schema.k8sConfigMaps.clusterId, clusterId),
+						// 	eq(schema.k8sConfigMaps.name, name)
+						// )
+						where: {
+							clusterId: clusterId,
+							name: name,
+						},
+					});
+					if (!cm) throw new Error(`ConfigMap '${name}' not found in cluster`);
+					if (
+						!userPermissions.has("configmap:manage") &&
+						cm.ownerId !== profileId
+					) {
+						throw new Error(`Forbidden: You do not own ConfigMap '${name}'`);
+					}
+				}
+			}
+
+			if (secretRefs) {
+				const secretNames = new Set<string>();
+				if (secretRefs.env) {
+					for (const r of secretRefs.env) secretNames.add(r.secretName);
+				}
+				if (secretRefs.envFrom) {
+					for (const r of secretRefs.envFrom) secretNames.add(r.secretName);
+				}
+				if (secretRefs.volumes) {
+					for (const r of secretRefs.volumes) secretNames.add(r.secretName);
+				}
+
+				for (const name of secretNames) {
+					const secret = await db.query.k8sSecrets.findFirst({
+						// where: and(
+						// 	eq(schema.k8sSecrets.clusterId, clusterId),
+						// 	eq(schema.k8sSecrets.name, name)
+						// )
+						where: {
+							clusterId: clusterId,
+							name: name,
+						},
+					});
+					if (!secret) throw new Error(`Secret '${name}' not found in cluster`);
+					if (
+						!userPermissions.has("secret:manage") &&
+						secret.ownerId !== profileId
+					) {
+						throw new Error(`Forbidden: You do not own Secret '${name}'`);
+					}
+				}
+			}
+		},
+	)
 	.guard({ userAuth: { requiredProfile: true } }, (app) =>
 		app
 			.get(
@@ -204,8 +288,10 @@ export const deploymentRoute = new Elysia({
 					roleAuth: "deployment:read",
 					response: {
 						200: baseResponseSchema(Type.Object(dbSchemaTypes.k8sDeployments)),
-						404: errorResponseSchema,
 						400: errorResponseSchema,
+						403: errorResponseSchema,
+						404: errorResponseSchema,
+						500: errorResponseSchema,
 					},
 				},
 			)
@@ -228,6 +314,24 @@ export const deploymentRoute = new Elysia({
 						return ctx.status(404, {
 							success: false,
 							message: "Cluster not found",
+							timestamp: Date.now(),
+						});
+					}
+
+					// 0. Validate ConfigMap/Secret ownership
+					try {
+						await ctx.validateResourceRefs(
+							clusterId,
+							ctx.profile?.id ?? "",
+							ctx.userPermissions,
+							body.configMapRefs,
+							body.secretRefs,
+						);
+					} catch (e: unknown) {
+						const message = e instanceof Error ? e.message : String(e);
+						return ctx.status(message.includes("Forbidden") ? 403 : 400, {
+							success: false,
+							message,
 							timestamp: Date.now(),
 						});
 					}
@@ -509,6 +613,7 @@ export const deploymentRoute = new Elysia({
 						),
 						200: baseResponseSchema(Type.Optional(Type.String())),
 						400: errorResponseSchema,
+						403: errorResponseSchema,
 						404: errorResponseSchema,
 						500: errorResponseSchema,
 					},
@@ -551,6 +656,36 @@ export const deploymentRoute = new Elysia({
 							message: "Deployment not found",
 							timestamp: Date.now(),
 						});
+					}
+
+					// Ownership Check
+					const isManager = ctx.userPermissions.has("deployment:manage");
+					if (!isManager && deployment.ownerId !== ctx.profile?.id) {
+						return ctx.status(403, {
+							success: false,
+							message: "Forbidden: You do not own this deployment",
+							timestamp: Date.now(),
+						});
+					}
+
+					// Validate ConfigMap/Secret ownership if refs are updated
+					if (body.configMapRefs || body.secretRefs) {
+						try {
+							await ctx.validateResourceRefs(
+								clusterId,
+								ctx.profile?.id ?? "",
+								ctx.userPermissions,
+								body.configMapRefs,
+								body.secretRefs,
+							);
+						} catch (e: unknown) {
+							const message = e instanceof Error ? e.message : String(e);
+							return ctx.status(message.includes("Forbidden") ? 403 : 400, {
+								success: false,
+								message,
+								timestamp: Date.now(),
+							});
+						}
 					}
 
 					// Special handling for SCALING vs EDITING
@@ -905,6 +1040,8 @@ export const deploymentRoute = new Elysia({
 					}),
 					response: {
 						200: baseResponseSchema(Type.Optional(Type.String())),
+						400: errorResponseSchema,
+						403: errorResponseSchema,
 						404: errorResponseSchema,
 						500: errorResponseSchema,
 					},
@@ -1000,6 +1137,16 @@ export const deploymentRoute = new Elysia({
 						});
 					}
 
+					// Ownership Check
+					const isManager = ctx.userPermissions.has("deployment:manage");
+					if (!isManager && deployment.ownerId !== ctx.profile?.id) {
+						return ctx.status(403, {
+							success: false,
+							message: "Forbidden: You do not own this deployment",
+							timestamp: Date.now(),
+						});
+					}
+
 					const cluster = await db.query.k8sCluster.findFirst({
 						where: {
 							id: clusterId,
@@ -1065,8 +1212,10 @@ export const deploymentRoute = new Elysia({
 				},
 				{
 					detail: { tags: ["Deployments"] },
+					roleAuth: "deployment:delete",
 					response: {
 						200: baseResponseSchema(Type.Object(dbSchemaTypes.k8sDeployments)),
+						403: errorResponseSchema,
 						404: errorResponseSchema,
 						500: errorResponseSchema,
 					},
@@ -1244,6 +1393,16 @@ export const deploymentRoute = new Elysia({
 						});
 					}
 
+					// Ownership Check
+					const isManager = ctx.userPermissions.has("deployment:manage");
+					if (!isManager && deployment.ownerId !== ctx.profile?.id) {
+						return ctx.status(403, {
+							success: false,
+							message: "Forbidden: You do not own this deployment",
+							timestamp: Date.now(),
+						});
+					}
+
 					const cluster = await db.query.k8sCluster.findFirst({
 						where: {
 							id: clusterId,
@@ -1349,7 +1508,10 @@ export const deploymentRoute = new Elysia({
 							success: true,
 							message: "Deployment re-deployed",
 							timestamp: Date.now(),
-							data: response.data,
+							data: {
+								...newDeployment,
+								agentResponse: response.data,
+							},
 						});
 					} catch (e) {
 						logger.error("Error re-deploying deployment:", e);
@@ -1365,7 +1527,13 @@ export const deploymentRoute = new Elysia({
 					detail: { tags: ["Deployments"] },
 					roleAuth: "deployment:update",
 					response: {
-						200: baseResponseSchema(Type.Optional(Type.String())),
+						200: baseResponseSchema(
+							Type.Object({
+								...dbSchemaTypes.k8sDeployments,
+								agentResponse: Type.Optional(Type.String()),
+							}),
+						),
+						403: errorResponseSchema,
 						404: errorResponseSchema,
 						500: errorResponseSchema,
 					},

@@ -259,6 +259,16 @@ export const secretRoute = new Elysia({
 						});
 					}
 
+					// Ownership Check
+					const isManager = ctx.userPermissions.has("secret:manage");
+					if (!isManager && secret.ownerId !== ctx.profile?.id) {
+						return ctx.status(403, {
+							success: false,
+							message: "Forbidden: You do not own this Secret",
+							timestamp: Date.now(),
+						});
+					}
+
 					const cluster = await db.query.k8sCluster.findFirst({
 						where: { id: clusterId },
 						with: { agent: true },
@@ -356,6 +366,7 @@ export const secretRoute = new Elysia({
 								agentResponse: Type.Optional(Type.String()),
 							}),
 						),
+						403: errorResponseSchema,
 						404: errorResponseSchema,
 						500: errorResponseSchema,
 					},
@@ -378,6 +389,16 @@ export const secretRoute = new Elysia({
 						return ctx.status(404, {
 							success: false,
 							message: "Secret not found",
+							timestamp: Date.now(),
+						});
+					}
+
+					// Ownership Check
+					const isManager = ctx.userPermissions.has("secret:manage");
+					if (!isManager && secret.ownerId !== ctx.profile?.id) {
+						return ctx.status(403, {
+							success: false,
+							message: "Forbidden: You do not own this Secret",
 							timestamp: Date.now(),
 						});
 					}
@@ -429,6 +450,7 @@ export const secretRoute = new Elysia({
 					roleAuth: "secret:delete",
 					response: {
 						200: baseResponseSchema(Type.Null()),
+						403: errorResponseSchema,
 						404: errorResponseSchema,
 						500: errorResponseSchema,
 					},

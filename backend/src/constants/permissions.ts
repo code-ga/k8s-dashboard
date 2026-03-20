@@ -68,6 +68,7 @@ export const RESOURCE_DEFINITIONS = {
 			create: "Create a ConfigMap",
 			update: "Update a ConfigMap",
 			delete: "Delete a ConfigMap",
+			manage: "Manage ConfigMaps",
 		},
 	},
 	secret: {
@@ -97,6 +98,7 @@ export const RESOURCE_DEFINITIONS = {
 			create: "Create a new role",
 			update: "Edit a role's permissions",
 			delete: "Delete a role",
+			manage: "Manage roles",
 		},
 	},
 } as const;

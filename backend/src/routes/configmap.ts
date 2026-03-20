@@ -271,6 +271,16 @@ export const configmapRoute = new Elysia({
 						});
 					}
 
+					// Ownership Check
+					const isManager = ctx.userPermissions.has("configmap:manage");
+					if (!isManager && cm.ownerId !== ctx.profile?.id) {
+						return ctx.status(403, {
+							success: false,
+							message: "Forbidden: You do not own this ConfigMap",
+							timestamp: Date.now(),
+						});
+					}
+
 					const cluster = await db.query.k8sCluster.findFirst({
 						where: { id: clusterId },
 						with: { agent: true },
@@ -367,6 +377,7 @@ export const configmapRoute = new Elysia({
 								agentResponse: Type.Optional(Type.String()),
 							}),
 						),
+						403: errorResponseSchema,
 						404: errorResponseSchema,
 						500: errorResponseSchema,
 					},
@@ -389,6 +400,16 @@ export const configmapRoute = new Elysia({
 						return ctx.status(404, {
 							success: false,
 							message: "ConfigMap not found",
+							timestamp: Date.now(),
+						});
+					}
+
+					// Ownership Check
+					const isManager = ctx.userPermissions.has("configmap:manage");
+					if (!isManager && cm.ownerId !== ctx.profile?.id) {
+						return ctx.status(403, {
+							success: false,
+							message: "Forbidden: You do not own this ConfigMap",
 							timestamp: Date.now(),
 						});
 					}
@@ -422,7 +443,7 @@ export const configmapRoute = new Elysia({
 						return ctx.status(200, {
 							success: true,
 							message: "ConfigMap deleted successfully",
-							data: null,
+							data: cm,
 							timestamp: Date.now(),
 						});
 					} catch (e) {
@@ -439,7 +460,8 @@ export const configmapRoute = new Elysia({
 					detail: { tags: ["ConfigMaps"] },
 					roleAuth: "configmap:delete",
 					response: {
-						200: baseResponseSchema(Type.Null()),
+						200: baseResponseSchema(Type.Object(dbSchemaTypes.k8sConfigMaps)),
+						403: errorResponseSchema,
 						404: errorResponseSchema,
 						500: errorResponseSchema,
 					},

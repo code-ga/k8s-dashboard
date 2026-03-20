@@ -48,11 +48,14 @@ export const ingressRoute = new Elysia({
 				"/",
 				async (ctx) => {
 					const { clusterId } = ctx.params;
+					const isManager = ctx.userPermissions.has("ingress:manage");
 					const ingresses = await db.query.k8sIngresses.findMany({
-						// where: eq(schema.k8sIngresses.clusterId, Number(clusterId)),
-						where: {
-							clusterId: Number(clusterId),
-						},
+						where: isManager
+							? { clusterId: Number(clusterId) }
+							: {
+									clusterId: Number(clusterId),
+									ownerId: ctx.profile?.id ?? "NONE",
+								},
 						with: {
 							service: true,
 						},
@@ -113,6 +116,7 @@ export const ingressRoute = new Elysia({
 					roleAuth: "ingress:read",
 					response: {
 						200: baseResponseSchema(ingressWithServiceSchema),
+						403: errorResponseSchema,
 						404: errorResponseSchema,
 					},
 				},
@@ -260,7 +264,6 @@ export const ingressRoute = new Elysia({
 							serviceId = existingSvc.id;
 						}
 					} else {
-						// Try to find existing service by name and namespace
 						const existingSvc = await db.query.k8sServices.findFirst({
 							where: {
 								clusterId,
@@ -275,6 +278,17 @@ export const ingressRoute = new Elysia({
 								timestamp: Date.now(),
 							});
 						}
+
+						// Check service ownership
+						const isSvcManager = ctx.userPermissions.has("service:manage");
+						if (!isSvcManager && existingSvc.ownerId !== ctx.profile?.id) {
+							return ctx.status(403, {
+								success: false,
+								message: "Forbidden: You do not own the service you are trying to expose",
+								timestamp: Date.now(),
+							});
+						}
+
 						serviceId = existingSvc.id;
 					}
 					// ------------------------------
@@ -368,6 +382,7 @@ export const ingressRoute = new Elysia({
 					response: {
 						201: baseResponseSchema(Type.Object(dbSchemaTypes.k8sIngresses)),
 						400: errorResponseSchema,
+						403: errorResponseSchema,
 						404: errorResponseSchema,
 						Conflict: errorResponseSchema,
 						500: errorResponseSchema,
@@ -395,6 +410,16 @@ export const ingressRoute = new Elysia({
 						return ctx.status(404, {
 							success: false,
 							message: "Ingress not found",
+							timestamp: Date.now(),
+						});
+					}
+
+					// Ownership Check
+					const isManagerCheck = ctx.userPermissions.has("ingress:manage");
+					if (!isManagerCheck && ingress.ownerId !== ctx.profile?.id) {
+						return ctx.status(403, {
+							success: false,
+							message: "Forbidden: You do not own this ingress",
 							timestamp: Date.now(),
 						});
 					}
@@ -456,6 +481,7 @@ export const ingressRoute = new Elysia({
 					roleAuth: "ingress:delete",
 					response: {
 						200: baseResponseSchema(Type.Object(dbSchemaTypes.k8sIngresses)),
+						403: errorResponseSchema,
 						404: errorResponseSchema,
 						500: errorResponseSchema,
 					},
