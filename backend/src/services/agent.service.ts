@@ -1266,7 +1266,7 @@ export class AgentService {
 		agentManager: AgentManager,
 	): Promise<void> {
 		logger.info(`Processing heartbeat for agent ${agentId}`);
-		logger.info(`Heartbeat: ${JSON.stringify(heartbeat.ingresses)}`);
+		logger.info(`Heartbeat: ${JSON.stringify(heartbeat.services)}`);
 
 		const cluster = await db.query.k8sCluster.findFirst({
 			where: { agentId },
