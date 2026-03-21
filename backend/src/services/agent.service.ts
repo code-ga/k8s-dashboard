@@ -1,4 +1,4 @@
-import { and, eq, type InferInsertModel, isNull, or } from "drizzle-orm";
+import { and, eq, type InferInsertModel, isNull, notInArray, or } from "drizzle-orm";
 import YAML from "yaml";
 import type { Heartbeat } from "../../pb-generated/agent-backend/websocket"; // Check imports carefully
 import { Command_CommandType } from "../../pb-generated/agent-backend/websocket";
@@ -174,6 +174,17 @@ export class AgentService {
 							.values({ ...nodeData, autoCreated: true });
 					}
 				}
+
+				// Cleanup: remove auto-created nodes no longer present
+				const heartbeatUids = nodes.map((n) => n.uid).filter((uid): uid is string => !!uid);
+				const deleteFilter = [
+					eq(k8sClusterNode.clusterId, clusterId),
+					eq(k8sClusterNode.autoCreated, true),
+				];
+				if (heartbeatUids.length > 0) {
+					deleteFilter.push(notInArray(k8sClusterNode.k8sUid, heartbeatUids));
+				}
+				await db.delete(k8sClusterNode).where(and(...deleteFilter));
 			});
 		} catch (error) {
 			logger.error("Failed to sync nodes", { clusterId, error });
@@ -282,25 +293,15 @@ export class AgentService {
 				}
 
 				// Cleanup: remove auto-created deployments no longer present
-				const heartbeatUids = new Set(
-					deployments.map((d) => d.uid).filter(Boolean),
-				);
-				const autoCreated = await db
-					.select()
-					.from(k8sDeployments)
-					.where(
-						and(
-							eq(k8sDeployments.clusterId, clusterId),
-							eq(k8sDeployments.autoCreated, true),
-						),
-					);
-				for (const dep of autoCreated) {
-					if (dep.k8sUid && !heartbeatUids.has(dep.k8sUid)) {
-						await db
-							.delete(k8sDeployments)
-							.where(eq(k8sDeployments.id, dep.id));
-					}
+				const heartbeatUids = deployments.map((d) => d.uid).filter((uid): uid is string => !!uid);
+				const deleteFilter = [
+					eq(k8sDeployments.clusterId, clusterId),
+					eq(k8sDeployments.autoCreated, true),
+				];
+				if (heartbeatUids.length > 0) {
+					deleteFilter.push(notInArray(k8sDeployments.k8sUid, heartbeatUids));
 				}
+				await db.delete(k8sDeployments).where(and(...deleteFilter));
 			});
 		} catch (error) {
 			logger.error("Failed to sync deployments", { clusterId, error });
@@ -435,22 +436,16 @@ export class AgentService {
 				}
 
 				// Cleanup: remove auto-created bare pods no longer present
-				const heartbeatUids = new Set(pods.map((p) => p.uid).filter(Boolean));
-				const autoCreated = await db
-					.select()
-					.from(k8sPods)
-					.where(
-						and(
-							eq(k8sPods.clusterId, clusterId),
-							eq(k8sPods.autoCreated, true),
-							isNull(k8sPods.deploymentId),
-						),
-					);
-				for (const pod of autoCreated) {
-					if (pod.k8sUid && !heartbeatUids.has(pod.k8sUid)) {
-						await db.delete(k8sPods).where(eq(k8sPods.id, pod.id));
-					}
+				const heartbeatUids = pods.map((p) => p.uid).filter((uid): uid is string => !!uid);
+				const deleteFilter = [
+					eq(k8sPods.clusterId, clusterId),
+					eq(k8sPods.autoCreated, true),
+					isNull(k8sPods.deploymentId),
+				];
+				if (heartbeatUids.length > 0) {
+					deleteFilter.push(notInArray(k8sPods.k8sUid, heartbeatUids));
 				}
+				await db.delete(k8sPods).where(and(...deleteFilter));
 			});
 		} catch (error) {
 			logger.error("Failed to sync pods", { clusterId, error });
@@ -525,25 +520,15 @@ export class AgentService {
 				}
 
 				// Cleanup: remove auto-created services no longer present
-				const heartbeatUids = new Set(
-					services.map((s) => s.uid).filter(Boolean),
-				);
-				const autoCreated = await db
-					.select()
-					.from(schema.k8sServices)
-					.where(
-						and(
-							eq(schema.k8sServices.clusterId, clusterId),
-							eq(schema.k8sServices.autoCreated, true),
-						),
-					);
-				for (const svc of autoCreated) {
-					if (svc.k8sUid && !heartbeatUids.has(svc.k8sUid)) {
-						await db
-							.delete(schema.k8sServices)
-							.where(eq(schema.k8sServices.id, svc.id));
-					}
+				const heartbeatUids = services.map((s) => s.uid).filter((uid): uid is string => !!uid);
+				const deleteFilter = [
+					eq(schema.k8sServices.clusterId, clusterId),
+					eq(schema.k8sServices.autoCreated, true),
+				];
+				if (heartbeatUids.length > 0) {
+					deleteFilter.push(notInArray(schema.k8sServices.k8sUid, heartbeatUids));
 				}
+				await db.delete(schema.k8sServices).where(and(...deleteFilter));
 			});
 		} catch (error) {
 			logger.error("Failed to sync services", { clusterId, error });
@@ -620,23 +605,15 @@ export class AgentService {
 			}
 
 			// Cleanup: remove auto-created configmaps no longer present
-			const heartbeatUids = new Set(
-				configMaps.map((cm) => cm.uid).filter(Boolean),
-			);
-			const autoCreated = await db
-				.select()
-				.from(k8sConfigMaps)
-				.where(
-					and(
-						eq(k8sConfigMaps.clusterId, clusterId),
-						eq(k8sConfigMaps.autoCreated, true),
-					),
-				);
-			for (const cm of autoCreated) {
-				if (cm.k8sUid && !heartbeatUids.has(cm.k8sUid)) {
-					await db.delete(k8sConfigMaps).where(eq(k8sConfigMaps.id, cm.id));
-				}
+			const heartbeatUids = configMaps.map((cm) => cm.uid).filter((uid): uid is string => !!uid);
+			const deleteFilter = [
+				eq(k8sConfigMaps.clusterId, clusterId),
+				eq(k8sConfigMaps.autoCreated, true),
+			];
+			if (heartbeatUids.length > 0) {
+				deleteFilter.push(notInArray(k8sConfigMaps.k8sUid, heartbeatUids));
 			}
+			await db.delete(k8sConfigMaps).where(and(...deleteFilter));
 		});
 	}
 
@@ -703,21 +680,15 @@ export class AgentService {
 			}
 
 			// Cleanup: remove auto-created secrets no longer present
-			const heartbeatUids = new Set(secrets.map((s) => s.uid).filter(Boolean));
-			const autoCreated = await db
-				.select()
-				.from(k8sSecrets)
-				.where(
-					and(
-						eq(k8sSecrets.clusterId, clusterId),
-						eq(k8sSecrets.autoCreated, true),
-					),
-				);
-			for (const sec of autoCreated) {
-				if (sec.k8sUid && !heartbeatUids.has(sec.k8sUid)) {
-					await db.delete(k8sSecrets).where(eq(k8sSecrets.id, sec.id));
-				}
+			const heartbeatUids = secrets.map((s) => s.uid).filter((uid): uid is string => !!uid);
+			const deleteFilter = [
+				eq(k8sSecrets.clusterId, clusterId),
+				eq(k8sSecrets.autoCreated, true),
+			];
+			if (heartbeatUids.length > 0) {
+				deleteFilter.push(notInArray(k8sSecrets.k8sUid, heartbeatUids));
 			}
+			await db.delete(k8sSecrets).where(and(...deleteFilter));
 		});
 	}
 
@@ -1165,23 +1136,15 @@ export class AgentService {
 			}
 
 			// Cleanup: remove auto-created ingresses no longer present
-			const heartbeatUids = new Set(
-				ingresses.map((i) => i.uid).filter(Boolean),
-			);
-			const autoCreated = await db
-				.select()
-				.from(k8sIngresses)
-				.where(
-					and(
-						eq(k8sIngresses.clusterId, clusterId),
-						eq(k8sIngresses.autoCreated, true),
-					),
-				);
-			for (const ing of autoCreated) {
-				if (ing.k8sUid && !heartbeatUids.has(ing.k8sUid)) {
-					await db.delete(k8sIngresses).where(eq(k8sIngresses.id, ing.id));
-				}
+			const heartbeatUids = ingresses.map((i) => i.uid).filter((uid): uid is string => !!uid);
+			const deleteFilter = [
+				eq(k8sIngresses.clusterId, clusterId),
+				eq(k8sIngresses.autoCreated, true),
+			];
+			if (heartbeatUids.length > 0) {
+				deleteFilter.push(notInArray(k8sIngresses.k8sUid, heartbeatUids));
 			}
+			await db.delete(k8sIngresses).where(and(...deleteFilter));
 		});
 	}
 
@@ -1296,18 +1259,13 @@ export class AgentService {
 			}
 
 			// 2. Sync resources from heartbeat → DB
-			if (heartbeat.nodes) await this.syncNodes(cluster.id, heartbeat.nodes);
-			if (heartbeat.deployments)
-				await this.syncDeployments(cluster.id, heartbeat.deployments);
-			if (heartbeat.pods) await this.syncPods(cluster.id, heartbeat.pods);
-			if (heartbeat.services)
-				await this.syncServices(cluster.id, heartbeat.services);
-			if (heartbeat.configMaps)
-				await this.syncConfigMaps(cluster.id, heartbeat.configMaps);
-			if (heartbeat.secrets)
-				await this.syncSecrets(cluster.id, heartbeat.secrets);
-			if (heartbeat.ingresses)
-				await this.syncIngresses(cluster.id, heartbeat.ingresses);
+			await this.syncNodes(cluster.id, heartbeat.nodes || []);
+			await this.syncDeployments(cluster.id, heartbeat.deployments || []);
+			await this.syncPods(cluster.id, heartbeat.pods || []);
+			await this.syncServices(cluster.id, heartbeat.services || []);
+			await this.syncConfigMaps(cluster.id, heartbeat.configMaps || []);
+			await this.syncSecrets(cluster.id, heartbeat.secrets || []);
+			await this.syncIngresses(cluster.id, heartbeat.ingresses || []);
 		});
 
 		// 3. Validate DB state → cluster (one command per heartbeat cycle)
