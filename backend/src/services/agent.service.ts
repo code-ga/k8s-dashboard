@@ -1,4 +1,4 @@
-import { and, eq, type InferInsertModel, isNull, notInArray, or } from "drizzle-orm";
+import { and, eq, inArray, type InferInsertModel, isNull, notInArray, or } from "drizzle-orm";
 import YAML from "yaml";
 import type { Heartbeat } from "../../pb-generated/agent-backend/websocket"; // Check imports carefully
 import { Command_CommandType } from "../../pb-generated/agent-backend/websocket";
@@ -521,14 +521,49 @@ export class AgentService {
 
 				// Cleanup: remove auto-created services no longer present
 				const heartbeatUids = services.map((s) => s.uid).filter((uid): uid is string => !!uid);
-				const deleteFilter = [
+				const staleServiceFilter = [
 					eq(schema.k8sServices.clusterId, clusterId),
 					eq(schema.k8sServices.autoCreated, true),
 				];
 				if (heartbeatUids.length > 0) {
-					deleteFilter.push(notInArray(schema.k8sServices.k8sUid, heartbeatUids));
+					staleServiceFilter.push(notInArray(schema.k8sServices.k8sUid, heartbeatUids));
 				}
-				await db.delete(schema.k8sServices).where(and(...deleteFilter));
+
+				// Find the stale services so we can clean up referencing ingresses first
+				const staleServices = await db
+					.select({ id: schema.k8sServices.id })
+					.from(schema.k8sServices)
+					.where(and(...staleServiceFilter));
+
+				if (staleServices.length > 0) {
+					const staleServiceIds = staleServices.map((s) => s.id);
+
+					// Delete auto-created ingresses pointing to stale services
+					// (they're orphaned and would fail the NOT-NULL FK cascade otherwise)
+					await db
+						.delete(k8sIngresses)
+						.where(
+							and(
+								eq(k8sIngresses.clusterId, clusterId),
+								eq(k8sIngresses.autoCreated, true),
+								inArray(k8sIngresses.serviceId, staleServiceIds),
+							),
+						);
+
+					// Null-out serviceId on user-created ingresses (FK set-null semantics)
+					await db
+						.update(k8sIngresses)
+						.set({ serviceId: null })
+						.where(
+							and(
+								eq(k8sIngresses.clusterId, clusterId),
+								inArray(k8sIngresses.serviceId, staleServiceIds),
+							),
+						);
+
+					// Now safe to delete the stale services
+					await db.delete(schema.k8sServices).where(and(...staleServiceFilter));
+				}
 			});
 		} catch (error) {
 			logger.error("Failed to sync services", { clusterId, error });
@@ -1176,6 +1211,13 @@ export class AgentService {
 			);
 
 			if (match) continue;
+
+			if (ingress.serviceId === null) {
+				logger.warn(
+					`Skipping restore of ingress ${ingress.name}: serviceId is null (linked service was deleted)`,
+				);
+				continue;
+			}
 
 			// Look up the linked service to get internalPort
 			const service = await db.query.k8sServices.findFirst({

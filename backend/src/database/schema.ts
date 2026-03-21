@@ -445,11 +445,9 @@ export const k8sIngresses = pgTable(
 			.references(() => k8sCluster.id, { onDelete: "cascade" }),
 		name: text("name").notNull(),
 		namespace: text("namespace").notNull(),
-		serviceId: integer("service_id")
-			.references(() => k8sServices.id, {
-				onDelete: "set null",
-			})
-			.notNull(),
+		serviceId: integer("service_id").references(() => k8sServices.id, {
+			onDelete: "set null",
+		}),
 		ownerId: text("owner_id").references(() => profile.id, {
 			onDelete: "set null",
 		}),
