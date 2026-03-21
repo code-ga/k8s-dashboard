@@ -7,7 +7,15 @@ import {
 } from "@tanstack/react-router";
 import { FitAddon } from "@xterm/addon-fit";
 import { WebLinksAddon } from "@xterm/addon-web-links";
-import { AlertTriangle, ArrowLeft, Plus, Trash2, X } from "lucide-react";
+import {
+	AlertTriangle,
+	ArrowLeft,
+	ExternalLink,
+	HelpCircle,
+	Plus,
+	Trash2,
+	X,
+} from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Terminal } from "xterm";
@@ -82,11 +90,11 @@ function ManagePodPage() {
 
 	useEffect(() => {
 		if (pod) {
-			setImage(pod.dockerImage);
+			setImage(pod.dockerImage || "");
 			setCommand(pod.command ? pod.command.split(" ") : []);
 			setArgs(pod.args ? pod.args.split(" ") : []);
 			try {
-				const parsed = (JSON.parse(pod.envVariables) || {}) as Record<
+				const parsed = (JSON.parse(pod.envVariables || "{}")) as Record<
 					string,
 					string
 				>;
@@ -124,6 +132,9 @@ function ManagePodPage() {
 				if (pod.configMapRefs) {
 					setConfigMapEnvRefs(pod.configMapRefs.env || []);
 					setConfigMapEnvFromRefs(pod.configMapRefs.envFrom || []);
+				} else {
+					setConfigMapEnvRefs([]);
+					setConfigMapEnvFromRefs([]);
 				}
 			} catch {
 				setConfigMapEnvRefs([]);
@@ -134,6 +145,9 @@ function ManagePodPage() {
 				if (pod.secretRefs) {
 					setSecretEnvRefs(pod.secretRefs.env || []);
 					setSecretEnvFromRefs(pod.secretRefs.envFrom || []);
+				} else {
+					setSecretEnvRefs([]);
+					setSecretEnvFromRefs([]);
 				}
 			} catch {
 				setSecretEnvRefs([]);
@@ -181,8 +195,8 @@ function ManagePodPage() {
 				.pods({ clusterId })({ id: podId.toString() })
 				.patch({
 					image,
-					command: command.length > 0 ? command : undefined,
-					args: args.length > 0 ? args : undefined,
+					command: command.length > 0 && command[0] !== "" ? command : undefined,
+					args: args.length > 0 && args[0] !== "" ? args : undefined,
 					env: envMap,
 					configMapRefs:
 						(configMapEnvRefs && configMapEnvRefs?.length > 0) ||
@@ -245,11 +259,11 @@ function ManagePodPage() {
 		</div>
 	);
 
-	if (isLoading) return <div className="p-6">Loading pod details...</div>;
-	if (!pod) return <div className="p-6">Pod not found</div>;
+	if (isLoading) return <div className="p-6 text-foreground">Loading pod details...</div>;
+	if (!pod) return <div className="p-6 text-foreground">Pod not found</div>;
 
 	return (
-		<div className="flex flex-col h-screen bg-background">
+		<div className="flex flex-col h-screen bg-background text-foreground">
 			{/* Header Section */}
 			<div className="border-b border-border bg-card">
 				<div className="px-6 py-6 flex items-center justify-between">
@@ -408,6 +422,20 @@ function ManagePodPage() {
 				>
 					<RecreationWarning />
 					<div className="max-w-2xl space-y-6">
+						<div className="flex items-center justify-between border-b pb-2">
+							<h3 className="text-lg font-semibold flex items-center gap-2">
+								Container Configuration
+								<HelpCircle className="h-4 w-4 text-muted-foreground" />
+							</h3>
+							<a
+								href="https://kubernetes.io/docs/concepts/workloads/pods/"
+								target="_blank"
+								rel="noopener noreferrer"
+								className="text-xs text-primary hover:underline flex items-center gap-1"
+							>
+								Pod Docs <ExternalLink className="h-3 w-3" />
+							</a>
+						</div>
 						<div className="space-y-2">
 							<Label htmlFor="image">Container Image</Label>
 							<Input
@@ -417,81 +445,98 @@ function ManagePodPage() {
 								placeholder="e.g., nginx:latest"
 							/>
 						</div>
-						<div className="space-y-2">
-							<Label htmlFor="command">Command (space-separated)</Label>
-							<Input
-								id="command"
-								value={command.join(" ")}
-								onChange={(e) => setCommand(e.target.value.split(" "))}
-								placeholder="e.g., /bin/sh"
-							/>
-						</div>
-						<div className="space-y-2">
-							<Label htmlFor="args">Arguments (space-separated)</Label>
-							<Input
-								id="args"
-								value={args.join(" ")}
-								onChange={(e) => setArgs(e.target.value.split(" "))}
-								placeholder="e.g., -c 'echo hello'"
-							/>
-						</div>
-						<div className="space-y-4">
+
+						<div className="space-y-4 pt-4 border-t">
 							<div className="flex items-center justify-between">
-								<Label>Container Ports</Label>
-								<Button
-									variant="outline"
-									size="sm"
-									onClick={() =>
-										setPorts([...ports, { containerPort: 80, name: "" }])
-									}
+								<h3 className="text-lg font-semibold flex items-center gap-2">
+									Lifecycle & Ports
+									<HelpCircle className="h-4 w-4 text-muted-foreground" />
+								</h3>
+								<a
+									href="https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/"
+									target="_blank"
+									rel="noopener noreferrer"
+									className="text-xs text-primary hover:underline flex items-center gap-1"
 								>
-									<Plus className="h-4 w-4 mr-1" /> Add Port
-								</Button>
+									Exec Docs <ExternalLink className="h-3 w-3" />
+								</a>
 							</div>
-							<div className="space-y-3">
-								{ports.map((p, i) => (
-									<div
-										key={`${p.containerPort}-${i}`}
-										className="flex gap-2 items-end"
+							<div className="space-y-2">
+								<Label htmlFor="command">Command (space-separated)</Label>
+								<Input
+									id="command"
+									value={command.join(" ")}
+									onChange={(e) => setCommand(e.target.value.split(" "))}
+									placeholder="e.g., /bin/sh"
+								/>
+							</div>
+							<div className="space-y-2">
+								<Label htmlFor="args">Arguments (space-separated)</Label>
+								<Input
+									id="args"
+									value={args.join(" ")}
+									onChange={(e) => setArgs(e.target.value.split(" "))}
+									placeholder="e.g., -c 'echo hello'"
+								/>
+							</div>
+							<div className="space-y-4">
+								<div className="flex items-center justify-between">
+									<Label>Container Ports</Label>
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={() =>
+											setPorts([...ports, { containerPort: 80, name: "" }])
+										}
 									>
-										<div className="flex-1">
-											<Label className="text-[10px] text-muted-foreground uppercase">
-												Port
-											</Label>
-											<Input
-												type="number"
-												value={p.containerPort}
-												onChange={(e) => {
-													const newPorts = [...ports];
-													newPorts[i].containerPort = Number(e.target.value);
-													setPorts(newPorts);
-												}}
-											/>
-										</div>
-										<div className="flex-1">
-											<Label className="text-[10px] text-muted-foreground uppercase">
-												Name
-											</Label>
-											<Input
-												value={p.name}
-												onChange={(e) => {
-													const newPorts = [...ports];
-													newPorts[i].name = e.target.value;
-													setPorts(newPorts);
-												}}
-											/>
-										</div>
-										<Button
-											variant="ghost"
-											size="icon"
-											onClick={() =>
-												setPorts(ports.filter((_, idx) => idx !== i))
-											}
+										<Plus className="h-4 w-4 mr-1" /> Add Port
+									</Button>
+								</div>
+								<div className="space-y-3">
+									{ports.map((p, i) => (
+										<div
+											key={`${p.containerPort}-${i}`}
+											className="flex gap-2 items-end"
 										>
-											<X className="h-4 w-4" />
-										</Button>
-									</div>
-								))}
+											<div className="flex-1">
+												<Label className="text-[10px] text-muted-foreground uppercase">
+													Port
+												</Label>
+												<Input
+													type="number"
+													value={p.containerPort}
+													onChange={(e) => {
+														const newPorts = [...ports];
+														newPorts[i].containerPort = Number(e.target.value);
+														setPorts(newPorts);
+													}}
+												/>
+											</div>
+											<div className="flex-1">
+												<Label className="text-[10px] text-muted-foreground uppercase">
+													Name
+												</Label>
+												<Input
+													value={p.name}
+													onChange={(e) => {
+														const newPorts = [...ports];
+														newPorts[i].name = e.target.value;
+														setPorts(newPorts);
+													}}
+												/>
+											</div>
+											<Button
+												variant="ghost"
+												size="icon"
+												onClick={() =>
+													setPorts(ports.filter((_, idx) => idx !== i))
+												}
+											>
+												<X className="h-4 w-4" />
+											</Button>
+										</div>
+									))}
+								</div>
 							</div>
 						</div>
 					</div>
@@ -509,14 +554,28 @@ function ManagePodPage() {
 				<TabsContent value="env" className="flex-1 overflow-auto p-6 space-y-6">
 					<RecreationWarning />
 					<div className="space-y-6">
+						<div className="flex items-center justify-between border-b pb-2">
+							<h3 className="text-lg font-semibold flex items-center gap-2">
+								Environment Configuration
+								<HelpCircle className="h-4 w-4 text-muted-foreground" />
+							</h3>
+							<a
+								href="https://kubernetes.io/docs/tasks/inject-data-application/define-environment-variable-container/"
+								target="_blank"
+								rel="noopener noreferrer"
+								className="text-xs text-primary hover:underline flex items-center gap-1"
+							>
+								Env Docs <ExternalLink className="h-3 w-3" />
+							</a>
+						</div>
 						<div>
-							<h3 className="text-sm font-semibold mb-4">
+							<h3 className="text-sm font-semibold mb-4 text-foreground">
 								Environment Variables
 							</h3>
 							<EnvEditor variables={envVars} onChange={setEnvVars} />
 						</div>
 						<div>
-							<h3 className="text-sm font-semibold mb-4">References</h3>
+							<h3 className="text-sm font-semibold mb-4 text-foreground">References</h3>
 							<RefsEditor
 								clusterId={clusterId}
 								configMapRefs={{
@@ -549,9 +608,23 @@ function ManagePodPage() {
 					className="flex-1 overflow-auto p-6 space-y-6"
 				>
 					<RecreationWarning />
+					<div className="flex items-center justify-between border-b pb-2 max-w-2xl">
+						<h3 className="text-lg font-semibold flex items-center gap-2">
+							Resource Management
+							<HelpCircle className="h-4 w-4 text-muted-foreground" />
+						</h3>
+						<a
+							href="https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/"
+							target="_blank"
+							rel="noopener noreferrer"
+							className="text-xs text-primary hover:underline flex items-center gap-1"
+						>
+							Resource Docs <ExternalLink className="h-3 w-3" />
+						</a>
+					</div>
 					<div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-2xl">
 						<div className="space-y-4">
-							<h3 className="text-sm font-semibold border-b pb-2">Requests</h3>
+							<h3 className="text-sm font-semibold border-b pb-2 text-foreground">Requests</h3>
 							<div className="space-y-2">
 								<Label htmlFor="cpu-request">CPU (millicores)</Label>
 								<Input
@@ -572,7 +645,7 @@ function ManagePodPage() {
 							</div>
 						</div>
 						<div className="space-y-4">
-							<h3 className="text-sm font-semibold border-b pb-2">Limits</h3>
+							<h3 className="text-sm font-semibold border-b pb-2 text-foreground">Limits</h3>
 							<div className="space-y-2">
 								<Label htmlFor="cpu-limit">CPU (millicores)</Label>
 								<Input
@@ -609,6 +682,20 @@ function ManagePodPage() {
 					className="flex-1 overflow-auto p-6 space-y-6"
 				>
 					<RecreationWarning />
+					<div className="flex items-center justify-between border-b pb-2 max-w-2xl">
+						<h3 className="text-lg font-semibold flex items-center gap-2">
+							Labels & Metadata
+							<HelpCircle className="h-4 w-4 text-muted-foreground" />
+						</h3>
+						<a
+							href="https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/"
+							target="_blank"
+							rel="noopener noreferrer"
+							className="text-xs text-primary hover:underline flex items-center gap-1"
+						>
+							Label Docs <ExternalLink className="h-3 w-3" />
+						</a>
+					</div>
 					<EnvEditor variables={labels} onChange={setLabels} />
 					<div className="flex justify-end gap-2 pt-4">
 						<Button
@@ -703,9 +790,9 @@ export function PodLogs({ pod, clusterId, isActive }: PodLogsProps) {
 	}, [logs, autoScroll]);
 
 	return (
-		<div className="h-full flex flex-col gap-3">
+		<div className="h-full flex flex-col gap-3 text-foreground">
 			<div className="flex items-center justify-between">
-				<div className="text-sm font-medium">Live Pod Logs</div>
+				<div className="text-sm font-medium text-foreground">Live Pod Logs</div>
 				<Button
 					variant={autoScroll ? "default" : "outline"}
 					size="sm"

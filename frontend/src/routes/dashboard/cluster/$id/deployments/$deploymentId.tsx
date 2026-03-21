@@ -31,6 +31,8 @@ import {
 	AlertTriangle,
 	ArrowLeft,
 	Box,
+	ExternalLink,
+	HelpCircle,
 	Plus,
 	Settings,
 	Trash2,
@@ -126,7 +128,7 @@ function ManageDeploymentPage() {
 
 	useEffect(() => {
 		if (deployment) {
-			setImage(deployment.dockerImage);
+			setImage(deployment.dockerImage || "");
 			setReplicas(deployment.replicas);
 			setCommand(deployment.command ? deployment.command.split(" ") : []);
 			setArgs(deployment.args ? deployment.args.split(" ") : []);
@@ -172,6 +174,9 @@ function ManageDeploymentPage() {
 				if (deployment.configMapRefs) {
 					setConfigMapEnvRefs(deployment.configMapRefs.env || []);
 					setConfigMapEnvFromRefs(deployment.configMapRefs.envFrom || []);
+				} else {
+					setConfigMapEnvRefs([]);
+					setConfigMapEnvFromRefs([]);
 				}
 			} catch {
 				setConfigMapEnvRefs([]);
@@ -182,6 +187,9 @@ function ManageDeploymentPage() {
 				if (deployment.secretRefs) {
 					setSecretEnvRefs(deployment.secretRefs.env || []);
 					setSecretEnvFromRefs(deployment.secretRefs.envFrom || []);
+				} else {
+					setSecretEnvRefs([]);
+					setSecretEnvFromRefs([]);
 				}
 			} catch {
 				setSecretEnvRefs([]);
@@ -207,8 +215,8 @@ function ManageDeploymentPage() {
 				.patch({
 					image,
 					replicas,
-					command: command.length > 0 ? command : undefined,
-					args: args.length > 0 ? args : undefined,
+					command: command.length > 0 && command[0] !== "" ? command : undefined,
+					args: args.length > 0 && args[0] !== "" ? args : undefined,
 					env: envMap,
 					configMapRefs:
 						configMapEnvRefs.length > 0 || configMapEnvFromRefs.length > 0
@@ -292,15 +300,15 @@ function ManageDeploymentPage() {
 	);
 
 	if (isLoading)
-		return <div className="p-6">Loading deployment details...</div>;
-	if (!deployment) return <div className="p-6">Deployment not found</div>;
+		return <div className="p-6 text-foreground">Loading deployment details...</div>;
+	if (!deployment) return <div className="p-6 text-foreground">Deployment not found</div>;
 
 	const selector = deployment.selector
 		? JSON.parse(deployment.selector)
 		: { app: deployment.name };
 
 	return (
-		<div className="flex flex-col h-screen bg-background">
+		<div className="flex flex-col h-screen bg-background text-foreground">
 			{/* Header Section */}
 			<div className="border-b border-border bg-card">
 				<div className="px-6 py-6 flex items-center justify-between">
@@ -447,6 +455,20 @@ function ManageDeploymentPage() {
 				>
 					<RecreationWarning />
 					<div className="max-w-2xl space-y-6">
+						<div className="flex items-center justify-between border-b pb-2">
+							<h3 className="text-lg font-semibold flex items-center gap-2">
+								Container Configuration
+								<HelpCircle className="h-4 w-4 text-muted-foreground" />
+							</h3>
+							<a
+								href="https://kubernetes.io/docs/concepts/workloads/controllers/deployment/"
+								target="_blank"
+								rel="noopener noreferrer"
+								className="text-xs text-primary hover:underline flex items-center gap-1"
+							>
+								Deployment Docs <ExternalLink className="h-3 w-3" />
+							</a>
+						</div>
 						<div className="space-y-2">
 							<Label htmlFor="deployment-image">Container Image</Label>
 							<Input
@@ -466,85 +488,102 @@ function ManageDeploymentPage() {
 								placeholder="3"
 							/>
 						</div>
-						<div className="space-y-2">
-							<Label htmlFor="deployment-command">
-								Command (space-separated)
-							</Label>
-							<Input
-								id="deployment-command"
-								value={command.join(" ")}
-								onChange={(e) => setCommand(e.target.value.split(" "))}
-								placeholder="e.g., /bin/sh"
-							/>
-						</div>
-						<div className="space-y-2">
-							<Label htmlFor="deployment-args">
-								Arguments (space-separated)
-							</Label>
-							<Input
-								id="deployment-args"
-								value={args.join(" ")}
-								onChange={(e) => setArgs(e.target.value.split(" "))}
-								placeholder="e.g., -c 'echo hello'"
-							/>
-						</div>
-						<div className="space-y-4">
+
+						<div className="space-y-4 pt-4 border-t">
 							<div className="flex items-center justify-between">
-								<Label>Container Ports</Label>
-								<Button
-									variant="outline"
-									size="sm"
-									onClick={() =>
-										setPorts([...ports, { containerPort: 80, name: "" }])
-									}
+								<h3 className="text-lg font-semibold flex items-center gap-2">
+									Lifecycle & Ports
+									<HelpCircle className="h-4 w-4 text-muted-foreground" />
+								</h3>
+								<a
+									href="https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/"
+									target="_blank"
+									rel="noopener noreferrer"
+									className="text-xs text-primary hover:underline flex items-center gap-1"
 								>
-									<Plus className="h-4 w-4 mr-1" /> Add Port
-								</Button>
+									Exec Docs <ExternalLink className="h-3 w-3" />
+								</a>
 							</div>
-							<div className="space-y-3">
-								{ports.map((p, i) => (
-									<div
-										key={`${p.containerPort}-${i}`}
-										className="flex gap-2 items-end"
+							<div className="space-y-2">
+								<Label htmlFor="deployment-command">
+									Command (space-separated)
+								</Label>
+								<Input
+									id="deployment-command"
+									value={command.join(" ")}
+									onChange={(e) => setCommand(e.target.value.split(" "))}
+									placeholder="e.g., /bin/sh"
+								/>
+							</div>
+							<div className="space-y-2">
+								<Label htmlFor="deployment-args">
+									Arguments (space-separated)
+								</Label>
+								<Input
+									id="deployment-args"
+									value={args.join(" ")}
+									onChange={(e) => setArgs(e.target.value.split(" "))}
+									placeholder="e.g., -c 'echo hello'"
+								/>
+							</div>
+							<div className="space-y-4">
+								<div className="flex items-center justify-between">
+									<Label>Container Ports</Label>
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={() =>
+											setPorts([...ports, { containerPort: 80, name: "" }])
+										}
 									>
-										<div className="flex-1">
-											<Label className="text-[10px] text-muted-foreground uppercase">
-												Port
-											</Label>
-											<Input
-												type="number"
-												value={p.containerPort}
-												onChange={(e) => {
-													const newPorts = [...ports];
-													newPorts[i].containerPort = Number(e.target.value);
-													setPorts(newPorts);
-												}}
-											/>
-										</div>
-										<div className="flex-1">
-											<Label className="text-[10px] text-muted-foreground uppercase">
-												Name
-											</Label>
-											<Input
-												value={p.name}
-												onChange={(e) => {
-													const newPorts = [...ports];
-													newPorts[i].name = e.target.value;
-													setPorts(newPorts);
-												}}
-											/>
-										</div>
-										<Button
-											variant="ghost"
-											size="icon"
-											onClick={() =>
-												setPorts(ports.filter((_, idx) => idx !== i))
-											}
+										<Plus className="h-4 w-4 mr-1" /> Add Port
+									</Button>
+								</div>
+								<div className="space-y-3">
+									{ports.map((p, i) => (
+										<div
+											key={`${p.containerPort}-${i}`}
+											className="flex gap-2 items-end"
 										>
-											<X className="h-4 w-4" />
-										</Button>
-									</div>
-								))}
+											<div className="flex-1">
+												<Label className="text-[10px] text-muted-foreground uppercase">
+													Port
+												</Label>
+												<Input
+													type="number"
+													value={p.containerPort}
+													onChange={(e) => {
+														const newPorts = [...ports];
+														newPorts[i].containerPort = Number(e.target.value);
+														setPorts(newPorts);
+													}}
+												/>
+											</div>
+											<div className="flex-1">
+												<Label className="text-[10px] text-muted-foreground uppercase">
+													Name
+												</Label>
+												<Input
+													value={p.name}
+													onChange={(e) => {
+														const newPorts = [...ports];
+														newPorts[i].name = e.target.value;
+														setPorts(newPorts);
+													}}
+												/>
+											</div>
+											<Button
+												variant="ghost"
+												size="icon"
+												onClick={() =>
+													setPorts(ports.filter((_, idx) => idx !== i))
+												}
+											>
+												<X className="h-4 w-4" />
+											</Button>
+										</div>
+									))}
+								</div>
 							</div>
 						</div>
 					</div>
@@ -564,6 +603,20 @@ function ManageDeploymentPage() {
 				<TabsContent value="env" className="flex-1 overflow-auto p-6 space-y-6">
 					<RecreationWarning />
 					<div className="space-y-6">
+						<div className="flex items-center justify-between border-b pb-2">
+							<h3 className="text-lg font-semibold flex items-center gap-2">
+								Environment Configuration
+								<HelpCircle className="h-4 w-4 text-muted-foreground" />
+							</h3>
+							<a
+								href="https://kubernetes.io/docs/tasks/inject-data-application/define-environment-variable-container/"
+								target="_blank"
+								rel="noopener noreferrer"
+								className="text-xs text-primary hover:underline flex items-center gap-1"
+							>
+								Env Docs <ExternalLink className="h-3 w-3" />
+							</a>
+						</div>
 						<div>
 							<h3 className="text-sm font-semibold mb-4">
 								Environment Variables
@@ -606,6 +659,20 @@ function ManageDeploymentPage() {
 					className="flex-1 overflow-auto p-6 space-y-6"
 				>
 					<RecreationWarning />
+					<div className="flex items-center justify-between border-b pb-2 max-w-2xl">
+						<h3 className="text-lg font-semibold flex items-center gap-2">
+							Resource Management
+							<HelpCircle className="h-4 w-4 text-muted-foreground" />
+						</h3>
+						<a
+							href="https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/"
+							target="_blank"
+							rel="noopener noreferrer"
+							className="text-xs text-primary hover:underline flex items-center gap-1"
+						>
+							Resource Docs <ExternalLink className="h-3 w-3" />
+						</a>
+					</div>
 					<div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-2xl">
 						<div className="space-y-4">
 							<h3 className="text-sm font-semibold border-b pb-2">Requests</h3>
@@ -668,6 +735,20 @@ function ManageDeploymentPage() {
 					className="flex-1 overflow-auto p-6 space-y-6"
 				>
 					<RecreationWarning />
+					<div className="flex items-center justify-between border-b pb-2 max-w-2xl">
+						<h3 className="text-lg font-semibold flex items-center gap-2">
+							Labels & Metadata
+							<HelpCircle className="h-4 w-4 text-muted-foreground" />
+						</h3>
+						<a
+							href="https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/"
+							target="_blank"
+							rel="noopener noreferrer"
+							className="text-xs text-primary hover:underline flex items-center gap-1"
+						>
+							Label Docs <ExternalLink className="h-3 w-3" />
+						</a>
+					</div>
 					<EnvEditor variables={labels} onChange={setLabels} />
 					<div className="flex justify-end gap-2 pt-4">
 						<Button
@@ -834,9 +915,9 @@ export function DeploymentLogs({
 	}, [logs, autoScroll]);
 
 	return (
-		<div className="h-full flex flex-col gap-3">
+		<div className="h-full flex flex-col gap-3 text-foreground">
 			<div className="flex items-center justify-between">
-				<p className="text-sm font-medium">Live Deployment Logs</p>
+				<p className="text-sm font-medium text-foreground">Live Deployment Logs</p>
 				<Button
 					variant={autoScroll ? "default" : "outline"}
 					size="sm"

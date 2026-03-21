@@ -6,7 +6,7 @@ import {
 	useNavigate,
 	useParams,
 } from "@tanstack/react-router";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ExternalLink, HelpCircle } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -28,7 +28,7 @@ import RefsEditor, {
 	type IConfigMapEnvRef,
 	type ISecretEnvFromRef,
 	type ISecretEnvRef,
-} from "../../../../../components/shared/refs-editor";
+} from "@/components/shared/refs-editor";
 
 export const Route = createFileRoute(
 	"/dashboard/cluster/$id/deployments/create",
@@ -77,28 +77,6 @@ function CreateDeploymentPage() {
 		ISecretEnvFromRef[]
 	>([]);
 
-	// temp inputs
-
-	// TODO: fetch configmaps and secrets for refs editor
-	// const { data: configMaps } = useQuery({
-	// 	queryKey: ["configmaps", clusterId],
-	// 	queryFn: async () => {
-	// 		const res = await api.api.configmaps({ clusterId }).get();
-	// 		if (res.error) throw res.error;
-	// 		return res.data.data as any[];
-	// 	},
-	// });
-
-	// const { data: secrets } = useQuery({
-	// 	queryKey: ["secrets", clusterId],
-	// 	queryFn: async () => {
-	// 		const res = await api.api.secrets({ clusterId }).get();
-	// 		if (res.error) throw res.error;
-	// 		return res.data.data as any[];
-	// 	},
-	// });
-
-	// refs state for RefsEditor
 	const mutation = useMutation({
 		mutationFn: async (values: z.infer<typeof deploymentSchema>) => {
 			const parseLabels = (str: string | undefined) => {
@@ -218,11 +196,23 @@ function CreateDeploymentPage() {
 
 			<Card>
 				<CardHeader>
-					<CardTitle>Deployment Configuration</CardTitle>
-					<CardDescription>
-						Configure the basic settings, resources, and environment for your
-						deployment.
-					</CardDescription>
+					<div className="flex justify-between items-start">
+						<div>
+							<CardTitle>Deployment Configuration</CardTitle>
+							<CardDescription>
+								Configure the basic settings, resources, and environment for your
+								deployment.
+							</CardDescription>
+						</div>
+						<a
+							href="https://kubernetes.io/docs/concepts/workloads/controllers/deployment/"
+							target="_blank"
+							rel="noopener noreferrer"
+							className="text-sm text-primary hover:underline flex items-center gap-1"
+						>
+							Deployment Docs <ExternalLink className="h-4 w-4" />
+						</a>
+					</div>
 				</CardHeader>
 				<CardContent>
 					<form
@@ -233,120 +223,173 @@ function CreateDeploymentPage() {
 						}}
 						className="space-y-6"
 					>
-						<div className="grid grid-cols-2 gap-4">
-							<div className="space-y-2">
-								<Label htmlFor="name">Deployment Name</Label>
-								<form.Field name="name">
-									{(field) => (
-										<>
-											<Input
-												id="name"
-												value={field.state.value}
-												onBlur={field.handleBlur}
-												onChange={(e) => field.handleChange(e.target.value)}
-												placeholder="my-deployment"
-											/>
-											{field.state.meta.errors && (
-												<p className="text-xs text-destructive">
-													{field.state.meta.errors.join(", ")}
-												</p>
-											)}
-										</>
-									)}
-								</form.Field>
-							</div>
-							<div className="space-y-2">
-								<Label htmlFor="namespace">Namespace</Label>
-								<form.Field name="namespace">
-									{(field) => (
-										<Input
-											id="namespace"
-											value={field.state.value}
-											onBlur={field.handleBlur}
-											onChange={(e) => field.handleChange(e.target.value)}
-											placeholder="default"
-										/>
-									)}
-								</form.Field>
-							</div>
-						</div>
-
-						<div className="grid grid-cols-2 gap-4">
-							<div className="space-y-2">
-								<Label htmlFor="image">Docker Image</Label>
-								<form.Field name="image">
-									{(field) => (
-										<>
-											<Input
-												id="image"
-												value={field.state.value}
-												onBlur={field.handleBlur}
-												onChange={(e) => field.handleChange(e.target.value)}
-												placeholder="nginx:latest"
-											/>
-											{field.state.meta.errors && (
-												<p className="text-xs text-destructive">
-													{field.state.meta.errors.join(", ")}
-												</p>
-											)}
-										</>
-									)}
-								</form.Field>
-							</div>
-							<div className="space-y-2">
-								<Label htmlFor="replicas">Replicas</Label>
-								<form.Field name="replicas">
-									{(field) => (
-										<Input
-											id="replicas"
-											type="number"
-											min={0}
-											value={field.state.value}
-											onBlur={field.handleBlur}
-											onChange={(e) =>
-												field.handleChange(Number(e.target.value))
-											}
-										/>
-									)}
-								</form.Field>
-							</div>
-						</div>
-
-						<div className="grid grid-cols-2 gap-4">
-							<div className="space-y-2">
-								<Label htmlFor="labels">
-									Labels (key=value, comma-separated)
-								</Label>
-								<form.Field name="labels">
-									{(field) => (
-										<Input
-											id="labels"
-											value={field.state.value}
-											onBlur={field.handleBlur}
-											onChange={(e) => field.handleChange(e.target.value)}
-											placeholder="app=myapp, tier=frontend"
-										/>
-									)}
-								</form.Field>
-							</div>
-							<div className="space-y-2">
-								<Label htmlFor="selector">Selector (key=value)</Label>
-								<form.Field name="selector">
-									{(field) => (
-										<Input
-											id="selector"
-											value={field.state.value}
-											onBlur={field.handleBlur}
-											onChange={(e) => field.handleChange(e.target.value)}
-											placeholder="app=myapp"
-										/>
-									)}
-								</form.Field>
-							</div>
-						</div>
-
 						<div className="space-y-4">
-							<h3 className="text-lg font-medium">Resources</h3>
+							<div className="flex items-center justify-between">
+								<h3 className="text-lg font-semibold flex items-center gap-2">
+									General Information
+									<HelpCircle className="h-4 w-4 text-muted-foreground" />
+								</h3>
+							</div>
+							<div className="grid grid-cols-2 gap-4">
+								<div className="space-y-2">
+									<Label htmlFor="name">Deployment Name</Label>
+									<form.Field name="name">
+										{(field) => (
+											<>
+												<Input
+													id="name"
+													value={field.state.value}
+													onBlur={field.handleBlur}
+													onChange={(e) => field.handleChange(e.target.value)}
+													placeholder="my-deployment"
+												/>
+												{field.state.meta.errors && (
+													<p className="text-xs text-destructive">
+														{field.state.meta.errors.join(", ")}
+													</p>
+												)}
+											</>
+										)}
+									</form.Field>
+								</div>
+								<div className="space-y-2">
+									<Label htmlFor="namespace">Namespace</Label>
+									<form.Field name="namespace">
+										{(field) => (
+											<Input
+												id="namespace"
+												value={field.state.value}
+												onBlur={field.handleBlur}
+												onChange={(e) => field.handleChange(e.target.value)}
+												placeholder="default"
+											/>
+										)}
+									</form.Field>
+								</div>
+							</div>
+						</div>
+
+						<div className="space-y-4 border-t pt-4">
+							<div className="flex items-center justify-between">
+								<h3 className="text-lg font-semibold flex items-center gap-2">
+									Container & Scaling
+									<HelpCircle className="h-4 w-4 text-muted-foreground" />
+								</h3>
+								<a
+									href="https://kubernetes.io/docs/concepts/containers/images/"
+									target="_blank"
+									rel="noopener noreferrer"
+									className="text-xs text-primary hover:underline flex items-center gap-1"
+								>
+									Image Docs <ExternalLink className="h-3 w-3" />
+								</a>
+							</div>
+							<div className="grid grid-cols-2 gap-4">
+								<div className="space-y-2">
+									<Label htmlFor="image">Docker Image</Label>
+									<form.Field name="image">
+										{(field) => (
+											<>
+												<Input
+													id="image"
+													value={field.state.value}
+													onBlur={field.handleBlur}
+													onChange={(e) => field.handleChange(e.target.value)}
+													placeholder="nginx:latest"
+												/>
+												{field.state.meta.errors && (
+													<p className="text-xs text-destructive">
+														{field.state.meta.errors.join(", ")}
+													</p>
+												)}
+											</>
+										)}
+									</form.Field>
+								</div>
+								<div className="space-y-2">
+									<Label htmlFor="replicas">Replicas</Label>
+									<form.Field name="replicas">
+										{(field) => (
+											<Input
+												id="replicas"
+												type="number"
+												min={0}
+												value={field.state.value}
+												onBlur={field.handleBlur}
+												onChange={(e) =>
+													field.handleChange(Number(e.target.value))
+												}
+											/>
+										)}
+									</form.Field>
+								</div>
+							</div>
+						</div>
+
+						<div className="space-y-4 border-t pt-4">
+							<div className="flex items-center justify-between">
+								<h3 className="text-lg font-semibold flex items-center gap-2">
+									Labels & Selectors
+									<HelpCircle className="h-4 w-4 text-muted-foreground" />
+								</h3>
+								<a
+									href="https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/"
+									target="_blank"
+									rel="noopener noreferrer"
+									className="text-xs text-primary hover:underline flex items-center gap-1"
+								>
+									Label Docs <ExternalLink className="h-3 w-3" />
+								</a>
+							</div>
+							<div className="grid grid-cols-2 gap-4">
+								<div className="space-y-2">
+									<Label htmlFor="labels">
+										Labels (key=value, comma-separated)
+									</Label>
+									<form.Field name="labels">
+										{(field) => (
+											<Input
+												id="labels"
+												value={field.state.value}
+												onBlur={field.handleBlur}
+												onChange={(e) => field.handleChange(e.target.value)}
+												placeholder="app=myapp, tier=frontend"
+											/>
+										)}
+									</form.Field>
+								</div>
+								<div className="space-y-2">
+									<Label htmlFor="selector">Selector (key=value)</Label>
+									<form.Field name="selector">
+										{(field) => (
+											<Input
+												id="selector"
+												value={field.state.value}
+												onBlur={field.handleBlur}
+												onChange={(e) => field.handleChange(e.target.value)}
+												placeholder="app=myapp"
+											/>
+										)}
+									</form.Field>
+								</div>
+							</div>
+						</div>
+
+						<div className="space-y-4 border-t pt-4">
+							<div className="flex items-center justify-between">
+								<h3 className="text-lg font-semibold flex items-center gap-2">
+									Resources
+									<HelpCircle className="h-4 w-4 text-muted-foreground" />
+								</h3>
+								<a
+									href="https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/"
+									target="_blank"
+									rel="noopener noreferrer"
+									className="text-xs text-primary hover:underline flex items-center gap-1"
+								>
+									Resource Docs <ExternalLink className="h-3 w-3" />
+								</a>
+							</div>
 							<div className="grid grid-cols-2 gap-6">
 								<div className="space-y-2">
 									<Label>Resource Requests</Label>
@@ -401,8 +444,21 @@ function CreateDeploymentPage() {
 							</div>
 						</div>
 
-						<div className="space-y-4">
-							<h3 className="text-lg font-medium">Command & Arguments</h3>
+						<div className="space-y-4 border-t pt-4">
+							<div className="flex items-center justify-between">
+								<h3 className="text-lg font-semibold flex items-center gap-2">
+									Command & Arguments
+									<HelpCircle className="h-4 w-4 text-muted-foreground" />
+								</h3>
+								<a
+									href="https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/"
+									target="_blank"
+									rel="noopener noreferrer"
+									className="text-xs text-primary hover:underline flex items-center gap-1"
+								>
+									Exec Docs <ExternalLink className="h-3 w-3" />
+								</a>
+							</div>
 							<div className="space-y-2">
 								<Label htmlFor="command">Command (optional)</Label>
 								<form.Field name="command">
@@ -433,8 +489,21 @@ function CreateDeploymentPage() {
 							</div>
 						</div>
 
-						<div className="space-y-4">
-							<h3 className="text-lg font-medium">Environment Variables</h3>
+						<div className="space-y-4 border-t pt-4">
+							<div className="flex items-center justify-between">
+								<h3 className="text-lg font-semibold flex items-center gap-2">
+									Environment Variables
+									<HelpCircle className="h-4 w-4 text-muted-foreground" />
+								</h3>
+								<a
+									href="https://kubernetes.io/docs/tasks/inject-data-application/define-environment-variable-container/"
+									target="_blank"
+									rel="noopener noreferrer"
+									className="text-xs text-primary hover:underline flex items-center gap-1"
+								>
+									Env Docs <ExternalLink className="h-3 w-3" />
+								</a>
+							</div>
 							<EnvEditor variables={envVars} onChange={setEnvVars} />
 							<div className="pt-4">
 								<RefsEditor

@@ -6,7 +6,7 @@ import {
 	useNavigate,
 	useParams,
 } from "@tanstack/react-router";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ExternalLink, HelpCircle } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -71,8 +71,6 @@ function CreatePodPage() {
 	const [secretEnvFromRefs, setSecretEnvFromRefs] = useState<
 		ISecretEnvFromRef[]
 	>([]);
-
-	// refs state for RefsEditor
 
 	const mutation = useMutation({
 		mutationFn: async (values: z.infer<typeof podSchema>) => {
@@ -175,11 +173,23 @@ function CreatePodPage() {
 
 			<Card>
 				<CardHeader>
-					<CardTitle>Pod Configuration</CardTitle>
-					<CardDescription>
-						Configure the basic settings, resources, and environment for your
-						pod.
-					</CardDescription>
+					<div className="flex justify-between items-start">
+						<div>
+							<CardTitle>Pod Configuration</CardTitle>
+							<CardDescription>
+								Configure the basic settings, resources, and environment for your
+								pod.
+							</CardDescription>
+						</div>
+						<a
+							href="https://kubernetes.io/docs/concepts/workloads/pods/"
+							target="_blank"
+							rel="noopener noreferrer"
+							className="text-sm text-primary hover:underline flex items-center gap-1"
+						>
+							Pod Docs <ExternalLink className="h-4 w-4" />
+						</a>
+					</div>
 				</CardHeader>
 				<CardContent>
 					<form
@@ -191,18 +201,72 @@ function CreatePodPage() {
 						className="space-y-6"
 					>
 						{/* Basic Info */}
-						<div className="grid grid-cols-2 gap-4">
-							<div className="space-y-2">
-								<Label htmlFor="name">Pod Name</Label>
-								<form.Field name="name">
-									{(field) => (
-										<>
+						<div className="space-y-4">
+							<div className="flex items-center justify-between">
+								<h3 className="text-lg font-semibold flex items-center gap-2">
+									General Information
+									<HelpCircle className="h-4 w-4 text-muted-foreground" />
+								</h3>
+							</div>
+							<div className="grid grid-cols-2 gap-4">
+								<div className="space-y-2">
+									<Label htmlFor="name">Pod Name</Label>
+									<form.Field name="name">
+										{(field) => (
+											<>
+												<Input
+													id="name"
+													value={field.state.value}
+													onBlur={field.handleBlur}
+													onChange={(e) => field.handleChange(e.target.value)}
+													placeholder="my-pod"
+												/>
+												{field.state.meta.errors && (
+													<p className="text-xs text-destructive">
+														{field.state.meta.errors.join(", ")}
+													</p>
+												)}
+											</>
+										)}
+									</form.Field>
+								</div>
+								<div className="space-y-2">
+									<Label htmlFor="namespace">Namespace</Label>
+									<form.Field name="namespace">
+										{(field) => (
 											<Input
-												id="name"
+												id="namespace"
 												value={field.state.value}
 												onBlur={field.handleBlur}
 												onChange={(e) => field.handleChange(e.target.value)}
-												placeholder="my-pod"
+												placeholder="default"
+											/>
+										)}
+									</form.Field>
+								</div>
+							</div>
+
+							<div className="space-y-2">
+								<div className="flex items-center justify-between">
+									<Label htmlFor="image">Docker Image</Label>
+									<a
+										href="https://kubernetes.io/docs/concepts/containers/images/"
+										target="_blank"
+										rel="noopener noreferrer"
+										className="text-xs text-primary hover:underline flex items-center gap-1"
+									>
+										Image Docs <ExternalLink className="h-3 w-3" />
+									</a>
+								</div>
+								<form.Field name="image">
+									{(field) => (
+										<>
+											<Input
+												id="image"
+												value={field.state.value}
+												onBlur={field.handleBlur}
+												onChange={(e) => field.handleChange(e.target.value)}
+												placeholder="nginx:latest"
 											/>
 											{field.state.meta.errors && (
 												<p className="text-xs text-destructive">
@@ -213,47 +277,24 @@ function CreatePodPage() {
 									)}
 								</form.Field>
 							</div>
-							<div className="space-y-2">
-								<Label htmlFor="namespace">Namespace</Label>
-								<form.Field name="namespace">
-									{(field) => (
-										<Input
-											id="namespace"
-											value={field.state.value}
-											onBlur={field.handleBlur}
-											onChange={(e) => field.handleChange(e.target.value)}
-											placeholder="default"
-										/>
-									)}
-								</form.Field>
-							</div>
-						</div>
-
-						<div className="space-y-2">
-							<Label htmlFor="image">Docker Image</Label>
-							<form.Field name="image">
-								{(field) => (
-									<>
-										<Input
-											id="image"
-											value={field.state.value}
-											onBlur={field.handleBlur}
-											onChange={(e) => field.handleChange(e.target.value)}
-											placeholder="nginx:latest"
-										/>
-										{field.state.meta.errors && (
-											<p className="text-xs text-destructive">
-												{field.state.meta.errors.join(", ")}
-											</p>
-										)}
-									</>
-								)}
-							</form.Field>
 						</div>
 
 						{/* Resources */}
-						<div className="space-y-4">
-							<h3 className="text-lg font-medium">Resources</h3>
+						<div className="space-y-4 border-t pt-4">
+							<div className="flex items-center justify-between">
+								<h3 className="text-lg font-semibold flex items-center gap-2">
+									Resources
+									<HelpCircle className="h-4 w-4 text-muted-foreground" />
+								</h3>
+								<a
+									href="https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/"
+									target="_blank"
+									rel="noopener noreferrer"
+									className="text-xs text-primary hover:underline flex items-center gap-1"
+								>
+									Resource Docs <ExternalLink className="h-3 w-3" />
+								</a>
+							</div>
 							<div className="grid grid-cols-2 gap-6">
 								<div className="space-y-2">
 									<Label>Resource Requests</Label>
@@ -310,8 +351,21 @@ function CreatePodPage() {
 						</div>
 
 						{/* Command and Args */}
-						<div className="space-y-4">
-							<h3 className="text-lg font-medium">Command & Arguments</h3>
+						<div className="space-y-4 border-t pt-4">
+							<div className="flex items-center justify-between">
+								<h3 className="text-lg font-semibold flex items-center gap-2">
+									Command & Arguments
+									<HelpCircle className="h-4 w-4 text-muted-foreground" />
+								</h3>
+								<a
+									href="https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/"
+									target="_blank"
+									rel="noopener noreferrer"
+									className="text-xs text-primary hover:underline flex items-center gap-1"
+								>
+									Exec Docs <ExternalLink className="h-3 w-3" />
+								</a>
+							</div>
 							<div className="space-y-2">
 								<Label htmlFor="command">Command (optional)</Label>
 								<form.Field name="command">
@@ -344,26 +398,38 @@ function CreatePodPage() {
 						</div>
 
 						{/* Environment Variables */}
-						<div className="space-y-4">
-							<h3 className="text-lg font-medium">Environment Variables</h3>
+						<div className="space-y-4 border-t pt-4">
+							<div className="flex items-center justify-between">
+								<h3 className="text-lg font-semibold flex items-center gap-2">
+									Environment Variables
+									<HelpCircle className="h-4 w-4 text-muted-foreground" />
+								</h3>
+								<a
+									href="https://kubernetes.io/docs/tasks/inject-data-application/define-environment-variable-container/"
+									target="_blank"
+									rel="noopener noreferrer"
+									className="text-xs text-primary hover:underline flex items-center gap-1"
+								>
+									Env Docs <ExternalLink className="h-3 w-3" />
+								</a>
+							</div>
 							<EnvEditor variables={envVars} onChange={setEnvVars} />
-						</div>
-
-						<div className="pt-4">
-							<RefsEditor
-								clusterId={clusterId}
-								configMapRefs={{
-									env: configMapEnvRefs,
-									envFrom: configMapEnvFromRefs,
-								}}
-								secretRefs={{ env: secretEnvRefs, envFrom: secretEnvFromRefs }}
-								onChange={(r) => {
-									setConfigMapEnvRefs(r.configMapRefs?.env || []);
-									setConfigMapEnvFromRefs(r.configMapRefs?.envFrom || []);
-									setSecretEnvRefs(r.secretRefs?.env || []);
-									setSecretEnvFromRefs(r.secretRefs?.envFrom || []);
-								}}
-							/>
+							<div className="pt-4">
+								<RefsEditor
+									clusterId={clusterId}
+									configMapRefs={{
+										env: configMapEnvRefs,
+										envFrom: configMapEnvFromRefs,
+									}}
+									secretRefs={{ env: secretEnvRefs, envFrom: secretEnvFromRefs }}
+									onChange={(r) => {
+										setConfigMapEnvRefs(r.configMapRefs?.env || []);
+										setConfigMapEnvFromRefs(r.configMapRefs?.envFrom || []);
+										setSecretEnvRefs(r.secretRefs?.env || []);
+										setSecretEnvFromRefs(r.secretRefs?.envFrom || []);
+									}}
+								/>
+							</div>
 						</div>
 
 						<div className="flex justify-end gap-4">
