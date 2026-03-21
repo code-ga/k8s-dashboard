@@ -66,7 +66,7 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 
 		return (
 			<ThemeProvider defaultTheme="dark" storageKey="k8s-dashboard-theme">
-				<div className="flex overflow-hidden bg-background">
+				<div className="flex min-h-screen overflow-hidden bg-background">
 					{/* Persistent Sidebar on Desktop */}
 					<Sidebar role={role} className="hidden lg:flex" />
 
