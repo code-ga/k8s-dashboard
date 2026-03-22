@@ -25,7 +25,9 @@ function ClusterPods() {
 	const { data: pods, isLoading } = useQuery({
 		queryKey: ["pods", id],
 		queryFn: async () => {
-			const res = await api.api.pods({ clusterId: id }).get();
+			const res = can("pod:manage")
+				? await api.api.pods({ clusterId: id }).all.get()
+				: await api.api.pods({ clusterId: id }).get();
 			if (res.error) throw res.error;
 			if (!res.data.data)
 				throw new Error(res.data.message || "Failed to fetch pods");

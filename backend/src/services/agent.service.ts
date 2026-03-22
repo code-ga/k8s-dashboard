@@ -367,11 +367,34 @@ export class AgentService {
 							);
 					}
 
+					let deploymentId: number | null = null;
+					let ownerId = defaultOwner.id;
+
+					const depName = pod.annotations?.["k8s-dashboard/deployment-name"];
+					if (depName) {
+						const depResult = await db
+							.select()
+							.from(k8sDeployments)
+							.where(
+								and(
+									eq(k8sDeployments.clusterId, clusterId),
+									eq(k8sDeployments.name, depName),
+									eq(k8sDeployments.namespace, pod.namespace),
+								),
+							)
+							.limit(1);
+						const dep = depResult[0];
+						if (dep) {
+							deploymentId = dep.id;
+							ownerId = dep.ownerId;
+						}
+					}
+
 					const podData: InferInsertModel<typeof k8sPods> = {
 						clusterId,
-						deploymentId: null,
+						deploymentId,
 						nodeId: node.id,
-						ownerId: defaultOwner.id,
+						ownerId,
 						name: pod.name,
 						namespace: pod.namespace,
 						dockerImage: pod.dockerImage,
@@ -407,6 +430,8 @@ export class AgentService {
 								memoryUsage: Number(pod.ramUsage),
 								k8sUid: pod.uid,
 								updatedAt: new Date(),
+								deploymentId,
+								ownerId,
 							})
 							.where(eq(k8sPods.id, existingPod.id));
 

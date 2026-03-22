@@ -1,18 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
-import {
-	ArrowLeft,
-	Eye,
-	Network,
-	ShieldAlert,
-	ShieldCheck,
-	Trash2,
-	Unplug,
-} from "lucide-react";
+import { ArrowLeft, Eye, Network, Plus, ShieldAlert, ShieldCheck, Trash2, Unplug } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { CreateServiceDialog } from "@/components/service/create-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -262,7 +253,9 @@ function ClusterServices() {
 	const { data: services, isLoading } = useQuery({
 		queryKey: ["services", id],
 		queryFn: async () => {
-			const res = await api.api.services({ clusterId: id }).get();
+			const res = can("service:manage")
+				? await api.api.services({ clusterId: id }).all.get()
+				: await api.api.services({ clusterId: id }).get();
 			if (res.error) throw res.error;
 			if (!res.data.data)
 				throw new Error(res.data.message || "Failed to fetch services");
@@ -305,7 +298,13 @@ function ClusterServices() {
 				</div>
 			</div>
 			<div className="flex justify-end">
-				{can("service:create") && <CreateServiceDialog clusterId={id} />}
+				{can("service:create") && (
+					<Link to="/dashboard/cluster/$id/services/create" params={{ id }}>
+						<Button>
+							<Plus className="mr-2 h-4 w-4" /> Create Service
+						</Button>
+					</Link>
+				)}
 			</div>
 
 			<Card>

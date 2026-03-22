@@ -54,6 +54,36 @@ export const configmapRoute = new Elysia({
 				},
 			)
 			.get(
+				"/all",
+				async (ctx) => {
+					const { clusterId } = ctx.params;
+					const items = await db.query.k8sConfigMaps.findMany({
+						where: { clusterId: Number(clusterId) },
+					});
+					return ctx.status(200, {
+						success: true,
+						message: "ConfigMaps fetched successfully",
+						data: items,
+						timestamp: Date.now(),
+					});
+				},
+				{
+					detail: { tags: ["ConfigMaps"] },
+					roleAuth: "configmap:read",
+					response: {
+						200: baseResponseSchema(
+							Type.Array(
+								Type.Object({
+									...dbSchemaTypes.k8sConfigMaps,
+								}),
+							),
+						),
+						401: errorResponseSchema,
+						404: errorResponseSchema,
+					},
+				},
+			)
+			.get(
 				"/:id",
 				async (ctx) => {
 					const { id } = ctx.params;

@@ -12,6 +12,7 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { api } from "@/lib/api";
+import { usePermissions } from "@/hooks/use-permissions";
 
 export const Route = createFileRoute("/dashboard/cluster/$id/configmaps/")({
 	component: ClusterConfigMaps,
@@ -19,11 +20,14 @@ export const Route = createFileRoute("/dashboard/cluster/$id/configmaps/")({
 
 function ClusterConfigMaps() {
 	const { id } = useParams({ from: "/dashboard/cluster/$id/configmaps/" });
+	const { can } = usePermissions();
 
 	const { data: configMaps, isLoading } = useQuery({
 		queryKey: ["configmaps", id],
 		queryFn: async () => {
-			const res = await api.api.configmaps({ clusterId: id }).get();
+			const res = can("configmap:manage")
+				? await api.api.configmaps({ clusterId: id }).all.get()
+				: await api.api.configmaps({ clusterId: id }).get();
 			if (res.error) throw res.error;
 			if (!res.data.data)
 				throw new Error(res.data.message || "Failed to fetch config maps");
@@ -49,11 +53,13 @@ function ClusterConfigMaps() {
 						</p>
 					</div>
 				</div>
-				<Link to="/dashboard/cluster/$id/configmaps/create" params={{ id }}>
-					<Button>
-						<Plus className="mr-2 h-4 w-4" /> Create ConfigMap
-					</Button>
-				</Link>
+				{can("configmap:create") && (
+					<Link to="/dashboard/cluster/$id/configmaps/create" params={{ id }}>
+						<Button>
+							<Plus className="mr-2 h-4 w-4" /> Create ConfigMap
+						</Button>
+					</Link>
+				)}
 			</div>
 
 			<Card>

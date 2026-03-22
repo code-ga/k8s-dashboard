@@ -221,7 +221,9 @@ function ClusterDeployments() {
 	const { data: deployments, isLoading } = useQuery({
 		queryKey: ["deployments", id],
 		queryFn: async () => {
-			const res = await api.api.deployments({ clusterId: id }).get();
+			const res = can("deployment:manage")
+				? await api.api.deployments({ clusterId: id }).all.get()
+				: await api.api.deployments({ clusterId: id }).get();
 			if (res.error) throw res.error;
 			if (!res.data.data)
 				throw new Error(res.data.message || "Failed to fetch deployments");

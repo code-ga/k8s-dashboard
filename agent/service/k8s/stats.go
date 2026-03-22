@@ -247,6 +247,15 @@ func (kc *K8sClient) GetFullClusterState() (*pb.Heartbeat, error) {
 			argsStr = strings.Join(pod.Spec.Containers[0].Args, " ")
 		}
 
+		// Add deployment name annotation if it's from a deployment/replicaset
+		annotations := make(map[string]string)
+		for k, v := range pod.Annotations {
+			annotations[k] = v
+		}
+		if depName := kc.getDeploymentNameForPod(&pod); depName != "" {
+			annotations["k8s-dashboard/deployment-name"] = depName
+		}
+
 		pbPods = append(pbPods, &pb.Pod{
 			Name:          pod.Name,
 			Namespace:     pod.Namespace,
@@ -266,7 +275,7 @@ func (kc *K8sClient) GetFullClusterState() (*pb.Heartbeat, error) {
 			CpuUsage:      podMetricsMap[fmt.Sprintf("%s/%s", pod.Namespace, pod.Name)]["cpu"],
 			RamUsage:      podMetricsMap[fmt.Sprintf("%s/%s", pod.Namespace, pod.Name)]["memory"],
 			Labels:        pod.Labels,
-			Annotations:   pod.Annotations,
+			Annotations:   annotations,
 		})
 
 	}
@@ -459,4 +468,22 @@ func (kc *K8sClient) GetFullClusterState() (*pb.Heartbeat, error) {
 	}
 
 	return heartbeat, nil
+}
+
+func (kc *K8sClient) getDeploymentNameForPod(pod *corev1.Pod) string {
+	for _, owner := range pod.OwnerReferences {
+		if owner.Kind == "ReplicaSet" {
+			// Standard K8s: RS name is <Deployment>-<PodTemplateHash>
+			// We take everything before the last dash.
+			lastDash := strings.LastIndex(owner.Name, "-")
+			if lastDash != -1 {
+				return owner.Name[:lastDash]
+			}
+			return owner.Name
+		}
+		if owner.Kind == "Deployment" {
+			return owner.Name
+		}
+	}
+	return ""
 }

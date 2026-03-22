@@ -31,7 +31,9 @@ function ClusterIngresses() {
 	const { data: ingresses, isLoading } = useQuery({
 		queryKey: ["ingresses", id],
 		queryFn: async () => {
-			const res = await api.api.ingresses({ clusterId: id }).get();
+			const res = can("ingress:manage")
+				? await api.api.ingresses({ clusterId: id }).all.get()
+				: await api.api.ingresses({ clusterId: id }).get();
 			if (res.error) throw res.error;
 			if (!res.data.data)
 				throw new Error(res.data.message || "Failed to fetch ingresses");

@@ -51,7 +51,14 @@ export const serviceRoute = new Elysia({
 					roleAuth: "service:manage",
 					response: {
 						200: baseResponseSchema(
-							Type.Array(Type.Object(dbSchemaTypes.k8sServices)),
+							Type.Array(
+								Type.Object({
+									...dbSchemaTypes.k8sServices,
+									ingresses: Type.Array(
+										Type.Object(dbSchemaTypes.k8sIngresses),
+									),
+								}),
+							),
 						),
 						400: errorResponseSchema,
 					},

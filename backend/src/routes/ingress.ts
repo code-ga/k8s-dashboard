@@ -76,6 +76,32 @@ export const ingressRoute = new Elysia({
 				},
 			)
 			.get(
+				"/all",
+				async (ctx) => {
+					const { clusterId } = ctx.params;
+					const ingresses = await db.query.k8sIngresses.findMany({
+						where: { clusterId: Number(clusterId) },
+						with: {
+							service: true,
+						},
+					});
+
+					return ctx.status(200, {
+						success: true,
+						message: "Ingresses fetched successfully",
+						data: ingresses,
+						timestamp: Date.now(),
+					});
+				},
+				{
+					detail: { tags: ["Ingresses"] },
+					roleAuth: "ingress:read",
+					response: {
+						200: baseResponseSchema(Type.Array(ingressWithServiceSchema)),
+					},
+				},
+			)
+			.get(
 				"/:id",
 				async (ctx) => {
 					const { clusterId, id } = ctx.params;

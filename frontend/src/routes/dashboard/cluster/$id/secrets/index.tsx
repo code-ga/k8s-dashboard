@@ -12,6 +12,7 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { api } from "@/lib/api";
+import { usePermissions } from "@/hooks/use-permissions";
 
 export const Route = createFileRoute("/dashboard/cluster/$id/secrets/")({
 	component: ClusterSecrets,
@@ -19,11 +20,14 @@ export const Route = createFileRoute("/dashboard/cluster/$id/secrets/")({
 
 function ClusterSecrets() {
 	const { id } = useParams({ from: "/dashboard/cluster/$id/secrets/" });
+	const { can } = usePermissions();
 
 	const { data: secrets, isLoading } = useQuery({
 		queryKey: ["secrets", id],
 		queryFn: async () => {
-			const res = await api.api.secrets({ clusterId: id }).get();
+			const res = can("secret:manage")
+				? await api.api.secrets({ clusterId: id }).all.get()
+				: await api.api.secrets({ clusterId: id }).get();
 			if (res.error) throw res.error;
 			if (!res.data.data)
 				throw new Error(res.data.message || "Failed to fetch secrets");

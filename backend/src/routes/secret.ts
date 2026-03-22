@@ -54,6 +54,36 @@ export const secretRoute = new Elysia({
 				},
 			)
 			.get(
+				"/all",
+				async (ctx) => {
+					const { clusterId } = ctx.params;
+					const secrets = await db.query.k8sSecrets.findMany({
+						where: { clusterId: Number(clusterId) },
+					});
+
+					// Mask data for list view
+					const maskedSecrets = secrets.map((s) => ({ ...s, data: "***" }));
+
+					return ctx.status(200, {
+						success: true,
+						message: "Secrets fetched successfully",
+						data: maskedSecrets,
+						timestamp: Date.now(),
+					});
+				},
+				{
+					detail: { tags: ["Secrets"] },
+					roleAuth: "secret:read",
+					response: {
+						200: baseResponseSchema(
+							Type.Array(Type.Object(dbSchemaTypes.k8sSecrets)),
+						),
+						401: errorResponseSchema,
+						404: errorResponseSchema,
+					},
+				},
+			)
+			.get(
 				"/:id",
 				async (ctx) => {
 					const { id } = ctx.params;
