@@ -164,6 +164,23 @@ export const ingressRoute = new Elysia({
 						});
 					}
 
+					if (body.domain) {
+						const domainConflict = await db.query.k8sIngresses.findFirst({
+							where: {
+								clusterId,
+								domain: body.domain,
+							},
+						});
+
+						if (domainConflict) {
+							return ctx.status("Conflict", {
+								success: false,
+								message: `Domain ${body.domain} is already in use in this cluster`,
+								timestamp: Date.now(),
+							});
+						}
+					}
+
 					let externalPort = body.externalPort;
 					if (!externalPort && body.protocol !== "http") {
 						const portEntry = await agentService.allocateGatewayPort(
