@@ -1,4 +1,12 @@
-import { and, eq, inArray, type InferInsertModel, isNull, notInArray, or } from "drizzle-orm";
+import {
+	and,
+	eq,
+	inArray,
+	type InferInsertModel,
+	isNull,
+	notInArray,
+	or,
+} from "drizzle-orm";
 import YAML from "yaml";
 import type { Heartbeat } from "../../pb-generated/agent-backend/websocket"; // Check imports carefully
 import { Command_CommandType } from "../../pb-generated/agent-backend/websocket";
@@ -176,7 +184,9 @@ export class AgentService {
 				}
 
 				// Cleanup: remove auto-created nodes no longer present
-				const heartbeatUids = nodes.map((n) => n.uid).filter((uid): uid is string => !!uid);
+				const heartbeatUids = nodes
+					.map((n) => n.uid)
+					.filter((uid): uid is string => !!uid);
 				const deleteFilter = [
 					eq(k8sClusterNode.clusterId, clusterId),
 					eq(k8sClusterNode.autoCreated, true),
@@ -293,7 +303,9 @@ export class AgentService {
 				}
 
 				// Cleanup: remove auto-created deployments no longer present
-				const heartbeatUids = deployments.map((d) => d.uid).filter((uid): uid is string => !!uid);
+				const heartbeatUids = deployments
+					.map((d) => d.uid)
+					.filter((uid): uid is string => !!uid);
 				const deleteFilter = [
 					eq(k8sDeployments.clusterId, clusterId),
 					eq(k8sDeployments.autoCreated, true),
@@ -301,6 +313,7 @@ export class AgentService {
 				if (heartbeatUids.length > 0) {
 					deleteFilter.push(notInArray(k8sDeployments.k8sUid, heartbeatUids));
 				}
+				logger.info("Deleting deployments", { deleteFilter });
 				await db.delete(k8sDeployments).where(and(...deleteFilter));
 			});
 		} catch (error) {
@@ -461,7 +474,9 @@ export class AgentService {
 				}
 
 				// Cleanup: remove auto-created bare pods no longer present
-				const heartbeatUids = pods.map((p) => p.uid).filter((uid): uid is string => !!uid);
+				const heartbeatUids = pods
+					.map((p) => p.uid)
+					.filter((uid): uid is string => !!uid);
 				const deleteFilter = [
 					eq(k8sPods.clusterId, clusterId),
 					eq(k8sPods.autoCreated, true),
@@ -470,6 +485,7 @@ export class AgentService {
 				if (heartbeatUids.length > 0) {
 					deleteFilter.push(notInArray(k8sPods.k8sUid, heartbeatUids));
 				}
+				logger.info("Deleting pods", { deleteFilter });
 				await db.delete(k8sPods).where(and(...deleteFilter));
 			});
 		} catch (error) {
@@ -545,13 +561,17 @@ export class AgentService {
 				}
 
 				// Cleanup: remove auto-created services no longer present
-				const heartbeatUids = services.map((s) => s.uid).filter((uid): uid is string => !!uid);
+				const heartbeatUids = services
+					.map((s) => s.uid)
+					.filter((uid): uid is string => !!uid);
 				const staleServiceFilter = [
 					eq(schema.k8sServices.clusterId, clusterId),
 					eq(schema.k8sServices.autoCreated, true),
 				];
 				if (heartbeatUids.length > 0) {
-					staleServiceFilter.push(notInArray(schema.k8sServices.k8sUid, heartbeatUids));
+					staleServiceFilter.push(
+						notInArray(schema.k8sServices.k8sUid, heartbeatUids),
+					);
 				}
 
 				// Find the stale services so we can clean up referencing ingresses first
@@ -585,7 +605,7 @@ export class AgentService {
 								inArray(k8sIngresses.serviceId, staleServiceIds),
 							),
 						);
-
+					logger.info("Deleting ingresses", { staleServiceIds });
 					// Now safe to delete the stale services
 					await db.delete(schema.k8sServices).where(and(...staleServiceFilter));
 				}
@@ -665,7 +685,9 @@ export class AgentService {
 			}
 
 			// Cleanup: remove auto-created configmaps no longer present
-			const heartbeatUids = configMaps.map((cm) => cm.uid).filter((uid): uid is string => !!uid);
+			const heartbeatUids = configMaps
+				.map((cm) => cm.uid)
+				.filter((uid): uid is string => !!uid);
 			const deleteFilter = [
 				eq(k8sConfigMaps.clusterId, clusterId),
 				eq(k8sConfigMaps.autoCreated, true),
@@ -673,6 +695,7 @@ export class AgentService {
 			if (heartbeatUids.length > 0) {
 				deleteFilter.push(notInArray(k8sConfigMaps.k8sUid, heartbeatUids));
 			}
+			logger.info("Deleting configmaps", { deleteFilter });
 			await db.delete(k8sConfigMaps).where(and(...deleteFilter));
 		});
 	}
@@ -740,7 +763,9 @@ export class AgentService {
 			}
 
 			// Cleanup: remove auto-created secrets no longer present
-			const heartbeatUids = secrets.map((s) => s.uid).filter((uid): uid is string => !!uid);
+			const heartbeatUids = secrets
+				.map((s) => s.uid)
+				.filter((uid): uid is string => !!uid);
 			const deleteFilter = [
 				eq(k8sSecrets.clusterId, clusterId),
 				eq(k8sSecrets.autoCreated, true),
@@ -748,6 +773,7 @@ export class AgentService {
 			if (heartbeatUids.length > 0) {
 				deleteFilter.push(notInArray(k8sSecrets.k8sUid, heartbeatUids));
 			}
+			logger.info("Deleting secrets", { deleteFilter });
 			await db.delete(k8sSecrets).where(and(...deleteFilter));
 		});
 	}
@@ -1196,7 +1222,9 @@ export class AgentService {
 			}
 
 			// Cleanup: remove auto-created ingresses no longer present
-			const heartbeatUids = ingresses.map((i) => i.uid).filter((uid): uid is string => !!uid);
+			const heartbeatUids = ingresses
+				.map((i) => i.uid)
+				.filter((uid): uid is string => !!uid);
 			const deleteFilter = [
 				eq(k8sIngresses.clusterId, clusterId),
 				eq(k8sIngresses.autoCreated, true),
@@ -1204,6 +1232,7 @@ export class AgentService {
 			if (heartbeatUids.length > 0) {
 				deleteFilter.push(notInArray(k8sIngresses.k8sUid, heartbeatUids));
 			}
+			logger.info("Deleting ingresses", { deleteFilter });
 			await db.delete(k8sIngresses).where(and(...deleteFilter));
 		});
 	}
