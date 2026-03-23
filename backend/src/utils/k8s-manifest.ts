@@ -118,6 +118,39 @@ export interface SecretDTO {
 	labels?: Record<string, string>;
 	annotations?: Record<string, string>;
 }
+ 
+const cleanResources = (res?: ResourceResources) => {
+	if (!res) return undefined;
+	const requests: Record<string, string | number> = {};
+	
+	const cpuReq = res.requests?.cpu;
+	if (cpuReq !== undefined && cpuReq !== null && cpuReq !== "" && cpuReq !== "0" && cpuReq !== 0) {
+		requests.cpu = cpuReq;
+	}
+	const memReq = res.requests?.memory;
+	if (memReq !== undefined && memReq !== null && memReq !== "" && memReq !== "0" && memReq !== 0) {
+		requests.memory = memReq;
+	}
+
+	const limits: Record<string, string | number> = {};
+	const cpuLimit = res.limits?.cpu;
+	if (cpuLimit !== undefined && cpuLimit !== null && cpuLimit !== "" && cpuLimit !== "0" && cpuLimit !== 0) {
+		limits.cpu = cpuLimit;
+	}
+	const memLimit = res.limits?.memory;
+	if (memLimit !== undefined && memLimit !== null && memLimit !== "" && memLimit !== "0" && memLimit !== 0) {
+		limits.memory = memLimit;
+	}
+
+	const result: {
+		requests?: Record<string, string | number>;
+		limits?: Record<string, string | number>;
+	} = {};
+	if (Object.keys(requests).length > 0) result.requests = requests;
+	if (Object.keys(limits).length > 0) result.limits = limits;
+	return Object.keys(result).length > 0 ? result : undefined;
+};
+
 
 export const generatePodManifest = (dto: PodDTO): string => {
 	// Build environment variables
@@ -221,6 +254,7 @@ export const generatePodManifest = (dto: PodDTO): string => {
 		}
 	}
 
+
 	const manifest = {
 		apiVersion: "v1",
 		kind: "Pod",
@@ -236,24 +270,14 @@ export const generatePodManifest = (dto: PodDTO): string => {
 					name: dto.name,
 					image: dto.image,
 					imagePullPolicy: "Always",
-					command: dto.command,
-					args: dto.args,
+					command:
+						dto.command && dto.command.length > 0 ? dto.command : undefined,
+					args: dto.args && dto.args.length > 0 ? dto.args : undefined,
 					env: envVars.length > 0 ? envVars : undefined,
 					envFrom: envFrom.length > 0 ? envFrom : undefined,
-					ports: dto.ports,
+					ports: dto.ports && dto.ports.length > 0 ? dto.ports : undefined,
 					volumeMounts: volumeMounts.length > 0 ? volumeMounts : undefined,
-					resources: dto.resources
-						? {
-								requests: {
-									cpu: dto.resources.requests?.cpu,
-									memory: dto.resources.requests?.memory,
-								},
-								limits: {
-									cpu: dto.resources.limits?.cpu,
-									memory: dto.resources.limits?.memory,
-								},
-							}
-						: undefined,
+					resources: cleanResources(dto.resources),
 				},
 			],
 			volumes: volumes.length > 0 ? volumes : undefined,
@@ -367,6 +391,7 @@ export const generateDeploymentManifest = (dto: DeploymentDTO): string => {
 		}
 	}
 
+
 	const manifest = {
 		apiVersion: "apps/v1",
 		kind: "Deployment",
@@ -392,24 +417,14 @@ export const generateDeploymentManifest = (dto: DeploymentDTO): string => {
 							name: dto.name,
 							image: dto.image,
 							imagePullPolicy: "Always",
-							command: dto.command,
-							args: dto.args,
+							command:
+								dto.command && dto.command.length > 0 ? dto.command : undefined,
+							args: dto.args && dto.args.length > 0 ? dto.args : undefined,
 							env: envVars.length > 0 ? envVars : undefined,
 							envFrom: envFrom.length > 0 ? envFrom : undefined,
-							ports: dto.ports,
+							ports: dto.ports && dto.ports.length > 0 ? dto.ports : undefined,
 							volumeMounts: volumeMounts.length > 0 ? volumeMounts : undefined,
-							resources: dto.resources
-								? {
-										requests: {
-											cpu: dto.resources.requests?.cpu,
-											memory: dto.resources.requests?.memory,
-										},
-										limits: {
-											cpu: dto.resources.limits?.cpu,
-											memory: dto.resources.limits?.memory,
-										},
-									}
-								: undefined,
+							resources: cleanResources(dto.resources),
 						},
 					],
 					volumes: volumes.length > 0 ? volumes : undefined,
