@@ -313,7 +313,7 @@ export class AgentService {
 				if (heartbeatUids.length > 0) {
 					deleteFilter.push(notInArray(k8sDeployments.k8sUid, heartbeatUids));
 				}
-				logger.info("Deleting deployments", { deleteFilter });
+				logger.info("Deleting deployments", { heartbeatUids });
 				await db.delete(k8sDeployments).where(and(...deleteFilter));
 			});
 		} catch (error) {
@@ -485,7 +485,7 @@ export class AgentService {
 				if (heartbeatUids.length > 0) {
 					deleteFilter.push(notInArray(k8sPods.k8sUid, heartbeatUids));
 				}
-				logger.info("Deleting pods", { deleteFilter });
+				logger.info("Deleting pods", { heartbeatUids });
 				await db.delete(k8sPods).where(and(...deleteFilter));
 			});
 		} catch (error) {
