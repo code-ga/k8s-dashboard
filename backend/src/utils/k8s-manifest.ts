@@ -118,27 +118,51 @@ export interface SecretDTO {
 	labels?: Record<string, string>;
 	annotations?: Record<string, string>;
 }
- 
+
 const cleanResources = (res?: ResourceResources) => {
 	if (!res) return undefined;
 	const requests: Record<string, string | number> = {};
-	
+
 	const cpuReq = res.requests?.cpu;
-	if (cpuReq !== undefined && cpuReq !== null && cpuReq !== "" && cpuReq !== "0" && cpuReq !== 0) {
+	if (
+		cpuReq !== undefined &&
+		cpuReq !== null &&
+		cpuReq !== "" &&
+		cpuReq !== "0" &&
+		cpuReq !== 0
+	) {
 		requests.cpu = cpuReq;
 	}
 	const memReq = res.requests?.memory;
-	if (memReq !== undefined && memReq !== null && memReq !== "" && memReq !== "0" && memReq !== 0) {
+	if (
+		memReq !== undefined &&
+		memReq !== null &&
+		memReq !== "" &&
+		memReq !== "0" &&
+		memReq !== 0
+	) {
 		requests.memory = memReq;
 	}
 
 	const limits: Record<string, string | number> = {};
 	const cpuLimit = res.limits?.cpu;
-	if (cpuLimit !== undefined && cpuLimit !== null && cpuLimit !== "" && cpuLimit !== "0" && cpuLimit !== 0) {
+	if (
+		cpuLimit !== undefined &&
+		cpuLimit !== null &&
+		cpuLimit !== "" &&
+		cpuLimit !== "0" &&
+		cpuLimit !== 0
+	) {
 		limits.cpu = cpuLimit;
 	}
 	const memLimit = res.limits?.memory;
-	if (memLimit !== undefined && memLimit !== null && memLimit !== "" && memLimit !== "0" && memLimit !== 0) {
+	if (
+		memLimit !== undefined &&
+		memLimit !== null &&
+		memLimit !== "" &&
+		memLimit !== "0" &&
+		memLimit !== 0
+	) {
 		limits.memory = memLimit;
 	}
 
@@ -150,7 +174,6 @@ const cleanResources = (res?: ResourceResources) => {
 	if (Object.keys(limits).length > 0) result.limits = limits;
 	return Object.keys(result).length > 0 ? result : undefined;
 };
-
 
 export const generatePodManifest = (dto: PodDTO): string => {
 	// Build environment variables
@@ -254,7 +277,6 @@ export const generatePodManifest = (dto: PodDTO): string => {
 		}
 	}
 
-
 	const manifest = {
 		apiVersion: "v1",
 		kind: "Pod",
@@ -271,8 +293,14 @@ export const generatePodManifest = (dto: PodDTO): string => {
 					image: dto.image,
 					imagePullPolicy: "Always",
 					command:
-						dto.command && dto.command.length > 0 ? dto.command : undefined,
-					args: dto.args && dto.args.length > 0 ? dto.args : undefined,
+						dto.command &&
+						dto.command.map((c) => c.trim()).filter(Boolean).length > 0
+							? dto.command
+							: undefined,
+					args:
+						dto.args && dto.args.map((a) => a.trim()).filter(Boolean).length > 0
+							? dto.args
+							: undefined,
 					env: envVars.length > 0 ? envVars : undefined,
 					envFrom: envFrom.length > 0 ? envFrom : undefined,
 					ports: dto.ports && dto.ports.length > 0 ? dto.ports : undefined,
@@ -291,7 +319,10 @@ export const generateDeploymentManifest = (dto: DeploymentDTO): string => {
 	const selector = dto.selector || { app: dto.name };
 
 	// Build environment variables
-	const envVars: any[] = [];
+	const envVars: (
+		| { name: string; value: string }
+		| { name: string; valueFrom: any }
+	)[] = [];
 
 	// Regular env vars
 	if (dto.env) {
@@ -391,7 +422,6 @@ export const generateDeploymentManifest = (dto: DeploymentDTO): string => {
 		}
 	}
 
-
 	const manifest = {
 		apiVersion: "apps/v1",
 		kind: "Deployment",
@@ -418,8 +448,15 @@ export const generateDeploymentManifest = (dto: DeploymentDTO): string => {
 							image: dto.image,
 							imagePullPolicy: "Always",
 							command:
-								dto.command && dto.command.length > 0 ? dto.command : undefined,
-							args: dto.args && dto.args.length > 0 ? dto.args : undefined,
+								dto.command &&
+								dto.command.map((c) => c.trim()).filter(Boolean).length > 0
+									? dto.command
+									: undefined,
+							args:
+								dto.args &&
+								dto.args.map((a) => a.trim()).filter(Boolean).length > 0
+									? dto.args
+									: undefined,
 							env: envVars.length > 0 ? envVars : undefined,
 							envFrom: envFrom.length > 0 ? envFrom : undefined,
 							ports: dto.ports && dto.ports.length > 0 ? dto.ports : undefined,
