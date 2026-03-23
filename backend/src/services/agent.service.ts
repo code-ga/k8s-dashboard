@@ -683,7 +683,7 @@ export class AgentService {
 		if (heartbeatUids.length > 0) {
 			deleteFilter.push(notInArray(k8sConfigMaps.k8sUid, heartbeatUids));
 		}
-		logger.info("Deleting configmaps", { deleteFilter });
+		logger.info("Deleting configmaps", { heartbeatUids });
 		await db.delete(k8sConfigMaps).where(and(...deleteFilter));
 	}
 
@@ -759,7 +759,7 @@ export class AgentService {
 		if (heartbeatUids.length > 0) {
 			deleteFilter.push(notInArray(k8sSecrets.k8sUid, heartbeatUids));
 		}
-		logger.info("Deleting secrets", { deleteFilter });
+		logger.info("Deleting secrets", { heartbeatUids });
 		await db.delete(k8sSecrets).where(and(...deleteFilter));
 	}
 
