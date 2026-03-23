@@ -465,14 +465,13 @@ export class AgentService {
 				}
 			}
 
-			// Cleanup: remove auto-created bare pods no longer present
+			// Cleanup: remove auto-created pods no longer present
 			const heartbeatUids = pods
 				.map((p) => p.uid)
 				.filter((uid): uid is string => !!uid);
 			const deleteFilter = [
 				eq(k8sPods.clusterId, clusterId),
 				eq(k8sPods.autoCreated, true),
-				isNull(k8sPods.deploymentId),
 			];
 			if (heartbeatUids.length > 0) {
 				deleteFilter.push(notInArray(k8sPods.k8sUid, heartbeatUids));
@@ -1216,7 +1215,7 @@ export class AgentService {
 		if (heartbeatUids.length > 0) {
 			deleteFilter.push(notInArray(k8sIngresses.k8sUid, heartbeatUids));
 		}
-		logger.info("Deleting ingresses", { deleteFilter });
+		logger.info("Deleting ingresses", { heartbeatUids });
 		await db.delete(k8sIngresses).where(and(...deleteFilter));
 	}
 
