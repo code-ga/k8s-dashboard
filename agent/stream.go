@@ -58,8 +58,9 @@ func getStream(id string) (*StreamEntry, bool) {
 }
 
 func handleStreamCommand(kc *k8s.K8sClient, conn *SafeConn, cmd *pb.Command) {
+	log.Printf("[Stream] Handling ID:%s Type:%v Namespace:%s Name:%s", cmd.Id, cmd.Type, cmd.TargetNamespace, cmd.TargetName)
 	if !registerStream(cmd.Id, &StreamEntry{}) {
-		log.Printf("Stream %s is already running, ignoring", cmd.Id)
+		log.Printf("[Stream] Stream %s is already running, ignoring", cmd.Id)
 		return
 	}
 	defer unregisterStream(cmd.Id)
@@ -73,7 +74,7 @@ func handleStreamCommand(kc *k8s.K8sClient, conn *SafeConn, cmd *pb.Command) {
 		TailLines int64    `json:"tailLines"`
 	}
 	if err := json.Unmarshal([]byte(cmd.Payload), &req); err != nil {
-		log.Printf("Stream payload unmarshal error: %v", err)
+		log.Printf("[Stream] Stream %s payload unmarshal error: %v", cmd.Id, err)
 		return
 	}
 
@@ -102,13 +103,14 @@ func handleStreamCommand(kc *k8s.K8sClient, conn *SafeConn, cmd *pb.Command) {
 		}
 		bytes, _ := proto.Marshal(payload)
 		conn.WriteMessage(websocket.BinaryMessage, bytes)
-		log.Printf("Stream %s ended", cmd.Id)
+		log.Printf("[Stream] Stream %s ended", cmd.Id)
 	}()
 
 	if cmd.Type == pb.Command_STREAM_LOGS {
+		log.Printf("[Stream] Opening logs for %s/%s/%s (ID:%s)", req.Namespace, req.Name, req.Container, cmd.Id)
 		stream, err := kc.GetLogsStream(context.Background(), req.Namespace, req.Name, req.Container, req.TailLines, req.Follow)
 		if err != nil {
-			log.Printf("Error opening logs: %v", err)
+			log.Printf("[Stream] Error opening logs for %s: %v", cmd.Id, err)
 			sendData([]byte(fmt.Sprintf("Error opening logs: %v", err)), true)
 			return
 		}
@@ -122,13 +124,14 @@ func handleStreamCommand(kc *k8s.K8sClient, conn *SafeConn, cmd *pb.Command) {
 			}
 			if err != nil {
 				if err != io.EOF {
-					log.Printf("Log stream error for %s: %v", cmd.Id, err)
+					log.Printf("[Stream] Log stream error for %s: %v", cmd.Id, err)
 					sendData([]byte(fmt.Sprintf("\nStream error: %v", err)), true)
 				}
 				break
 			}
 		}
 	} else if cmd.Type == pb.Command_EXEC {
+		log.Printf("[Stream] Starting exec for %s/%s/%s with command %v (ID:%s)", req.Namespace, req.Name, req.Container, req.Command, cmd.Id)
 		r, w := io.Pipe()
 		stdinChan := make(chan []byte, 10)
 		resizeQueue := k8s.NewTerminalSizeQueue()
@@ -152,11 +155,12 @@ func handleStreamCommand(kc *k8s.K8sClient, conn *SafeConn, cmd *pb.Command) {
 
 		err := kc.ExecStream(req.Namespace, req.Name, req.Container, req.Command, r, outWriter, errWriter, true, resizeQueue)
 		if err != nil {
-			log.Printf("Exec error: %v", err)
+			log.Printf("[Stream] Exec error for %s: %v", cmd.Id, err)
 			sendData([]byte(fmt.Sprintf("Exec error: %v", err)), true)
 		}
 	}
 }
+
 
 // WsWriter adapts a send function to the io.Writer interface.
 type WsWriter struct {

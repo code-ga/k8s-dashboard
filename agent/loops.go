@@ -27,7 +27,7 @@ func readLoop(c *websocket.Conn, safeConn *SafeConn, kubeClient *k8s.K8sClient, 
 			}
 
 			if cmd := serverPayload.GetCommand(); cmd != nil {
-				log.Printf("Received Command: %s (Type: %v)", cmd.Id, cmd.Type)
+				log.Printf("[Agent] Received Command: ID:%s Type:%v Target:%s/%s", cmd.Id, cmd.Type, cmd.TargetNamespace, cmd.TargetName)
 
 				if cmd.Type == pb.Command_STREAM_LOGS || cmd.Type == pb.Command_EXEC {
 					log.Printf("Starting stream command: %s", cmd.Id)

@@ -1425,6 +1425,7 @@ export const deploymentRoute = new Elysia({
 							templateAnnotations: {
 								...(deployment.templateAnnotations as Record<string, string>),
 								"k8s.dashboard.io/redeployed-at": new Date().toISOString(),
+								"kubectl.kubernetes.io/restartedAt": new Date().toISOString(),
 							},
 							updatedAt: new Date(),
 						};

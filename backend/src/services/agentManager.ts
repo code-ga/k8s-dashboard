@@ -141,18 +141,16 @@ export class AgentManager extends EventEmitter<EventMap> {
 		const ws = this.connections.get(agentId);
 
 		if (!ws) {
-			logger.info(
-				`Agent ${agentId} not connected, command ${commandId} queued.`,
+			logger.warn(
+				`Agent ${agentId} not connected, command ${commandId} queued in DB.`,
 			);
-			// Validate payload to ensure it matches Command expectations if needed,
-			// but primarily return a 'Queued' response.
-			return {
-				id: commandId,
-				success: true,
-				data: "Command queued (Agent disconnected)",
-				error: "",
-				type: command.type,
-			} as CommandResponse;
+			// Command is already persisted as 'pending' in DB and will be re-sent
+			// when the agent reconnects. We must NOT resolve as success here because
+			// callers (e.g. delete routes) would then mutate the DB assuming the
+			// k8s resource was actually deleted.
+			throw new Error(
+				"Agent is currently offline. The command has been queued and will be retried when the agent reconnects.",
+			);
 		}
 
 		logger.info("Sending payload:", command);

@@ -10,6 +10,7 @@ import (
 )
 
 func handleCommand(kc *k8s.K8sClient, cmd *pb.Command) (string, error) {
+	log.Printf("[Command] Handling ID:%s Type:%v Namespace:%s Name:%s", cmd.Id, cmd.Type, cmd.TargetNamespace, cmd.TargetName)
 	var err error
 	var resultData string
 
@@ -23,6 +24,7 @@ func handleCommand(kc *k8s.K8sClient, cmd *pb.Command) (string, error) {
 		pb.Command_CREATE_CONFIGMAP,
 		pb.Command_CREATE_INGRESS:
 		if cmd.Payload != "" {
+			log.Printf("[Command] Applying manifest for command ID:%s (Payload size: %d bytes)", cmd.Id, len(cmd.Payload))
 			err = kc.ApplyManifest(cmd.Payload)
 			if err == nil {
 				resultData = "Resource applied successfully"
@@ -91,21 +93,22 @@ func handleCommand(kc *k8s.K8sClient, cmd *pb.Command) (string, error) {
 			err = fmt.Errorf("missing target_name for DELETE_NODE command")
 		}
 	case pb.Command_GET_JOIN_TOKEN:
-		log.Println("Generating join token...")
+		log.Printf("[Command] Generating join token for command ID:%s", cmd.Id)
 		if cmdStr, joinErr := kc.GenerateJoinCommand(); joinErr != nil {
 			err = fmt.Errorf("failed to generate join token: %v", joinErr)
 		} else {
 			resultData = cmdStr
 		}
 	default:
-		log.Printf("Unknown command type: %v", cmd.Type)
+		log.Printf("[Command] Unknown command type: %v (ID:%s)", cmd.Type, cmd.Id)
 		return "", fmt.Errorf("unknown command type: %v", cmd.Type)
 	}
 
 	if err != nil {
-		log.Printf("Error executing command %s: %v", cmd.Id, err)
+		log.Printf("[Command] Error executing command %s: %v", cmd.Id, err)
 		return "", err
 	}
-	log.Printf("Successfully executed command %s", cmd.Id)
+	log.Printf("[Command] Successfully executed command %s. Result: %s", cmd.Id, resultData)
 	return resultData, nil
 }
+
