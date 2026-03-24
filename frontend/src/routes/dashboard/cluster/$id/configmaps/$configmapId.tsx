@@ -1,3 +1,7 @@
+import { EnvEditor, type EnvVar } from "@/components/shared/env-editor";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { api, getEdenErrorMessage } from "@/lib/api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
 	createFileRoute,
@@ -5,13 +9,9 @@ import {
 	useNavigate,
 	useParams,
 } from "@tanstack/react-router";
-import { ArrowLeft, Edit2, Save, Trash2 } from "lucide-react";
+import { ArrowLeft, Edit2, Save, Trash2, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { EnvEditor, type EnvVar } from "@/components/shared/env-editor";
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { api, getEdenErrorMessage } from "@/lib/api";
 
 export const Route = createFileRoute(
 	"/dashboard/cluster/$id/configmaps/$configmapId",
