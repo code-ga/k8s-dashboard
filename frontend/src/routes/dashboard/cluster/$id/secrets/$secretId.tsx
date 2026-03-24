@@ -17,10 +17,10 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import type { EnvVar } from "@/components/shared/env-editor";
+import { EnvEditor, type EnvVar } from "@/components/shared/env-editor";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
 import { api, getEdenErrorMessage } from "@/lib/api";
 
 export const Route = createFileRoute(
@@ -104,8 +104,8 @@ function ManageSecretPage() {
 			});
 
 			const res = await api.api.secrets({ clusterId })({ id: secretId }).put({
-				data: Object.keys(data).length > 0 ? (data as any) : undefined,
-				labels: Object.keys(labelData).length > 0 ? (labelData as any) : undefined,
+				data: Object.keys(data).length > 0 ? (data as Record<string, string | null>) : undefined,
+				labels: Object.keys(labelData).length > 0 ? (labelData as Record<string, string | null>) : undefined,
 			});
 			if (res.error) {
 				throw new Error(getEdenErrorMessage(res.error));
@@ -350,62 +350,9 @@ function ManageSecretPage() {
 						</div>
 						<div className="space-y-4">
 							{isEditing ? (
-								<>
-									{editDataVars.map((v, idx: number) => (
-										<div
-											key={`edit-data-${v.name}`}
-											className="flex gap-2 items-start"
-										>
-											<Input
-												placeholder="Key"
-												value={v.name}
-												onChange={(e) => {
-													const newVars = [...editDataVars];
-													newVars[idx].name = e.target.value;
-													setEditDataVars(newVars);
-												}}
-												className="w-1/3"
-											/>
-											<Input
-												placeholder="Value (plaintext)"
-												value={v.value}
-												onChange={(e) => {
-													const newVars = [...editDataVars];
-													newVars[idx].value = e.target.value;
-													setEditDataVars(newVars);
-												}}
-												className="flex-1"
-												type="text"
-											/>
-											<Button
-												variant="ghost"
-												size="icon"
-												onClick={() => {
-													const newVars = editDataVars.filter(
-														(_, i) => i !== idx,
-													);
-													setEditDataVars(newVars);
-												}}
-											>
-												<X className="h-4 w-4" />
-											</Button>
-										</div>
-									))}
-									<Button
-										variant="outline"
-										size="sm"
-										onClick={() => {
-											setEditDataVars([
-												...editDataVars,
-												{ name: "", value: "" },
-											]);
-										}}
-									>
-										Add Secret Key
-									</Button>
-								</>
+								<EnvEditor variables={editDataVars} onChange={setEditDataVars} />
 							) : dataVars.length > 0 ? (
-								dataVars.map((v: any) => (
+								dataVars.map((v: EnvVar) => (
 									<SecretValueRow
 										key={v.name}
 										name={v.name}
@@ -432,58 +379,11 @@ function ManageSecretPage() {
 						<div className="space-y-2">
 							{isEditing ? (
 								<>
-									{editLabels.map((l, idx: number) => (
-										<div
-											key={`edit-label-${l.name}`}
-											className="flex gap-2 items-start"
-										>
-											<Input
-												placeholder="Key"
-												value={l.name}
-												onChange={(e) => {
-													const newLabels = [...editLabels];
-													newLabels[idx].name = e.target.value;
-													setEditLabels(newLabels);
-												}}
-												className="w-1/3"
-											/>
-											<Input
-												placeholder="Value"
-												value={l.value}
-												onChange={(e) => {
-													const newLabels = [...editLabels];
-													newLabels[idx].value = e.target.value;
-													setEditLabels(newLabels);
-												}}
-												className="flex-1"
-											/>
-											<Button
-												variant="ghost"
-												size="icon"
-												onClick={() => {
-													const newLabels = editLabels.filter(
-														(_, i) => i !== idx,
-													);
-													setEditLabels(newLabels);
-												}}
-											>
-												<X className="h-4 w-4" />
-											</Button>
-										</div>
-									))}
-									<Button
-										variant="outline"
-										size="sm"
-										onClick={() => {
-											setEditLabels([...editLabels, { name: "", value: "" }]);
-										}}
-									>
-										Add Label
-									</Button>
+									<EnvEditor variables={editLabels} onChange={setEditLabels} />
 								</>
 							) : labels.length > 0 ? (
 								<div className="flex flex-wrap gap-2">
-									{labels.map((l: any) => (
+									{labels.map((l: EnvVar) => (
 										<div
 											key={l.name}
 											className="flex gap-2 items-center px-3 py-1 bg-secondary rounded border"

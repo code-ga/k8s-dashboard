@@ -5,12 +5,11 @@ import {
 	useNavigate,
 	useParams,
 } from "@tanstack/react-router";
-import { ArrowLeft, Edit2, Save, Trash2, X } from "lucide-react";
+import { ArrowLeft, Edit2, Save, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import type { EnvVar } from "@/components/shared/env-editor";
+import { EnvEditor, type EnvVar } from "@/components/shared/env-editor";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api, getEdenErrorMessage } from "@/lib/api";
 
@@ -117,9 +116,9 @@ function ManageConfigMapPage() {
 			const res = await api.api
 				.configmaps({ clusterId })({ id: configmapId })
 				.put({
-					data: Object.keys(data).length > 0 ? (data as any) : undefined,
-					binaryData: Object.keys(binaryData).length > 0 ? (binaryData as any) : undefined,
-					labels: Object.keys(labelData).length > 0 ? (labelData as any) : undefined,
+					data: Object.keys(data).length > 0 ? (data as Record<string, string | null>) : undefined,
+					binaryData: Object.keys(binaryData).length > 0 ? (binaryData as Record<string, string | null>) : undefined,
+					labels: Object.keys(labelData).length > 0 ? (labelData as Record<string, string | null>) : undefined,
 				});
 			if (res.error) {
 				throw new Error(getEdenErrorMessage(res.error));
@@ -347,61 +346,9 @@ function ManageConfigMapPage() {
 						<h3 className="text-sm font-semibold mb-4">ConfigMap Data</h3>
 						<div className="space-y-4">
 							{isEditing ? (
-								<>
-									{editDataVars.map((v, idx: number) => (
-										<div
-											key={`data-${v.name || idx}`}
-											className="flex gap-2 items-start"
-										>
-											<Input
-												placeholder="Key"
-												value={v.name}
-												onChange={(e) => {
-													const newVars = [...editDataVars];
-													newVars[idx].name = e.target.value;
-													setEditDataVars(newVars);
-												}}
-												className="w-1/3"
-											/>
-											<Input
-												placeholder="Value"
-												value={v.value}
-												onChange={(e) => {
-													const newVars = [...editDataVars];
-													newVars[idx].value = e.target.value;
-													setEditDataVars(newVars);
-												}}
-												className="flex-1"
-											/>
-											<Button
-												variant="ghost"
-												size="icon"
-												onClick={() => {
-													const newVars = editDataVars.filter(
-														(_, i) => i !== idx,
-													);
-													setEditDataVars(newVars);
-												}}
-											>
-												<X className="h-4 w-4" />
-											</Button>
-										</div>
-									))}
-									<Button
-										variant="outline"
-										size="sm"
-										onClick={() => {
-											setEditDataVars([
-												...editDataVars,
-												{ name: "", value: "" },
-											]);
-										}}
-									>
-										Add Key-Value
-									</Button>
-								</>
+								<EnvEditor variables={editDataVars} onChange={setEditDataVars} />
 							) : dataVars.length > 0 ? (
-								dataVars.map((v: any) => (
+								dataVars.map((v: EnvVar) => (
 									<div key={v.name} className="space-y-2">
 										<div className="text-xs font-semibold text-muted-foreground">
 											{v.name}
@@ -429,61 +376,9 @@ function ManageConfigMapPage() {
 						<h3 className="text-sm font-semibold mb-4">Binary Data (Base64)</h3>
 						<div className="space-y-4">
 							{isEditing ? (
-								<>
-									{editBinaryDataVars.map((v, idx: number) => (
-										<div
-											key={`bin-${v.name || idx}`}
-											className="flex gap-2 items-start"
-										>
-											<Input
-												placeholder="Key"
-												value={v.name}
-												onChange={(e) => {
-													const newVars = [...editBinaryDataVars];
-													newVars[idx].name = e.target.value;
-													setEditBinaryDataVars(newVars);
-												}}
-												className="w-1/3"
-											/>
-											<Input
-												placeholder="Value (Base64)"
-												value={v.value}
-												onChange={(e) => {
-													const newVars = [...editBinaryDataVars];
-													newVars[idx].value = e.target.value;
-													setEditBinaryDataVars(newVars);
-												}}
-												className="flex-1"
-											/>
-											<Button
-												variant="ghost"
-												size="icon"
-												onClick={() => {
-													const newVars = editBinaryDataVars.filter(
-														(_, i) => i !== idx,
-													);
-													setEditBinaryDataVars(newVars);
-												}}
-											>
-												<X className="h-4 w-4" />
-											</Button>
-										</div>
-									))}
-									<Button
-										variant="outline"
-										size="sm"
-										onClick={() => {
-											setEditBinaryDataVars([
-												...editBinaryDataVars,
-												{ name: "", value: "" },
-											]);
-										}}
-									>
-										Add Binary Key
-									</Button>
-								</>
+								<EnvEditor variables={editBinaryDataVars} onChange={setEditBinaryDataVars} />
 							) : binaryDataVars.length > 0 ? (
-								binaryDataVars.map((v: any) => (
+								binaryDataVars.map((v: EnvVar) => (
 									<div key={v.name} className="space-y-2">
 										<div className="text-xs font-semibold text-muted-foreground">
 											{v.name}
@@ -511,59 +406,10 @@ function ManageConfigMapPage() {
 						<h3 className="text-sm font-semibold mb-4">Labels</h3>
 						<div className="space-y-2">
 							{isEditing ? (
-								<>
-									{editLabels.map((l, idx: number) => (
-										<div
-											key={`label-${l.name || idx}`}
-											className="flex gap-2 items-start"
-										>
-											<Input
-												placeholder="Key"
-												value={l.name}
-												onChange={(e) => {
-													const newLabels = [...editLabels];
-													newLabels[idx].name = e.target.value;
-													setEditLabels(newLabels);
-												}}
-												className="w-1/3"
-											/>
-											<Input
-												placeholder="Value"
-												value={l.value}
-												onChange={(e) => {
-													const newLabels = [...editLabels];
-													newLabels[idx].value = e.target.value;
-													setEditLabels(newLabels);
-												}}
-												className="flex-1"
-											/>
-											<Button
-												variant="ghost"
-												size="icon"
-												onClick={() => {
-													const newLabels = editLabels.filter(
-														(_, i) => i !== idx,
-													);
-													setEditLabels(newLabels);
-												}}
-											>
-												<X className="h-4 w-4" />
-											</Button>
-										</div>
-									))}
-									<Button
-										variant="outline"
-										size="sm"
-										onClick={() => {
-											setEditLabels([...editLabels, { name: "", value: "" }]);
-										}}
-									>
-										Add Label
-									</Button>
-								</>
+								<EnvEditor variables={editLabels} onChange={setEditLabels} />
 							) : labels.length > 0 ? (
 								<div className="flex flex-wrap gap-2">
-									{labels.map((l: any) => (
+									{labels.map((l: EnvVar) => (
 										<div
 											key={l.name}
 											className="flex gap-2 items-center px-3 py-1 bg-secondary rounded border"
