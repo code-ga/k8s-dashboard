@@ -73,22 +73,39 @@ function ManageSecretPage() {
 
 	const updateMutation = useMutation({
 		mutationFn: async () => {
-			const data: Record<string, string> = {};
+			const data: Record<string, string | null> = {};
+			// Only send changed or new secret data
 			editDataVars.forEach((v) => {
-				if (v.name && v.value) {
-					// Encode value to base64 for Kubernetes secret
-					data[v.name] = btoa(v.value);
+				const original = dataVars.find((ov) => ov.name === v.name);
+				if (!original || original.value !== v.value) {
+					data[v.name] = v.value || "";
+				}
+			});
+			// Send null for deleted keys
+			dataVars.forEach((ov) => {
+				if (!editDataVars.find((v) => v.name === ov.name)) {
+					data[ov.name] = null;
 				}
 			});
 
-			const labelData: Record<string, string> = {};
-			editLabels.forEach((v) => {
-				if (v.name && v.value) labelData[v.name] = v.value;
+			const labelData: Record<string, string | null> = {};
+			// Only send changed or new labels
+			editLabels.forEach((l) => {
+				const original = labels.find((ol) => ol.name === l.name);
+				if (!original || original.value !== l.value) {
+					labelData[l.name] = l.value || "";
+				}
+			});
+			// Send null for deleted labels
+			labels.forEach((ol) => {
+				if (!editLabels.find((l) => l.name === ol.name)) {
+					labelData[ol.name] = null;
+				}
 			});
 
 			const res = await api.api.secrets({ clusterId })({ id: secretId }).put({
-				data,
-				labels: labelData,
+				data: Object.keys(data).length > 0 ? (data as any) : undefined,
+				labels: Object.keys(labelData).length > 0 ? (labelData as any) : undefined,
 			});
 			if (res.error) {
 				throw new Error(getEdenErrorMessage(res.error));
@@ -113,10 +130,19 @@ function ManageSecretPage() {
 				// Secret data in DB is encrypted JSON of {key: base64val}
 				// Detail API returns decrypted JSON.
 				setDataVars(
-					Object.entries(secret.data).map(([name, value]) => ({
-						name,
-						value: String(value),
-					})),
+					Object.entries(secret.data).map(([name, value]) => {
+						let decoded = String(value);
+						try {
+							// Kubernetes secret values are base64 encoded
+							decoded = atob(String(value));
+						} catch {
+							// Fallback to original if not valid base64
+						}
+						return {
+							name,
+							value: decoded,
+						};
+					}),
 				);
 			}
 			if (secret.labels) {
@@ -497,15 +523,7 @@ function SecretValueRow({
 		setIsRevealed(initialRevealed);
 	}, [initialRevealed]);
 
-	// Value is Base64 in secret data, we should decode it if it's not Opaque or just handle it.
-	// Actually K8s secret data values are ALWAYS base64.
-	const decodedValue = (() => {
-		try {
-			return atob(value);
-		} catch {
-			return value;
-		}
-	})();
+	const decodedValue = value;
 
 	return (
 		<div className="space-y-1 group">

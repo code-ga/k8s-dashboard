@@ -69,27 +69,57 @@ function ManageConfigMapPage() {
 
 	const updateMutation = useMutation({
 		mutationFn: async () => {
-			const data: Record<string, string> = {};
+			const data: Record<string, string | null> = {};
+			// Only send changed or new data
 			editDataVars.forEach((v) => {
-				if (v.name && v.value) data[v.name] = v.value;
+				const original = dataVars.find((ov) => ov.name === v.name);
+				if (!original || original.value !== v.value) {
+					data[v.name] = v.value || "";
+				}
+			});
+			// Send null for deleted keys
+			dataVars.forEach((ov) => {
+				if (!editDataVars.find((v) => v.name === ov.name)) {
+					data[ov.name] = null;
+				}
 			});
 
-			const binaryData: Record<string, string> = {};
+			const binaryData: Record<string, string | null> = {};
+			// Only send changed or new binary data
 			editBinaryDataVars.forEach((v) => {
-				if (v.name && v.value) binaryData[v.name] = v.value;
+				const original = binaryDataVars.find((ov) => ov.name === v.name);
+				if (!original || original.value !== v.value) {
+					binaryData[v.name] = v.value || "";
+				}
+			});
+			// Send null for deleted binary keys
+			binaryDataVars.forEach((ov) => {
+				if (!editBinaryDataVars.find((v) => v.name === ov.name)) {
+					binaryData[ov.name] = null;
+				}
 			});
 
-			const labelData: Record<string, string> = {};
-			editLabels.forEach((v) => {
-				if (v.name && v.value) labelData[v.name] = v.value;
+			const labelData: Record<string, string | null> = {};
+			// Only send changed or new labels
+			editLabels.forEach((l) => {
+				const original = labels.find((ol) => ol.name === l.name);
+				if (!original || original.value !== l.value) {
+					labelData[l.name] = l.value || "";
+				}
+			});
+			// Send null for deleted labels
+			labels.forEach((ol) => {
+				if (!editLabels.find((l) => l.name === ol.name)) {
+					labelData[ol.name] = null;
+				}
 			});
 
 			const res = await api.api
 				.configmaps({ clusterId })({ id: configmapId })
 				.put({
-					data,
-					binaryData,
-					labels: labelData,
+					data: Object.keys(data).length > 0 ? (data as any) : undefined,
+					binaryData: Object.keys(binaryData).length > 0 ? (binaryData as any) : undefined,
+					labels: Object.keys(labelData).length > 0 ? (labelData as any) : undefined,
 				});
 			if (res.error) {
 				throw new Error(getEdenErrorMessage(res.error));

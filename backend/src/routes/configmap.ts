@@ -319,17 +319,83 @@ export const configmapRoute = new Elysia({
 					if (!cluster || !cluster.agent) {
 						return ctx.status(404, {
 							success: false,
-							message: "Cluster not found",
+							message: "Failed to update ConfigMap",
 							timestamp: Date.now(),
 						});
 					}
 
-					const encryptedData = body.data
-						? encrypt(JSON.stringify(body.data))
-						: "";
-					let encryptedBinaryData = "";
+					// Merge data
+					let existingData: Record<string, string> = {};
+					if (cm.data) {
+						try {
+							existingData = JSON.parse(decrypt(cm.data));
+						} catch {
+							logger.error("Failed to decrypt existing configmap data for update", cm.id);
+						}
+					}
+					const mergedData = { ...existingData };
+					if (body.data) {
+						for (const [key, val] of Object.entries(body.data)) {
+							if (val === null) {
+								delete mergedData[key];
+							} else if (typeof val === "string") {
+								mergedData[key] = val;
+							}
+						}
+					}
+					const encryptedData = encrypt(JSON.stringify(mergedData));
+
+					// Merge binaryData
+					let existingBinaryData: Record<string, string> = {};
+					if (cm.binaryData) {
+						try {
+							existingBinaryData = JSON.parse(decrypt(cm.binaryData));
+						} catch {
+							logger.error("Failed to decrypt existing configmap binaryData for update", cm.id);
+						}
+					}
+					const mergedBinaryData = { ...existingBinaryData };
 					if (body.binaryData) {
-						encryptedBinaryData = encrypt(JSON.stringify(body.binaryData));
+						for (const [key, val] of Object.entries(body.binaryData)) {
+							if (val === null) {
+								delete mergedBinaryData[key];
+							} else if (typeof val === "string") {
+								mergedBinaryData[key] = val;
+							}
+						}
+					}
+					const encryptedBinaryData = encrypt(JSON.stringify(mergedBinaryData));
+
+					// Merge labels
+					let existingLabels: Record<string, string> = {};
+					if (cm.labels) {
+						try {
+							existingLabels = JSON.parse(cm.labels);
+						} catch {
+							logger.error("Failed to parse existing configmap labels", cm.id);
+						}
+					}
+					const mergedLabels = { ...existingLabels };
+					if (body.labels) {
+						for (const [key, val] of Object.entries(body.labels)) {
+							if (val === null) {
+								delete mergedLabels[key];
+							} else if (typeof val === "string") {
+								mergedLabels[key] = val;
+							}
+						}
+					}
+
+					// Merge annotations
+					const mergedAnnotations = { ...((cm.annotations as Record<string, string>) || {}) };
+					if (body.annotations) {
+						for (const [key, val] of Object.entries(body.annotations)) {
+							if (val === null) {
+								delete mergedAnnotations[key];
+							} else if (typeof val === "string") {
+								mergedAnnotations[key] = val;
+							}
+						}
 					}
 
 					const [updatedCm] = await db
@@ -337,9 +403,9 @@ export const configmapRoute = new Elysia({
 						.set({
 							data: encryptedData,
 							binaryData: encryptedBinaryData,
-							labels: JSON.stringify(body.labels || {}),
+							labels: JSON.stringify(mergedLabels),
 							updatedAt: new Date(),
-							annotations: body.annotations || cm.annotations || {},
+							annotations: mergedAnnotations as Record<string, string>,
 						})
 						.where(eq(schema.k8sConfigMaps.id, id))
 						.returning();
@@ -347,7 +413,7 @@ export const configmapRoute = new Elysia({
 					if (!updatedCm) {
 						return ctx.status(500, {
 							success: false,
-							message: "Failed to update ConfigMap",
+							message: "Failed to update ConfigMap in DB",
 							timestamp: Date.now(),
 						});
 					}
@@ -362,10 +428,10 @@ export const configmapRoute = new Elysia({
 								payload: generateConfigMapManifest({
 									name: cm.name,
 									namespace: cm.namespace,
-									data: body.data,
-									binaryData: body.binaryData,
-									labels: body.labels,
-									annotations: body.annotations || cm.annotations || {},
+									data: mergedData,
+									binaryData: mergedBinaryData,
+									labels: mergedLabels,
+									annotations: mergedAnnotations,
 								}),
 								targetNamespace: cm.namespace,
 								targetName: cm.name,
@@ -391,13 +457,17 @@ export const configmapRoute = new Elysia({
 					detail: { tags: ["ConfigMaps"] },
 					roleAuth: "configmap:update",
 					body: Type.Object({
-						data: Type.Optional(Type.Record(Type.String(), Type.String())),
-						binaryData: Type.Optional(
-							Type.Record(Type.String(), Type.String()),
+						data: Type.Optional(
+							Type.Record(Type.String(), Type.Union([Type.String(), Type.Null()])),
 						),
-						labels: Type.Optional(Type.Record(Type.String(), Type.String())),
+						binaryData: Type.Optional(
+							Type.Record(Type.String(), Type.Union([Type.String(), Type.Null()])),
+						),
+						labels: Type.Optional(
+							Type.Record(Type.String(), Type.Union([Type.String(), Type.Null()])),
+						),
 						annotations: Type.Optional(
-							Type.Record(Type.String(), Type.String()),
+							Type.Record(Type.String(), Type.Union([Type.String(), Type.Null()])),
 						),
 					}),
 					response: {

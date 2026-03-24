@@ -314,24 +314,68 @@ export const secretRoute = new Elysia({
 
 					// For Secrets, body.data should be plain string values, we will base64 them for K8s manifest
 					// and encrypt for DB.
-					const binData: Record<string, string> = {};
+					// We merge with existing data to support "only update edited" feature
+					let binData: Record<string, string> = {};
+					if (secret.data) {
+						try {
+							binData = JSON.parse(decrypt(secret.data));
+						} catch (e) {
+							logger.error("Failed to decrypt existing secret data for update", e);
+						}
+					}
+
 					if (body.data) {
 						for (const [key, val] of Object.entries(body.data)) {
 							if (typeof val === "string") {
 								binData[key] = Buffer.from(val).toString("base64");
+							} else if (val === null) {
+								delete binData[key];
 							}
 						}
 					}
 					const encryptedData = encrypt(JSON.stringify(binData));
+
+					// Merge labels
+					let existingLabels: Record<string, string> = {};
+					if (secret.labels) {
+						try {
+							existingLabels = JSON.parse(secret.labels);
+						} catch (e) {
+							logger.error("Failed to parse existing secret labels", e);
+						}
+					}
+
+					const labelData = { ...existingLabels };
+					if (body.labels) {
+						for (const [key, val] of Object.entries(body.labels)) {
+							if (typeof val === "string") {
+								labelData[key] = val;
+							} else if (val === null) {
+								delete labelData[key];
+							}
+						}
+					}
+
+					// Merge annotations
+					const annotationData = { ...((secret.annotations as Record<string, string>) || {}) };
+					if (body.annotations) {
+						for (const [key, val] of Object.entries(body.annotations)) {
+							if (typeof val === "string") {
+								annotationData[key] = val;
+							} else if (val === null) {
+								delete annotationData[key];
+							}
+						}
+					}
 
 					const [updatedSecret] = await db
 						.update(schema.k8sSecrets)
 						.set({
 							type: body.type || secret.type || "Opaque",
 							data: encryptedData,
-							labels: JSON.stringify(body.labels || {}),
+							labels: JSON.stringify(labelData),
 							updatedAt: new Date(),
-							annotations: body.annotations || secret.annotations || {},
+							annotations: annotationData as Record<string, string>,
 						})
 						.where(eq(schema.k8sSecrets.id, id))
 						.returning();
@@ -354,9 +398,9 @@ export const secretRoute = new Elysia({
 									name: secret.name,
 									namespace: secret.namespace,
 									type: body.type || secret.type || "Opaque",
-									data: binData,
-									annotations: body.annotations || secret.annotations || {},
-									labels: body.labels,
+									data: binData, // Already combined with existing
+									annotations: annotationData,
+									labels: labelData,
 								}),
 								targetNamespace: secret.namespace,
 								targetName: secret.name,
@@ -383,10 +427,14 @@ export const secretRoute = new Elysia({
 					roleAuth: "secret:update",
 					body: Type.Object({
 						type: Type.Optional(Type.String()),
-						data: Type.Optional(Type.Record(Type.String(), Type.String())),
-						labels: Type.Optional(Type.Record(Type.String(), Type.String())),
+						data: Type.Optional(
+							Type.Record(Type.String(), Type.Union([Type.String(), Type.Null()])),
+						),
+						labels: Type.Optional(
+							Type.Record(Type.String(), Type.Union([Type.String(), Type.Null()])),
+						),
 						annotations: Type.Optional(
-							Type.Record(Type.String(), Type.String()),
+							Type.Record(Type.String(), Type.Union([Type.String(), Type.Null()])),
 						),
 					}),
 					response: {
