@@ -60,9 +60,20 @@ export class AgentManager extends EventEmitter<EventMap> {
 		await this.processPendingCommands(agentId);
 	}
 
-	removeConnection(agentId: number) {
+	removeConnection(
+		agentId: number,
+		ws?: Prettify<ElysiaWS<Omit<Context, "body">, RouteSchema>>,
+	): boolean {
+		const currentWs = this.connections.get(agentId);
+		if (ws && currentWs && currentWs !== ws) {
+			logger.info(
+				`Agent ${agentId} old connection disconnected (GC/timeout). Keeping newer connection.`,
+			);
+			return false;
+		}
 		this.connections.delete(agentId);
 		logger.info(`Agent ${agentId} disconnected`);
+		return true;
 	}
 
 	private pendingCommandInterval() {

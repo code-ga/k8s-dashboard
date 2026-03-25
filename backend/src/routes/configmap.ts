@@ -330,7 +330,10 @@ export const configmapRoute = new Elysia({
 						try {
 							existingData = JSON.parse(decrypt(cm.data));
 						} catch {
-							logger.error("Failed to decrypt existing configmap data for update", cm.id);
+							logger.error(
+								"Failed to decrypt existing configmap data for update",
+								cm.id,
+							);
 						}
 					}
 					const mergedData = { ...existingData };
@@ -351,7 +354,10 @@ export const configmapRoute = new Elysia({
 						try {
 							existingBinaryData = JSON.parse(decrypt(cm.binaryData));
 						} catch {
-							logger.error("Failed to decrypt existing configmap binaryData for update", cm.id);
+							logger.error(
+								"Failed to decrypt existing configmap binaryData for update",
+								cm.id,
+							);
 						}
 					}
 					const mergedBinaryData = { ...existingBinaryData };
@@ -387,7 +393,9 @@ export const configmapRoute = new Elysia({
 					}
 
 					// Merge annotations
-					const mergedAnnotations = { ...((cm.annotations as Record<string, string>) || {}) };
+					const mergedAnnotations = {
+						...((cm.annotations as Record<string, string>) || {}),
+					};
 					if (body.annotations) {
 						for (const [key, val] of Object.entries(body.annotations)) {
 							if (val === null) {
@@ -458,16 +466,28 @@ export const configmapRoute = new Elysia({
 					roleAuth: "configmap:update",
 					body: Type.Object({
 						data: Type.Optional(
-							Type.Record(Type.String(), Type.Union([Type.String(), Type.Null()])),
+							Type.Record(
+								Type.String(),
+								Type.Union([Type.String(), Type.Null()]),
+							),
 						),
 						binaryData: Type.Optional(
-							Type.Record(Type.String(), Type.Union([Type.String(), Type.Null()])),
+							Type.Record(
+								Type.String(),
+								Type.Union([Type.String(), Type.Null()]),
+							),
 						),
 						labels: Type.Optional(
-							Type.Record(Type.String(), Type.Union([Type.String(), Type.Null()])),
+							Type.Record(
+								Type.String(),
+								Type.Union([Type.String(), Type.Null()]),
+							),
 						),
 						annotations: Type.Optional(
-							Type.Record(Type.String(), Type.Union([Type.String(), Type.Null()])),
+							Type.Record(
+								Type.String(),
+								Type.Union([Type.String(), Type.Null()]),
+							),
 						),
 					}),
 					response: {
