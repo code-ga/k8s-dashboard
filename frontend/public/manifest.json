@@ -1,6 +1,6 @@
 {
-  "short_name": "TanStack App",
-  "name": "Create TanStack App Sample",
+  "short_name": "K3s Dashboard",
+  "name": "K3s Cloud-Native PaaS Dashboard",
   "icons": [
     {
       "src": "favicon.ico",

@@ -1,5 +1,6 @@
 {
-  "name": "frontend",
+  "name": "k8s-dashboard-frontend",
+  "description": "A modern, 'Cloud Run on Bare Metal' Platform-as-a-Service (PaaS) interface built on top of K3s.",
   "private": true,
   "type": "module",
   "scripts": {
