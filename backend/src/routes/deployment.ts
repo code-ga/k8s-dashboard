@@ -295,6 +295,88 @@ export const deploymentRoute = new Elysia({
 					},
 				},
 			)
+			.get(
+				"/:id/describe",
+				async (ctx) => {
+					const { clusterId, id } = ctx.params;
+					if (!clusterId || !id) {
+						return ctx.status(400, {
+							success: false,
+							message: "Cluster ID and Deployment ID are required",
+							timestamp: Date.now(),
+						});
+					}
+					const cluster = await db.query.k8sCluster.findFirst({
+						where: { id: Number(clusterId) },
+						with: { agent: true },
+					});
+					if (!cluster || !cluster.agent) {
+						return ctx.status(404, {
+							success: false,
+							message: "Cluster or agent not found",
+							timestamp: Date.now(),
+						});
+					}
+					const deployment = await db.query.k8sDeployments.findFirst({
+						where: { id: Number(id), clusterId: Number(clusterId) },
+					});
+					if (!deployment) {
+						return ctx.status(404, {
+							success: false,
+							message: "Deployment not found",
+							timestamp: Date.now(),
+						});
+					}
+
+					// Ownership Check
+					const isManager = ctx.userPermissions.has("deployment:manage");
+					if (!isManager && deployment.ownerId !== ctx.profile?.id) {
+						return ctx.status(403, {
+							success: false,
+							message: "Forbidden",
+							timestamp: Date.now(),
+						});
+					}
+
+					try {
+						const response = await ctx.agentManager.sendCommand(
+							cluster.agent.id,
+							cluster.id,
+							{
+								id: crypto.randomUUID(),
+								type: Command_CommandType.DESCRIBE_RESOURCE,
+								targetNamespace: deployment.namespace,
+								targetName: deployment.name,
+								payload: JSON.stringify({ kind: "Deployment" }),
+							},
+						);
+
+						return ctx.status(200, {
+							success: true,
+							message: "Describe fetched",
+							data: JSON.parse(response.data || "{}"),
+							timestamp: Date.now(),
+						});
+					} catch (error: any) {
+						return ctx.status(500, {
+							success: false,
+							message: error.message || "Failed to fetch describe",
+							timestamp: Date.now(),
+						});
+					}
+				},
+				{
+					detail: { tags: ["Deployments"] },
+					roleAuth: "deployment:read",
+					response: {
+						200: baseResponseSchema(Type.Any()),
+						400: errorResponseSchema,
+						403: errorResponseSchema,
+						404: errorResponseSchema,
+						500: errorResponseSchema,
+					},
+				},
+			)
 			.post(
 				"/",
 				async (ctx) => {
@@ -1439,7 +1521,7 @@ export const deploymentRoute = new Elysia({
 							throw new Error("Failed to update deployment");
 						}
 
-						let finalEnv = undefined;
+						let finalEnv: Record<string, string> = {};
 						if (newDeployment.envVariables) {
 							try {
 								finalEnv = JSON.parse(decrypt(newDeployment.envVariables));
@@ -1538,6 +1620,80 @@ export const deploymentRoute = new Elysia({
 						404: errorResponseSchema,
 						500: errorResponseSchema,
 					},
+				},
+			)
+			.patch(
+				"/:id/redeploy",
+				async (ctx) => {
+					const clusterId = Number(ctx.params.clusterId);
+					const id = ctx.params.id;
+
+					const cluster = await db.query.k8sCluster.findFirst({
+						where: {
+							id: clusterId,
+						},
+					});
+
+					if (!cluster) {
+						return ctx.status(404, {
+							success: false,
+							message: "Cluster not found",
+							timestamp: Date.now(),
+						});
+					}
+
+					const deployment = await db.query.k8sDeployments.findFirst({
+						where: {
+							id: Number(id),
+						},
+					});
+
+					if (!deployment) {
+						return ctx.status(404, {
+							success: false,
+							message: "Deployment not found",
+							timestamp: Date.now(),
+						});
+					}
+
+					const commandId = crypto.randomUUID();
+					const response = await ctx.agentManager.sendCommand(
+						cluster.agentId,
+						clusterId,
+						{
+							id: commandId,
+							type: Command_CommandType.REDEPLOY_DEPLOYMENT,
+							targetNamespace: deployment.namespace,
+							targetName: deployment.name,
+							payload: "",
+						},
+					);
+
+					if (!response.success) {
+						return ctx.status(500, {
+							success: false,
+							message: response.error || "Failed to trigger re-deployment",
+							timestamp: Date.now(),
+						});
+					}
+
+					return ctx.status(200, {
+						success: true,
+						message: "Deployment re-deployment triggered successfully",
+						timestamp: Date.now(),
+						data: null,
+					});
+				},
+				{
+					detail: {
+						tags: ["Deployments"],
+					},
+					response: {
+						200: baseResponseSchema(Type.Null()),
+						404: errorResponseSchema,
+						500: errorResponseSchema,
+					},
+					roleAuth: "deployment:update",
 				},
 			),
 	);

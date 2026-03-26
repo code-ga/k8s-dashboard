@@ -34,6 +34,7 @@ import {
 	ExternalLink,
 	HelpCircle,
 	Plus,
+	RefreshCw,
 	Settings,
 	Trash2,
 	X,
@@ -288,6 +289,29 @@ function ManageDeploymentPage() {
 		},
 	});
 
+	const redeployMutation = useMutation({
+		mutationFn: async () => {
+			const res = await api.api
+				.deployments({ clusterId })({ id: deploymentId.toString() })
+				.redeploy.patch();
+			if (res.error) {
+				const message = getEdenErrorMessage(res.error);
+				throw new Error(message);
+			}
+			return res.data;
+		},
+		onSuccess: () => {
+			toast.success("Deployment re-deployment triggered");
+			queryClient.invalidateQueries({
+				queryKey: ["deployment", clusterId, deploymentId],
+			});
+			queryClient.invalidateQueries({ queryKey: ["pods", clusterId] });
+		},
+		onError: (error: Error) => {
+			toast.error(error.message);
+		},
+	});
+
 	const RecreationWarning = () => (
 		<div className="bg-yellow-500/10 border border-yellow-500/50 rounded-lg p-3 flex gap-3 items-start">
 			<AlertTriangle className="h-5 w-5 text-yellow-500 shrink-0 mt-0.5" />
@@ -339,6 +363,25 @@ function ManageDeploymentPage() {
 							selector={selector}
 						/>
 						<Button
+							variant="outline"
+							onClick={() => {
+								if (
+									confirm(
+										"Are you sure you want to trigger a rolling restart for this deployment?",
+									)
+								) {
+									redeployMutation.mutate();
+								}
+							}}
+							disabled={redeployMutation.isPending}
+							size="sm"
+						>
+							<RefreshCw
+								className={`h-4 w-4 mr-2 ${redeployMutation.isPending ? "animate-spin" : ""}`}
+							/>
+							{redeployMutation.isPending ? "Re-deploying..." : "Re-deploy"}
+						</Button>
+						<Button
 							variant="destructive"
 							onClick={() => deleteMutation.mutate()}
 							disabled={deleteMutation.isPending}
@@ -358,7 +401,7 @@ function ManageDeploymentPage() {
 				className="flex-1 flex flex-col overflow-hidden"
 			>
 				<div className="border-b border-border bg-card px-6">
-					<TabsList className="grid w-full grid-cols-6 max-w-3xl h-auto bg-transparent p-0 gap-0">
+					<TabsList className="grid w-full grid-cols-7 max-w-4xl h-auto bg-transparent p-0 gap-0">
 						<TabsTrigger
 							value="overview"
 							className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary"
@@ -388,6 +431,12 @@ function ManageDeploymentPage() {
 							className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary"
 						>
 							Labels
+						</TabsTrigger>
+						<TabsTrigger
+							value="events"
+							className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary"
+						>
+							Events
 						</TabsTrigger>
 						<TabsTrigger
 							value="pods"
@@ -762,6 +811,18 @@ function ManageDeploymentPage() {
 					</div>
 				</TabsContent>
 
+				{/* Events Tab */}
+				<TabsContent
+					value="events"
+					className="flex-1 overflow-auto p-6 flex flex-col"
+				>
+					<DeploymentEvents
+						deploymentId={deploymentId}
+						clusterId={clusterId}
+						isActive={activeTab === "events"}
+					/>
+				</TabsContent>
+
 				{/* Pods Tab */}
 				<TabsContent value="pods" className="flex-1 overflow-auto p-6">
 					<div className="space-y-4">
@@ -932,6 +993,120 @@ export function DeploymentLogs({
 			>
 				{logs || "Waiting for logs..."}
 			</pre>
+		</div>
+	);
+}
+
+interface DeploymentEventsProps {
+	deploymentId: string;
+	clusterId: string;
+	isActive: boolean;
+}
+
+export function DeploymentEvents({
+	deploymentId,
+	clusterId,
+	isActive,
+}: DeploymentEventsProps) {
+	const { data, isLoading, error } = useQuery({
+		queryKey: ["deployment-describe", clusterId, deploymentId],
+		queryFn: async () => {
+			const res = await api.api
+				.deployments({ clusterId })({ id: deploymentId })
+				.describe.get();
+			if (res.error) throw res.error;
+			return res.data.data;
+		},
+		enabled: isActive,
+	});
+
+	if (isLoading)
+		return (
+			<div className="flex-1 flex items-center justify-center p-12">
+				<div className="text-sm text-muted-foreground animate-pulse">
+					Fetching deployment events from agent...
+				</div>
+			</div>
+		);
+
+	if (error)
+		return (
+			<div className="flex-1 flex items-center justify-center p-12">
+				<div className="text-sm text-destructive font-semibold">
+					Error: {(error as Error).message}
+				</div>
+			</div>
+		);
+
+	const events = (data?.events || []) as Array<{
+		lastSeen: string;
+		type: string;
+		reason: string;
+		message: string;
+		object: string;
+		namespace: string;
+	}>;
+
+	return (
+		<div className="flex-1 overflow-hidden flex flex-col gap-4">
+			<div className="flex items-center justify-between">
+				<h3 className="text-sm font-semibold text-foreground italic opacity-70">
+					Recent events for this deployment
+				</h3>
+			</div>
+
+			<div className="flex-1 border rounded-lg overflow-auto">
+				<Table>
+					<TableHeader className="bg-muted/50 sticky top-0 z-10">
+						<TableRow>
+							<TableHead className="w-[180px]">Last Seen</TableHead>
+							<TableHead className="w-[100px]">Type</TableHead>
+							<TableHead className="w-[150px]">Reason</TableHead>
+							<TableHead>Message</TableHead>
+						</TableRow>
+					</TableHeader>
+					<TableBody>
+						{events.length === 0 ? (
+							<TableRow>
+								<TableCell
+									colSpan={4}
+									className="text-center h-24 text-muted-foreground italic"
+								>
+									No events found in the last hour
+								</TableCell>
+							</TableRow>
+						) : (
+							events.map((e, i) => (
+								<TableRow
+									key={`${e.lastSeen}-${e.reason}-${i}`}
+									className="hover:bg-muted/30 transition-colors"
+								>
+									<TableCell className="text-[10px] font-mono whitespace-nowrap">
+										{new Date(e.lastSeen).toLocaleString()}
+									</TableCell>
+									<TableCell>
+										<span
+											className={`px-2 py-0.5 rounded-full text-[9px] uppercase font-bold tracking-tight ${
+												e.type === "Normal"
+													? "bg-emerald-100/80 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+													: "bg-amber-100/80 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+											}`}
+										>
+											{e.type}
+										</span>
+									</TableCell>
+									<TableCell className="font-medium text-xs text-foreground/80 lowercase italic">
+										{e.reason}
+									</TableCell>
+									<TableCell className="text-xs text-muted-foreground max-w-md truncate hover:whitespace-normal cursor-help">
+										{e.message}
+									</TableCell>
+								</TableRow>
+							))
+						)}
+					</TableBody>
+				</Table>
+			</div>
 		</div>
 	);
 }

@@ -5,6 +5,7 @@ import { db } from "../database";
 import { schema } from "../database/schema";
 import { dbSchemaTypes } from "../database/type";
 import { authenticationMiddleware } from "../middleware/auth";
+import { Command_CommandType } from "../../pb-generated/agent-backend/websocket";
 import { agentManagerService } from "../services/agentManager";
 import { baseResponseSchema, errorResponseSchema } from "../types";
 
@@ -283,6 +284,72 @@ export const clusterRoute = new Elysia({ prefix: "/cluster" })
 								}),
 							),
 							404: errorResponseSchema,
+						},
+						roleAuth: "cluster:read",
+					},
+				)
+				.get(
+					"/:id/events",
+					async (ctx) => {
+						const clusterId = Number(ctx.params.id);
+						const cluster = await db
+							.select()
+							.from(schema.k8sCluster)
+							.where(eq(schema.k8sCluster.id, clusterId));
+
+						if (cluster.length === 0 || !cluster[0]) {
+							return ctx.status(404, {
+								success: false,
+								message: "Cluster not found",
+								timestamp: Date.now(),
+							});
+						}
+
+						const commandId = crypto.randomUUID();
+						const response = await ctx.agentManager.sendCommand(
+							cluster[0].agentId,
+							clusterId,
+							{
+								id: commandId,
+								type: Command_CommandType.GET_ALL_EVENTS,
+								payload: "",
+								targetName: "",
+								targetNamespace: "",
+							},
+						);
+
+						if (!response.success) {
+							return ctx.status(500, {
+								success: false,
+								message: response.error || "Failed to fetch events from agent",
+								timestamp: Date.now(),
+							});
+						}
+
+						try {
+							const events = JSON.parse(response.data || "[]");
+							return ctx.status(200, {
+								success: true,
+								message: "Cluster events fetched successfully",
+								data: events,
+								timestamp: Date.now(),
+							});
+						} catch (_) {
+							return ctx.status(500, {
+								success: false,
+								message: "Failed to parse events from agent",
+								timestamp: Date.now(),
+							});
+						}
+					},
+					{
+						detail: {
+							tags: ["Cluster"],
+						},
+						response: {
+							200: baseResponseSchema(Type.Array(Type.Any())),
+							404: errorResponseSchema,
+							500: errorResponseSchema,
 						},
 						roleAuth: "cluster:read",
 					},

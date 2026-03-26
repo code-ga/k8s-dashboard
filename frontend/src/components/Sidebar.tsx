@@ -1,5 +1,6 @@
 import { Link, useLocation, useParams } from "@tanstack/react-router";
 import {
+	Activity,
 	Box,
 	ChevronLeft,
 	Cpu,
@@ -118,6 +119,13 @@ export function Sidebar({ role, className }: SidebarProps) {
 			label: "Secrets",
 			icon: Lock,
 			permission: "secret:read" as PermissionFilter,
+			exact: false,
+		},
+		{
+			to: `/dashboard/cluster/${clusterId}/events`,
+			label: "Events",
+			icon: Activity,
+			permission: "cluster:read" as PermissionFilter,
 			exact: false,
 		},
 	];

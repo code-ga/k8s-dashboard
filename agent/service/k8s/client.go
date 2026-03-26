@@ -2,10 +2,12 @@ package k8s
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/discovery/cached/memory"
@@ -163,4 +165,124 @@ func (kc *K8sClient) GetClusterDomain() (string, error) {
 		}
 	}
 	return "cluster.local", nil // default fallback
+}
+
+type EventInfo struct {
+	LastSeen  string `json:"lastSeen"`
+	Type      string `json:"type"`
+	Reason    string `json:"reason"`
+	Message   string `json:"message"`
+	Object    string `json:"object"`
+	Namespace string `json:"namespace"`
+}
+
+func (kc *K8sClient) GetAllEvents(ctx context.Context) (string, error) {
+	events, err := kc.Clientset.CoreV1().Events("").List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return "", fmt.Errorf("failed to list all events: %w", err)
+	}
+
+	resultEvents := make([]EventInfo, 0)
+	for _, e := range events.Items {
+		lastSeen := e.LastTimestamp.Time.String()
+		if e.LastTimestamp.IsZero() {
+			if !e.EventTime.IsZero() {
+				lastSeen = e.EventTime.Time.String()
+			} else {
+				lastSeen = e.CreationTimestamp.Time.String()
+			}
+		}
+		resultEvents = append(resultEvents, EventInfo{
+			LastSeen:  lastSeen,
+			Type:      e.Type,
+			Reason:    e.Reason,
+			Message:   e.Message,
+			Object:    fmt.Sprintf("%s/%s", e.InvolvedObject.Kind, e.InvolvedObject.Name),
+			Namespace: e.Namespace,
+		})
+	}
+
+	jsonData, err := json.Marshal(resultEvents)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal all events: %w", err)
+	}
+
+	return string(jsonData), nil
+}
+
+func (kc *K8sClient) DescribeResource(namespace, name, kind string) (string, error) {
+	// 1. Fetch Events
+	fieldSelector := fmt.Sprintf("involvedObject.name=%s,involvedObject.kind=%s", name, kind)
+	events, err := kc.Clientset.CoreV1().Events(namespace).List(kc.Context, metav1.ListOptions{
+		FieldSelector: fieldSelector,
+	})
+	if err != nil {
+		return "", fmt.Errorf("failed to list events: %w", err)
+	}
+
+	resultEvents := make([]EventInfo, 0)
+	for _, e := range events.Items {
+		lastSeen := e.LastTimestamp.Time.String()
+		if e.LastTimestamp.IsZero() {
+			if !e.EventTime.IsZero() {
+				lastSeen = e.EventTime.Time.String()
+			} else {
+				lastSeen = e.CreationTimestamp.Time.String()
+			}
+		}
+		resultEvents = append(resultEvents, EventInfo{
+			LastSeen:  lastSeen,
+			Type:      e.Type,
+			Reason:    e.Reason,
+			Message:   e.Message,
+			Object:    fmt.Sprintf("%s/%s", e.InvolvedObject.Kind, e.InvolvedObject.Name),
+			Namespace: e.Namespace,
+		})
+	}
+
+	// 2. Fetch basic metadata/status
+	var resourceData interface{}
+	if strings.ToLower(kind) == "pod" {
+		pod, err := kc.Clientset.CoreV1().Pods(namespace).Get(kc.Context, name, metav1.GetOptions{})
+		if err == nil {
+			resourceData = pod
+		}
+	} else if strings.ToLower(kind) == "deployment" {
+		dep, err := kc.Clientset.AppsV1().Deployments(namespace).Get(kc.Context, name, metav1.GetOptions{})
+		if err == nil {
+			resourceData = dep
+		}
+	}
+
+	res := map[string]interface{}{
+		"kind":      kind,
+		"name":      name,
+		"namespace": namespace,
+		"events":    resultEvents,
+		"resource":  resourceData,
+	}
+
+	jsonData, err := json.Marshal(res)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal describe data: %w", err)
+	}
+
+	return string(jsonData), nil
+}
+
+// RedeployDeployment triggers a rolling restart of a deployment by updating its pod template annotations.
+func (kc *K8sClient) RedeployDeployment(ctx context.Context, namespace, name string) error {
+	deployment, err := kc.Clientset.AppsV1().Deployments(namespace).Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+
+	if deployment.Spec.Template.Annotations == nil {
+		deployment.Spec.Template.Annotations = make(map[string]string)
+	}
+
+	deployment.Spec.Template.Annotations["kubectl.kubernetes.io/restartedAt"] = time.Now().Format(time.RFC3339)
+
+	_, err = kc.Clientset.AppsV1().Deployments(namespace).Update(ctx, deployment, metav1.UpdateOptions{})
+	return err
 }

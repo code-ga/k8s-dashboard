@@ -258,6 +258,9 @@ message Command {
     DELETE_CONFIGMAP = 18;
     CREATE_SECRET = 19;
     DELETE_SECRET = 20;
+    DESCRIBE_RESOURCE = 21;
+    GET_ALL_EVENTS = 22;
+    REDEPLOY_DEPLOYMENT = 23;
   }
   CommandType type = 2;
   

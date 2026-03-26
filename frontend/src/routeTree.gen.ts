@@ -24,6 +24,7 @@ import { Route as DashboardClusterIdServicesIndexRouteImport } from './routes/da
 import { Route as DashboardClusterIdSecretsIndexRouteImport } from './routes/dashboard/cluster/$id/secrets/index'
 import { Route as DashboardClusterIdPodsIndexRouteImport } from './routes/dashboard/cluster/$id/pods/index'
 import { Route as DashboardClusterIdIngressesIndexRouteImport } from './routes/dashboard/cluster/$id/ingresses/index'
+import { Route as DashboardClusterIdEventsIndexRouteImport } from './routes/dashboard/cluster/$id/events/index'
 import { Route as DashboardClusterIdDeploymentsIndexRouteImport } from './routes/dashboard/cluster/$id/deployments/index'
 import { Route as DashboardClusterIdConfigmapsIndexRouteImport } from './routes/dashboard/cluster/$id/configmaps/index'
 import { Route as DashboardClusterIdServicesCreateRouteImport } from './routes/dashboard/cluster/$id/services/create'
@@ -115,6 +116,12 @@ const DashboardClusterIdIngressesIndexRoute =
   DashboardClusterIdIngressesIndexRouteImport.update({
     id: '/dashboard/cluster/$id/ingresses/',
     path: '/dashboard/cluster/$id/ingresses/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const DashboardClusterIdEventsIndexRoute =
+  DashboardClusterIdEventsIndexRouteImport.update({
+    id: '/dashboard/cluster/$id/events/',
+    path: '/dashboard/cluster/$id/events/',
     getParentRoute: () => rootRouteImport,
   } as any)
 const DashboardClusterIdDeploymentsIndexRoute =
@@ -221,6 +228,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/cluster/$id/services/create': typeof DashboardClusterIdServicesCreateRoute
   '/dashboard/cluster/$id/configmaps/': typeof DashboardClusterIdConfigmapsIndexRoute
   '/dashboard/cluster/$id/deployments/': typeof DashboardClusterIdDeploymentsIndexRoute
+  '/dashboard/cluster/$id/events/': typeof DashboardClusterIdEventsIndexRoute
   '/dashboard/cluster/$id/ingresses/': typeof DashboardClusterIdIngressesIndexRoute
   '/dashboard/cluster/$id/pods/': typeof DashboardClusterIdPodsIndexRoute
   '/dashboard/cluster/$id/secrets/': typeof DashboardClusterIdSecretsIndexRoute
@@ -251,6 +259,7 @@ export interface FileRoutesByTo {
   '/dashboard/cluster/$id/services/create': typeof DashboardClusterIdServicesCreateRoute
   '/dashboard/cluster/$id/configmaps': typeof DashboardClusterIdConfigmapsIndexRoute
   '/dashboard/cluster/$id/deployments': typeof DashboardClusterIdDeploymentsIndexRoute
+  '/dashboard/cluster/$id/events': typeof DashboardClusterIdEventsIndexRoute
   '/dashboard/cluster/$id/ingresses': typeof DashboardClusterIdIngressesIndexRoute
   '/dashboard/cluster/$id/pods': typeof DashboardClusterIdPodsIndexRoute
   '/dashboard/cluster/$id/secrets': typeof DashboardClusterIdSecretsIndexRoute
@@ -282,6 +291,7 @@ export interface FileRoutesById {
   '/dashboard/cluster/$id/services/create': typeof DashboardClusterIdServicesCreateRoute
   '/dashboard/cluster/$id/configmaps/': typeof DashboardClusterIdConfigmapsIndexRoute
   '/dashboard/cluster/$id/deployments/': typeof DashboardClusterIdDeploymentsIndexRoute
+  '/dashboard/cluster/$id/events/': typeof DashboardClusterIdEventsIndexRoute
   '/dashboard/cluster/$id/ingresses/': typeof DashboardClusterIdIngressesIndexRoute
   '/dashboard/cluster/$id/pods/': typeof DashboardClusterIdPodsIndexRoute
   '/dashboard/cluster/$id/secrets/': typeof DashboardClusterIdSecretsIndexRoute
@@ -314,6 +324,7 @@ export interface FileRouteTypes {
     | '/dashboard/cluster/$id/services/create'
     | '/dashboard/cluster/$id/configmaps/'
     | '/dashboard/cluster/$id/deployments/'
+    | '/dashboard/cluster/$id/events/'
     | '/dashboard/cluster/$id/ingresses/'
     | '/dashboard/cluster/$id/pods/'
     | '/dashboard/cluster/$id/secrets/'
@@ -344,6 +355,7 @@ export interface FileRouteTypes {
     | '/dashboard/cluster/$id/services/create'
     | '/dashboard/cluster/$id/configmaps'
     | '/dashboard/cluster/$id/deployments'
+    | '/dashboard/cluster/$id/events'
     | '/dashboard/cluster/$id/ingresses'
     | '/dashboard/cluster/$id/pods'
     | '/dashboard/cluster/$id/secrets'
@@ -374,6 +386,7 @@ export interface FileRouteTypes {
     | '/dashboard/cluster/$id/services/create'
     | '/dashboard/cluster/$id/configmaps/'
     | '/dashboard/cluster/$id/deployments/'
+    | '/dashboard/cluster/$id/events/'
     | '/dashboard/cluster/$id/ingresses/'
     | '/dashboard/cluster/$id/pods/'
     | '/dashboard/cluster/$id/secrets/'
@@ -405,6 +418,7 @@ export interface RootRouteChildren {
   DashboardClusterIdServicesCreateRoute: typeof DashboardClusterIdServicesCreateRoute
   DashboardClusterIdConfigmapsIndexRoute: typeof DashboardClusterIdConfigmapsIndexRoute
   DashboardClusterIdDeploymentsIndexRoute: typeof DashboardClusterIdDeploymentsIndexRoute
+  DashboardClusterIdEventsIndexRoute: typeof DashboardClusterIdEventsIndexRoute
   DashboardClusterIdIngressesIndexRoute: typeof DashboardClusterIdIngressesIndexRoute
   DashboardClusterIdPodsIndexRoute: typeof DashboardClusterIdPodsIndexRoute
   DashboardClusterIdSecretsIndexRoute: typeof DashboardClusterIdSecretsIndexRoute
@@ -516,6 +530,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard/cluster/$id/ingresses'
       fullPath: '/dashboard/cluster/$id/ingresses/'
       preLoaderRoute: typeof DashboardClusterIdIngressesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard/cluster/$id/events/': {
+      id: '/dashboard/cluster/$id/events/'
+      path: '/dashboard/cluster/$id/events'
+      fullPath: '/dashboard/cluster/$id/events/'
+      preLoaderRoute: typeof DashboardClusterIdEventsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard/cluster/$id/deployments/': {
@@ -646,6 +667,7 @@ const rootRouteChildren: RootRouteChildren = {
     DashboardClusterIdConfigmapsIndexRoute,
   DashboardClusterIdDeploymentsIndexRoute:
     DashboardClusterIdDeploymentsIndexRoute,
+  DashboardClusterIdEventsIndexRoute: DashboardClusterIdEventsIndexRoute,
   DashboardClusterIdIngressesIndexRoute: DashboardClusterIdIngressesIndexRoute,
   DashboardClusterIdPodsIndexRoute: DashboardClusterIdPodsIndexRoute,
   DashboardClusterIdSecretsIndexRoute: DashboardClusterIdSecretsIndexRoute,

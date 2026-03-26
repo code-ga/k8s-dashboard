@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"strconv"
@@ -99,6 +100,30 @@ func handleCommand(kc *k8s.K8sClient, cmd *pb.Command) (string, error) {
 		} else {
 			resultData = cmdStr
 		}
+	case pb.Command_DESCRIBE_RESOURCE:
+		if cmd.TargetNamespace != "" && cmd.TargetName != "" && cmd.Payload != "" {
+			var payload struct {
+				Kind string `json:"kind"`
+			}
+			if unmarshalErr := json.Unmarshal([]byte(cmd.Payload), &payload); unmarshalErr != nil {
+				err = fmt.Errorf("invalid payload for DESCRIBE_RESOURCE: %v", unmarshalErr)
+			} else {
+				resultData, err = kc.DescribeResource(cmd.TargetNamespace, cmd.TargetName, payload.Kind)
+			}
+		} else {
+			err = fmt.Errorf("missing target or payload for DESCRIBE_RESOURCE command")
+		}
+	case pb.Command_GET_ALL_EVENTS:
+		resultData, err = kc.GetAllEvents(kc.Context)
+	case pb.Command_REDEPLOY_DEPLOYMENT:
+		if cmd.TargetNamespace != "" && cmd.TargetName != "" {
+			err = kc.RedeployDeployment(kc.Context, cmd.TargetNamespace, cmd.TargetName)
+			if err == nil {
+				resultData = fmt.Sprintf("Deployment %s/%s redeployed successfully", cmd.TargetNamespace, cmd.TargetName)
+			}
+		} else {
+			err = fmt.Errorf("missing target for REDEPLOY_DEPLOYMENT command")
+		}
 	default:
 		log.Printf("[Command] Unknown command type: %v (ID:%s)", cmd.Type, cmd.Id)
 		return "", fmt.Errorf("unknown command type: %v", cmd.Type)
@@ -111,4 +136,3 @@ func handleCommand(kc *k8s.K8sClient, cmd *pb.Command) (string, error) {
 	log.Printf("[Command] Successfully executed command %s. Result: %s", cmd.Id, resultData)
 	return resultData, nil
 }
-

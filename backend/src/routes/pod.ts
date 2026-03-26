@@ -6,6 +6,7 @@ import { db } from "../database";
 import { schema } from "../database/schema";
 import { dbSchemaTypes, type SchemaStatic } from "../database/type";
 import { authenticationMiddleware } from "../middleware/auth";
+import { Command_CommandType } from "../../pb-generated/agent-backend/websocket";
 import { agentManagerService } from "../services/agentManager";
 import { baseResponseSchema, errorResponseSchema } from "../types";
 import { decrypt, encrypt } from "../utils/crypto";
@@ -358,6 +359,93 @@ export const podRoute = new Elysia({
 						),
 						404: errorResponseSchema,
 						400: errorResponseSchema,
+					},
+				},
+			)
+			.get(
+				"/:id/describe",
+				async (ctx) => {
+					const { clusterId, id } = ctx.params;
+					if (!clusterId || !id) {
+						return ctx.status(400, {
+							success: false,
+							message: "Cluster ID and Pod ID are required",
+							timestamp: Date.now(),
+						});
+					}
+					const cluster = await db.query.k8sCluster.findFirst({
+						where: { id: Number(clusterId) },
+						with: { agent: true },
+					});
+					if (!cluster || !cluster.agent) {
+						return ctx.status(404, {
+							success: false,
+							message: "Cluster or agent not found",
+							timestamp: Date.now(),
+						});
+					}
+					const pod = await db.query.k8sPods.findFirst({
+						where: { id: Number(id), clusterId: Number(clusterId) },
+					});
+					if (!pod) {
+						return ctx.status(404, {
+							success: false,
+							message: "Pod not found",
+							timestamp: Date.now(),
+						});
+					}
+
+					// Ownership Check
+					const isManager = ctx.userPermissions.has("pod:manage");
+					if (!isManager && pod.ownerId !== ctx.profile?.id) {
+						return ctx.status(403, {
+							success: false,
+							message: "Forbidden",
+							timestamp: Date.now(),
+						});
+					}
+
+					try {
+						const response = await ctx.agentManager.sendCommand(
+							cluster.agent.id,
+							cluster.id,
+							{
+								id: crypto.randomUUID(),
+								type: Command_CommandType.DESCRIBE_RESOURCE,
+								targetNamespace: pod.namespace,
+								targetName: pod.name,
+								payload: JSON.stringify({ kind: "Pod" }),
+							},
+						);
+
+						const describe = JSON.parse(response.data || "{}");
+						const events = describe.events || [];
+						return ctx.status(200, {
+							success: true,
+							message: "Describe fetched",
+							data: {
+								...describe,
+								events,
+							},
+							timestamp: Date.now(),
+						});
+					} catch (error: any) {
+						return ctx.status(500, {
+							success: false,
+							message: error.message || "Failed to fetch describe",
+							timestamp: Date.now(),
+						});
+					}
+				},
+				{
+					detail: { tags: ["Pods"] },
+					roleAuth: "pod:read",
+					response: {
+						200: baseResponseSchema(Type.Any()),
+						400: errorResponseSchema,
+						403: errorResponseSchema,
+						404: errorResponseSchema,
+						500: errorResponseSchema,
 					},
 				},
 			)

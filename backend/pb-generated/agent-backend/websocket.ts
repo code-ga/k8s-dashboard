@@ -390,6 +390,9 @@ export enum Command_CommandType {
   DELETE_CONFIGMAP = 18,
   CREATE_SECRET = 19,
   DELETE_SECRET = 20,
+  DESCRIBE_RESOURCE = 21,
+  GET_ALL_EVENTS = 22,
+  REDEPLOY_DEPLOYMENT = 23,
   UNRECOGNIZED = -1,
 }
 
@@ -458,6 +461,15 @@ export function command_CommandTypeFromJSON(object: any): Command_CommandType {
     case 20:
     case "DELETE_SECRET":
       return Command_CommandType.DELETE_SECRET;
+    case 21:
+    case "DESCRIBE_RESOURCE":
+      return Command_CommandType.DESCRIBE_RESOURCE;
+    case 22:
+    case "GET_ALL_EVENTS":
+      return Command_CommandType.GET_ALL_EVENTS;
+    case 23:
+    case "REDEPLOY_DEPLOYMENT":
+      return Command_CommandType.REDEPLOY_DEPLOYMENT;
     case -1:
     case "UNRECOGNIZED":
     default:
@@ -509,6 +521,12 @@ export function command_CommandTypeToJSON(object: Command_CommandType): string {
       return "CREATE_SECRET";
     case Command_CommandType.DELETE_SECRET:
       return "DELETE_SECRET";
+    case Command_CommandType.DESCRIBE_RESOURCE:
+      return "DESCRIBE_RESOURCE";
+    case Command_CommandType.GET_ALL_EVENTS:
+      return "GET_ALL_EVENTS";
+    case Command_CommandType.REDEPLOY_DEPLOYMENT:
+      return "REDEPLOY_DEPLOYMENT";
     case Command_CommandType.UNRECOGNIZED:
     default:
       return "UNRECOGNIZED";

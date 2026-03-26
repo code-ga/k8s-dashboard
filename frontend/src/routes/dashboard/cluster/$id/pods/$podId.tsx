@@ -30,6 +30,14 @@ import RefsEditor, {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
 	api,
@@ -314,7 +322,7 @@ function ManagePodPage() {
 				className="flex-1 flex flex-col overflow-hidden"
 			>
 				<div className="border-b border-border bg-card px-6">
-					<TabsList className="grid w-full grid-cols-7 max-w-3xl h-auto bg-transparent p-0 gap-0">
+					<TabsList className="grid w-full grid-cols-8 max-w-4xl h-auto bg-transparent p-0 gap-0">
 						<TabsTrigger
 							value="overview"
 							className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary"
@@ -344,6 +352,12 @@ function ManagePodPage() {
 							className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary"
 						>
 							Labels
+						</TabsTrigger>
+						<TabsTrigger
+							value="events"
+							className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary"
+						>
+							Events
 						</TabsTrigger>
 						<TabsTrigger
 							value="logs"
@@ -719,6 +733,18 @@ function ManagePodPage() {
 					/>
 				</TabsContent>
 
+				{/* Events Tab */}
+				<TabsContent
+					value="events"
+					className="flex-1 overflow-auto p-6 flex flex-col"
+				>
+					<PodEvents
+						podId={podId}
+						clusterId={clusterId}
+						isActive={activeTab === "events"}
+					/>
+				</TabsContent>
+
 				{/* Terminal Tab */}
 				<TabsContent
 					value="terminal"
@@ -957,5 +983,113 @@ export function PodTerminal({ pod, clusterId, isActive }: PodTerminalProps) {
 			className="h-full w-full rounded-lg overflow-hidden"
 			style={{ minHeight: "300px" }}
 		/>
+	);
+}
+
+interface PodEventsProps {
+	podId: string;
+	clusterId: string;
+	isActive: boolean;
+}
+
+export function PodEvents({ podId, clusterId, isActive }: PodEventsProps) {
+	const { data, isLoading, error } = useQuery({
+		queryKey: ["pod-describe", clusterId, podId],
+		queryFn: async () => {
+			const res = await api.api.pods({ clusterId })({ id: podId }).describe.get();
+			if (res.error) throw res.error;
+			return res.data.data;
+		},
+		enabled: isActive,
+	});
+
+	if (isLoading)
+		return (
+			<div className="flex-1 flex items-center justify-center">
+				<div className="text-sm text-muted-foreground animate-pulse">
+					Fetching events from agent...
+				</div>
+			</div>
+		);
+
+	if (error)
+		return (
+			<div className="flex-1 flex items-center justify-center">
+				<div className="text-sm text-destructive font-semibold">
+					Error: {(error as Error).message}
+				</div>
+			</div>
+		);
+
+	const events = (data?.events || []) as Array<{
+		lastSeen: string;
+		type: string;
+		reason: string;
+		message: string;
+		object: string;
+		namespace: string;
+	}>;
+
+	return (
+		<div className="flex-1 overflow-hidden flex flex-col gap-4">
+			<div className="flex items-center justify-between">
+				<h3 className="text-sm font-semibold text-foreground italic opacity-70">
+					Recent events for this pod
+				</h3>
+			</div>
+
+			<div className="flex-1 border rounded-lg overflow-auto">
+				<Table>
+					<TableHeader className="bg-muted/50 sticky top-0 z-10">
+						<TableRow>
+							<TableHead className="w-[180px]">Last Seen</TableHead>
+							<TableHead className="w-[100px]">Type</TableHead>
+							<TableHead className="w-[150px]">Reason</TableHead>
+							<TableHead>Message</TableHead>
+						</TableRow>
+					</TableHeader>
+					<TableBody>
+						{events.length === 0 ? (
+							<TableRow>
+								<TableCell
+									colSpan={4}
+									className="text-center h-24 text-muted-foreground italic"
+								>
+									No events found in the last hour
+								</TableCell>
+							</TableRow>
+						) : (
+							events.map((e, i) => (
+								<TableRow
+									key={`${e.lastSeen}-${e.reason}-${i}`}
+									className="hover:bg-muted/30 transition-colors"
+								>
+									<TableCell className="text-[10px] font-mono whitespace-nowrap">
+										{new Date(e.lastSeen).toLocaleString()}
+									</TableCell>
+									<TableCell>
+										<span
+											className={`px-2 py-0.5 rounded-full text-[9px] uppercase font-bold tracking-tight ${
+												e.type === "Normal"
+													? "bg-emerald-100/80 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+													: "bg-amber-100/80 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+											}`}
+										>
+											{e.type}
+										</span>
+									</TableCell>
+									<TableCell className="font-medium text-xs text-foreground/80 lowercase italic">
+										{e.reason}
+									</TableCell>
+									<TableCell className="text-xs text-muted-foreground max-w-md truncate hover:whitespace-normal cursor-help">
+										{e.message}
+									</TableCell>
+								</TableRow>
+							))
+						)}
+					</TableBody>
+				</Table>
+			</div>
+		</div>
 	);
 }
