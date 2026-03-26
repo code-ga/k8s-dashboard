@@ -20,10 +20,16 @@ export const Route = createFileRoute("/dashboard/cluster/$id/events/")({
 });
 
 function ClusterEvents() {
-	const { id: clusterId } = useParams({ from: "/dashboard/cluster/$id/events/" });
+	const { id: clusterId } = useParams({
+		from: "/dashboard/cluster/$id/events/",
+	});
 	const [searchQuery, setSearchQuery] = useState("");
 
-	const { data: events, isLoading, error } = useQuery({
+	const {
+		data: events,
+		isLoading,
+		error,
+	} = useQuery({
 		queryKey: ["cluster-events", clusterId],
 		queryFn: async () => {
 			const res = await api.api.cluster({ id: clusterId }).events.get();
@@ -70,7 +76,9 @@ function ClusterEvents() {
 						</Button>
 					</Link>
 					<div>
-						<h2 className="text-3xl font-bold tracking-tight">Cluster Events</h2>
+						<h2 className="text-3xl font-bold tracking-tight">
+							Cluster Events
+						</h2>
 						<p className="text-muted-foreground">
 							Real-time audit of activities across all namespaces
 						</p>
@@ -111,12 +119,19 @@ function ClusterEvents() {
 											colSpan={6}
 											className="text-center h-24 text-muted-foreground italic"
 										>
-											{searchQuery ? "No events match your search" : "No recent events found"}
+											{searchQuery
+												? "No events match your search"
+												: "No recent events found"}
 										</TableCell>
 									</TableRow>
 								) : (
 									filteredEvents.map((e: any, i: number) => (
-										<TableRow key={i} className="hover:bg-muted/30 transition-colors">
+										// biome-ignore lint/suspicious/noArrayIndexKey: <explanation>
+										<TableRow
+											// biome-ignore lint/suspicious/noArrayIndexKey: <explanation>
+											key={i}
+											className="hover:bg-muted/30 transition-colors"
+										>
 											<TableCell className="text-[10px] font-mono whitespace-nowrap">
 												{new Date(e.lastSeen).toLocaleString()}
 											</TableCell>
@@ -139,7 +154,10 @@ function ClusterEvents() {
 											<TableCell className="font-medium text-xs text-foreground/80 lowercase italic">
 												{e.reason}
 											</TableCell>
-											<TableCell className="text-xs font-mono text-blue-500/80 truncate max-w-[200px]" title={e.object}>
+											<TableCell
+												className="text-xs font-mono text-blue-500/80 truncate max-w-[200px]"
+												title={e.object}
+											>
 												{e.object}
 											</TableCell>
 											<TableCell className="text-xs text-muted-foreground max-w-md truncate hover:whitespace-normal cursor-help">
