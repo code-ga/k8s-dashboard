@@ -12,7 +12,7 @@ COPY frontend/package.json ./frontend/
 # Use Docker Buildx cache mount for Bun's download cache
 # This significantly speeds up subsequent builds
 RUN --mount=type=cache,id=bun,target=/root/.bun/install/cache \
-    bun install --frozen-lockfile
+    bun install
 
 # --- Stage 2: Production Runtime ---
 FROM base AS runner
