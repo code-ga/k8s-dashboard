@@ -868,13 +868,14 @@ type Node struct {
 	CpuCapacity int64                  `protobuf:"varint,4,opt,name=cpu_capacity,json=cpuCapacity,proto3" json:"cpu_capacity,omitempty"`
 	RamCapacity int64                  `protobuf:"varint,5,opt,name=ram_capacity,json=ramCapacity,proto3" json:"ram_capacity,omitempty"`
 	// JSON string or key=value pairs for labels
-	Labels        map[string]string `protobuf:"bytes,6,rep,name=labels,proto3" json:"labels,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	Uid           string            `protobuf:"bytes,7,opt,name=uid,proto3" json:"uid,omitempty"`
-	Status        string            `protobuf:"bytes,8,opt,name=status,proto3" json:"status,omitempty"`
-	Roles         []string          `protobuf:"bytes,9,rep,name=roles,proto3" json:"roles,omitempty"`
-	Annotations   map[string]string `protobuf:"bytes,10,rep,name=annotations,proto3" json:"annotations,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Labels         map[string]string `protobuf:"bytes,6,rep,name=labels,proto3" json:"labels,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Uid            string            `protobuf:"bytes,7,opt,name=uid,proto3" json:"uid,omitempty"`
+	Status         string            `protobuf:"bytes,8,opt,name=status,proto3" json:"status,omitempty"`
+	Roles          []string          `protobuf:"bytes,9,rep,name=roles,proto3" json:"roles,omitempty"`
+	Annotations    map[string]string `protobuf:"bytes,10,rep,name=annotations,proto3" json:"annotations,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	ResourceConfig string            `protobuf:"bytes,11,opt,name=resource_config,json=resourceConfig,proto3" json:"resource_config,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *Node) Reset() {
@@ -977,6 +978,13 @@ func (x *Node) GetAnnotations() map[string]string {
 	return nil
 }
 
+func (x *Node) GetResourceConfig() string {
+	if x != nil {
+		return x.ResourceConfig
+	}
+	return ""
+}
+
 type Deployment struct {
 	state               protoimpl.MessageState `protogen:"open.v1"`
 	Name                string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
@@ -1002,6 +1010,7 @@ type Deployment struct {
 	Ports               []*ContainerPort  `protobuf:"bytes,17,rep,name=ports,proto3" json:"ports,omitempty"`
 	Annotations         map[string]string `protobuf:"bytes,18,rep,name=annotations,proto3" json:"annotations,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	TemplateAnnotations map[string]string `protobuf:"bytes,19,rep,name=template_annotations,json=templateAnnotations,proto3" json:"template_annotations,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	ResourceConfig      string            `protobuf:"bytes,20,opt,name=resource_config,json=resourceConfig,proto3" json:"resource_config,omitempty"`
 	unknownFields       protoimpl.UnknownFields
 	sizeCache           protoimpl.SizeCache
 }
@@ -1169,6 +1178,13 @@ func (x *Deployment) GetTemplateAnnotations() map[string]string {
 	return nil
 }
 
+func (x *Deployment) GetResourceConfig() string {
+	if x != nil {
+		return x.ResourceConfig
+	}
+	return ""
+}
+
 type Pod struct {
 	state     protoimpl.MessageState `protogen:"open.v1"`
 	Name      string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
@@ -1193,11 +1209,12 @@ type Pod struct {
 	CpuUsage int64            `protobuf:"varint,15,opt,name=cpu_usage,json=cpuUsage,proto3" json:"cpu_usage,omitempty"`
 	RamUsage int64            `protobuf:"varint,16,opt,name=ram_usage,json=ramUsage,proto3" json:"ram_usage,omitempty"`
 	// New field for parity
-	Labels        map[string]string `protobuf:"bytes,17,rep,name=labels,proto3" json:"labels,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	Args          string            `protobuf:"bytes,18,opt,name=args,proto3" json:"args,omitempty"`
-	Annotations   map[string]string `protobuf:"bytes,19,rep,name=annotations,proto3" json:"annotations,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Labels         map[string]string `protobuf:"bytes,17,rep,name=labels,proto3" json:"labels,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Args           string            `protobuf:"bytes,18,opt,name=args,proto3" json:"args,omitempty"`
+	Annotations    map[string]string `protobuf:"bytes,19,rep,name=annotations,proto3" json:"annotations,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	ResourceConfig string            `protobuf:"bytes,20,opt,name=resource_config,json=resourceConfig,proto3" json:"resource_config,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *Pod) Reset() {
@@ -1363,6 +1380,13 @@ func (x *Pod) GetAnnotations() map[string]string {
 	return nil
 }
 
+func (x *Pod) GetResourceConfig() string {
+	if x != nil {
+		return x.ResourceConfig
+	}
+	return ""
+}
+
 type ServicePort struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
@@ -1446,14 +1470,15 @@ type Service struct {
 	Type      string                 `protobuf:"bytes,3,opt,name=type,proto3" json:"type,omitempty"` // ClusterIP, NodePort, LoadBalancer
 	ClusterIp string                 `protobuf:"bytes,4,opt,name=cluster_ip,json=clusterIp,proto3" json:"cluster_ip,omitempty"`
 	// Selector labels
-	Selector      map[string]string `protobuf:"bytes,5,rep,name=selector,proto3" json:"selector,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	Domain        string            `protobuf:"bytes,6,opt,name=domain,proto3" json:"domain,omitempty"`
-	Uid           string            `protobuf:"bytes,7,opt,name=uid,proto3" json:"uid,omitempty"`
-	Labels        map[string]string `protobuf:"bytes,8,rep,name=labels,proto3" json:"labels,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	Ports         []*ServicePort    `protobuf:"bytes,9,rep,name=ports,proto3" json:"ports,omitempty"`
-	Annotations   map[string]string `protobuf:"bytes,10,rep,name=annotations,proto3" json:"annotations,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Selector       map[string]string `protobuf:"bytes,5,rep,name=selector,proto3" json:"selector,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Domain         string            `protobuf:"bytes,6,opt,name=domain,proto3" json:"domain,omitempty"`
+	Uid            string            `protobuf:"bytes,7,opt,name=uid,proto3" json:"uid,omitempty"`
+	Labels         map[string]string `protobuf:"bytes,8,rep,name=labels,proto3" json:"labels,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Ports          []*ServicePort    `protobuf:"bytes,9,rep,name=ports,proto3" json:"ports,omitempty"`
+	Annotations    map[string]string `protobuf:"bytes,10,rep,name=annotations,proto3" json:"annotations,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	ResourceConfig string            `protobuf:"bytes,11,opt,name=resource_config,json=resourceConfig,proto3" json:"resource_config,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *Service) Reset() {
@@ -1556,18 +1581,26 @@ func (x *Service) GetAnnotations() map[string]string {
 	return nil
 }
 
+func (x *Service) GetResourceConfig() string {
+	if x != nil {
+		return x.ResourceConfig
+	}
+	return ""
+}
+
 type ConfigMap struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	Namespace     string                 `protobuf:"bytes,2,opt,name=namespace,proto3" json:"namespace,omitempty"`
-	Data          map[string]string      `protobuf:"bytes,3,rep,name=data,proto3" json:"data,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	BinaryData    map[string][]byte      `protobuf:"bytes,4,rep,name=binary_data,json=binaryData,proto3" json:"binary_data,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	Uid           string                 `protobuf:"bytes,5,opt,name=uid,proto3" json:"uid,omitempty"`
-	Labels        map[string]string      `protobuf:"bytes,6,rep,name=labels,proto3" json:"labels,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	Immutable     bool                   `protobuf:"varint,7,opt,name=immutable,proto3" json:"immutable,omitempty"`
-	Annotations   map[string]string      `protobuf:"bytes,8,rep,name=annotations,proto3" json:"annotations,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Name           string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Namespace      string                 `protobuf:"bytes,2,opt,name=namespace,proto3" json:"namespace,omitempty"`
+	Data           map[string]string      `protobuf:"bytes,3,rep,name=data,proto3" json:"data,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	BinaryData     map[string][]byte      `protobuf:"bytes,4,rep,name=binary_data,json=binaryData,proto3" json:"binary_data,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Uid            string                 `protobuf:"bytes,5,opt,name=uid,proto3" json:"uid,omitempty"`
+	Labels         map[string]string      `protobuf:"bytes,6,rep,name=labels,proto3" json:"labels,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Immutable      bool                   `protobuf:"varint,7,opt,name=immutable,proto3" json:"immutable,omitempty"`
+	Annotations    map[string]string      `protobuf:"bytes,8,rep,name=annotations,proto3" json:"annotations,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	ResourceConfig string                 `protobuf:"bytes,9,opt,name=resource_config,json=resourceConfig,proto3" json:"resource_config,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *ConfigMap) Reset() {
@@ -1656,18 +1689,26 @@ func (x *ConfigMap) GetAnnotations() map[string]string {
 	return nil
 }
 
+func (x *ConfigMap) GetResourceConfig() string {
+	if x != nil {
+		return x.ResourceConfig
+	}
+	return ""
+}
+
 type Secret struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	Namespace     string                 `protobuf:"bytes,2,opt,name=namespace,proto3" json:"namespace,omitempty"`
-	Data          map[string][]byte      `protobuf:"bytes,3,rep,name=data,proto3" json:"data,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	Type          string                 `protobuf:"bytes,4,opt,name=type,proto3" json:"type,omitempty"`
-	Uid           string                 `protobuf:"bytes,5,opt,name=uid,proto3" json:"uid,omitempty"`
-	Labels        map[string]string      `protobuf:"bytes,6,rep,name=labels,proto3" json:"labels,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	Immutable     bool                   `protobuf:"varint,7,opt,name=immutable,proto3" json:"immutable,omitempty"`
-	Annotations   map[string]string      `protobuf:"bytes,8,rep,name=annotations,proto3" json:"annotations,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Name           string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Namespace      string                 `protobuf:"bytes,2,opt,name=namespace,proto3" json:"namespace,omitempty"`
+	Data           map[string][]byte      `protobuf:"bytes,3,rep,name=data,proto3" json:"data,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Type           string                 `protobuf:"bytes,4,opt,name=type,proto3" json:"type,omitempty"`
+	Uid            string                 `protobuf:"bytes,5,opt,name=uid,proto3" json:"uid,omitempty"`
+	Labels         map[string]string      `protobuf:"bytes,6,rep,name=labels,proto3" json:"labels,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Immutable      bool                   `protobuf:"varint,7,opt,name=immutable,proto3" json:"immutable,omitempty"`
+	Annotations    map[string]string      `protobuf:"bytes,8,rep,name=annotations,proto3" json:"annotations,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	ResourceConfig string                 `protobuf:"bytes,9,opt,name=resource_config,json=resourceConfig,proto3" json:"resource_config,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *Secret) Reset() {
@@ -1756,6 +1797,13 @@ func (x *Secret) GetAnnotations() map[string]string {
 	return nil
 }
 
+func (x *Secret) GetResourceConfig() string {
+	if x != nil {
+		return x.ResourceConfig
+	}
+	return ""
+}
+
 type Ingress struct {
 	state     protoimpl.MessageState `protogen:"open.v1"`
 	Name      string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
@@ -1773,11 +1821,12 @@ type Ingress struct {
 	// Path prefix (HTTP only)
 	Path string `protobuf:"bytes,8,opt,name=path,proto3" json:"path,omitempty"`
 	// Kubernetes UID of the IngressRoute resource
-	Uid           string            `protobuf:"bytes,9,opt,name=uid,proto3" json:"uid,omitempty"`
-	Labels        map[string]string `protobuf:"bytes,10,rep,name=labels,proto3" json:"labels,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	Annotations   map[string]string `protobuf:"bytes,11,rep,name=annotations,proto3" json:"annotations,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Uid            string            `protobuf:"bytes,9,opt,name=uid,proto3" json:"uid,omitempty"`
+	Labels         map[string]string `protobuf:"bytes,10,rep,name=labels,proto3" json:"labels,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Annotations    map[string]string `protobuf:"bytes,11,rep,name=annotations,proto3" json:"annotations,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	ResourceConfig string            `protobuf:"bytes,12,opt,name=resource_config,json=resourceConfig,proto3" json:"resource_config,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *Ingress) Reset() {
@@ -1887,19 +1936,27 @@ func (x *Ingress) GetAnnotations() map[string]string {
 	return nil
 }
 
+func (x *Ingress) GetResourceConfig() string {
+	if x != nil {
+		return x.ResourceConfig
+	}
+	return ""
+}
+
 type PVC struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	Namespace     string                 `protobuf:"bytes,2,opt,name=namespace,proto3" json:"namespace,omitempty"`
-	Capacity      int64                  `protobuf:"varint,3,opt,name=capacity,proto3" json:"capacity,omitempty"` // in MiB
-	Phase         string                 `protobuf:"bytes,4,opt,name=phase,proto3" json:"phase,omitempty"`
-	StorageClass  string                 `protobuf:"bytes,5,opt,name=storage_class,json=storageClass,proto3" json:"storage_class,omitempty"`
-	VolumeName    string                 `protobuf:"bytes,6,opt,name=volume_name,json=volumeName,proto3" json:"volume_name,omitempty"`
-	Uid           string                 `protobuf:"bytes,7,opt,name=uid,proto3" json:"uid,omitempty"`
-	Labels        map[string]string      `protobuf:"bytes,8,rep,name=labels,proto3" json:"labels,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	Annotations   map[string]string      `protobuf:"bytes,9,rep,name=annotations,proto3" json:"annotations,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Name           string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Namespace      string                 `protobuf:"bytes,2,opt,name=namespace,proto3" json:"namespace,omitempty"`
+	Capacity       int64                  `protobuf:"varint,3,opt,name=capacity,proto3" json:"capacity,omitempty"` // in MiB
+	Phase          string                 `protobuf:"bytes,4,opt,name=phase,proto3" json:"phase,omitempty"`
+	StorageClass   string                 `protobuf:"bytes,5,opt,name=storage_class,json=storageClass,proto3" json:"storage_class,omitempty"`
+	VolumeName     string                 `protobuf:"bytes,6,opt,name=volume_name,json=volumeName,proto3" json:"volume_name,omitempty"`
+	Uid            string                 `protobuf:"bytes,7,opt,name=uid,proto3" json:"uid,omitempty"`
+	Labels         map[string]string      `protobuf:"bytes,8,rep,name=labels,proto3" json:"labels,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Annotations    map[string]string      `protobuf:"bytes,9,rep,name=annotations,proto3" json:"annotations,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	ResourceConfig string                 `protobuf:"bytes,10,opt,name=resource_config,json=resourceConfig,proto3" json:"resource_config,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *PVC) Reset() {
@@ -1993,6 +2050,13 @@ func (x *PVC) GetAnnotations() map[string]string {
 		return x.Annotations
 	}
 	return nil
+}
+
+func (x *PVC) GetResourceConfig() string {
+	if x != nil {
+		return x.ResourceConfig
+	}
+	return ""
 }
 
 type Command struct {
@@ -2208,7 +2272,7 @@ const file_agent_backend_websocket_proto_rawDesc = "" +
 	"\rContainerPort\x12%\n" +
 	"\x0econtainer_port\x18\x01 \x01(\x05R\rcontainerPort\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x1a\n" +
-	"\bprotocol\x18\x03 \x01(\tR\bprotocol\"\xc2\x03\n" +
+	"\bprotocol\x18\x03 \x01(\tR\bprotocol\"\xeb\x03\n" +
 	"\x04Node\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1b\n" +
 	"\tcpu_usage\x18\x02 \x01(\x03R\bcpuUsage\x12\x1b\n" +
@@ -2220,13 +2284,14 @@ const file_agent_backend_websocket_proto_rawDesc = "" +
 	"\x06status\x18\b \x01(\tR\x06status\x12\x14\n" +
 	"\x05roles\x18\t \x03(\tR\x05roles\x12<\n" +
 	"\vannotations\x18\n" +
-	" \x03(\v2\x1a.api.Node.AnnotationsEntryR\vannotations\x1a9\n" +
+	" \x03(\v2\x1a.api.Node.AnnotationsEntryR\vannotations\x12'\n" +
+	"\x0fresource_config\x18\v \x01(\tR\x0eresourceConfig\x1a9\n" +
 	"\vLabelsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1a>\n" +
 	"\x10AnnotationsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x87\b\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xb0\b\n" +
 	"\n" +
 	"Deployment\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1c\n" +
@@ -2249,7 +2314,8 @@ const file_agent_backend_websocket_proto_rawDesc = "" +
 	"\fmemory_limit\x18\x10 \x01(\x03R\vmemoryLimit\x12(\n" +
 	"\x05ports\x18\x11 \x03(\v2\x12.api.ContainerPortR\x05ports\x12B\n" +
 	"\vannotations\x18\x12 \x03(\v2 .api.Deployment.AnnotationsEntryR\vannotations\x12[\n" +
-	"\x14template_annotations\x18\x13 \x03(\v2(.api.Deployment.TemplateAnnotationsEntryR\x13templateAnnotations\x1a9\n" +
+	"\x14template_annotations\x18\x13 \x03(\v2(.api.Deployment.TemplateAnnotationsEntryR\x13templateAnnotations\x12'\n" +
+	"\x0fresource_config\x18\x14 \x01(\tR\x0eresourceConfig\x1a9\n" +
 	"\vLabelsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1a;\n" +
@@ -2261,7 +2327,7 @@ const file_agent_backend_websocket_proto_rawDesc = "" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1aF\n" +
 	"\x18TemplateAnnotationsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xe2\x05\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x8b\x06\n" +
 	"\x03Pod\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1c\n" +
 	"\tnamespace\x18\x02 \x01(\tR\tnamespace\x12\x1b\n" +
@@ -2283,7 +2349,8 @@ const file_agent_backend_websocket_proto_rawDesc = "" +
 	"\tram_usage\x18\x10 \x01(\x03R\bramUsage\x12,\n" +
 	"\x06labels\x18\x11 \x03(\v2\x14.api.Pod.LabelsEntryR\x06labels\x12\x12\n" +
 	"\x04args\x18\x12 \x01(\tR\x04args\x12;\n" +
-	"\vannotations\x18\x13 \x03(\v2\x19.api.Pod.AnnotationsEntryR\vannotations\x1a9\n" +
+	"\vannotations\x18\x13 \x03(\v2\x19.api.Pod.AnnotationsEntryR\vannotations\x12'\n" +
+	"\x0fresource_config\x18\x14 \x01(\tR\x0eresourceConfig\x1a9\n" +
 	"\vLabelsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1a>\n" +
@@ -2296,7 +2363,7 @@ const file_agent_backend_websocket_proto_rawDesc = "" +
 	"\x04port\x18\x03 \x01(\x05R\x04port\x12\x1f\n" +
 	"\vtarget_port\x18\x04 \x01(\x05R\n" +
 	"targetPort\x12\x1b\n" +
-	"\tnode_port\x18\x05 \x01(\x05R\bnodePort\"\xa3\x04\n" +
+	"\tnode_port\x18\x05 \x01(\x05R\bnodePort\"\xcc\x04\n" +
 	"\aService\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1c\n" +
 	"\tnamespace\x18\x02 \x01(\tR\tnamespace\x12\x12\n" +
@@ -2309,7 +2376,8 @@ const file_agent_backend_websocket_proto_rawDesc = "" +
 	"\x06labels\x18\b \x03(\v2\x18.api.Service.LabelsEntryR\x06labels\x12&\n" +
 	"\x05ports\x18\t \x03(\v2\x10.api.ServicePortR\x05ports\x12?\n" +
 	"\vannotations\x18\n" +
-	" \x03(\v2\x1d.api.Service.AnnotationsEntryR\vannotations\x1a;\n" +
+	" \x03(\v2\x1d.api.Service.AnnotationsEntryR\vannotations\x12'\n" +
+	"\x0fresource_config\x18\v \x01(\tR\x0eresourceConfig\x1a;\n" +
 	"\rSelectorEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1a9\n" +
@@ -2318,7 +2386,7 @@ const file_agent_backend_websocket_proto_rawDesc = "" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1a>\n" +
 	"\x10AnnotationsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xc6\x04\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xef\x04\n" +
 	"\tConfigMap\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1c\n" +
 	"\tnamespace\x18\x02 \x01(\tR\tnamespace\x12,\n" +
@@ -2328,7 +2396,8 @@ const file_agent_backend_websocket_proto_rawDesc = "" +
 	"\x03uid\x18\x05 \x01(\tR\x03uid\x122\n" +
 	"\x06labels\x18\x06 \x03(\v2\x1a.api.ConfigMap.LabelsEntryR\x06labels\x12\x1c\n" +
 	"\timmutable\x18\a \x01(\bR\timmutable\x12A\n" +
-	"\vannotations\x18\b \x03(\v2\x1f.api.ConfigMap.AnnotationsEntryR\vannotations\x1a7\n" +
+	"\vannotations\x18\b \x03(\v2\x1f.api.ConfigMap.AnnotationsEntryR\vannotations\x12'\n" +
+	"\x0fresource_config\x18\t \x01(\tR\x0eresourceConfig\x1a7\n" +
 	"\tDataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1a=\n" +
@@ -2340,7 +2409,7 @@ const file_agent_backend_websocket_proto_rawDesc = "" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1a>\n" +
 	"\x10AnnotationsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xce\x03\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xf7\x03\n" +
 	"\x06Secret\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1c\n" +
 	"\tnamespace\x18\x02 \x01(\tR\tnamespace\x12)\n" +
@@ -2349,7 +2418,8 @@ const file_agent_backend_websocket_proto_rawDesc = "" +
 	"\x03uid\x18\x05 \x01(\tR\x03uid\x12/\n" +
 	"\x06labels\x18\x06 \x03(\v2\x17.api.Secret.LabelsEntryR\x06labels\x12\x1c\n" +
 	"\timmutable\x18\a \x01(\bR\timmutable\x12>\n" +
-	"\vannotations\x18\b \x03(\v2\x1c.api.Secret.AnnotationsEntryR\vannotations\x1a7\n" +
+	"\vannotations\x18\b \x03(\v2\x1c.api.Secret.AnnotationsEntryR\vannotations\x12'\n" +
+	"\x0fresource_config\x18\t \x01(\tR\x0eresourceConfig\x1a7\n" +
 	"\tDataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\fR\x05value:\x028\x01\x1a9\n" +
@@ -2358,7 +2428,7 @@ const file_agent_backend_websocket_proto_rawDesc = "" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1a>\n" +
 	"\x10AnnotationsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xdf\x03\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x88\x04\n" +
 	"\aIngress\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1c\n" +
 	"\tnamespace\x18\x02 \x01(\tR\tnamespace\x12\x1a\n" +
@@ -2371,13 +2441,14 @@ const file_agent_backend_websocket_proto_rawDesc = "" +
 	"\x03uid\x18\t \x01(\tR\x03uid\x120\n" +
 	"\x06labels\x18\n" +
 	" \x03(\v2\x18.api.Ingress.LabelsEntryR\x06labels\x12?\n" +
-	"\vannotations\x18\v \x03(\v2\x1d.api.Ingress.AnnotationsEntryR\vannotations\x1a9\n" +
+	"\vannotations\x18\v \x03(\v2\x1d.api.Ingress.AnnotationsEntryR\vannotations\x12'\n" +
+	"\x0fresource_config\x18\f \x01(\tR\x0eresourceConfig\x1a9\n" +
 	"\vLabelsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1a>\n" +
 	"\x10AnnotationsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xa7\x03\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xd0\x03\n" +
 	"\x03PVC\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1c\n" +
 	"\tnamespace\x18\x02 \x01(\tR\tnamespace\x12\x1a\n" +
@@ -2388,7 +2459,9 @@ const file_agent_backend_websocket_proto_rawDesc = "" +
 	"volumeName\x12\x10\n" +
 	"\x03uid\x18\a \x01(\tR\x03uid\x12,\n" +
 	"\x06labels\x18\b \x03(\v2\x14.api.PVC.LabelsEntryR\x06labels\x12;\n" +
-	"\vannotations\x18\t \x03(\v2\x19.api.PVC.AnnotationsEntryR\vannotations\x1a9\n" +
+	"\vannotations\x18\t \x03(\v2\x19.api.PVC.AnnotationsEntryR\vannotations\x12'\n" +
+	"\x0fresource_config\x18\n" +
+	" \x01(\tR\x0eresourceConfig\x1a9\n" +
 	"\vLabelsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1a>\n" +

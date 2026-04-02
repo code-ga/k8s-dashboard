@@ -84,6 +84,7 @@ export const k8sDeployments = pgTable(
 		lastAccessedAt: timestamp("last_accessed_at"),
 		isAutoScaling: boolean("is_auto_scaling").default(false).notNull(),
 		isAlwaysRunning: boolean("is_always_running").default(true).notNull(),
+		resourceConfig: text("resource_config").default("").notNull(),
 
 		autoCreated: boolean("is_auto_created").default(false).notNull(), // create by agent when it detects a deployment not in DB
 	},
@@ -135,6 +136,7 @@ export const k8sPods = pgTable(
 		status: text("status").notNull().default("Unknown"),
 		cpuUsage: integer("cpu_usage").default(0).notNull(),
 		memoryUsage: integer("memory_usage").default(0).notNull(),
+		resourceConfig: text("resource_config").default("").notNull(),
 		autoCreated: boolean("is_auto_created").default(false).notNull(), // created by agent when it detects a pod not in DB
 	},
 	(table) => ({
@@ -180,6 +182,7 @@ export const k8sServices = pgTable(
 			.notNull(),
 		k8sUid: text("k8s_uid"),
 		status: text("status").notNull().default("Unknown"),
+		resourceConfig: text("resource_config").default("").notNull(),
 
 		autoCreated: boolean("is_auto_created").default(false).notNull(), // created by agent when it detects a service not in DB
 	},
@@ -225,6 +228,7 @@ export const k8sIngresses = pgTable(
 		updatedAt: timestamp("updated_at")
 			.$onUpdate(() => /* @__PURE__ */ new Date())
 			.notNull(),
+		resourceConfig: text("resource_config").default("").notNull(),
 
 		autoCreated: boolean("is_auto_created").default(false).notNull(), // created by agent when it detects an ingress not in DB
 	},
@@ -261,6 +265,7 @@ export const k8sConfigMaps = pgTable(
 		updatedAt: timestamp("updated_at")
 			.$onUpdate(() => /* @__PURE__ */ new Date())
 			.notNull(),
+		resourceConfig: text("resource_config").default("").notNull(),
 
 		autoCreated: boolean("is_auto_created").default(false).notNull(), // created by agent when it detects a configmap not in DB
 	},
@@ -296,6 +301,7 @@ export const k8sSecrets = pgTable(
 		updatedAt: timestamp("updated_at")
 			.$onUpdate(() => /* @__PURE__ */ new Date())
 			.notNull(),
+		resourceConfig: text("resource_config").default("").notNull(),
 
 		autoCreated: boolean("is_auto_created").default(false).notNull(), // created by agent when it detects a secret not in DB
 	},
@@ -337,6 +343,7 @@ export const k8sPersistentVolumeClaims = pgTable(
 		updatedAt: timestamp("updated_at")
 			.$onUpdate(() => /* @__PURE__ */ new Date())
 			.notNull(),
+		resourceConfig: text("resource_config").default("").notNull(),
 	},
 	(table) => ({
 		clusterUidIdx: uniqueIndex("pvc_cluster_uid_idx").on(

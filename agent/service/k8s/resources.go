@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"encoding/json"
 	"fmt"
 	"regexp"
 	"strconv"
@@ -233,6 +234,11 @@ func (kc *K8sClient) GetIngressRoutes() ([]*pb.Ingress, error) {
 				}
 			}
 
+			ingressJSON, err := json.Marshal(item)
+			if err != nil {
+				return nil, fmt.Errorf("failed to marshal ingress: %w", err)
+			}
+
 			ingresses = append(ingresses, &pb.Ingress{
 				Name:         name,
 				Namespace:    namespace,
@@ -244,6 +250,7 @@ func (kc *K8sClient) GetIngressRoutes() ([]*pb.Ingress, error) {
 				ServiceName:  serviceName,
 				Domain:       domain,
 				Path:         path,
+				ResourceConfig: string(ingressJSON),
 			})
 		}
 	}

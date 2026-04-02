@@ -137,6 +137,7 @@ export interface Node {
   status: string;
   roles: string[];
   annotations: { [key: string]: string };
+  resourceConfig: string;
 }
 
 export interface Node_LabelsEntry {
@@ -173,6 +174,7 @@ export interface Deployment {
   ports: ContainerPort[];
   annotations: { [key: string]: string };
   templateAnnotations: { [key: string]: string };
+  resourceConfig: string;
 }
 
 export interface Deployment_LabelsEntry {
@@ -221,6 +223,7 @@ export interface Pod {
   labels: { [key: string]: string };
   args: string;
   annotations: { [key: string]: string };
+  resourceConfig: string;
 }
 
 export interface Pod_LabelsEntry {
@@ -255,6 +258,7 @@ export interface Service {
   labels: { [key: string]: string };
   ports: ServicePort[];
   annotations: { [key: string]: string };
+  resourceConfig: string;
 }
 
 export interface Service_SelectorEntry {
@@ -281,6 +285,7 @@ export interface ConfigMap {
   labels: { [key: string]: string };
   immutable: boolean;
   annotations: { [key: string]: string };
+  resourceConfig: string;
 }
 
 export interface ConfigMap_DataEntry {
@@ -312,6 +317,7 @@ export interface Secret {
   labels: { [key: string]: string };
   immutable: boolean;
   annotations: { [key: string]: string };
+  resourceConfig: string;
 }
 
 export interface Secret_DataEntry {
@@ -348,6 +354,7 @@ export interface Ingress {
   uid: string;
   labels: { [key: string]: string };
   annotations: { [key: string]: string };
+  resourceConfig: string;
 }
 
 export interface Ingress_LabelsEntry {
@@ -371,6 +378,7 @@ export interface PVC {
   uid: string;
   labels: { [key: string]: string };
   annotations: { [key: string]: string };
+  resourceConfig: string;
 }
 
 export interface PVC_LabelsEntry {
@@ -1613,6 +1621,7 @@ function createBaseNode(): Node {
     status: "",
     roles: [],
     annotations: {},
+    resourceConfig: "",
   };
 }
 
@@ -1648,6 +1657,9 @@ export const Node: MessageFns<Node> = {
     globalThis.Object.entries(message.annotations).forEach(([key, value]: [string, string]) => {
       Node_AnnotationsEntry.encode({ key: key as any, value }, writer.uint32(82).fork()).join();
     });
+    if (message.resourceConfig !== "") {
+      writer.uint32(90).string(message.resourceConfig);
+    }
     return writer;
   },
 
@@ -1744,6 +1756,14 @@ export const Node: MessageFns<Node> = {
           }
           continue;
         }
+        case 11: {
+          if (tag !== 90) {
+            break;
+          }
+
+          message.resourceConfig = reader.string();
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -1799,6 +1819,11 @@ export const Node: MessageFns<Node> = {
           {},
         )
         : {},
+      resourceConfig: isSet(object.resourceConfig)
+        ? globalThis.String(object.resourceConfig)
+        : isSet(object.resource_config)
+        ? globalThis.String(object.resource_config)
+        : "",
     };
   },
 
@@ -1846,6 +1871,9 @@ export const Node: MessageFns<Node> = {
         });
       }
     }
+    if (message.resourceConfig !== "") {
+      obj.resourceConfig = message.resourceConfig;
+    }
     return obj;
   },
 
@@ -1880,6 +1908,7 @@ export const Node: MessageFns<Node> = {
       },
       {},
     );
+    message.resourceConfig = object.resourceConfig ?? "";
     return message;
   },
 };
@@ -2057,6 +2086,7 @@ function createBaseDeployment(): Deployment {
     ports: [],
     annotations: {},
     templateAnnotations: {},
+    resourceConfig: "",
   };
 }
 
@@ -2119,6 +2149,9 @@ export const Deployment: MessageFns<Deployment> = {
     globalThis.Object.entries(message.templateAnnotations).forEach(([key, value]: [string, string]) => {
       Deployment_TemplateAnnotationsEntry.encode({ key: key as any, value }, writer.uint32(154).fork()).join();
     });
+    if (message.resourceConfig !== "") {
+      writer.uint32(162).string(message.resourceConfig);
+    }
     return writer;
   },
 
@@ -2293,6 +2326,14 @@ export const Deployment: MessageFns<Deployment> = {
           }
           continue;
         }
+        case 20: {
+          if (tag !== 162) {
+            break;
+          }
+
+          message.resourceConfig = reader.string();
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -2397,6 +2438,11 @@ export const Deployment: MessageFns<Deployment> = {
           {},
         )
         : {},
+      resourceConfig: isSet(object.resourceConfig)
+        ? globalThis.String(object.resourceConfig)
+        : isSet(object.resource_config)
+        ? globalThis.String(object.resource_config)
+        : "",
     };
   },
 
@@ -2483,6 +2529,9 @@ export const Deployment: MessageFns<Deployment> = {
         });
       }
     }
+    if (message.resourceConfig !== "") {
+      obj.resourceConfig = message.resourceConfig;
+    }
     return obj;
   },
 
@@ -2540,6 +2589,7 @@ export const Deployment: MessageFns<Deployment> = {
         }
         return acc;
       }, {});
+    message.resourceConfig = object.resourceConfig ?? "";
     return message;
   },
 };
@@ -2873,6 +2923,7 @@ function createBasePod(): Pod {
     labels: {},
     args: "",
     annotations: {},
+    resourceConfig: "",
   };
 }
 
@@ -2935,6 +2986,9 @@ export const Pod: MessageFns<Pod> = {
     globalThis.Object.entries(message.annotations).forEach(([key, value]: [string, string]) => {
       Pod_AnnotationsEntry.encode({ key: key as any, value }, writer.uint32(154).fork()).join();
     });
+    if (message.resourceConfig !== "") {
+      writer.uint32(162).string(message.resourceConfig);
+    }
     return writer;
   },
 
@@ -3103,6 +3157,14 @@ export const Pod: MessageFns<Pod> = {
           }
           continue;
         }
+        case 20: {
+          if (tag !== 162) {
+            break;
+          }
+
+          message.resourceConfig = reader.string();
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -3187,6 +3249,11 @@ export const Pod: MessageFns<Pod> = {
           {},
         )
         : {},
+      resourceConfig: isSet(object.resourceConfig)
+        ? globalThis.String(object.resourceConfig)
+        : isSet(object.resource_config)
+        ? globalThis.String(object.resource_config)
+        : "",
     };
   },
 
@@ -3261,6 +3328,9 @@ export const Pod: MessageFns<Pod> = {
         });
       }
     }
+    if (message.resourceConfig !== "") {
+      obj.resourceConfig = message.resourceConfig;
+    }
     return obj;
   },
 
@@ -3304,6 +3374,7 @@ export const Pod: MessageFns<Pod> = {
       },
       {},
     );
+    message.resourceConfig = object.resourceConfig ?? "";
     return message;
   },
 };
@@ -3604,6 +3675,7 @@ function createBaseService(): Service {
     labels: {},
     ports: [],
     annotations: {},
+    resourceConfig: "",
   };
 }
 
@@ -3639,6 +3711,9 @@ export const Service: MessageFns<Service> = {
     globalThis.Object.entries(message.annotations).forEach(([key, value]: [string, string]) => {
       Service_AnnotationsEntry.encode({ key: key as any, value }, writer.uint32(82).fork()).join();
     });
+    if (message.resourceConfig !== "") {
+      writer.uint32(90).string(message.resourceConfig);
+    }
     return writer;
   },
 
@@ -3738,6 +3813,14 @@ export const Service: MessageFns<Service> = {
           }
           continue;
         }
+        case 11: {
+          if (tag !== 90) {
+            break;
+          }
+
+          message.resourceConfig = reader.string();
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -3789,6 +3872,11 @@ export const Service: MessageFns<Service> = {
           {},
         )
         : {},
+      resourceConfig: isSet(object.resourceConfig)
+        ? globalThis.String(object.resourceConfig)
+        : isSet(object.resource_config)
+        ? globalThis.String(object.resource_config)
+        : "",
     };
   },
 
@@ -3842,6 +3930,9 @@ export const Service: MessageFns<Service> = {
         });
       }
     }
+    if (message.resourceConfig !== "") {
+      obj.resourceConfig = message.resourceConfig;
+    }
     return obj;
   },
 
@@ -3884,6 +3975,7 @@ export const Service: MessageFns<Service> = {
       },
       {},
     );
+    message.resourceConfig = object.resourceConfig ?? "";
     return message;
   },
 };
@@ -4117,7 +4209,17 @@ export const Service_AnnotationsEntry: MessageFns<Service_AnnotationsEntry> = {
 };
 
 function createBaseConfigMap(): ConfigMap {
-  return { name: "", namespace: "", data: {}, binaryData: {}, uid: "", labels: {}, immutable: false, annotations: {} };
+  return {
+    name: "",
+    namespace: "",
+    data: {},
+    binaryData: {},
+    uid: "",
+    labels: {},
+    immutable: false,
+    annotations: {},
+    resourceConfig: "",
+  };
 }
 
 export const ConfigMap: MessageFns<ConfigMap> = {
@@ -4146,6 +4248,9 @@ export const ConfigMap: MessageFns<ConfigMap> = {
     globalThis.Object.entries(message.annotations).forEach(([key, value]: [string, string]) => {
       ConfigMap_AnnotationsEntry.encode({ key: key as any, value }, writer.uint32(66).fork()).join();
     });
+    if (message.resourceConfig !== "") {
+      writer.uint32(74).string(message.resourceConfig);
+    }
     return writer;
   },
 
@@ -4232,6 +4337,14 @@ export const ConfigMap: MessageFns<ConfigMap> = {
           }
           continue;
         }
+        case 9: {
+          if (tag !== 74) {
+            break;
+          }
+
+          message.resourceConfig = reader.string();
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -4291,6 +4404,11 @@ export const ConfigMap: MessageFns<ConfigMap> = {
           {},
         )
         : {},
+      resourceConfig: isSet(object.resourceConfig)
+        ? globalThis.String(object.resourceConfig)
+        : isSet(object.resource_config)
+        ? globalThis.String(object.resource_config)
+        : "",
     };
   },
 
@@ -4344,6 +4462,9 @@ export const ConfigMap: MessageFns<ConfigMap> = {
         });
       }
     }
+    if (message.resourceConfig !== "") {
+      obj.resourceConfig = message.resourceConfig;
+    }
     return obj;
   },
 
@@ -4392,6 +4513,7 @@ export const ConfigMap: MessageFns<ConfigMap> = {
       },
       {},
     );
+    message.resourceConfig = object.resourceConfig ?? "";
     return message;
   },
 };
@@ -4701,7 +4823,17 @@ export const ConfigMap_AnnotationsEntry: MessageFns<ConfigMap_AnnotationsEntry> 
 };
 
 function createBaseSecret(): Secret {
-  return { name: "", namespace: "", data: {}, type: "", uid: "", labels: {}, immutable: false, annotations: {} };
+  return {
+    name: "",
+    namespace: "",
+    data: {},
+    type: "",
+    uid: "",
+    labels: {},
+    immutable: false,
+    annotations: {},
+    resourceConfig: "",
+  };
 }
 
 export const Secret: MessageFns<Secret> = {
@@ -4730,6 +4862,9 @@ export const Secret: MessageFns<Secret> = {
     globalThis.Object.entries(message.annotations).forEach(([key, value]: [string, string]) => {
       Secret_AnnotationsEntry.encode({ key: key as any, value }, writer.uint32(66).fork()).join();
     });
+    if (message.resourceConfig !== "") {
+      writer.uint32(74).string(message.resourceConfig);
+    }
     return writer;
   },
 
@@ -4813,6 +4948,14 @@ export const Secret: MessageFns<Secret> = {
           }
           continue;
         }
+        case 9: {
+          if (tag !== 74) {
+            break;
+          }
+
+          message.resourceConfig = reader.string();
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -4856,6 +4999,11 @@ export const Secret: MessageFns<Secret> = {
           {},
         )
         : {},
+      resourceConfig: isSet(object.resourceConfig)
+        ? globalThis.String(object.resourceConfig)
+        : isSet(object.resource_config)
+        ? globalThis.String(object.resource_config)
+        : "",
     };
   },
 
@@ -4903,6 +5051,9 @@ export const Secret: MessageFns<Secret> = {
         });
       }
     }
+    if (message.resourceConfig !== "") {
+      obj.resourceConfig = message.resourceConfig;
+    }
     return obj;
   },
 
@@ -4943,6 +5094,7 @@ export const Secret: MessageFns<Secret> = {
       },
       {},
     );
+    message.resourceConfig = object.resourceConfig ?? "";
     return message;
   },
 };
@@ -5188,6 +5340,7 @@ function createBaseIngress(): Ingress {
     uid: "",
     labels: {},
     annotations: {},
+    resourceConfig: "",
   };
 }
 
@@ -5226,6 +5379,9 @@ export const Ingress: MessageFns<Ingress> = {
     globalThis.Object.entries(message.annotations).forEach(([key, value]: [string, string]) => {
       Ingress_AnnotationsEntry.encode({ key: key as any, value }, writer.uint32(90).fork()).join();
     });
+    if (message.resourceConfig !== "") {
+      writer.uint32(98).string(message.resourceConfig);
+    }
     return writer;
   },
 
@@ -5330,6 +5486,14 @@ export const Ingress: MessageFns<Ingress> = {
           }
           continue;
         }
+        case 12: {
+          if (tag !== 98) {
+            break;
+          }
+
+          message.resourceConfig = reader.string();
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -5376,6 +5540,11 @@ export const Ingress: MessageFns<Ingress> = {
           {},
         )
         : {},
+      resourceConfig: isSet(object.resourceConfig)
+        ? globalThis.String(object.resourceConfig)
+        : isSet(object.resource_config)
+        ? globalThis.String(object.resource_config)
+        : "",
     };
   },
 
@@ -5426,6 +5595,9 @@ export const Ingress: MessageFns<Ingress> = {
         });
       }
     }
+    if (message.resourceConfig !== "") {
+      obj.resourceConfig = message.resourceConfig;
+    }
     return obj;
   },
 
@@ -5461,6 +5633,7 @@ export const Ingress: MessageFns<Ingress> = {
       },
       {},
     );
+    message.resourceConfig = object.resourceConfig ?? "";
     return message;
   },
 };
@@ -5628,6 +5801,7 @@ function createBasePVC(): PVC {
     uid: "",
     labels: {},
     annotations: {},
+    resourceConfig: "",
   };
 }
 
@@ -5660,6 +5834,9 @@ export const PVC: MessageFns<PVC> = {
     globalThis.Object.entries(message.annotations).forEach(([key, value]: [string, string]) => {
       PVC_AnnotationsEntry.encode({ key: key as any, value }, writer.uint32(74).fork()).join();
     });
+    if (message.resourceConfig !== "") {
+      writer.uint32(82).string(message.resourceConfig);
+    }
     return writer;
   },
 
@@ -5748,6 +5925,14 @@ export const PVC: MessageFns<PVC> = {
           }
           continue;
         }
+        case 10: {
+          if (tag !== 82) {
+            break;
+          }
+
+          message.resourceConfig = reader.string();
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -5792,6 +5977,11 @@ export const PVC: MessageFns<PVC> = {
           {},
         )
         : {},
+      resourceConfig: isSet(object.resourceConfig)
+        ? globalThis.String(object.resourceConfig)
+        : isSet(object.resource_config)
+        ? globalThis.String(object.resource_config)
+        : "",
     };
   },
 
@@ -5836,6 +6026,9 @@ export const PVC: MessageFns<PVC> = {
         });
       }
     }
+    if (message.resourceConfig !== "") {
+      obj.resourceConfig = message.resourceConfig;
+    }
     return obj;
   },
 
@@ -5869,6 +6062,7 @@ export const PVC: MessageFns<PVC> = {
       },
       {},
     );
+    message.resourceConfig = object.resourceConfig ?? "";
     return message;
   },
 };

@@ -81,6 +81,7 @@ export const k8sClusterNode = pgTable(
 			.notNull(),
 		k8sUid: text("k8s_uid"),
 		autoCreated: boolean("auto_created").default(false).notNull(), // whether this node is auto created by agent when it reports a new node name
+		resourceConfig: text("resource_config").default("").notNull(),
 	},
 	(table) => ({
 		clusterUidIdx: uniqueIndex("node_cluster_uid_idx").on(

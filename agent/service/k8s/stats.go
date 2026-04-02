@@ -117,6 +117,11 @@ func (kc *K8sClient) GetFullClusterState() (*pb.Heartbeat, error) {
 			annotations[k] = v
 		}
 
+		nodeJSON, err := json.Marshal(node)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal node: %w", err)
+		}
+
 		pbNodes = append(pbNodes, &pb.Node{
 			Name:        node.Name,
 			CpuCapacity: cpuCap,
@@ -126,6 +131,7 @@ func (kc *K8sClient) GetFullClusterState() (*pb.Heartbeat, error) {
 			Status:      status,
 			Roles:       roles,
 			Annotations:  annotations,
+			ResourceConfig: string(nodeJSON),
 			// CpuUsage: ... (requires metrics server or manual aggregation)
 			// RamUsage: ...
 		})
@@ -256,6 +262,11 @@ func (kc *K8sClient) GetFullClusterState() (*pb.Heartbeat, error) {
 			annotations["k8s-dashboard/deployment-name"] = depName
 		}
 
+		podJSON, err := json.Marshal(pod)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal pod: %w", err)
+		}
+
 		pbPods = append(pbPods, &pb.Pod{
 			Name:          pod.Name,
 			Namespace:     pod.Namespace,
@@ -276,6 +287,7 @@ func (kc *K8sClient) GetFullClusterState() (*pb.Heartbeat, error) {
 			RamUsage:      podMetricsMap[fmt.Sprintf("%s/%s", pod.Namespace, pod.Name)]["memory"],
 			Labels:        pod.Labels,
 			Annotations:   annotations,
+			ResourceConfig: string(podJSON),
 		})
 
 	}
@@ -296,6 +308,11 @@ func (kc *K8sClient) GetFullClusterState() (*pb.Heartbeat, error) {
 				NodePort:   p.NodePort,
 			})
 		}
+
+		serviceJSON, err := json.Marshal(scv)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal service: %w", err)
+		}
 		pbServices = append(pbServices, &pb.Service{
 			Name:      scv.Name,
 			Namespace: scv.Namespace,
@@ -306,6 +323,7 @@ func (kc *K8sClient) GetFullClusterState() (*pb.Heartbeat, error) {
 			Labels:    scv.Labels,
 			Ports:     ports,
 			Annotations: scv.Annotations,
+			ResourceConfig: string(serviceJSON),
 		})
 	}
 
@@ -371,6 +389,11 @@ func (kc *K8sClient) GetFullClusterState() (*pb.Heartbeat, error) {
 			}
 		}
 
+		deploymentJSON, err := json.Marshal(dep)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal deployment: %w", err)
+		}
+
 		pbDeployments = append(pbDeployments, &pb.Deployment{
 			Name:                dep.Name,
 			Namespace:           dep.Namespace,
@@ -391,6 +414,7 @@ func (kc *K8sClient) GetFullClusterState() (*pb.Heartbeat, error) {
 			Ports:               pbPorts,
 			Annotations:         dep.Annotations,
 			TemplateAnnotations: dep.Spec.Template.Annotations,
+			ResourceConfig: string(deploymentJSON),
 		})
 
 	}
@@ -403,6 +427,10 @@ func (kc *K8sClient) GetFullClusterState() (*pb.Heartbeat, error) {
 	var pbConfigMaps []*pb.ConfigMap
 	if cms != nil {
 		for _, cm := range cms.Items {
+			configMapJSON, err := json.Marshal(cm)
+			if err != nil {
+				return nil, fmt.Errorf("failed to marshal config map: %w", err)
+			}
 			pbConfigMaps = append(pbConfigMaps, &pb.ConfigMap{
 				Name:       cm.Name,
 				Namespace:  cm.Namespace,
@@ -412,6 +440,7 @@ func (kc *K8sClient) GetFullClusterState() (*pb.Heartbeat, error) {
 				Labels:     cm.Labels,
 				Immutable:  cm.Immutable != nil && *cm.Immutable,
 				Annotations: cm.Annotations,
+				ResourceConfig: string(configMapJSON),
 			})
 		}
 	}
@@ -424,6 +453,10 @@ func (kc *K8sClient) GetFullClusterState() (*pb.Heartbeat, error) {
 	var pbSecrets []*pb.Secret
 	if secs != nil {
 		for _, sec := range secs.Items {
+			secretJSON, err := json.Marshal(sec)
+			if err != nil {
+				return nil, fmt.Errorf("failed to marshal secret: %w", err)
+			}
 			pbSecrets = append(pbSecrets, &pb.Secret{
 				Name:      sec.Name,
 				Namespace: sec.Namespace,
@@ -433,6 +466,7 @@ func (kc *K8sClient) GetFullClusterState() (*pb.Heartbeat, error) {
 				Labels:    sec.Labels,
 				Immutable: sec.Immutable != nil && *sec.Immutable,
 				Annotations: sec.Annotations,
+				ResourceConfig: string(secretJSON),
 				// Note: We do not include the decoded secret data for security reasons.
 			})
 		}
@@ -466,6 +500,11 @@ func (kc *K8sClient) GetFullClusterState() (*pb.Heartbeat, error) {
 			if pvc.Spec.StorageClassName != nil {
 				storageClass = *pvc.Spec.StorageClassName
 			}
+
+			pvcJSON, err := json.Marshal(pvc)
+			if err != nil {
+				return nil, fmt.Errorf("failed to marshal pvc: %w", err)
+			}
 			
 			pbPvcs = append(pbPvcs, &pb.PVC{
 				Name:         pvc.Name,
@@ -477,6 +516,7 @@ func (kc *K8sClient) GetFullClusterState() (*pb.Heartbeat, error) {
 				Uid:          string(pvc.UID),
 				Labels:       pvc.Labels,
 				Annotations:  pvc.Annotations,
+				ResourceConfig: string(pvcJSON),
 			})
 		}
 	}

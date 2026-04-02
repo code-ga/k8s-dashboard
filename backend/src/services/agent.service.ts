@@ -168,6 +168,7 @@ export class AgentService {
 					roles: node.roles || [],
 					updatedAt: new Date(),
 					annotations: node.annotations || {},
+					resourceConfig: node.resourceConfig || "",
 				};
 
 				const existingRecord = existingNode[0];
@@ -254,6 +255,7 @@ export class AgentService {
 					updatedAt: new Date(),
 					annotations: dep.annotations || {},
 					templateAnnotations: dep.templateAnnotations || {},
+					resourceConfig: dep.resourceConfig || "",
 				};
 
 				const existingRecord = existing[0];
@@ -418,6 +420,7 @@ export class AgentService {
 					memoryUsage: Number(pod.ramUsage),
 					updatedAt: new Date(),
 					annotations: pod.annotations || {},
+					resourceConfig: pod.resourceConfig || "",
 				};
 
 				const existingPod = existingPodResult[0];
@@ -526,6 +529,7 @@ export class AgentService {
 					ports: svc.ports,
 					updatedAt: new Date(),
 					annotations: svc.annotations || {},
+					resourceConfig: svc.resourceConfig || "",
 				};
 
 				const existingRecord = existingSvc[0];
@@ -656,6 +660,7 @@ export class AgentService {
 				k8sUid: cm.uid,
 				updatedAt: new Date(),
 				annotations: cm.annotations || {},
+				resourceConfig: cm.resourceConfig || "",
 			};
 
 			if (existing.length > 0 && existing[0]) {
@@ -732,6 +737,7 @@ export class AgentService {
 				k8sUid: sec.uid,
 				updatedAt: new Date(),
 				annotations: sec.annotations || {},
+				resourceConfig: sec.resourceConfig || "",
 			};
 
 			if (existing.length > 0 && existing[0]) {
@@ -1176,6 +1182,7 @@ export class AgentService {
 				annotations: ing.annotations || {},
 				labels: ing.labels || {},
 				ownerId: null, // No owner for ingresses since they don't have a controller we can link to
+				resourceConfig: ing.resourceConfig || "",
 				// We can consider linking to the service's ownerId in the future if needed
 			};
 
@@ -1261,6 +1268,7 @@ export class AgentService {
 					labels: pvc.labels || {},
 					annotations: pvc.annotations || {},
 					updatedAt: new Date(),
+					resourceConfig: pvc.resourceConfig || "",
 				};
 
 				const existingRecord = existing[0];
