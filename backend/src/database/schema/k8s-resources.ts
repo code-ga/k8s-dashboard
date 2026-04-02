@@ -39,10 +39,7 @@ export const k8sDeployments = pgTable(
 		command: text("command").default("").notNull(),
 		args: text("args").default("").notNull(),
 		envVariables: text("env_variables").default("").notNull(),
-		ports: jsonb("ports")
-			.$type<Array<{ containerPort: number; name?: string; protocol?: string }>>()
-			.default([])
-			.notNull(),
+		ports: jsonb("ports").$type<any>().default([]).notNull(),
 
 		// ConfigMap and Secret references
 		configMapRefs: jsonb("configmap_refs")
@@ -175,17 +172,7 @@ export const k8sServices = pgTable(
 			.default({})
 			.notNull()
 			.$type<Record<string, string>>(), // JSON string
-		ports: jsonb("ports")
-			.$type<
-				Array<{
-					port: number;
-					name?: string;
-					protocol?: string;
-					targetPort?: number | string;
-				}>
-			>()
-			.default([])
-			.notNull(), // Array of ServicePortDTO
+		ports: jsonb("ports").$type<any[]>().default([]).notNull(), // Array of ServicePortDTO
 
 		createdAt: timestamp("created_at").defaultNow().notNull(),
 		updatedAt: timestamp("updated_at")
