@@ -6,6 +6,7 @@ import (
 	"os"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -22,6 +23,7 @@ var (
 
 func (kc *K8sClient) EnsureGatewayInstalled() error {
 	namespace := "platform-system"
+	traefikClaim := "data"
 
 	// 1. Create Namespace
 	_, err := kc.Clientset.CoreV1().Namespaces().Get(kc.Context, namespace, metav1.GetOptions{})
@@ -59,11 +61,21 @@ func (kc *K8sClient) EnsureGatewayInstalled() error {
 	//    running a competing Helm install that will always conflict with k3s.
 	_, k3sErr := kc.DynamicClient.Resource(helmChartGVR).Namespace("kube-system").Get(kc.Context, "traefik", metav1.GetOptions{})
 	if k3sErr == nil {
-		log.Printf("k3s-managed Traefik detected; applying HelmChartConfig in kube-system")
-		return kc.applyK3sTraefikConfig(acmeEmail)
+		log.Printf("k3s-managed Traefik detected; applying HelmChartConfig in kube-system")		// Ensure PVC in kube-system for k3s-managed Traefik
+		err = kc.EnsurePVC("kube-system", traefikClaim)
+		if err != nil {
+			return fmt.Errorf("failed to ensure PVC for k3s: %w", err)
+		}	
+			return kc.applyK3sTraefikConfig(acmeEmail, traefikClaim)
 	}
 
-	// 5. Traefik CRDs & Gateway installation (non-k3s path)
+	// 5. Ensure PVC for Traefik data
+	err = kc.EnsurePVC(namespace, traefikClaim)
+	if err != nil {
+		return fmt.Errorf("failed to ensure PVC: %w", err)
+	}
+
+	// 6. Traefik CRDs & Gateway installation (non-k3s path)
 	// Construct values for Traefik chart.
 	// Note: expose must be an object {default: bool} in Traefik Helm chart v32+.
 	// Note: certResolvers is not a valid top-level schema key in newer chart versions;
@@ -106,11 +118,8 @@ func (kc *K8sClient) EnsureGatewayInstalled() error {
 		// Without persistence, Traefik requests new certificates on every restart,
 		// which can hit Let's Encrypt rate limits.
 		"persistence": map[string]interface{}{
-			"enabled":    true,
-			"name":       "data",
-			"accessMode": "ReadWriteMany",
-			"size":       "128Mi",
-			"path":       "/data",
+			"enabled":       true,
+			"existingClaim": traefikClaim,
 		},
 	}
 
@@ -154,18 +163,15 @@ func (kc *K8sClient) EnsureGatewayInstalled() error {
 // applyK3sTraefikConfig configures the k3s-managed Traefik instance by creating or
 // updating a HelmChartConfig resource in kube-system. k3s reconciles this resource
 // automatically, so our ACME/certResolver settings get applied to the built-in Traefik.
-func (kc *K8sClient) applyK3sTraefikConfig(acmeEmail string) error {
+func (kc *K8sClient) applyK3sTraefikConfig(acmeEmail string,claimName string) error {
 	valuesContent := fmt.Sprintf(`additionalArguments:
   - "--certificatesresolvers.letsencrypt.acme.email=%s"
   - "--certificatesresolvers.letsencrypt.acme.storage=/data/acme.json"
   - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
 persistence:
   enabled: true
-  name: data
-  accessMode: ReadWriteMany
-  size: 128Mi
-  path: /data
-`, acmeEmail)
+  existingClaim: %s
+`, acmeEmail, claimName)
 
 	obj := &unstructured.Unstructured{
 		Object: map[string]interface{}{
@@ -199,7 +205,38 @@ persistence:
 	return nil
 }
 
+func (kc *K8sClient) EnsurePVC(namespace, name string) error {
+	_, err := kc.Clientset.CoreV1().PersistentVolumeClaims(namespace).Get(kc.Context, name, metav1.GetOptions{})
+	if err != nil {
+		// PVC does not exist, create it
+		pvc := &corev1.PersistentVolumeClaim{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: namespace,
+			},
+			Spec: corev1.PersistentVolumeClaimSpec{
+				AccessModes: []corev1.PersistentVolumeAccessMode{
+					corev1.ReadWriteMany,
+				},
+				Resources: corev1.VolumeResourceRequirements{
+					Requests: corev1.ResourceList{
+						corev1.ResourceStorage: resource.MustParse("128Mi"),
+					},
+				},
+			},
+		}
+		_, err = kc.Clientset.CoreV1().PersistentVolumeClaims(namespace).Create(kc.Context, pvc, metav1.CreateOptions{})
+		if err != nil {
+			return fmt.Errorf("failed to create PVC %s in namespace %s: %w", name, namespace, err)
+		}
+		log.Printf("Created PVC %s in namespace %s", name, namespace)
+	} else {
+		log.Printf("PVC %s already exists in namespace %s", name, namespace)
+	}
+	return nil
+}
 func (kc *K8sClient) DetectAndLabelEdgeNodes() error {
+	log.Printf("Labeling edge nodes")
 	nodes, err := kc.GetNodes()
 	if err != nil {
 		return err

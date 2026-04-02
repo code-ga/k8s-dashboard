@@ -71,6 +71,14 @@ func (kc *K8sClient) GetSecrets(namespace string) (*corev1.SecretList, error) {
 	return secrets, nil
 }
 
+func (kc *K8sClient) GetPVCs(namespace string) (*corev1.PersistentVolumeClaimList, error) {
+	pvcs, err := kc.Clientset.CoreV1().PersistentVolumeClaims(namespace).List(kc.Context, metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+	return pvcs, nil
+}
+
 // traefikGVR returns the GroupVersionResource for a Traefik CRD type.
 func traefikGVR(resource string) schema.GroupVersionResource {
 	return schema.GroupVersionResource{Group: "traefik.io", Version: "v1alpha1", Resource: resource}

@@ -119,6 +119,16 @@ export interface SecretDTO {
 	annotations?: Record<string, string>;
 }
 
+export interface PVCDTO {
+	name: string;
+	namespace: string;
+	storageClass?: string;
+	capacity: string; // e.g. "1Gi"
+	accessModes?: string[];
+	labels?: Record<string, string>;
+	annotations?: Record<string, string>;
+}
+
 const cleanResources = (res?: ResourceResources) => {
 	if (!res) return undefined;
 	const requests: Record<string, string | number> = {};
@@ -617,6 +627,29 @@ export const generateSecretManifest = (dto: SecretDTO): string => {
 			annotations: dto.annotations,
 		},
 		data: dto.data || {}, // Already base64 encoded
+	};
+	return YAML.stringify(manifest);
+};
+
+export const generatePVCManifest = (dto: PVCDTO): string => {
+	const manifest = {
+		apiVersion: "v1",
+		kind: "PersistentVolumeClaim",
+		metadata: {
+			name: dto.name,
+			namespace: dto.namespace,
+			labels: dto.labels,
+			annotations: dto.annotations,
+		},
+		spec: {
+			accessModes: dto.accessModes || ["ReadWriteOnce"],
+			storageClassName: dto.storageClass || undefined,
+			resources: {
+				requests: {
+					storage: dto.capacity,
+				},
+			},
+		},
 	};
 	return YAML.stringify(manifest);
 };

@@ -1,16 +1,76 @@
-📂 Project Context: K3s Cloud-Native PaaS DashboardObjective: Build a Cloud-Native Platform Engineering Interface (PaaS) on top of K3s.Constraints: 1-month timeline, ~3 hours coding/day. Local/Low-cost infrastructure.Core Philosophy: "Cloud Run on Bare Metal" — Scale-to-zero, isolation, and developer-friendly (Docker Compose) deployments.🏗 Architecture StackComponentTech StackRoleFrontendReact + TanStack Router + ViteDashboard UI. Integrates monaco-editor (code) and xterm.js (terminal).Control PlaneTypeScript (Node.js)Centralized Backend. Manages users, credits, and cluster orchestration.Cluster AgentGoLangRuns inside each K3s cluster. Connects via WebSocket. Executes K8s CRUD & Auto-provisions infra.OrchestratorK3sLightweight Kubernetes distribution.Ingress/NetTraefikHandles HTTP routing. Middleware for scaling logic.DatabaseCloudNativePGShared Postgres cluster. Agent creates logical DBs per user.Object StoreGarageHQShared S3-compatible store. Agent creates Buckets per user.🧠 Key Technical Decisions & Logic1. "Virtual Cluster" Isolation (No vCluster)Strategy: Native Namespaces + NetworkPolicies.Agent Logic:On project creation -> Create Namespace user-project.Create NetworkPolicy -> Deny all Ingress/Egress except from Traefik and to Shared DB/S3.Create RoleBinding -> Limit user view to this namespace.2. "Cloud Run" Scale-to-ZeroTool: Sablier (Traefik Middleware).Flow:User app scales to 0 replicas.Traefik receives request -> Holds connection.Sablier triggers K8s to scale app to 1.Traefik forwards traffic once Pod is ready.Database Handling: User deployments are converted to Multi-container Pods (App + Sidecar DB) OR the Database is kept "Always On" (CloudNativePG) to prevent cold-start crashes.3. Networking & SSH AccessPublic IP Constraint: Not all nodes have public IPs.Solution: Label nodes (ingress-ready=true). Pin Traefik to these nodes.SSH Access: Single Port (22/2222) strategy.Tool: SSH Piper.Logic: User SSHs as project.service@node-ip. Piper resolves username to internal Pod IP and streams traffic.4. Deployment PipelineInput: User uploads/pastes docker-compose.yml.Parser: Agent uses Kompose library to convert Compose -> K8s Manifests (Deployments/Services).Injection: Agent automatically injects DATABASE_URL and S3_BUCKET env vars into the user's container.5. Infrastructure Auto-ProvisioningThe "Superpower": The Go Agent uses the K3s Helm Controller (HelmChart CRD) to bootstrap the cluster.Logic:Agent starts -> Checks for garage and cnpg.If missing -> Applies kind: HelmChart to kube-system to install them automatically.📅 The "Battle Plan" (4 Weeks)Week 1: The Self-Driving SkeletonAgent: Auto-deploy GarageHQ & CloudNativePG using K3s HelmChart manifests.Connect: Build WebSocket tunnel (Backend <-> Agent).Ops: Implement EnsureBucket() and EnsureDatabase() in Go.Week 2: The Core Flow (Deploy & Scale)Deploy: Implement POST /deploy -> Agent parses docker-compose (Kompose) -> Apply to K8s.Scale: Integrate Sablier middleware into generated Ingress routes.Net: Enforce NetworkPolicies (Isolation).Week 3: Connectivity (SSH & Logs)Logs: Stream kubectl logs via WebSocket to Frontend.SSH: Deploy SSH Piper. Write the username-to-pod resolver script.Week 4: Frontend PolishUI: React Dashboard for Project list.Terminal: Wire up xterm.js to the WebSocket stream.📝 Current Context Snippet: K3s Auto-Deploy LogicUsing K3s HelmChart CRD avoids needing the Helm binary inside the Agent.Example Manifest to be applied by Agent (Go):YAMLapiVersion: helm.cattle.io/v1
-kind: HelmChart
-metadata:
-  name: garage
-  namespace: kube-system
-spec:
-  repo: https://garage-hq.github.io/garage-helm
-  chart: garage
-  targetNamespace: garage-system
-  createNamespace: true
-  valuesContent: |-
-    replication_mode: none
-    db: { engine: sqlite }
-    volumes:
-      data: { hostPath: { path: /var/lib/garage/data, type: DirectoryOrCreate } }
-Next Immediate Task: Write the Go function in the Agent to apply these HelmChart manifests using client-go to bootstrap the infrastructure.
+Project Blueprint: Cloud-Native K3s Platform (MVP)
+1. Project Overview
+A multi-cluster PaaS interface allowing users to deploy applications (via Docker Compose), Virtual Machines, and Game Servers (Minecraft) to K3s clusters. The platform features "Cloud Run" (scale-to-zero) behavior and centralized management.
+
+2. Technology Stack
+Frontend: React, TanStack Router, Vite, Xterm.js (Web Terminal), Monaco Editor.
+
+Control Plane: TypeScript Backend (Centralized Logic).
+
+Edge Agent: GoLang (Runs inside each K3s cluster, communicates via WebSocket).
+
+Cluster Core: K3s (Lightweight Kubernetes).
+
+3. Architecture & Key Decisions
+A. Networking & Ingress
+Ingress Controller: Traefik (Pinned to nodes with Public IPs).
+
+Scale-to-Zero: Sablier.
+
+Mechanism: Traefik Middleware pauses requests -> Sablier scales Deployment to 1 -> Request proceeds.
+
+SSH Access: SSH Piper.
+
+Strategy: Single Public Port (22/2222).
+
+Routing: Routes based on username (e.g., ssh user-project@node.com) to internal Pod IP.
+
+Internal Communication: Native K8s Services within a Namespace (mimics Docker Compose networking).
+
+B. Multi-Tenancy (No vCluster)
+Isolation: Namespace-as-a-Service.
+
+Security: Agent enforces NetworkPolicy (Deny All Ingress/Egress by default, Allow only Traefik & Shared Services).
+
+Storage Strategy:
+
+S3: GarageHQ (Shared Cluster, Agent creates logical Buckets).
+
+Database: CloudNativePG (Shared Cluster, Agent creates logical DBs + Users).
+
+C. The "Self-Driving" Agent
+The Go Agent is responsible for bootstrapping the cluster state using K3s HelmChart CRDs:
+
+Auto-Deploy Infra: On startup, checks for/installs GarageHQ and CloudNativePG.
+
+Deployment Logic: Parses user docker-compose.yml -> Converts to K8s Manifests (using kompose logic) -> Injects ENV vars for Shared DB/S3 -> Applies to Namespace.
+
+4. Implementation Plan (4-Week MVP)
+Week 1: Skeleton & Infra
+
+Build WebSocket Tunnel (Agent <-> Backend).
+
+Implement "Bootstrap" logic: Agent applies HelmChart manifests for Garage & CNPG.
+
+Week 2: Deployment Pipeline
+
+Implement Kompose conversion in Go.
+
+Inject Sidecars/Env Vars for database connections.
+
+Implement Traefik Ingress + Sablier Middleware generation.
+
+Week 3: Interactive Features
+
+Real-time Logs (Stream via WS).
+
+SSH Piper setup & "Piper Script" for pod resolution.
+
+Week 4: Frontend & UI
+
+Dashboard for Projects.
+
+Xterm.js integration.
+
+5. Next Immediate Task
+Write the Go function (ApplyManifest) in the Agent that uses client-go (dynamic client) to apply the HelmChart YAMLs for GarageHQ and CloudNativePG, effectively bootstrapping the cluster infrastructure.

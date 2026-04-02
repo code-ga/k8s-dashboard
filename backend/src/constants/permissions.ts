@@ -101,6 +101,16 @@ export const RESOURCE_DEFINITIONS = {
 			manage: "Manage roles",
 		},
 	},
+	pvc: {
+		description: "Kubernetes PersistentVolumeClaim management",
+		actions: {
+			read: "View PersistentVolumeClaims",
+			create: "Create a PersistentVolumeClaim",
+			update: "Update a PersistentVolumeClaim",
+			delete: "Delete a PersistentVolumeClaim",
+			manage: "Manage PersistentVolumeClaims",
+		},
+	},
 } as const;
 
 export type ResourceKey = keyof typeof RESOURCE_DEFINITIONS;

@@ -69,6 +69,9 @@ message Heartbeat {
   // List of ingresses (IngressRoute / IngressRouteTCP / IngressRouteUDP)
   repeated Ingress ingresses = 9;
 
+  // List of Persistent Volume Claims
+  repeated PVC pvcs = 10;
+
   // Timestamp of the heartbeat
   int64 timestamp = 5;
 }
@@ -234,6 +237,18 @@ message Ingress {
   map<string, string> annotations = 11;
 }
 
+message PVC {
+  string name = 1;
+  string namespace = 2;
+  int64 capacity = 3; // in MiB
+  string phase = 4;
+  string storage_class = 5;
+  string volume_name = 6;
+  string uid = 7;
+  map<string, string> labels = 8;
+  map<string, string> annotations = 9;
+}
+
 message Command {
   string id = 1;
   enum CommandType {
@@ -261,6 +276,10 @@ message Command {
     DESCRIBE_RESOURCE = 21;
     GET_ALL_EVENTS = 22;
     REDEPLOY_DEPLOYMENT = 23;
+    CREATE_PVC = 24;
+    DELETE_PVC = 25;
+    EDIT_PVC = 26;
+    RESIZE_PVC = 27;
   }
   CommandType type = 2;
   

@@ -7,6 +7,7 @@ export type ResourceKey =
 	| "ingress"
 	| "configmap"
 	| "secret"
+	| "pvc"
 	| "user"
 	| "role";
 

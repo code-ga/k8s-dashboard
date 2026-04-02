@@ -122,6 +122,13 @@ export function Sidebar({ role, className }: SidebarProps) {
 			exact: false,
 		},
 		{
+			to: `/dashboard/cluster/${clusterId}/pvcs`,
+			label: "PVCs",
+			icon: Database,
+			permission: "pvc:read" as PermissionFilter,
+			exact: false,
+		},
+		{
 			to: `/dashboard/cluster/${clusterId}/events`,
 			label: "Events",
 			icon: Activity,

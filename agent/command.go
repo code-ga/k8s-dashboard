@@ -124,6 +124,38 @@ func handleCommand(kc *k8s.K8sClient, cmd *pb.Command) (string, error) {
 		} else {
 			err = fmt.Errorf("missing target for REDEPLOY_DEPLOYMENT command")
 		}
+	case pb.Command_CREATE_PVC,
+		pb.Command_EDIT_PVC:
+		if cmd.Payload != "" {
+			log.Printf("[Command] Applying PVC manifest for command ID:%s (Payload size: %d bytes)", cmd.Id, len(cmd.Payload))
+			err = kc.ApplyManifest(cmd.Payload)
+			if err == nil {
+				resultData = "PVC applied successfully"
+			}
+		} else {
+			err = fmt.Errorf("payload empty for PVC CREATE/EDIT command")
+		}
+	case pb.Command_DELETE_PVC:
+		if cmd.TargetNamespace != "" && cmd.TargetName != "" {
+			log.Printf("[Command] Deleting PVC %s/%s", cmd.TargetNamespace, cmd.TargetName)
+			err = kc.DeleteResource(cmd.TargetNamespace, cmd.TargetName, "PersistentVolumeClaim")
+			if err == nil {
+				resultData = "PVC deleted successfully"
+			}
+		} else {
+			err = fmt.Errorf("missing target for DELETE_PVC command")
+		}
+	case pb.Command_RESIZE_PVC:
+		if cmd.TargetNamespace != "" && cmd.TargetName != "" && cmd.Payload != "" {
+			log.Printf("[Command] Resizing PVC %s/%s to %s", cmd.TargetNamespace, cmd.TargetName, cmd.Payload)
+			// For resizing, we usually apply the updated PVC manifest which contains the new storage request size.
+			err = kc.ApplyManifest(cmd.Payload)
+			if err == nil {
+				resultData = fmt.Sprintf("PVC %s/%s resized successfully to %s", cmd.TargetNamespace, cmd.TargetName, cmd.Payload)
+			}
+		} else {
+			err = fmt.Errorf("missing target or payload for RESIZE_PVC command")
+		}
 	default:
 		log.Printf("[Command] Unknown command type: %v (ID:%s)", cmd.Type, cmd.Id)
 		return "", fmt.Errorf("unknown command type: %v", cmd.Type)

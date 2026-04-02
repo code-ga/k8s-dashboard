@@ -21,6 +21,7 @@ import {
 	k8sIngresses,
 	k8sPods,
 	k8sSecrets,
+	k8sPersistentVolumeClaims,
 	profile,
 	schema,
 } from "../database/schema";
@@ -1219,6 +1220,87 @@ export class AgentService {
 		await db.delete(k8sIngresses).where(and(...deleteFilter));
 	}
 
+	private async syncPVCs(
+		clusterId: number,
+		pvcs: Heartbeat["pvcs"],
+	): Promise<void> {
+		try {
+			for (const pvc of pvcs) {
+				let existing = await db
+					.select()
+					.from(k8sPersistentVolumeClaims)
+					.where(
+						and(
+							eq(k8sPersistentVolumeClaims.clusterId, clusterId),
+							eq(k8sPersistentVolumeClaims.k8sUid, pvc.uid),
+						),
+					);
+
+				if (existing.length === 0) {
+					existing = await db
+						.select()
+						.from(k8sPersistentVolumeClaims)
+						.where(
+							and(
+								eq(k8sPersistentVolumeClaims.clusterId, clusterId),
+								eq(k8sPersistentVolumeClaims.name, pvc.name),
+								eq(k8sPersistentVolumeClaims.namespace, pvc.namespace),
+							),
+						);
+				}
+
+				const pvcData: InferInsertModel<typeof k8sPersistentVolumeClaims> = {
+					clusterId,
+					name: pvc.name,
+					namespace: pvc.namespace,
+					capacity: Number(pvc.capacity),
+					phase: pvc.phase,
+					storageClass: pvc.storageClass,
+					volumeName: pvc.volumeName,
+					k8sUid: pvc.uid,
+					labels: pvc.labels || {},
+					annotations: pvc.annotations || {},
+					updatedAt: new Date(),
+				};
+
+				const existingRecord = existing[0];
+				if (existingRecord) {
+					await db
+						.update(k8sPersistentVolumeClaims)
+						.set(pvcData)
+						.where(eq(k8sPersistentVolumeClaims.id, existingRecord.id));
+				} else {
+					const defaultOwner = await this.findDefaultOwner();
+					if (!defaultOwner) throw new Error("Default account not found");
+
+					await db.insert(k8sPersistentVolumeClaims).values({
+						...pvcData,
+						ownerId: defaultOwner.id,
+						autoCreated: true,
+					});
+				}
+			}
+
+			// Cleanup: remove auto-created PVCs no longer present
+			const heartbeatUids = pvcs
+				.map((p) => p.uid)
+				.filter((uid): uid is string => !!uid);
+			const deleteFilter = [
+				eq(k8sPersistentVolumeClaims.clusterId, clusterId),
+				eq(k8sPersistentVolumeClaims.autoCreated, true),
+			];
+			if (heartbeatUids.length > 0) {
+				deleteFilter.push(
+					notInArray(k8sPersistentVolumeClaims.k8sUid, heartbeatUids),
+				);
+			}
+			await db.delete(k8sPersistentVolumeClaims).where(and(...deleteFilter));
+		} catch (error) {
+			logger.error("Failed to sync PVCs", { clusterId, error });
+			throw error;
+		}
+	}
+
 	/** Returns true if a command was sent. */
 	private async validateIngresses(
 		agentId: number,
@@ -1344,6 +1426,7 @@ export class AgentService {
 			await this.syncConfigMaps(cluster.id, heartbeat.configMaps || []);
 			await this.syncSecrets(cluster.id, heartbeat.secrets || []);
 			await this.syncIngresses(cluster.id, heartbeat.ingresses || []);
+			await this.syncPVCs(cluster.id, heartbeat.pvcs || []);
 		});
 
 		// 3. Validate DB state → cluster (one command per heartbeat cycle)

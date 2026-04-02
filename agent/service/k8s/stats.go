@@ -448,6 +448,38 @@ func (kc *K8sClient) GetFullClusterState() (*pb.Heartbeat, error) {
 	if err != nil {
 		fmt.Printf("Warning: Failed to fetch ingress routes: %v\n", err)
 	}
+	
+	// Fetch PVCs
+	pvcs, err := kc.GetPVCs("")
+	if err != nil {
+		fmt.Printf("Warning: Failed to fetch PVCs: %v\n", err)
+	}
+	var pbPvcs []*pb.PVC
+	if pvcs != nil {
+		for _, pvc := range pvcs.Items {
+			var capacity int64
+			if q, ok := pvc.Status.Capacity[corev1.ResourceStorage]; ok {
+				capacity = q.Value() / (1024 * 1024) // in MiB
+			}
+			
+			storageClass := ""
+			if pvc.Spec.StorageClassName != nil {
+				storageClass = *pvc.Spec.StorageClassName
+			}
+			
+			pbPvcs = append(pbPvcs, &pb.PVC{
+				Name:         pvc.Name,
+				Namespace:    pvc.Namespace,
+				Capacity:     capacity,
+				Phase:        string(pvc.Status.Phase),
+				StorageClass: storageClass,
+				VolumeName:   pvc.Spec.VolumeName,
+				Uid:          string(pvc.UID),
+				Labels:       pvc.Labels,
+				Annotations:  pvc.Annotations,
+			})
+		}
+	}
 
 	heartbeat := &pb.Heartbeat{
 		ClusterResource: &pb.ClusterResource{
@@ -464,6 +496,7 @@ func (kc *K8sClient) GetFullClusterState() (*pb.Heartbeat, error) {
 		ConfigMaps:  pbConfigMaps,
 		Secrets:     pbSecrets,
 		Ingresses:   pbIngresses,
+		Pvcs:        pbPvcs,
 		Timestamp:   time.Now().Unix(),
 	}
 

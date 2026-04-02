@@ -95,6 +95,8 @@ export interface Heartbeat {
   secrets: Secret[];
   /** List of ingresses (IngressRoute / IngressRouteTCP / IngressRouteUDP) */
   ingresses: Ingress[];
+  /** List of Persistent Volume Claims */
+  pvcs: PVC[];
   /** Timestamp of the heartbeat */
   timestamp: number;
 }
@@ -358,6 +360,29 @@ export interface Ingress_AnnotationsEntry {
   value: string;
 }
 
+export interface PVC {
+  name: string;
+  namespace: string;
+  /** in MiB */
+  capacity: number;
+  phase: string;
+  storageClass: string;
+  volumeName: string;
+  uid: string;
+  labels: { [key: string]: string };
+  annotations: { [key: string]: string };
+}
+
+export interface PVC_LabelsEntry {
+  key: string;
+  value: string;
+}
+
+export interface PVC_AnnotationsEntry {
+  key: string;
+  value: string;
+}
+
 export interface Command {
   id: string;
   type: Command_CommandType;
@@ -393,6 +418,10 @@ export enum Command_CommandType {
   DESCRIBE_RESOURCE = 21,
   GET_ALL_EVENTS = 22,
   REDEPLOY_DEPLOYMENT = 23,
+  CREATE_PVC = 24,
+  DELETE_PVC = 25,
+  EDIT_PVC = 26,
+  RESIZE_PVC = 27,
   UNRECOGNIZED = -1,
 }
 
@@ -470,6 +499,18 @@ export function command_CommandTypeFromJSON(object: any): Command_CommandType {
     case 23:
     case "REDEPLOY_DEPLOYMENT":
       return Command_CommandType.REDEPLOY_DEPLOYMENT;
+    case 24:
+    case "CREATE_PVC":
+      return Command_CommandType.CREATE_PVC;
+    case 25:
+    case "DELETE_PVC":
+      return Command_CommandType.DELETE_PVC;
+    case 26:
+    case "EDIT_PVC":
+      return Command_CommandType.EDIT_PVC;
+    case 27:
+    case "RESIZE_PVC":
+      return Command_CommandType.RESIZE_PVC;
     case -1:
     case "UNRECOGNIZED":
     default:
@@ -527,6 +568,14 @@ export function command_CommandTypeToJSON(object: Command_CommandType): string {
       return "GET_ALL_EVENTS";
     case Command_CommandType.REDEPLOY_DEPLOYMENT:
       return "REDEPLOY_DEPLOYMENT";
+    case Command_CommandType.CREATE_PVC:
+      return "CREATE_PVC";
+    case Command_CommandType.DELETE_PVC:
+      return "DELETE_PVC";
+    case Command_CommandType.EDIT_PVC:
+      return "EDIT_PVC";
+    case Command_CommandType.RESIZE_PVC:
+      return "RESIZE_PVC";
     case Command_CommandType.UNRECOGNIZED:
     default:
       return "UNRECOGNIZED";
@@ -1035,6 +1084,7 @@ function createBaseHeartbeat(): Heartbeat {
     configMaps: [],
     secrets: [],
     ingresses: [],
+    pvcs: [],
     timestamp: 0,
   };
 }
@@ -1064,6 +1114,9 @@ export const Heartbeat: MessageFns<Heartbeat> = {
     }
     for (const v of message.ingresses) {
       Ingress.encode(v!, writer.uint32(74).fork()).join();
+    }
+    for (const v of message.pvcs) {
+      PVC.encode(v!, writer.uint32(82).fork()).join();
     }
     if (message.timestamp !== 0) {
       writer.uint32(40).int64(message.timestamp);
@@ -1142,6 +1195,14 @@ export const Heartbeat: MessageFns<Heartbeat> = {
           message.ingresses.push(Ingress.decode(reader, reader.uint32()));
           continue;
         }
+        case 10: {
+          if (tag !== 82) {
+            break;
+          }
+
+          message.pvcs.push(PVC.decode(reader, reader.uint32()));
+          continue;
+        }
         case 5: {
           if (tag !== 40) {
             break;
@@ -1181,6 +1242,7 @@ export const Heartbeat: MessageFns<Heartbeat> = {
       ingresses: globalThis.Array.isArray(object?.ingresses)
         ? object.ingresses.map((e: any) => Ingress.fromJSON(e))
         : [],
+      pvcs: globalThis.Array.isArray(object?.pvcs) ? object.pvcs.map((e: any) => PVC.fromJSON(e)) : [],
       timestamp: isSet(object.timestamp) ? globalThis.Number(object.timestamp) : 0,
     };
   },
@@ -1211,6 +1273,9 @@ export const Heartbeat: MessageFns<Heartbeat> = {
     if (message.ingresses?.length) {
       obj.ingresses = message.ingresses.map((e) => Ingress.toJSON(e));
     }
+    if (message.pvcs?.length) {
+      obj.pvcs = message.pvcs.map((e) => PVC.toJSON(e));
+    }
     if (message.timestamp !== 0) {
       obj.timestamp = Math.round(message.timestamp);
     }
@@ -1232,6 +1297,7 @@ export const Heartbeat: MessageFns<Heartbeat> = {
     message.configMaps = object.configMaps?.map((e) => ConfigMap.fromPartial(e)) || [];
     message.secrets = object.secrets?.map((e) => Secret.fromPartial(e)) || [];
     message.ingresses = object.ingresses?.map((e) => Ingress.fromPartial(e)) || [];
+    message.pvcs = object.pvcs?.map((e) => PVC.fromPartial(e)) || [];
     message.timestamp = object.timestamp ?? 0;
     return message;
   },
@@ -5545,6 +5611,414 @@ export const Ingress_AnnotationsEntry: MessageFns<Ingress_AnnotationsEntry> = {
   },
   fromPartial<I extends Exact<DeepPartial<Ingress_AnnotationsEntry>, I>>(object: I): Ingress_AnnotationsEntry {
     const message = createBaseIngress_AnnotationsEntry();
+    message.key = object.key ?? "";
+    message.value = object.value ?? "";
+    return message;
+  },
+};
+
+function createBasePVC(): PVC {
+  return {
+    name: "",
+    namespace: "",
+    capacity: 0,
+    phase: "",
+    storageClass: "",
+    volumeName: "",
+    uid: "",
+    labels: {},
+    annotations: {},
+  };
+}
+
+export const PVC: MessageFns<PVC> = {
+  encode(message: PVC, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.name !== "") {
+      writer.uint32(10).string(message.name);
+    }
+    if (message.namespace !== "") {
+      writer.uint32(18).string(message.namespace);
+    }
+    if (message.capacity !== 0) {
+      writer.uint32(24).int64(message.capacity);
+    }
+    if (message.phase !== "") {
+      writer.uint32(34).string(message.phase);
+    }
+    if (message.storageClass !== "") {
+      writer.uint32(42).string(message.storageClass);
+    }
+    if (message.volumeName !== "") {
+      writer.uint32(50).string(message.volumeName);
+    }
+    if (message.uid !== "") {
+      writer.uint32(58).string(message.uid);
+    }
+    globalThis.Object.entries(message.labels).forEach(([key, value]: [string, string]) => {
+      PVC_LabelsEntry.encode({ key: key as any, value }, writer.uint32(66).fork()).join();
+    });
+    globalThis.Object.entries(message.annotations).forEach(([key, value]: [string, string]) => {
+      PVC_AnnotationsEntry.encode({ key: key as any, value }, writer.uint32(74).fork()).join();
+    });
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): PVC {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBasePVC();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.name = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.namespace = reader.string();
+          continue;
+        }
+        case 3: {
+          if (tag !== 24) {
+            break;
+          }
+
+          message.capacity = longToNumber(reader.int64());
+          continue;
+        }
+        case 4: {
+          if (tag !== 34) {
+            break;
+          }
+
+          message.phase = reader.string();
+          continue;
+        }
+        case 5: {
+          if (tag !== 42) {
+            break;
+          }
+
+          message.storageClass = reader.string();
+          continue;
+        }
+        case 6: {
+          if (tag !== 50) {
+            break;
+          }
+
+          message.volumeName = reader.string();
+          continue;
+        }
+        case 7: {
+          if (tag !== 58) {
+            break;
+          }
+
+          message.uid = reader.string();
+          continue;
+        }
+        case 8: {
+          if (tag !== 66) {
+            break;
+          }
+
+          const entry8 = PVC_LabelsEntry.decode(reader, reader.uint32());
+          if (entry8.value !== undefined) {
+            message.labels[entry8.key] = entry8.value;
+          }
+          continue;
+        }
+        case 9: {
+          if (tag !== 74) {
+            break;
+          }
+
+          const entry9 = PVC_AnnotationsEntry.decode(reader, reader.uint32());
+          if (entry9.value !== undefined) {
+            message.annotations[entry9.key] = entry9.value;
+          }
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): PVC {
+    return {
+      name: isSet(object.name) ? globalThis.String(object.name) : "",
+      namespace: isSet(object.namespace) ? globalThis.String(object.namespace) : "",
+      capacity: isSet(object.capacity) ? globalThis.Number(object.capacity) : 0,
+      phase: isSet(object.phase) ? globalThis.String(object.phase) : "",
+      storageClass: isSet(object.storageClass)
+        ? globalThis.String(object.storageClass)
+        : isSet(object.storage_class)
+        ? globalThis.String(object.storage_class)
+        : "",
+      volumeName: isSet(object.volumeName)
+        ? globalThis.String(object.volumeName)
+        : isSet(object.volume_name)
+        ? globalThis.String(object.volume_name)
+        : "",
+      uid: isSet(object.uid) ? globalThis.String(object.uid) : "",
+      labels: isObject(object.labels)
+        ? (globalThis.Object.entries(object.labels) as [string, any][]).reduce(
+          (acc: { [key: string]: string }, [key, value]: [string, any]) => {
+            acc[key] = globalThis.String(value);
+            return acc;
+          },
+          {},
+        )
+        : {},
+      annotations: isObject(object.annotations)
+        ? (globalThis.Object.entries(object.annotations) as [string, any][]).reduce(
+          (acc: { [key: string]: string }, [key, value]: [string, any]) => {
+            acc[key] = globalThis.String(value);
+            return acc;
+          },
+          {},
+        )
+        : {},
+    };
+  },
+
+  toJSON(message: PVC): unknown {
+    const obj: any = {};
+    if (message.name !== "") {
+      obj.name = message.name;
+    }
+    if (message.namespace !== "") {
+      obj.namespace = message.namespace;
+    }
+    if (message.capacity !== 0) {
+      obj.capacity = Math.round(message.capacity);
+    }
+    if (message.phase !== "") {
+      obj.phase = message.phase;
+    }
+    if (message.storageClass !== "") {
+      obj.storageClass = message.storageClass;
+    }
+    if (message.volumeName !== "") {
+      obj.volumeName = message.volumeName;
+    }
+    if (message.uid !== "") {
+      obj.uid = message.uid;
+    }
+    if (message.labels) {
+      const entries = globalThis.Object.entries(message.labels) as [string, string][];
+      if (entries.length > 0) {
+        obj.labels = {};
+        entries.forEach(([k, v]) => {
+          obj.labels[k] = v;
+        });
+      }
+    }
+    if (message.annotations) {
+      const entries = globalThis.Object.entries(message.annotations) as [string, string][];
+      if (entries.length > 0) {
+        obj.annotations = {};
+        entries.forEach(([k, v]) => {
+          obj.annotations[k] = v;
+        });
+      }
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<PVC>, I>>(base?: I): PVC {
+    return PVC.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<PVC>, I>>(object: I): PVC {
+    const message = createBasePVC();
+    message.name = object.name ?? "";
+    message.namespace = object.namespace ?? "";
+    message.capacity = object.capacity ?? 0;
+    message.phase = object.phase ?? "";
+    message.storageClass = object.storageClass ?? "";
+    message.volumeName = object.volumeName ?? "";
+    message.uid = object.uid ?? "";
+    message.labels = (globalThis.Object.entries(object.labels ?? {}) as [string, string][]).reduce(
+      (acc: { [key: string]: string }, [key, value]: [string, string]) => {
+        if (value !== undefined) {
+          acc[key] = globalThis.String(value);
+        }
+        return acc;
+      },
+      {},
+    );
+    message.annotations = (globalThis.Object.entries(object.annotations ?? {}) as [string, string][]).reduce(
+      (acc: { [key: string]: string }, [key, value]: [string, string]) => {
+        if (value !== undefined) {
+          acc[key] = globalThis.String(value);
+        }
+        return acc;
+      },
+      {},
+    );
+    return message;
+  },
+};
+
+function createBasePVC_LabelsEntry(): PVC_LabelsEntry {
+  return { key: "", value: "" };
+}
+
+export const PVC_LabelsEntry: MessageFns<PVC_LabelsEntry> = {
+  encode(message: PVC_LabelsEntry, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.key !== "") {
+      writer.uint32(10).string(message.key);
+    }
+    if (message.value !== "") {
+      writer.uint32(18).string(message.value);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): PVC_LabelsEntry {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBasePVC_LabelsEntry();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.key = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.value = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): PVC_LabelsEntry {
+    return {
+      key: isSet(object.key) ? globalThis.String(object.key) : "",
+      value: isSet(object.value) ? globalThis.String(object.value) : "",
+    };
+  },
+
+  toJSON(message: PVC_LabelsEntry): unknown {
+    const obj: any = {};
+    if (message.key !== "") {
+      obj.key = message.key;
+    }
+    if (message.value !== "") {
+      obj.value = message.value;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<PVC_LabelsEntry>, I>>(base?: I): PVC_LabelsEntry {
+    return PVC_LabelsEntry.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<PVC_LabelsEntry>, I>>(object: I): PVC_LabelsEntry {
+    const message = createBasePVC_LabelsEntry();
+    message.key = object.key ?? "";
+    message.value = object.value ?? "";
+    return message;
+  },
+};
+
+function createBasePVC_AnnotationsEntry(): PVC_AnnotationsEntry {
+  return { key: "", value: "" };
+}
+
+export const PVC_AnnotationsEntry: MessageFns<PVC_AnnotationsEntry> = {
+  encode(message: PVC_AnnotationsEntry, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.key !== "") {
+      writer.uint32(10).string(message.key);
+    }
+    if (message.value !== "") {
+      writer.uint32(18).string(message.value);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): PVC_AnnotationsEntry {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBasePVC_AnnotationsEntry();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.key = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.value = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): PVC_AnnotationsEntry {
+    return {
+      key: isSet(object.key) ? globalThis.String(object.key) : "",
+      value: isSet(object.value) ? globalThis.String(object.value) : "",
+    };
+  },
+
+  toJSON(message: PVC_AnnotationsEntry): unknown {
+    const obj: any = {};
+    if (message.key !== "") {
+      obj.key = message.key;
+    }
+    if (message.value !== "") {
+      obj.value = message.value;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<PVC_AnnotationsEntry>, I>>(base?: I): PVC_AnnotationsEntry {
+    return PVC_AnnotationsEntry.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<PVC_AnnotationsEntry>, I>>(object: I): PVC_AnnotationsEntry {
+    const message = createBasePVC_AnnotationsEntry();
     message.key = object.key ?? "";
     message.value = object.value ?? "";
     return message;
