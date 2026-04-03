@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -38,28 +39,39 @@ type K8sClient struct {
 }
 
 func NewK8sClient(clusterKey string) (*K8sClient, error) {
+	log.Printf("[K8sClient] Creating new K8sClient for clusterKey: %s", clusterKey)
+
 	// Initialize and return a new K8sClient
 
 	// if client run in cluster, use in-cluster config
 	// else use kubeconfig file
 	var config *rest.Config
 	var err error
+	var configSource string
 
 	// 1. Determine Config (In-Cluster vs Local)
 	if _, exists := os.LookupEnv("KUBERNETES_SERVICE_HOST"); exists {
+		log.Printf("[K8sClient] Using in-cluster config")
 		config, err = rest.InClusterConfig()
+		configSource = "in-cluster"
 	} else {
 		if _, exists := os.LookupEnv("KUBECONFIG"); exists {
+			log.Printf("[K8sClient] Using kubeconfig from KUBECONFIG env: %s", os.Getenv("KUBECONFIG"))
 			config, err = clientcmd.BuildConfigFromFlags("", os.Getenv("KUBECONFIG"))
+			configSource = "KUBECONFIG env"
 		} else {
 			// Check for k3s kubeconfig
 			k3sConfigPath := "/etc/rancher/k3s/k3s.yaml"
 			if _, err := os.Stat(k3sConfigPath); err == nil {
+				log.Printf("[K8sClient] Using k3s kubeconfig: %s", k3sConfigPath)
 				config, err = clientcmd.BuildConfigFromFlags("", k3sConfigPath)
+				configSource = "k3s"
 			} else {
 				homeDir, _ := os.UserHomeDir()
 				kubeconfigPath := filepath.Join(homeDir, ".kube", "config")
+				log.Printf("[K8sClient] Using default kubeconfig: %s", kubeconfigPath)
 				config, err = clientcmd.BuildConfigFromFlags("", kubeconfigPath)
+				configSource = "default"
 			}
 		}
 	}
@@ -68,28 +80,36 @@ func NewK8sClient(clusterKey string) (*K8sClient, error) {
 		return nil, fmt.Errorf("failed to load kubeconfig: %w", err)
 	}
 
+	log.Printf("[K8sClient] Config source: %s", configSource)
+
 	// 2. Initialize Standard Client
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create clientset: %w", err)
 	}
+	log.Printf("[K8sClient] Clientset initialized")
 
 	// 3. Initialize Dynamic Client (Required for HelmChart CRDs)
 	dynClient, err := dynamic.NewForConfig(config)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create dynamic client: %w", err)
 	}
+	log.Printf("[K8sClient] Dynamic client initialized")
 
 	// 4. Initialize Discovery Client (Required for Generic Deletion)
 	discoClient, err := discovery.NewDiscoveryClientForConfig(config)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create discovery client: %w", err)
 	}
+	log.Printf("[K8sClient] Discovery client initialized")
 
 	// 5. Initialize RESTMapper (Required for dynamic GVR resolution)
 	// We need a cached discovery client for the mapper
 	cachedDiscovery := memory.NewMemCacheClient(discoClient)
 	mapper := restmapper.NewDeferredDiscoveryRESTMapper(cachedDiscovery)
+	log.Printf("[K8sClient] RESTMapper initialized")
+
+	log.Printf("[K8sClient] K8sClient created successfully")
 
 	return &K8sClient{
 		Clientset:       clientset,
@@ -103,13 +123,16 @@ func NewK8sClient(clusterKey string) (*K8sClient, error) {
 }
 
 func (kc *K8sClient) GetClientset() *kubernetes.Clientset {
+	log.Printf("[K8sClient] GetClientset called")
 	return kc.Clientset
 }
 
 func (kc *K8sClient) GetRestConfig() (*rest.Config, error) {
+	log.Printf("[K8sClient] GetRestConfig called")
 	// if client run in cluster, use in-cluster config
 	// else use kubeconfig file
 	if _, exists := os.LookupEnv("KUBERNETES_SERVICE_HOST"); exists {
+		log.Printf("[K8sClient] Using in-cluster config")
 		return rest.InClusterConfig()
 	}
 	homeDir, err := os.UserHomeDir()
@@ -117,6 +140,7 @@ func (kc *K8sClient) GetRestConfig() (*rest.Config, error) {
 		return nil, err
 	}
 	kubeconfigPath := filepath.Join(homeDir, ".kube", "config")
+	log.Printf("[K8sClient] Using kubeconfig: %s", kubeconfigPath)
 	return clientcmd.BuildConfigFromFlags("", kubeconfigPath)
 }
 
@@ -126,23 +150,33 @@ func (kc *K8sClient) Close() error {
 }
 
 func (kc *K8sClient) Ping() error {
-	// Implement a simple ping to the Kubernetes API server
+	log.Printf("[K8sClient] Ping called - attempting to reach API server")
 	_, err := kc.Clientset.ServerVersion()
-	return err
+	if err != nil {
+		log.Printf("[K8sClient] Ping failed: %v", err)
+		return err
+	}
+	log.Printf("[K8sClient] Ping succeeded")
+	return nil
 }
 
 func (kc *K8sClient) ClientInfo() (*version.Info, error) {
+	log.Printf("[K8sClient] ClientInfo called - retrieving server version")
 	versionInfo, err := kc.Clientset.ServerVersion()
 	if err != nil {
+		log.Printf("[K8sClient] Failed to get server version: %v", err)
 		return nil, err
 	}
+	log.Printf("[K8sClient] Server version: %s", versionInfo.String())
 	return versionInfo, nil
 }
 
 func (kc *K8sClient) GetClusterDomain() (string, error) {
+	log.Printf("[K8sClient] GetClusterDomain called - retrieving cluster domain")
 	// Attempt to get the cluster domain from the API server
 	corefile, err := kc.Clientset.CoreV1().ConfigMaps("kube-system").Get(kc.Context, "coredns", metav1.GetOptions{})
 	if err != nil {
+		log.Printf("[K8sClient] Failed to get cluster domain: %v", err)
 		return "", err
 	}
 
@@ -157,6 +191,7 @@ func (kc *K8sClient) GetClusterDomain() (string, error) {
 					parts := strings.Fields(line)
 					for i, part := range parts {
 						if part == "kubernetes" && i+1 < len(parts) {
+							log.Printf("[K8sClient] Cluster domain: %s", parts[i+1])
 							return parts[i+1], nil
 						}
 					}
@@ -164,6 +199,7 @@ func (kc *K8sClient) GetClusterDomain() (string, error) {
 			}
 		}
 	}
+	log.Printf("[K8sClient] Using default cluster domain: cluster.local")
 	return "cluster.local", nil // default fallback
 }
 
@@ -177,10 +213,13 @@ type EventInfo struct {
 }
 
 func (kc *K8sClient) GetAllEvents(ctx context.Context) (string, error) {
+	log.Printf("[K8sClient] GetAllEvents called")
 	events, err := kc.Clientset.CoreV1().Events("").List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return "", fmt.Errorf("failed to list all events: %w", err)
 	}
+
+	log.Printf("[K8sClient] Retrieved %d events", len(events.Items))
 
 	resultEvents := make([]EventInfo, 0)
 	for _, e := range events.Items {
@@ -211,6 +250,7 @@ func (kc *K8sClient) GetAllEvents(ctx context.Context) (string, error) {
 }
 
 func (kc *K8sClient) DescribeResource(namespace, name, kind string) (string, error) {
+	log.Printf("[K8sClient] DescribeResource called for namespace=%s, name=%s, kind=%s", namespace, name, kind)
 	// 1. Fetch Events
 	fieldSelector := fmt.Sprintf("involvedObject.name=%s,involvedObject.kind=%s", name, kind)
 	events, err := kc.Clientset.CoreV1().Events(namespace).List(kc.Context, metav1.ListOptions{
@@ -272,8 +312,10 @@ func (kc *K8sClient) DescribeResource(namespace, name, kind string) (string, err
 
 // RedeployDeployment triggers a rolling restart of a deployment by updating its pod template annotations.
 func (kc *K8sClient) RedeployDeployment(ctx context.Context, namespace, name string) error {
+	log.Printf("[K8sClient] RedeployDeployment called for namespace=%s, name=%s", namespace, name)
 	deployment, err := kc.Clientset.AppsV1().Deployments(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
+		log.Printf("[K8sClient] Failed to get deployment: %v", err)
 		return err
 	}
 
@@ -283,6 +325,12 @@ func (kc *K8sClient) RedeployDeployment(ctx context.Context, namespace, name str
 
 	deployment.Spec.Template.Annotations["kubectl.kubernetes.io/restartedAt"] = time.Now().Format(time.RFC3339)
 
+	log.Printf("[K8sClient] Updating deployment with restart annotation")
 	_, err = kc.Clientset.AppsV1().Deployments(namespace).Update(ctx, deployment, metav1.UpdateOptions{})
-	return err
+	if err != nil {
+		log.Printf("[K8sClient] Failed to update deployment: %v", err)
+		return err
+	}
+	log.Printf("[K8sClient] Deployment redeployed successfully")
+	return nil
 }
