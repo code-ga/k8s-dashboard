@@ -38,6 +38,8 @@ func handleCommand(kc *k8s.K8sClient, cmd *pb.Command) (string, error) {
 			replicas, convErr := strconv.Atoi(cmd.Payload)
 			if convErr != nil {
 				err = fmt.Errorf("invalid replicas payload: %v", convErr)
+			} else if replicas < 0 || replicas > 1000 {
+				err = fmt.Errorf("replicas must be between 0 and 1000")
 			} else {
 				err = kc.ScaleDeployment(cmd.TargetNamespace, cmd.TargetName, int32(replicas))
 				if err == nil {

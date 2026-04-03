@@ -103,10 +103,18 @@ function ManageSecretPage() {
 				}
 			});
 
-			const res = await api.api.secrets({ clusterId })({ id: secretId }).put({
-				data: Object.keys(data).length > 0 ? (data as Record<string, string | null>) : undefined,
-				labels: Object.keys(labelData).length > 0 ? (labelData as Record<string, string | null>) : undefined,
-			});
+			const res = await api.api
+				.secrets({ clusterId })({ id: secretId })
+				.put({
+					data:
+						Object.keys(data).length > 0
+							? (data as Record<string, string | null>)
+							: undefined,
+					labels:
+						Object.keys(labelData).length > 0
+							? (labelData as Record<string, string | null>)
+							: undefined,
+				});
 			if (res.error) {
 				throw new Error(getEdenErrorMessage(res.error));
 			}
@@ -350,13 +358,16 @@ function ManageSecretPage() {
 						</div>
 						<div className="space-y-4">
 							{isEditing ? (
-								<EnvEditor variables={editDataVars} onChange={setEditDataVars} />
+								<EnvEditor
+									variables={editDataVars}
+									onChange={setEditDataVars}
+								/>
 							) : dataVars.length > 0 ? (
 								dataVars.map((v: EnvVar) => (
 									<SecretValueRow
 										key={v.name}
 										name={v.name}
-										value={v.value}
+										value={v.value ?? ""}
 										revealed={revealAll}
 									/>
 								))

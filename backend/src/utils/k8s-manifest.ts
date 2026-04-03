@@ -37,19 +37,36 @@ export interface SecretRef {
 	}>;
 }
 
+export interface PvcVolumeMount {
+	name: string;
+	pvcName: string;
+	mountPath: string;
+	readOnly?: boolean;
+	subPath?: string;
+}
+
+export interface EmptyDirVolumeMount {
+	name: string;
+	mountPath: string;
+	medium?: string; // "" or "Memory"
+	sizeLimit?: string; // e.g. "256Mi"
+}
+
 export interface PodDTO {
 	name: string;
 	namespace: string;
-	image?: string; // This is necessary for the pod creation but updating image is not supported
+	image?: string;
 	command?: string[];
 	args?: string[];
-	env?: Record<string, string>;
+	env?: Array<{ name: string; value?: string; valueFrom?: any }>;
 	ports?: { containerPort: number; name?: string }[];
 	annotations?: Record<string, string>;
 	resources?: ResourceResources;
 	labels?: Record<string, string>;
 	configMapRefs?: ConfigMapRef;
 	secretRefs?: SecretRef;
+	pvcVolumes?: PvcVolumeMount[];
+	emptyDirVolumes?: EmptyDirVolumeMount[];
 }
 
 export interface DeploymentDTO {
@@ -59,13 +76,15 @@ export interface DeploymentDTO {
 	replicas: number;
 	command?: string[];
 	args?: string[];
-	env?: Record<string, string>;
+	env?: Array<{ name: string; value?: string; valueFrom?: any }>;
 	ports?: { containerPort: number; name?: string }[];
 	resources?: ResourceResources;
 	labels?: Record<string, string>;
 	selector?: Record<string, string>;
 	configMapRefs?: ConfigMapRef;
 	secretRefs?: SecretRef;
+	pvcVolumes?: PvcVolumeMount[];
+	emptyDirVolumes?: EmptyDirVolumeMount[];
 	annotations?: Record<string, string>;
 	templateAnnotations?: Record<string, string>;
 }
@@ -191,9 +210,7 @@ export const generatePodManifest = (dto: PodDTO): string => {
 
 	// Regular env vars
 	if (dto.env) {
-		envVars.push(
-			...Object.entries(dto.env).map(([name, value]) => ({ name, value })),
-		);
+		envVars.push(...dto.env);
 	}
 
 	// ConfigMap env refs
@@ -279,6 +296,42 @@ export const generatePodManifest = (dto: PodDTO): string => {
 					secretName: vol.secretName,
 					items: vol.items,
 				},
+			});
+			volumeMounts.push({
+				name: vol.name,
+				mountPath: vol.mountPath,
+			});
+		}
+	}
+
+	// PVC volumes
+	if (dto.pvcVolumes) {
+		for (const vol of dto.pvcVolumes) {
+			volumes.push({
+				name: vol.name,
+				persistentVolumeClaim: {
+					claimName: vol.pvcName,
+					readOnly: vol.readOnly || undefined,
+				},
+			});
+			volumeMounts.push({
+				name: vol.name,
+				mountPath: vol.mountPath,
+				readOnly: vol.readOnly || undefined,
+				subPath: vol.subPath || undefined,
+			});
+		}
+	}
+
+	// EmptyDir volumes
+	if (dto.emptyDirVolumes) {
+		for (const vol of dto.emptyDirVolumes) {
+			const emptyDir: Record<string, string> = {};
+			if (vol.medium) emptyDir.medium = vol.medium;
+			if (vol.sizeLimit) emptyDir.sizeLimit = vol.sizeLimit;
+			volumes.push({
+				name: vol.name,
+				emptyDir: Object.keys(emptyDir).length > 0 ? emptyDir : {},
 			});
 			volumeMounts.push({
 				name: vol.name,
@@ -329,16 +382,15 @@ export const generateDeploymentManifest = (dto: DeploymentDTO): string => {
 	const selector = dto.selector || { app: dto.name };
 
 	// Build environment variables
-	const envVars: (
-		| { name: string; value: string }
-		| { name: string; valueFrom: any }
-	)[] = [];
+	const envVars: {
+		name: string;
+		value?: string | undefined;
+		valueFrom?: any;
+	}[] = [];
 
 	// Regular env vars
 	if (dto.env) {
-		envVars.push(
-			...Object.entries(dto.env).map(([name, value]) => ({ name, value })),
-		);
+		envVars.push(...dto.env);
 	}
 
 	// ConfigMap env refs
@@ -424,6 +476,42 @@ export const generateDeploymentManifest = (dto: DeploymentDTO): string => {
 					secretName: vol.secretName,
 					items: vol.items,
 				},
+			});
+			volumeMounts.push({
+				name: vol.name,
+				mountPath: vol.mountPath,
+			});
+		}
+	}
+
+	// PVC volumes
+	if (dto.pvcVolumes) {
+		for (const vol of dto.pvcVolumes) {
+			volumes.push({
+				name: vol.name,
+				persistentVolumeClaim: {
+					claimName: vol.pvcName,
+					readOnly: vol.readOnly || undefined,
+				},
+			});
+			volumeMounts.push({
+				name: vol.name,
+				mountPath: vol.mountPath,
+				readOnly: vol.readOnly || undefined,
+				subPath: vol.subPath || undefined,
+			});
+		}
+	}
+
+	// EmptyDir volumes
+	if (dto.emptyDirVolumes) {
+		for (const vol of dto.emptyDirVolumes) {
+			const emptyDir: Record<string, string> = {};
+			if (vol.medium) emptyDir.medium = vol.medium;
+			if (vol.sizeLimit) emptyDir.sizeLimit = vol.sizeLimit;
+			volumes.push({
+				name: vol.name,
+				emptyDir: Object.keys(emptyDir).length > 0 ? emptyDir : {},
 			});
 			volumeMounts.push({
 				name: vol.name,

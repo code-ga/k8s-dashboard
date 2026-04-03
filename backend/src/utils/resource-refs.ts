@@ -103,6 +103,27 @@ export type SecretVolumeRef = Static<typeof SecretVolumeRefSchema>;
 // 	items?: SecretVolumeItem[];
 // }
 
+// ==================== PVC Volume Ref Types ====================
+
+export const PvcVolumeRefSchema = Type.Object({
+	name: Type.String(),
+	pvcName: Type.String(),
+	mountPath: Type.String(),
+	readOnly: Type.Optional(Type.Boolean()),
+	subPath: Type.Optional(Type.String()),
+});
+export type PvcVolumeRef = Static<typeof PvcVolumeRefSchema>;
+
+// ==================== EmptyDir Volume Ref Types ====================
+
+export const EmptyDirVolumeRefSchema = Type.Object({
+	name: Type.String(),
+	mountPath: Type.String(),
+	medium: Type.Optional(Type.String()),
+	sizeLimit: Type.Optional(Type.String()),
+});
+export type EmptyDirVolumeRef = Static<typeof EmptyDirVolumeRefSchema>;
+
 export const ResourceRefsSchema = Type.Object({
 	configMapRefs: Type.Optional(
 		Type.Object({
@@ -118,20 +139,10 @@ export const ResourceRefsSchema = Type.Object({
 			volumes: Type.Optional(Type.Array(SecretVolumeRefSchema)),
 		}),
 	),
+	pvcVolumes: Type.Optional(Type.Array(PvcVolumeRefSchema)),
+	emptyDirVolumes: Type.Optional(Type.Array(EmptyDirVolumeRefSchema)),
 });
 export type ResourceRefs = Static<typeof ResourceRefsSchema>;
-// export interface ResourceRefs {
-// 	configMapRefs?: {
-// 		env?: ConfigMapEnvRef[] | undefined;
-// 		envFrom?: ConfigMapEnvFromRef[] | undefined;
-// 		volumes?: ConfigMapVolumeRef[] | undefined;
-// 	};
-// 	secretRefs?: {
-// 		env?: SecretEnvRef[] | undefined;
-// 		envFrom?: SecretEnvFromRef[] | undefined;
-// 		volumes?: SecretVolumeRef[] | undefined;
-// 	};
-// }
 
 // ==================== Pod Port Operations ====================
 
@@ -768,6 +779,172 @@ export async function deleteDeploymentSecretRefs(
 		.where(eq(schema.deploymentSecretVolumeRefs.deploymentId, deploymentId));
 }
 
+// ==================== Pod PVC Volume Ref Operations ====================
+
+export async function insertPodPvcVolumeRefs(
+	refs: PvcVolumeRef[],
+	podId: number,
+): Promise<void> {
+	if (!refs || refs.length === 0) return;
+	const values = refs.map((ref) => ({
+		podId,
+		volumeName: ref.name,
+		pvcName: ref.pvcName,
+		mountPath: ref.mountPath,
+		readOnly: ref.readOnly ?? false,
+		subPath: ref.subPath || null,
+	}));
+	await db.insert(schema.podPvcVolumeRefs).values(values);
+}
+
+export async function fetchPodPvcVolumeRefs(
+	podId: number,
+): Promise<PvcVolumeRef[]> {
+	const results = await db
+		.select()
+		.from(schema.podPvcVolumeRefs)
+		.where(eq(schema.podPvcVolumeRefs.podId, podId));
+	return results.map((row) => ({
+		name: row.volumeName,
+		pvcName: row.pvcName,
+		mountPath: row.mountPath,
+		readOnly: row.readOnly,
+		subPath: row.subPath ?? undefined,
+	}));
+}
+
+export async function deletePodPvcVolumeRefs(podId: number): Promise<void> {
+	await db
+		.delete(schema.podPvcVolumeRefs)
+		.where(eq(schema.podPvcVolumeRefs.podId, podId));
+}
+
+// ==================== Pod EmptyDir Volume Ref Operations ====================
+
+export async function insertPodEmptyDirVolumeRefs(
+	refs: EmptyDirVolumeRef[],
+	podId: number,
+): Promise<void> {
+	if (!refs || refs.length === 0) return;
+	const values = refs.map((ref) => ({
+		podId,
+		volumeName: ref.name,
+		mountPath: ref.mountPath,
+		medium: ref.medium || null,
+		sizeLimit: ref.sizeLimit || null,
+	}));
+	await db.insert(schema.podEmptyDirVolumeRefs).values(values);
+}
+
+export async function fetchPodEmptyDirVolumeRefs(
+	podId: number,
+): Promise<EmptyDirVolumeRef[]> {
+	const results = await db
+		.select()
+		.from(schema.podEmptyDirVolumeRefs)
+		.where(eq(schema.podEmptyDirVolumeRefs.podId, podId));
+	return results.map((row) => ({
+		name: row.volumeName,
+		mountPath: row.mountPath,
+		medium: row.medium ?? undefined,
+		sizeLimit: row.sizeLimit ?? undefined,
+	}));
+}
+
+export async function deletePodEmptyDirVolumeRefs(
+	podId: number,
+): Promise<void> {
+	await db
+		.delete(schema.podEmptyDirVolumeRefs)
+		.where(eq(schema.podEmptyDirVolumeRefs.podId, podId));
+}
+
+// ==================== Deployment PVC Volume Ref Operations ====================
+
+export async function insertDeploymentPvcVolumeRefs(
+	refs: PvcVolumeRef[],
+	deploymentId: number,
+): Promise<void> {
+	if (!refs || refs.length === 0) return;
+	const values = refs.map((ref) => ({
+		deploymentId,
+		volumeName: ref.name,
+		pvcName: ref.pvcName,
+		mountPath: ref.mountPath,
+		readOnly: ref.readOnly ?? false,
+		subPath: ref.subPath || null,
+	}));
+	await db.insert(schema.deploymentPvcVolumeRefs).values(values);
+}
+
+export async function fetchDeploymentPvcVolumeRefs(
+	deploymentId: number,
+): Promise<PvcVolumeRef[]> {
+	const results = await db
+		.select()
+		.from(schema.deploymentPvcVolumeRefs)
+		.where(eq(schema.deploymentPvcVolumeRefs.deploymentId, deploymentId));
+	return results.map((row) => ({
+		name: row.volumeName,
+		pvcName: row.pvcName,
+		mountPath: row.mountPath,
+		readOnly: row.readOnly,
+		subPath: row.subPath ?? undefined,
+	}));
+}
+
+export async function deleteDeploymentPvcVolumeRefs(
+	deploymentId: number,
+): Promise<void> {
+	await db
+		.delete(schema.deploymentPvcVolumeRefs)
+		.where(eq(schema.deploymentPvcVolumeRefs.deploymentId, deploymentId));
+}
+
+// ==================== Deployment EmptyDir Volume Ref Operations ====================
+
+export async function insertDeploymentEmptyDirVolumeRefs(
+	refs: EmptyDirVolumeRef[],
+	deploymentId: number,
+): Promise<void> {
+	if (!refs || refs.length === 0) return;
+	const values = refs.map((ref) => ({
+		deploymentId,
+		volumeName: ref.name,
+		mountPath: ref.mountPath,
+		medium: ref.medium || null,
+		sizeLimit: ref.sizeLimit || null,
+	}));
+	await db.insert(schema.deploymentEmptyDirVolumeRefs).values(values);
+}
+
+export async function fetchDeploymentEmptyDirVolumeRefs(
+	deploymentId: number,
+): Promise<EmptyDirVolumeRef[]> {
+	const results = await db
+		.select()
+		.from(schema.deploymentEmptyDirVolumeRefs)
+		.where(
+			eq(schema.deploymentEmptyDirVolumeRefs.deploymentId, deploymentId),
+		);
+	return results.map((row) => ({
+		name: row.volumeName,
+		mountPath: row.mountPath,
+		medium: row.medium ?? undefined,
+		sizeLimit: row.sizeLimit ?? undefined,
+	}));
+}
+
+export async function deleteDeploymentEmptyDirVolumeRefs(
+	deploymentId: number,
+): Promise<void> {
+	await db
+		.delete(schema.deploymentEmptyDirVolumeRefs)
+		.where(
+			eq(schema.deploymentEmptyDirVolumeRefs.deploymentId, deploymentId),
+		);
+}
+
 // ==================== Combined Operations ====================
 
 /**
@@ -789,6 +966,14 @@ export async function insertAllPodResourceRefs(
 
 		if (refs.secretRefs) {
 			await insertPodSecretRefs(refs.secretRefs, podId);
+		}
+
+		if (refs.pvcVolumes && refs.pvcVolumes.length > 0) {
+			await insertPodPvcVolumeRefs(refs.pvcVolumes, podId);
+		}
+
+		if (refs.emptyDirVolumes && refs.emptyDirVolumes.length > 0) {
+			await insertPodEmptyDirVolumeRefs(refs.emptyDirVolumes, podId);
 		}
 	});
 }
@@ -813,6 +998,17 @@ export async function insertAllDeploymentResourceRefs(
 		if (refs.secretRefs) {
 			await insertDeploymentSecretRefs(refs.secretRefs, deploymentId);
 		}
+
+		if (refs.pvcVolumes && refs.pvcVolumes.length > 0) {
+			await insertDeploymentPvcVolumeRefs(refs.pvcVolumes, deploymentId);
+		}
+
+		if (refs.emptyDirVolumes && refs.emptyDirVolumes.length > 0) {
+			await insertDeploymentEmptyDirVolumeRefs(
+				refs.emptyDirVolumes,
+				deploymentId,
+			);
+		}
 	});
 }
 
@@ -822,17 +1018,23 @@ export async function insertAllDeploymentResourceRefs(
 export async function fetchAllPodResourceRefs(
 	podId: number,
 ): Promise<{ ports: PortRef[]; refs: ResourceRefs }> {
-	const [ports, configMapRefs, secretRefs] = await Promise.all([
-		fetchPodPorts(podId),
-		fetchPodConfigMapRefs(podId),
-		fetchPodSecretRefs(podId),
-	]);
+	const [ports, configMapRefs, secretRefs, pvcVolumes, emptyDirVolumes] =
+		await Promise.all([
+			fetchPodPorts(podId),
+			fetchPodConfigMapRefs(podId),
+			fetchPodSecretRefs(podId),
+			fetchPodPvcVolumeRefs(podId),
+			fetchPodEmptyDirVolumeRefs(podId),
+		]);
 
 	return {
 		ports,
 		refs: {
 			configMapRefs,
 			secretRefs,
+			pvcVolumes: pvcVolumes.length > 0 ? pvcVolumes : undefined,
+			emptyDirVolumes:
+				emptyDirVolumes.length > 0 ? emptyDirVolumes : undefined,
 		},
 	};
 }
@@ -843,17 +1045,23 @@ export async function fetchAllPodResourceRefs(
 export async function fetchAllDeploymentResourceRefs(
 	deploymentId: number,
 ): Promise<{ ports: PortRef[]; refs: ResourceRefs }> {
-	const [ports, configMapRefs, secretRefs] = await Promise.all([
-		fetchDeploymentPorts(deploymentId),
-		fetchDeploymentConfigMapRefs(deploymentId),
-		fetchDeploymentSecretRefs(deploymentId),
-	]);
+	const [ports, configMapRefs, secretRefs, pvcVolumes, emptyDirVolumes] =
+		await Promise.all([
+			fetchDeploymentPorts(deploymentId),
+			fetchDeploymentConfigMapRefs(deploymentId),
+			fetchDeploymentSecretRefs(deploymentId),
+			fetchDeploymentPvcVolumeRefs(deploymentId),
+			fetchDeploymentEmptyDirVolumeRefs(deploymentId),
+		]);
 
 	return {
 		ports,
 		refs: {
 			configMapRefs,
 			secretRefs,
+			pvcVolumes: pvcVolumes.length > 0 ? pvcVolumes : undefined,
+			emptyDirVolumes:
+				emptyDirVolumes.length > 0 ? emptyDirVolumes : undefined,
 		},
 	};
 }
@@ -866,6 +1074,8 @@ export async function deleteAllPodResourceRefs(podId: number): Promise<void> {
 		deletePodPorts(podId),
 		deletePodConfigMapRefs(podId),
 		deletePodSecretRefs(podId),
+		deletePodPvcVolumeRefs(podId),
+		deletePodEmptyDirVolumeRefs(podId),
 	]);
 }
 
@@ -879,6 +1089,8 @@ export async function deleteAllDeploymentResourceRefs(
 		deleteDeploymentPorts(deploymentId),
 		deleteDeploymentConfigMapRefs(deploymentId),
 		deleteDeploymentSecretRefs(deploymentId),
+		deleteDeploymentPvcVolumeRefs(deploymentId),
+		deleteDeploymentEmptyDirVolumeRefs(deploymentId),
 	]);
 }
 
@@ -891,10 +1103,8 @@ export async function updateAllPodResourceRefs(
 	refs?: ResourceRefs,
 ): Promise<void> {
 	await db.transaction(async () => {
-		// Delete existing refs
 		await deleteAllPodResourceRefs(podId);
 
-		// Insert new refs
 		if (ports) {
 			await insertPodPorts(ports, podId);
 		}
@@ -903,9 +1113,14 @@ export async function updateAllPodResourceRefs(
 			if (refs.configMapRefs) {
 				await insertPodConfigMapRefs(refs.configMapRefs, podId);
 			}
-
 			if (refs.secretRefs) {
 				await insertPodSecretRefs(refs.secretRefs, podId);
+			}
+			if (refs.pvcVolumes && refs.pvcVolumes.length > 0) {
+				await insertPodPvcVolumeRefs(refs.pvcVolumes, podId);
+			}
+			if (refs.emptyDirVolumes && refs.emptyDirVolumes.length > 0) {
+				await insertPodEmptyDirVolumeRefs(refs.emptyDirVolumes, podId);
 			}
 		}
 	});
@@ -920,10 +1135,8 @@ export async function updateAllDeploymentResourceRefs(
 	refs?: ResourceRefs,
 ): Promise<void> {
 	await db.transaction(async () => {
-		// Delete existing refs
 		await deleteAllDeploymentResourceRefs(deploymentId);
 
-		// Insert new refs
 		if (ports) {
 			await insertDeploymentPorts(ports, deploymentId);
 		}
@@ -932,9 +1145,17 @@ export async function updateAllDeploymentResourceRefs(
 			if (refs.configMapRefs) {
 				await insertDeploymentConfigMapRefs(refs.configMapRefs, deploymentId);
 			}
-
 			if (refs.secretRefs) {
 				await insertDeploymentSecretRefs(refs.secretRefs, deploymentId);
+			}
+			if (refs.pvcVolumes && refs.pvcVolumes.length > 0) {
+				await insertDeploymentPvcVolumeRefs(refs.pvcVolumes, deploymentId);
+			}
+			if (refs.emptyDirVolumes && refs.emptyDirVolumes.length > 0) {
+				await insertDeploymentEmptyDirVolumeRefs(
+					refs.emptyDirVolumes,
+					deploymentId,
+				);
 			}
 		}
 	});
@@ -946,8 +1167,16 @@ export async function updateAllDeploymentResourceRefs(
  * Transform normalized structure to JSONB format (for backwards compatibility)
  */
 export function transformToJsonbFormat(refs: ResourceRefs): {
-	configMapRefs: any;
-	secretRefs: any;
+	configMapRefs: {
+		env: ConfigMapEnvRef[];
+		envFrom: ConfigMapEnvFromRef[];
+		volumes: ConfigMapVolumeRef[];
+	};
+	secretRefs: {
+		env: SecretEnvRef[];
+		envFrom: SecretEnvFromRef[];
+		volumes: SecretVolumeRef[];
+	};
 } {
 	return {
 		configMapRefs: {
@@ -967,8 +1196,16 @@ export function transformToJsonbFormat(refs: ResourceRefs): {
  * Transform JSONB format to normalized structure (for migration)
  */
 export function transformFromJsonbFormat(data: {
-	configMapRefs?: any;
-	secretRefs?: any;
+	configMapRefs?: {
+		env?: ConfigMapEnvRef[];
+		envFrom?: ConfigMapEnvFromRef[];
+		volumes?: ConfigMapVolumeRef[];
+	};
+	secretRefs?: {
+		env?: SecretEnvRef[];
+		envFrom?: SecretEnvFromRef[];
+		volumes?: SecretVolumeRef[];
+	};
 }): ResourceRefs {
 	return {
 		configMapRefs: data.configMapRefs

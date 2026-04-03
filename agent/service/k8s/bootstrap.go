@@ -61,12 +61,12 @@ func (kc *K8sClient) EnsureGatewayInstalled() error {
 	//    running a competing Helm install that will always conflict with k3s.
 	_, k3sErr := kc.DynamicClient.Resource(helmChartGVR).Namespace("kube-system").Get(kc.Context, "traefik", metav1.GetOptions{})
 	if k3sErr == nil {
-		log.Printf("k3s-managed Traefik detected; applying HelmChartConfig in kube-system")		// Ensure PVC in kube-system for k3s-managed Traefik
+		log.Printf("k3s-managed Traefik detected; applying HelmChartConfig in kube-system") // Ensure PVC in kube-system for k3s-managed Traefik
 		err = kc.EnsurePVC("kube-system", traefikClaim)
 		if err != nil {
 			return fmt.Errorf("failed to ensure PVC for k3s: %w", err)
-		}	
-			return kc.applyK3sTraefikConfig(acmeEmail, traefikClaim)
+		}
+		return kc.applyK3sTraefikConfig(acmeEmail, traefikClaim)
 	}
 
 	// 5. Ensure PVC for Traefik data
@@ -163,7 +163,7 @@ func (kc *K8sClient) EnsureGatewayInstalled() error {
 // applyK3sTraefikConfig configures the k3s-managed Traefik instance by creating or
 // updating a HelmChartConfig resource in kube-system. k3s reconciles this resource
 // automatically, so our ACME/certResolver settings get applied to the built-in Traefik.
-func (kc *K8sClient) applyK3sTraefikConfig(acmeEmail string,claimName string) error {
+func (kc *K8sClient) applyK3sTraefikConfig(acmeEmail string, claimName string) error {
 	valuesContent := fmt.Sprintf(`additionalArguments:
   - "--certificatesresolvers.letsencrypt.acme.email=%s"
   - "--certificatesresolvers.letsencrypt.acme.storage=/data/acme.json"
@@ -263,12 +263,14 @@ func (kc *K8sClient) DetectAndLabelEdgeNodes() error {
 		}
 
 		if isEdge {
-			if node.Labels == nil {
-				node.Labels = make(map[string]string)
-			}
 			if node.Labels["role.k8s.io/edge"] != "true" {
-				node.Labels["role.k8s.io/edge"] = "true"
-				_, err := kc.Clientset.CoreV1().Nodes().Update(kc.Context, &node, metav1.UpdateOptions{})
+				// Create a copy to avoid modifying the original node object
+				nodeCopy := node.DeepCopy()
+				if nodeCopy.Labels == nil {
+					nodeCopy.Labels = make(map[string]string)
+				}
+				nodeCopy.Labels["role.k8s.io/edge"] = "true"
+				_, err := kc.Clientset.CoreV1().Nodes().Update(kc.Context, nodeCopy, metav1.UpdateOptions{})
 				if err != nil {
 					log.Printf("Failed to update node %s: %v", node.Name, err)
 				} else {

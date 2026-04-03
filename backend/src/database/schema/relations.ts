@@ -8,7 +8,9 @@ import {
 	deploymentConfigMapEnvRefs,
 	deploymentConfigMapVolumeItems,
 	deploymentConfigMapVolumeRefs,
+	deploymentEmptyDirVolumeRefs,
 	deploymentPorts,
+	deploymentPvcVolumeRefs,
 	deploymentSecretEnvFromRefs,
 	deploymentSecretEnvRefs,
 	deploymentSecretVolumeItems,
@@ -17,7 +19,9 @@ import {
 	podConfigMapEnvRefs,
 	podConfigMapVolumeItems,
 	podConfigMapVolumeRefs,
+	podEmptyDirVolumeRefs,
 	podPorts,
+	podPvcVolumeRefs,
 	podSecretEnvFromRefs,
 	podSecretEnvRefs,
 	podSecretVolumeItems,
@@ -72,6 +76,11 @@ export const schema = {
 	deploymentSecretEnvFromRefs,
 	deploymentSecretVolumeRefs,
 	deploymentSecretVolumeItems,
+	// PVC and EmptyDir volume references
+	podPvcVolumeRefs,
+	deploymentPvcVolumeRefs,
+	podEmptyDirVolumeRefs,
+	deploymentEmptyDirVolumeRefs,
 } as const;
 
 export const schemaRelations = defineRelations(schema, (r) => ({
@@ -121,6 +130,8 @@ export const schemaRelations = defineRelations(schema, (r) => ({
 		secretEnvRefs: r.many.podSecretEnvRefs(),
 		secretEnvFromRefs: r.many.podSecretEnvFromRefs(),
 		secretVolumeRefs: r.many.podSecretVolumeRefs(),
+		pvcVolumeRefs: r.many.podPvcVolumeRefs(),
+		emptyDirVolumeRefs: r.many.podEmptyDirVolumeRefs(),
 	},
 	k8sServices: {
 		node: r.one.k8sClusterNode({
@@ -184,6 +195,8 @@ export const schemaRelations = defineRelations(schema, (r) => ({
 		secretEnvRefs: r.many.deploymentSecretEnvRefs(),
 		secretEnvFromRefs: r.many.deploymentSecretEnvFromRefs(),
 		secretVolumeRefs: r.many.deploymentSecretVolumeRefs(),
+		pvcVolumeRefs: r.many.deploymentPvcVolumeRefs(),
+		emptyDirVolumeRefs: r.many.deploymentEmptyDirVolumeRefs(),
 	},
 	profile: {
 		user: r.one.user({
@@ -368,6 +381,32 @@ export const schemaRelations = defineRelations(schema, (r) => ({
 		volumeRef: r.one.deploymentSecretVolumeRefs({
 			from: r.deploymentSecretVolumeItems.volumeRefId,
 			to: r.deploymentSecretVolumeRefs.id,
+		}),
+	},
+	// PVC Volume References
+	podPvcVolumeRefs: {
+		pod: r.one.k8sPods({
+			from: r.podPvcVolumeRefs.podId,
+			to: r.k8sPods.id,
+		}),
+	},
+	deploymentPvcVolumeRefs: {
+		deployment: r.one.k8sDeployments({
+			from: r.deploymentPvcVolumeRefs.deploymentId,
+			to: r.k8sDeployments.id,
+		}),
+	},
+	// EmptyDir Volume References
+	podEmptyDirVolumeRefs: {
+		pod: r.one.k8sPods({
+			from: r.podEmptyDirVolumeRefs.podId,
+			to: r.k8sPods.id,
+		}),
+	},
+	deploymentEmptyDirVolumeRefs: {
+		deployment: r.one.k8sDeployments({
+			from: r.deploymentEmptyDirVolumeRefs.deploymentId,
+			to: r.k8sDeployments.id,
 		}),
 	},
 }));

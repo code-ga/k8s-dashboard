@@ -9,11 +9,14 @@ import { authenticationMiddleware } from "../middleware/auth";
 import { agentManagerService } from "../services/agentManager";
 import { baseResponseSchema, errorResponseSchema } from "../types";
 import { decrypt, encrypt } from "../utils/crypto";
+import { decryptEnvVars } from "../utils/env-utils";
 import { generateDeploymentManifest } from "../utils/k8s-manifest";
 import { logger } from "../utils/logger";
 import {
+	EmptyDirVolumeRefSchema,
 	fetchAllDeploymentResourceRefs,
 	insertAllDeploymentResourceRefs,
+	PvcVolumeRefSchema,
 	updateAllDeploymentResourceRefs,
 } from "../utils/resource-refs";
 
@@ -63,6 +66,7 @@ export const deploymentRoute = new Elysia({
 				envFrom?: Array<{ secretName: string }>;
 				volumes?: Array<{ secretName: string }>;
 			},
+			pvcVolumes?: Array<{ pvcName: string }>,
 		) => {
 			if (configMapRefs) {
 				const cmNames = new Set<string>();
@@ -126,6 +130,27 @@ export const deploymentRoute = new Elysia({
 						secret.ownerId !== profileId
 					) {
 						throw new Error(`Forbidden: You do not own Secret '${name}'`);
+					}
+				}
+			}
+
+			if (pvcVolumes) {
+				const pvcNames = new Set<string>();
+				for (const r of pvcVolumes) pvcNames.add(r.pvcName);
+
+				for (const name of pvcNames) {
+					const pvc = await db.query.k8sPersistentVolumeClaims.findFirst({
+						where: {
+							clusterId: clusterId,
+							name: name,
+						},
+					});
+					if (!pvc) throw new Error(`PVC '${name}' not found in cluster`);
+					if (
+						!userPermissions.has("storage:manage") &&
+						pvc.ownerId !== profileId
+					) {
+						throw new Error(`Forbidden: You do not own PVC '${name}'`);
 					}
 				}
 			}
@@ -256,6 +281,8 @@ export const deploymentRoute = new Elysia({
 							envFrom: [],
 							volumes: [],
 						},
+						pvcVolumes: refs.pvcVolumes || [],
+						emptyDirVolumes: refs.emptyDirVolumes || [],
 					};
 
 					if (depData.envVariables) {
@@ -287,7 +314,29 @@ export const deploymentRoute = new Elysia({
 					detail: { tags: ["Deployments"] },
 					roleAuth: "deployment:read",
 					response: {
-						200: baseResponseSchema(Type.Object(dbSchemaTypes.k8sDeployments)),
+						200: baseResponseSchema(
+							Type.Object({
+								...dbSchemaTypes.k8sDeployments,
+								ports: Type.Array(
+									Type.Object({
+										containerPort: Type.Number(),
+										name: Type.Optional(Type.String()),
+									}),
+								),
+								configMapRefs: Type.Object({
+									env: Type.Optional(Type.Array(Type.Object({ configMapName: Type.String(), key: Type.String(), name: Type.String() }))),
+									envFrom: Type.Optional(Type.Array(Type.Object({ configMapName: Type.String() }))),
+									volumes: Type.Optional(Type.Array(Type.Object({ configMapName: Type.String(), mountPath: Type.String(), name: Type.String() }))),
+								}),
+								secretRefs: Type.Object({
+									env: Type.Optional(Type.Array(Type.Object({ secretName: Type.String(), key: Type.String(), name: Type.String() }))),
+									envFrom: Type.Optional(Type.Array(Type.Object({ secretName: Type.String() }))),
+									volumes: Type.Optional(Type.Array(Type.Object({ secretName: Type.String(), mountPath: Type.String(), name: Type.String() }))),
+								}),
+								pvcVolumes: Type.Optional(Type.Array(PvcVolumeRefSchema)),
+								emptyDirVolumes: Type.Optional(Type.Array(EmptyDirVolumeRefSchema)),
+							}),
+						),
 						400: errorResponseSchema,
 						403: errorResponseSchema,
 						404: errorResponseSchema,
@@ -497,6 +546,8 @@ export const deploymentRoute = new Elysia({
 							{
 								configMapRefs: body.configMapRefs,
 								secretRefs: body.secretRefs,
+								pvcVolumes: body.pvcVolumes,
+								emptyDirVolumes: body.emptyDirVolumes,
 							},
 						);
 					} catch (dbError) {
@@ -529,6 +580,8 @@ export const deploymentRoute = new Elysia({
 							selector: body.selector,
 							configMapRefs: body.configMapRefs,
 							secretRefs: body.secretRefs,
+							pvcVolumes: body.pvcVolumes,
+							emptyDirVolumes: body.emptyDirVolumes,
 							annotations: body.annotations || undefined,
 							templateAnnotations: body.templateAnnotations || undefined,
 						});
@@ -571,7 +624,15 @@ export const deploymentRoute = new Elysia({
 						replicas: Type.Number({ default: 1 }),
 						command: Type.Optional(Type.Array(Type.String())),
 						args: Type.Optional(Type.Array(Type.String())),
-						env: Type.Optional(Type.Record(Type.String(), Type.String())),
+						env: Type.Optional(
+							Type.Array(
+								Type.Object({
+									name: Type.String(),
+									value: Type.Optional(Type.String()),
+									valueFrom: Type.Optional(Type.Any()),
+								}),
+							),
+						),
 						configMapRefs: Type.Optional(
 							Type.Object({
 								env: Type.Optional(
@@ -645,6 +706,12 @@ export const deploymentRoute = new Elysia({
 									),
 								),
 							}),
+						),
+						pvcVolumes: Type.Optional(
+							Type.Array(PvcVolumeRefSchema),
+						),
+						emptyDirVolumes: Type.Optional(
+							Type.Array(EmptyDirVolumeRefSchema),
 						),
 						ports: Type.Optional(
 							Type.Array(
@@ -759,6 +826,7 @@ export const deploymentRoute = new Elysia({
 								ctx.userPermissions,
 								body.configMapRefs,
 								body.secretRefs,
+								body.pvcVolumes,
 							);
 						} catch (e: unknown) {
 							const message = e instanceof Error ? e.message : String(e);
@@ -866,6 +934,8 @@ export const deploymentRoute = new Elysia({
 								await updateAllDeploymentResourceRefs(depId, body.ports || [], {
 									configMapRefs: body.configMapRefs,
 									secretRefs: body.secretRefs,
+									pvcVolumes: body.pvcVolumes,
+									emptyDirVolumes: body.emptyDirVolumes,
 								});
 							}
 						} catch (dbError) {
@@ -888,11 +958,7 @@ export const deploymentRoute = new Elysia({
 						// Re-calculate payload with correct Env/ConfigMap/Secret preservation
 						let finalEnv = body.env;
 						if (!finalEnv && deployment.envVariables) {
-							try {
-								finalEnv = JSON.parse(decrypt(deployment.envVariables));
-							} catch (e) {
-								logger.error("Decrypt fail", e);
-							}
+							finalEnv = decryptEnvVars(deployment.envVariables, deployment.name);
 						}
 
 						let finalConfigMapRefs = body.configMapRefs;
@@ -927,11 +993,9 @@ export const deploymentRoute = new Elysia({
 								env: finalEnv,
 								configMapRefs: finalConfigMapRefs,
 								secretRefs: finalSecretRefs,
-								labels:
-									body.labels ||
-									(deployment.labels
-										? JSON.parse(deployment.labels)
-										: undefined),
+								pvcVolumes: body.pvcVolumes,
+								emptyDirVolumes: body.emptyDirVolumes,
+								labels: body.labels || (deployment.labels ? JSON.parse(deployment.labels) : undefined),
 								selector:
 									body.selector ||
 									(deployment.selector
@@ -1028,7 +1092,15 @@ export const deploymentRoute = new Elysia({
 								),
 							}),
 						),
-						env: Type.Optional(Type.Record(Type.String(), Type.String())),
+						env: Type.Optional(
+							Type.Array(
+								Type.Object({
+									name: Type.String(),
+									value: Type.Optional(Type.String()),
+									valueFrom: Type.Optional(Type.Any()),
+								}),
+							),
+						),
 						configMapRefs: Type.Optional(
 							Type.Object({
 								env: Type.Optional(
@@ -1102,6 +1174,12 @@ export const deploymentRoute = new Elysia({
 									),
 								),
 							}),
+						),
+						pvcVolumes: Type.Optional(
+							Type.Array(PvcVolumeRefSchema),
+						),
+						emptyDirVolumes: Type.Optional(
+							Type.Array(EmptyDirVolumeRefSchema),
 						),
 						command: Type.Optional(Type.Array(Type.String())),
 						args: Type.Optional(Type.Array(Type.String())),
@@ -1521,14 +1599,10 @@ export const deploymentRoute = new Elysia({
 							throw new Error("Failed to update deployment");
 						}
 
-						let finalEnv: Record<string, string> = {};
-						if (newDeployment.envVariables) {
-							try {
-								finalEnv = JSON.parse(decrypt(newDeployment.envVariables));
-							} catch (e) {
-								logger.error("Decrypt fail", e);
-							}
-						}
+						const finalEnv = decryptEnvVars(
+							newDeployment.envVariables,
+							newDeployment.name,
+						);
 
 						const payload = generateDeploymentManifest({
 							name: newDeployment.name,

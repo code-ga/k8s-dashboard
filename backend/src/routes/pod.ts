@@ -10,14 +10,17 @@ import { Command_CommandType } from "../../pb-generated/agent-backend/websocket"
 import { agentManagerService } from "../services/agentManager";
 import { baseResponseSchema, errorResponseSchema } from "../types";
 import { decrypt, encrypt } from "../utils/crypto";
+import { decryptEnvVars } from "../utils/env-utils";
 import { generatePodManifest } from "../utils/k8s-manifest";
 import {
 	ConfigMapEnvFromRefSchema,
 	ConfigMapEnvRefSchema,
 	ConfigMapVolumeRefSchema,
+	EmptyDirVolumeRefSchema,
 	fetchAllPodResourceRefs,
 	insertAllPodResourceRefs,
 	PortRefSchema,
+	PvcVolumeRefSchema,
 	SecretEnvFromRefSchema,
 	SecretEnvRefSchema,
 	SecretVolumeRefSchema,
@@ -65,7 +68,8 @@ export const podRoute = new Elysia({
 			env?: Array<{ secretName: string }>;
 			envFrom?: Array<{ secretName: string }>;
 			volumes?: Array<{ secretName: string }>;
-		}
+		},
+		pvcVolumes?: Array<{ pvcName: string }>
 	) => {
 		if (configMapRefs) {
 			const cmNames = new Set<string>();
@@ -115,6 +119,24 @@ export const podRoute = new Elysia({
 				if (!secret) throw new Error(`Secret '${name}' not found in cluster`);
 				if (!userPermissions.has("secret:manage") && secret.ownerId !== profileId) {
 					throw new Error(`Forbidden: You do not own Secret '${name}'`);
+				}
+			}
+		}
+
+		if (pvcVolumes) {
+			const pvcNames = new Set<string>();
+			for (const r of pvcVolumes) pvcNames.add(r.pvcName);
+
+			for (const name of pvcNames) {
+				const pvc = await db.query.k8sPersistentVolumeClaims.findFirst({
+					where: {
+						clusterId: clusterId,
+						name: name
+					}
+				});
+				if (!pvc) throw new Error(`PVC '${name}' not found in cluster`);
+				if (!userPermissions.has("storage:manage") && pvc.ownerId !== profileId) {
+					throw new Error(`Forbidden: You do not own PVC '${name}'`);
 				}
 			}
 		}
@@ -312,6 +334,8 @@ export const podRoute = new Elysia({
 							envFrom: [],
 							volumes: [],
 						},
+						pvcVolumes: refs.pvcVolumes || [],
+						emptyDirVolumes: refs.emptyDirVolumes || [],
 					};
 
 					if (podData.envVariables) {
@@ -355,6 +379,8 @@ export const podRoute = new Elysia({
 									envFrom: Type.Optional(Type.Array(SecretEnvFromRefSchema)),
 									volumes: Type.Optional(Type.Array(SecretVolumeRefSchema)),
 								}),
+								pvcVolumes: Type.Optional(Type.Array(PvcVolumeRefSchema)),
+								emptyDirVolumes: Type.Optional(Type.Array(EmptyDirVolumeRefSchema)),
 							}),
 						),
 						404: errorResponseSchema,
@@ -476,10 +502,11 @@ export const podRoute = new Elysia({
 					try {
 						await ctx.validateResourceRefs(
 							clusterId,
-							ctx.profile?.id ?? "NONE",
+							ctx.profile?.id ?? "",
 							ctx.userPermissions,
 							body.configMapRefs,
-							body.secretRefs
+							body.secretRefs,
+							body.pvcVolumes,
 						);
 					} catch (e: unknown) {
 						const message = e instanceof Error ? e.message : String(e);
@@ -547,6 +574,8 @@ export const podRoute = new Elysia({
 						await insertAllPodResourceRefs(newPod.id, body.ports || [], {
 							configMapRefs: body.configMapRefs,
 							secretRefs: body.secretRefs,
+							pvcVolumes: body.pvcVolumes,
+							emptyDirVolumes: body.emptyDirVolumes,
 						});
 					} catch (dbError) {
 						logger.error("DB Insert Failed:", dbError);
@@ -576,6 +605,8 @@ export const podRoute = new Elysia({
 							labels: body.labels,
 							configMapRefs: body.configMapRefs,
 							secretRefs: body.secretRefs,
+							pvcVolumes: body.pvcVolumes,
+							emptyDirVolumes: body.emptyDirVolumes,
 						});
 
 						const response = await ctx.agentManager.sendCommand(
@@ -615,7 +646,15 @@ export const podRoute = new Elysia({
 						image: Type.String(),
 						command: Type.Optional(Type.Array(Type.String())),
 						args: Type.Optional(Type.Array(Type.String())),
-						env: Type.Optional(Type.Record(Type.String(), Type.String())),
+						env: Type.Optional(
+							Type.Array(
+								Type.Object({
+									name: Type.String(),
+									value: Type.Optional(Type.String()),
+									valueFrom: Type.Optional(Type.Any()),
+								}),
+							),
+						),
 						ports: Type.Optional(
 							Type.Array(
 								Type.Object({
@@ -716,6 +755,12 @@ export const podRoute = new Elysia({
 									),
 								),
 							}),
+						),
+						pvcVolumes: Type.Optional(
+							Type.Array(PvcVolumeRefSchema),
+						),
+						emptyDirVolumes: Type.Optional(
+							Type.Array(EmptyDirVolumeRefSchema),
 						),
 						annotations: Type.Optional(
 							Type.Record(Type.String(), Type.String()),
@@ -884,14 +929,15 @@ export const podRoute = new Elysia({
 					}
 
 					// Validate ConfigMap/Secret ownership if refs are updated
-					if (body.configMapRefs || body.secretRefs) {
+					if (body.configMapRefs || body.secretRefs || body.pvcVolumes) {
 						try {
 							await ctx.validateResourceRefs(
 								clusterId,
 								ctx.profile?.id ?? "",
 								ctx.userPermissions,
 								body.configMapRefs,
-								body.secretRefs
+								body.secretRefs,
+								body.pvcVolumes,
 							);
 						} catch (e: unknown) {
 							const message = e instanceof Error ? e.message : String(e);
@@ -932,19 +978,23 @@ export const podRoute = new Elysia({
 					if (body.annotations) updateData.annotations = body.annotations;
 
 					try {
-						await db
-							.update(schema.k8sPods)
-							.set(updateData)
-							.where(eq(schema.k8sPods.id, podId))
-							.returning();
+						await db.transaction(async (tx) => {
+							const [p] = await tx
+								.update(schema.k8sPods)
+								.set(updateData)
+								.where(eq(schema.k8sPods.id, podId))
+								.returning();
 
-						// Update resource refs in normalized tables if provided
-						if (body.ports || body.configMapRefs || body.secretRefs) {
+							// Update resource refs in normalized tables
 							await updateAllPodResourceRefs(podId, body.ports || [], {
 								configMapRefs: body.configMapRefs,
 								secretRefs: body.secretRefs,
+								pvcVolumes: body.pvcVolumes,
+								emptyDirVolumes: body.emptyDirVolumes,
 							});
-						}
+
+							return p;
+						});
 					} catch (dbError) {
 						logger.error("DB Update Failed:", dbError);
 						const message =
@@ -956,14 +1006,9 @@ export const podRoute = new Elysia({
 						});
 					}
 
-					// Merge env for manifest
 					let finalEnv = body.env;
 					if (!finalEnv && pod.envVariables) {
-						try {
-							finalEnv = JSON.parse(decrypt(pod.envVariables));
-						} catch (e) {
-							logger.error("Failed to decrypt env for pod", pod.id, e);
-						}
+						finalEnv = decryptEnvVars(pod.envVariables, pod.name);
 					}
 
 					// Generate manifest for update - NO LONGER USED for Agent command since we use DELETE_POD
@@ -1006,7 +1051,15 @@ export const podRoute = new Elysia({
 						image: Type.Optional(Type.String()),
 						command: Type.Optional(Type.Array(Type.String())),
 						args: Type.Optional(Type.Array(Type.String())),
-						env: Type.Optional(Type.Record(Type.String(), Type.String())),
+						env: Type.Optional(
+							Type.Array(
+								Type.Object({
+									name: Type.String(),
+									value: Type.Optional(Type.String()),
+									valueFrom: Type.Optional(Type.Any()),
+								}),
+							),
+						),
 						ports: Type.Optional(
 							Type.Array(
 								Type.Object({
@@ -1107,6 +1160,12 @@ export const podRoute = new Elysia({
 									),
 								),
 							}),
+						),
+						pvcVolumes: Type.Optional(
+							Type.Array(PvcVolumeRefSchema),
+						),
+						emptyDirVolumes: Type.Optional(
+							Type.Array(EmptyDirVolumeRefSchema),
 						),
 						annotations: Type.Optional(
 							Type.Record(Type.String(), Type.String()),

@@ -1,0 +1,1 @@
+src/routes/deployment.ts(1554,8): error TS2740: Type 'Record<string, string>' is missing the following properties from type '{ name: string; value?: string | undefined; valueFrom?: any; }[]': length, pop, push, concat, and 35 more.

@@ -75,7 +75,7 @@ function CreateSecretPage() {
 		mutationFn: async (values: z.infer<typeof secretSchema>) => {
 			const data: Record<string, string> = {};
 			for (const v of dataVars) {
-				if (v.name) data[v.name] = v.value;
+				if (v.name && v.value) data[v.name] = v.value;
 			}
 
 			const res = await api.api.secrets({ clusterId }).post({

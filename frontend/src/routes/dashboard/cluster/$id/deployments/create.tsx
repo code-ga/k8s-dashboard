@@ -29,6 +29,10 @@ import RefsEditor, {
 	type ISecretEnvFromRef,
 	type ISecretEnvRef,
 } from "@/components/shared/refs-editor";
+import VolumeMountEditor, {
+	type IEmptyDirVolumeMount,
+	type IPvcVolumeMount,
+} from "@/components/shared/volume-mount-editor";
 
 export const Route = createFileRoute(
 	"/dashboard/cluster/$id/deployments/create",
@@ -38,7 +42,9 @@ export const Route = createFileRoute(
 
 const envVarSchema = z.object({
 	name: z.string().min(1, "Name is required"),
-	value: z.string(),
+	value: z.string().optional(),
+	valueFrom: z.any().optional(),
+	type: z.string().optional(),
 });
 
 const deploymentSchema = z.object({
@@ -76,6 +82,10 @@ function CreateDeploymentPage() {
 	const [secretEnvFromRefs, setSecretEnvFromRefs] = useState<
 		ISecretEnvFromRef[]
 	>([]);
+	const [pvcVolumes, setPvcVolumes] = useState<IPvcVolumeMount[]>([]);
+	const [emptyDirVolumes, setEmptyDirVolumes] = useState<IEmptyDirVolumeMount[]>(
+		[],
+	);
 
 	const mutation = useMutation({
 		mutationFn: async (values: z.infer<typeof deploymentSchema>) => {
@@ -108,13 +118,14 @@ function CreateDeploymentPage() {
 				args: values.args ? values.args.split(" ") : undefined,
 				env:
 					envVars.length > 0
-						? envVars.reduce(
-								(acc, curr) => {
-									if (curr.name) acc[curr.name] = curr.value;
-									return acc;
-								},
-								{} as Record<string, string>,
-							)
+						? (envVars
+								.filter((v) => v.name)
+								.map((v) => {
+									if (v.type === "fieldRef" || (!v.type && v.valueFrom?.fieldRef)) {
+										return { name: v.name, valueFrom: v.valueFrom };
+									}
+									return { name: v.name, value: v.value };
+								}) as any)
 						: undefined,
 				configMapRefs:
 					configMapEnvRefs.length > 0 || configMapEnvFromRefs.length > 0
@@ -136,6 +147,8 @@ function CreateDeploymentPage() {
 						: undefined,
 				labels: parseLabels(values.labels),
 				selector: parseLabels(values.selector),
+				pvcVolumes: pvcVolumes.length > 0 ? pvcVolumes : undefined,
+				emptyDirVolumes: emptyDirVolumes.length > 0 ? emptyDirVolumes : undefined,
 			});
 
 			if (res.error) {
@@ -524,6 +537,32 @@ function CreateDeploymentPage() {
 									}}
 								/>
 							</div>
+						</div>
+
+						<div className="space-y-4 border-t pt-4">
+							<div className="flex items-center justify-between">
+								<h3 className="text-lg font-semibold flex items-center gap-2">
+									Volume Mounts
+									<HelpCircle className="h-4 w-4 text-muted-foreground" />
+								</h3>
+								<a
+									href="https://kubernetes.io/docs/concepts/storage/volumes/"
+									target="_blank"
+									rel="noopener noreferrer"
+									className="text-xs text-primary hover:underline flex items-center gap-1"
+								>
+									Volume Docs <ExternalLink className="h-3 w-3" />
+								</a>
+							</div>
+							<VolumeMountEditor
+								clusterId={clusterId}
+								pvcVolumes={pvcVolumes}
+								emptyDirVolumes={emptyDirVolumes}
+								onChange={(v) => {
+									setPvcVolumes(v.pvcVolumes);
+									setEmptyDirVolumes(v.emptyDirVolumes);
+								}}
+							/>
 						</div>
 
 						<div className="flex justify-end gap-4">

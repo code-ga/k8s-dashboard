@@ -31,6 +31,7 @@ import {
 	generateIngressRouteManifest,
 	generatePodManifest,
 } from "../utils/k8s-manifest";
+import { decryptEnvVars } from "../utils/env-utils";
 import { logger } from "../utils/logger";
 import {
 	deleteDeploymentPorts,
@@ -56,7 +57,7 @@ export class AgentService {
 
 	private buildDeploymentManifest(
 		dbDep: typeof k8sDeployments.$inferSelect,
-		envVars?: Record<string, string>,
+		envVars?: Array<any>,
 	) {
 		return generateDeploymentManifest({
 			name: dbDep.name,
@@ -85,7 +86,7 @@ export class AgentService {
 
 	private buildPodManifest(
 		dbPod: typeof k8sPods.$inferSelect,
-		envVars?: Record<string, string>,
+		envVars?: Array<any>,
 	) {
 		return generatePodManifest({
 			name: dbPod.name,
@@ -112,18 +113,7 @@ export class AgentService {
 		});
 	}
 
-	private decryptEnvVars(
-		encrypted: string | null,
-		label: string,
-	): Record<string, string> | undefined {
-		if (!encrypted) return undefined;
-		try {
-			return JSON.parse(decrypt(encrypted));
-		} catch (e) {
-			logger.error(`Failed to decrypt env vars for ${label}`, e);
-			return undefined;
-		}
-	}
+
 
 	// ─── Phase 1: Sync heartbeat → DB ─────────────────────────────────────────
 
@@ -802,7 +792,7 @@ export class AgentService {
 				logger.info(
 					`Missing Deployment: ${dbDep.name} in ${dbDep.namespace}. Creating...`,
 				);
-				const envVars = this.decryptEnvVars(dbDep.envVariables, dbDep.name);
+				const envVars = decryptEnvVars(dbDep.envVariables, dbDep.name);
 				await agentManager.sendCommand(agentId, clusterId, {
 					id: "",
 					type: Command_CommandType.CREATE_DEPLOYMENT,
@@ -821,7 +811,7 @@ export class AgentService {
 				logger.info(
 					`Syncing Deployment ${dbDep.name}: Mismatch (Replicas: ${match.replicas} vs ${dbDep.replicas}, Image: ${match.dockerImage} vs ${dbDep.dockerImage})`,
 				);
-				const envVars = this.decryptEnvVars(dbDep.envVariables, dbDep.name);
+				const envVars = decryptEnvVars(dbDep.envVariables, dbDep.name);
 				await agentManager.sendCommand(agentId, clusterId, {
 					id: "",
 					type: Command_CommandType.CREATE_DEPLOYMENT,
@@ -873,7 +863,7 @@ export class AgentService {
 				logger.info(
 					`Missing Pod: ${dbPod.name} in ${dbPod.namespace}. Restoring...`,
 				);
-				const envVars = this.decryptEnvVars(dbPod.envVariables, dbPod.name);
+				const envVars = decryptEnvVars(dbPod.envVariables, dbPod.name);
 				await agentManager.sendCommand(agentId, clusterId, {
 					id: "",
 					type: Command_CommandType.CREATE_POD,
@@ -888,7 +878,7 @@ export class AgentService {
 				logger.info(
 					`Syncing Pod ${dbPod.name}: Image mismatch (${match.dockerImage} vs ${dbPod.dockerImage})`,
 				);
-				const envVars = this.decryptEnvVars(dbPod.envVariables, dbPod.name);
+				const envVars = decryptEnvVars(dbPod.envVariables, dbPod.name);
 				await agentManager.sendCommand(agentId, clusterId, {
 					id: "",
 					type: Command_CommandType.CREATE_POD,

@@ -1,4 +1,5 @@
 import {
+	boolean,
 	integer,
 	pgTable,
 	serial,
@@ -232,6 +233,70 @@ export const deploymentSecretVolumeItems = pgTable(
 			.references(() => deploymentSecretVolumeRefs.id, { onDelete: "cascade" }),
 		key: text("key").notNull(),
 		path: text("path").notNull(),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+	},
+);
+
+// ==================== PVC Volume References ====================
+
+// Pod PVC Volume References
+export const podPvcVolumeRefs = pgTable("pod_pvc_volume_refs", {
+	id: serial("id").primaryKey(),
+	podId: integer("pod_id")
+		.notNull()
+		.references(() => k8sPods.id, { onDelete: "cascade" }),
+	volumeName: text("volume_name").notNull(),
+	pvcName: text("pvc_name").notNull(),
+	mountPath: text("mount_path").notNull(),
+	readOnly: boolean("read_only").default(false).notNull(),
+	subPath: text("sub_path"),
+	createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Deployment PVC Volume References
+export const deploymentPvcVolumeRefs = pgTable(
+	"deployment_pvc_volume_refs",
+	{
+		id: serial("id").primaryKey(),
+		deploymentId: integer("deployment_id")
+			.notNull()
+			.references(() => k8sDeployments.id, { onDelete: "cascade" }),
+		volumeName: text("volume_name").notNull(),
+		pvcName: text("pvc_name").notNull(),
+		mountPath: text("mount_path").notNull(),
+		readOnly: boolean("read_only").default(false).notNull(),
+		subPath: text("sub_path"),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+	},
+);
+
+// ==================== EmptyDir Volume References ====================
+
+// Pod EmptyDir Volume References
+export const podEmptyDirVolumeRefs = pgTable("pod_emptydir_volume_refs", {
+	id: serial("id").primaryKey(),
+	podId: integer("pod_id")
+		.notNull()
+		.references(() => k8sPods.id, { onDelete: "cascade" }),
+	volumeName: text("volume_name").notNull(),
+	mountPath: text("mount_path").notNull(),
+	medium: text("medium"), // "" (default) or "Memory"
+	sizeLimit: text("size_limit"), // e.g. "256Mi"
+	createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Deployment EmptyDir Volume References
+export const deploymentEmptyDirVolumeRefs = pgTable(
+	"deployment_emptydir_volume_refs",
+	{
+		id: serial("id").primaryKey(),
+		deploymentId: integer("deployment_id")
+			.notNull()
+			.references(() => k8sDeployments.id, { onDelete: "cascade" }),
+		volumeName: text("volume_name").notNull(),
+		mountPath: text("mount_path").notNull(),
+		medium: text("medium"), // "" (default) or "Memory"
+		sizeLimit: text("size_limit"), // e.g. "256Mi"
 		createdAt: timestamp("created_at").defaultNow().notNull(),
 	},
 );

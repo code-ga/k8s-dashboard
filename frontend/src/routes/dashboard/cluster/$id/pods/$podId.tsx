@@ -27,6 +27,10 @@ import RefsEditor, {
 	type ISecretEnvFromRef,
 	type ISecretEnvRef,
 } from "@/components/shared/refs-editor";
+import VolumeMountEditor, {
+	type IEmptyDirVolumeMount,
+	type IPvcVolumeMount,
+} from "@/components/shared/volume-mount-editor";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -41,8 +45,8 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
 	api,
-	getEdenErrorMessage,
 	type databaseTypes,
+	getEdenErrorMessage,
 	type SchemaStatic,
 } from "@/lib/api";
 import "xterm/css/xterm.css";
@@ -95,6 +99,10 @@ function ManagePodPage() {
 	const [memoryRequest, setMemoryRequest] = useState("");
 	const [memoryLimit, setMemoryLimit] = useState("");
 	const [labels, setLabels] = useState<EnvVar[]>([]);
+	const [pvcVolumes, setPvcVolumes] = useState<IPvcVolumeMount[]>([]);
+	const [emptyDirVolumes, setEmptyDirVolumes] = useState<
+		IEmptyDirVolumeMount[]
+	>([]);
 
 	useEffect(() => {
 		if (pod) {
@@ -102,13 +110,26 @@ function ManagePodPage() {
 			setCommand(pod.command ? pod.command.split(" ") : []);
 			setArgs(pod.args ? pod.args.split(" ") : []);
 			try {
-				const parsed = (JSON.parse(pod.envVariables || "{}")) as Record<
-					string,
-					string
-				>;
-				setEnvVars(
-					Object.entries(parsed).map(([name, value]) => ({ name, value })),
-				);
+				if (pod.envVariables) {
+					const parsed = JSON.parse(pod.envVariables);
+					if (Array.isArray(parsed)) {
+						setEnvVars(
+							parsed.map((v) => ({
+								...v,
+								type: v.valueFrom?.fieldRef ? "fieldRef" : "text",
+							})),
+						);
+					} else {
+						// Backward compatibility
+						setEnvVars(
+							Object.entries(parsed as Record<string, string>).map(
+								([name, value]) => ({ name, value, type: "text" }),
+							),
+						);
+					}
+				} else {
+					setEnvVars([]);
+				}
 			} catch (_e) {
 				logger.error("Failed to parse env variables", _e);
 				setEnvVars([]);
@@ -161,6 +182,9 @@ function ManagePodPage() {
 				setSecretEnvRefs([]);
 				setSecretEnvFromRefs([]);
 			}
+
+			setPvcVolumes(pod.pvcVolumes || []);
+			setEmptyDirVolumes(pod.emptyDirVolumes || []);
 		}
 	}, [pod]);
 
@@ -189,23 +213,28 @@ function ManagePodPage() {
 
 	const savePodMutation = useMutation({
 		mutationFn: async () => {
-			const envMap: Record<string, string> = {};
-			for (const v of envVars) {
-				if (v.name) envMap[v.name] = v.value;
-			}
+			const envPayload = envVars
+				.filter((v) => v.name)
+				.map((v) => {
+					if (v.type === "fieldRef" || (!v.type && v.valueFrom?.fieldRef)) {
+						return { name: v.name, valueFrom: v.valueFrom };
+					}
+					return { name: v.name, value: v.value };
+				});
 
 			const labelsMap: Record<string, string> = {};
 			for (const l of labels) {
-				if (l.name) labelsMap[l.name] = l.value;
+				if (l.name && l.value) labelsMap[l.name] = l.value;
 			}
 
 			const res = await api.api
 				.pods({ clusterId })({ id: podId.toString() })
 				.patch({
 					image,
-					command: command.length > 0 && command[0] !== "" ? command : undefined,
+					command:
+						command.length > 0 && command[0] !== "" ? command : undefined,
 					args: args.length > 0 && args[0] !== "" ? args : undefined,
-					env: envMap,
+					env: envPayload as any,
 					configMapRefs:
 						(configMapEnvRefs && configMapEnvRefs?.length > 0) ||
 						(configMapEnvFromRefs && configMapEnvFromRefs?.length > 0)
@@ -240,6 +269,9 @@ function ManagePodPage() {
 						limits: { cpu: cpuLimit, memory: memoryLimit },
 					},
 					ports: ports.length > 0 ? ports : undefined,
+					pvcVolumes: pvcVolumes.length > 0 ? pvcVolumes : undefined,
+					emptyDirVolumes:
+						emptyDirVolumes.length > 0 ? emptyDirVolumes : undefined,
 				});
 			if (res.error) {
 				throw new Error(getEdenErrorMessage(res.error));
@@ -267,7 +299,8 @@ function ManagePodPage() {
 		</div>
 	);
 
-	if (isLoading) return <div className="p-6 text-foreground">Loading pod details...</div>;
+	if (isLoading)
+		return <div className="p-6 text-foreground">Loading pod details...</div>;
 	if (!pod) return <div className="p-6 text-foreground">Pod not found</div>;
 
 	return (
@@ -322,7 +355,7 @@ function ManagePodPage() {
 				className="flex-1 flex flex-col overflow-hidden"
 			>
 				<div className="border-b border-border bg-card px-6">
-					<TabsList className="grid w-full grid-cols-8 max-w-4xl h-auto bg-transparent p-0 gap-0">
+					<TabsList className="grid w-full grid-cols-9 max-w-5xl h-auto bg-transparent p-0 gap-0">
 						<TabsTrigger
 							value="overview"
 							className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary"
@@ -334,6 +367,12 @@ function ManagePodPage() {
 							className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary"
 						>
 							Config
+						</TabsTrigger>
+						<TabsTrigger
+							value="volumes"
+							className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary"
+						>
+							Volumes
 						</TabsTrigger>
 						<TabsTrigger
 							value="env"
@@ -564,6 +603,47 @@ function ManagePodPage() {
 					</div>
 				</TabsContent>
 
+				{/* Volumes Tab */}
+				<TabsContent
+					value="volumes"
+					className="flex-1 overflow-auto p-6 space-y-6"
+				>
+					<RecreationWarning />
+					<div className="space-y-6">
+						<div className="flex items-center justify-between border-b pb-2">
+							<h3 className="text-lg font-semibold flex items-center gap-2">
+								Storage & Volume Mounts
+								<HelpCircle className="h-4 w-4 text-muted-foreground" />
+							</h3>
+							<a
+								href="https://kubernetes.io/docs/concepts/storage/volumes/"
+								target="_blank"
+								rel="noopener noreferrer"
+								className="text-xs text-primary hover:underline flex items-center gap-1"
+							>
+								Volume Docs <ExternalLink className="h-3 w-3" />
+							</a>
+						</div>
+						<VolumeMountEditor
+							clusterId={clusterId}
+							pvcVolumes={pvcVolumes}
+							emptyDirVolumes={emptyDirVolumes}
+							onChange={(v) => {
+								setPvcVolumes(v.pvcVolumes);
+								setEmptyDirVolumes(v.emptyDirVolumes);
+							}}
+						/>
+					</div>
+					<div className="flex justify-end gap-2 pt-4">
+						<Button
+							onClick={() => savePodMutation.mutate()}
+							disabled={savePodMutation.isPending}
+						>
+							{savePodMutation.isPending ? "Updating..." : "Update Pod"}
+						</Button>
+					</div>
+				</TabsContent>
+
 				{/* Environment Tab */}
 				<TabsContent value="env" className="flex-1 overflow-auto p-6 space-y-6">
 					<RecreationWarning />
@@ -589,7 +669,9 @@ function ManagePodPage() {
 							<EnvEditor variables={envVars} onChange={setEnvVars} />
 						</div>
 						<div>
-							<h3 className="text-sm font-semibold mb-4 text-foreground">References</h3>
+							<h3 className="text-sm font-semibold mb-4 text-foreground">
+								References
+							</h3>
 							<RefsEditor
 								clusterId={clusterId}
 								configMapRefs={{
@@ -638,7 +720,9 @@ function ManagePodPage() {
 					</div>
 					<div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-2xl">
 						<div className="space-y-4">
-							<h3 className="text-sm font-semibold border-b pb-2 text-foreground">Requests</h3>
+							<h3 className="text-sm font-semibold border-b pb-2 text-foreground">
+								Requests
+							</h3>
 							<div className="space-y-2">
 								<Label htmlFor="cpu-request">CPU (millicores)</Label>
 								<Input
@@ -659,7 +743,9 @@ function ManagePodPage() {
 							</div>
 						</div>
 						<div className="space-y-4">
-							<h3 className="text-sm font-semibold border-b pb-2 text-foreground">Limits</h3>
+							<h3 className="text-sm font-semibold border-b pb-2 text-foreground">
+								Limits
+							</h3>
 							<div className="space-y-2">
 								<Label htmlFor="cpu-limit">CPU (millicores)</Label>
 								<Input
@@ -996,7 +1082,9 @@ export function PodEvents({ podId, clusterId, isActive }: PodEventsProps) {
 	const { data, isLoading, error } = useQuery({
 		queryKey: ["pod-describe", clusterId, podId],
 		queryFn: async () => {
-			const res = await api.api.pods({ clusterId })({ id: podId }).describe.get();
+			const res = await api.api
+				.pods({ clusterId })({ id: podId })
+				.describe.get();
 			if (res.error) throw res.error;
 			return res.data.data;
 		},

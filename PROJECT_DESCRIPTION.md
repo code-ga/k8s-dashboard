@@ -81,10 +81,10 @@ If you are asked to support a new K8s resource (e.g., *PersistentVolumeClaims*, 
 
 ## 🛠️ Roadmap (Upcoming Features)
 
-    - [/] **Storage & Volume Management**: 
-        - [x] **Milestone 1 (PVC Full CRUD)**: Implemented Protobuf sync, Backend CRUD (Sync/Create/Resize/Delete), and Dashboard UI for PVCs.
+    - [x] **Storage & Volume Management**: 
+    - [x] **Milestone 1 (PVC Full CRUD)**: Implemented Protobuf sync, Backend CRUD (Sync/Create/Resize/Delete), and Dashboard UI for PVCs.
     - [ ] **Milestone 2 (StorageClasses & PVs)**: Add remaining storage resources to Heartbeat and UI.
-    - [ ] **Milestone 3 (Pod Creation Integration)**: Add volume mount builder to Deployment/Pod creation forms.
+    - [x] **Milestone 3 (Pod Creation Integration)**: Add volume mount builder to Deployment/Pod creation forms. Integrated PVC and emptyDir support across manifest generation, ownership validation, and UI details.
 - [ ] **Virtual Cluster Isolation**: Native namespace isolation with `NetworkPolicies` and `RoleBindings`.
 - [ ] **Scale-to-Zero**: Integration with **Sablier** and Traefik for request-based automatic scaling.
 - [ ] **Compose-to-K8s**: Support for `docker-compose.yml` conversion via Kompose.
@@ -99,4 +99,26 @@ If you are asked to support a new K8s resource (e.g., *PersistentVolumeClaims*, 
 4. **Real-time UI**: Any form execution (e.g. "Save Configuration") on the frontend must submit the API command, then visually transition to a "Pending" state, relying on TanStack Query invalidation via WebSocket broadcasts to turn "Green" when the agent succeeds.
 
 ---
-*Last updated: 2026-03-30 (Aligned with README.md source of truth)*
+- [x] **Env Var Refactoring**: Transitioned from flat `Record<string, string>` to structured `[]EnvVar` array to support Kubernetes Downward API (`fieldRef`). Fixed across Agent (Go), Backend (TS), and Frontend (React) with backward compatibility for legacy records.
+
+## 🔗 Feature Flow: Kubernetes Downward API (fieldRef)
+1. **Agent**: `agent/service/k8s/stats.go` now serializes the full `corev1.EnvVar` array instead of flattening it.
+   - `backend/src/utils/env-utils.ts`: Centralized utility to decrypt and parse environment variables, handling migration from legacy formats.
+   - `backend/src/utils/k8s-manifest.ts` handles structured arrays in `generatePodManifest` and `generateDeploymentManifest`.
+   - `backend/src/services/agent.service.ts` decrypts `envVariables` and converts legacy maps to the new array format.
+   - `backend/src/routes/deployment.ts` and `pod.ts` validation schemas updated to `Type.Array(Type.Object({ ... }))`.
+3. **Frontend**:
+   - `frontend/src/components/shared/env-editor.tsx` updated with a "Type" selector (Text vs FieldRef) and auto-complete for common `fieldPath` values.
+   - `deployments/$id.tsx`, `pods/$id.tsx`, and creation forms updated to map UI state to the new structured API payload.
+
+- [x] **Storage Volume Mounts**: Integrated support for attaching Persistent Volume Claims (PVC) and temporary `emptyDir` volumes to Pods and Deployments.
+
+## 🔗 Feature Flow: Storage Volume Mounts (M3)
+1. **Manifest Generator**: `backend/src/utils/k8s-manifest.ts` uses `PodDTO` and `DeploymentDTO` containing volume data to generate YAML segments.
+2. **Resource Validation**: `backend/src/utils/resource-refs.ts` defining `validateResourceRefs` checks PVC ownership.
+3. **Database Layer**: `backend/src/database/schema/k8s-normalized.ts` stores relationships; CRUD handled in `resource-refs.ts`.
+4. **API Routes**: `backend/src/routes/pod.ts` / `deployment.ts` handle POST/PATCH and manifest coordination.
+5. **Frontend UI**: Shared `VolumeMountEditor.tsx` integrated across creation and detail/edit pages.
+
+---
+*Last updated: 2026-04-03 (Added Storage Volume Mounts support)*

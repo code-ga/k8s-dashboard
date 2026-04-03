@@ -234,12 +234,9 @@ func (kc *K8sClient) GetFullClusterState() (*pb.Heartbeat, error) {
 		// EnvVariables
 		var envEncrypted string
 		if len(pod.Spec.Containers) > 0 {
-			envConf := map[string]string{}
-			for _, env := range pod.Spec.Containers[0].Env {
-				envConf[env.Name] = env.Value
-			}
-			if len(envConf) > 0 {
-				jsonBytes, _ := json.Marshal(envConf)
+			envVars := pod.Spec.Containers[0].Env
+			if len(envVars) > 0 {
+				jsonBytes, _ := json.Marshal(envVars)
 				if enc, err := crypto.Encrypt(string(jsonBytes), kc.ClusterKey); err == nil {
 					envEncrypted = enc
 				} else {
@@ -377,12 +374,9 @@ func (kc *K8sClient) GetFullClusterState() (*pb.Heartbeat, error) {
 			}
 
 			// Env
-			envConf := map[string]string{}
-			for _, env := range container.Env {
-				envConf[env.Name] = env.Value
-			}
-			if len(envConf) > 0 {
-				jsonBytes, _ := json.Marshal(envConf)
+			envVars := container.Env
+			if len(envVars) > 0 {
+				jsonBytes, _ := json.Marshal(envVars)
 				if enc, err := crypto.Encrypt(string(jsonBytes), kc.ClusterKey); err == nil {
 					envEncrypted = enc
 				}

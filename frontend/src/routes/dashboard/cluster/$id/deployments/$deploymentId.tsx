@@ -1,25 +1,3 @@
-import { ExposeDialog } from "@/components/service/expose-dialog";
-import { EnvEditor, type EnvVar } from "@/components/shared/env-editor";
-import RefsEditor, {
-	type IConfigMapEnvFromRef,
-	type IConfigMapEnvRef,
-	type ISecretEnvFromRef,
-	type ISecretEnvRef,
-} from "@/components/shared/refs-editor";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-	Table,
-	TableBody,
-	TableCell,
-	TableHead,
-	TableHeader,
-	TableRow,
-} from "@/components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { api, getEdenErrorMessage, type databaseTypes, type SchemaStatic } from "@/lib/api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
 	createFileRoute,
@@ -41,6 +19,37 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { ExposeDialog } from "@/components/service/expose-dialog";
+import { EnvEditor, type EnvVar } from "@/components/shared/env-editor";
+import RefsEditor, {
+	type IConfigMapEnvFromRef,
+	type IConfigMapEnvRef,
+	type ISecretEnvFromRef,
+	type ISecretEnvRef,
+} from "@/components/shared/refs-editor";
+import VolumeMountEditor, {
+	type IEmptyDirVolumeMount,
+	type IPvcVolumeMount,
+} from "@/components/shared/volume-mount-editor";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+	api,
+	type databaseTypes,
+	getEdenErrorMessage,
+	type SchemaStatic,
+} from "@/lib/api";
 import { BACKEND_URL } from "../../../../../constants";
 import { logger } from "../../../../../lib/logger";
 
@@ -126,6 +135,10 @@ function ManageDeploymentPage() {
 	const [memoryLimit, setMemoryLimit] = useState("");
 	const [labels, setLabels] = useState<EnvVar[]>([]);
 	const [replicas, setReplicas] = useState(1);
+	const [pvcVolumes, setPvcVolumes] = useState<IPvcVolumeMount[]>([]);
+	const [emptyDirVolumes, setEmptyDirVolumes] = useState<
+		IEmptyDirVolumeMount[]
+	>([]);
 
 	useEffect(() => {
 		if (deployment) {
@@ -135,13 +148,22 @@ function ManageDeploymentPage() {
 			setArgs(deployment.args ? deployment.args.split(" ") : []);
 			try {
 				if (deployment.envVariables) {
-					const parsed = (JSON.parse(deployment.envVariables) || {}) as Record<
-						string,
-						string
-					>;
-					setEnvVars(
-						Object.entries(parsed).map(([name, value]) => ({ name, value })),
-					);
+					const parsed = JSON.parse(deployment.envVariables);
+					if (Array.isArray(parsed)) {
+						setEnvVars(
+							parsed.map((v) => ({
+								...v,
+								type: v.valueFrom?.fieldRef ? "fieldRef" : "text",
+							})),
+						);
+					} else {
+						// Backward compatibility
+						setEnvVars(
+							Object.entries(parsed as Record<string, string>).map(
+								([name, value]) => ({ name, value, type: "text" }),
+							),
+						);
+					}
 				} else {
 					setEnvVars([]);
 				}
@@ -196,19 +218,26 @@ function ManageDeploymentPage() {
 				setSecretEnvRefs([]);
 				setSecretEnvFromRefs([]);
 			}
+
+			setPvcVolumes(deployment.pvcVolumes || []);
+			setEmptyDirVolumes(deployment.emptyDirVolumes || []);
 		}
 	}, [deployment]);
 
 	const saveDeploymentMutation = useMutation({
 		mutationFn: async () => {
-			const envMap: Record<string, string> = {};
-			for (const v of envVars) {
-				if (v.name) envMap[v.name] = v.value;
-			}
+			const envPayload = envVars
+				.filter((v) => v.name)
+				.map((v) => {
+					if (v.type === "fieldRef" || (!v.type && v.valueFrom?.fieldRef)) {
+						return { name: v.name, valueFrom: v.valueFrom };
+					}
+					return { name: v.name, value: v.value };
+				});
 
 			const labelsMap: Record<string, string> = {};
 			for (const l of labels) {
-				if (l.name) labelsMap[l.name] = l.value;
+				if (l.name && l.value) labelsMap[l.name] = l.value;
 			}
 
 			const res = await api.api
@@ -216,9 +245,10 @@ function ManageDeploymentPage() {
 				.patch({
 					image,
 					replicas,
-					command: command.length > 0 && command[0] !== "" ? command : undefined,
+					command:
+						command.length > 0 && command[0] !== "" ? command : undefined,
 					args: args.length > 0 && args[0] !== "" ? args : undefined,
-					env: envMap,
+					env: envPayload as any,
 					configMapRefs:
 						configMapEnvRefs.length > 0 || configMapEnvFromRefs.length > 0
 							? {
@@ -246,6 +276,9 @@ function ManageDeploymentPage() {
 						limits: { cpu: cpuLimit, memory: memoryLimit },
 					},
 					ports: ports.length > 0 ? ports : undefined,
+					pvcVolumes: pvcVolumes.length > 0 ? pvcVolumes : undefined,
+					emptyDirVolumes:
+						emptyDirVolumes.length > 0 ? emptyDirVolumes : undefined,
 				});
 			if (res.error) {
 				const message = getEdenErrorMessage(res.error);
@@ -324,8 +357,11 @@ function ManageDeploymentPage() {
 	);
 
 	if (isLoading)
-		return <div className="p-6 text-foreground">Loading deployment details...</div>;
-	if (!deployment) return <div className="p-6 text-foreground">Deployment not found</div>;
+		return (
+			<div className="p-6 text-foreground">Loading deployment details...</div>
+		);
+	if (!deployment)
+		return <div className="p-6 text-foreground">Deployment not found</div>;
 
 	const selector = deployment.selector
 		? JSON.parse(deployment.selector)
@@ -401,7 +437,7 @@ function ManageDeploymentPage() {
 				className="flex-1 flex flex-col overflow-hidden"
 			>
 				<div className="border-b border-border bg-card px-6">
-					<TabsList className="grid w-full grid-cols-7 max-w-4xl h-auto bg-transparent p-0 gap-0">
+					<TabsList className="grid w-full grid-cols-8 max-w-5xl h-auto bg-transparent p-0 gap-0">
 						<TabsTrigger
 							value="overview"
 							className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary"
@@ -413,6 +449,12 @@ function ManageDeploymentPage() {
 							className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary"
 						>
 							Config
+						</TabsTrigger>
+						<TabsTrigger
+							value="volumes"
+							className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary"
+						>
+							Volumes
 						</TabsTrigger>
 						<TabsTrigger
 							value="env"
@@ -778,6 +820,49 @@ function ManageDeploymentPage() {
 					</div>
 				</TabsContent>
 
+				{/* Volumes Tab */}
+				<TabsContent
+					value="volumes"
+					className="flex-1 overflow-auto p-6 space-y-6"
+				>
+					<RecreationWarning />
+					<div className="space-y-6">
+						<div className="flex items-center justify-between border-b pb-2">
+							<h3 className="text-lg font-semibold flex items-center gap-2">
+								Storage & Volume Mounts
+								<HelpCircle className="h-4 w-4 text-muted-foreground" />
+							</h3>
+							<a
+								href="https://kubernetes.io/docs/concepts/storage/volumes/"
+								target="_blank"
+								rel="noopener noreferrer"
+								className="text-xs text-primary hover:underline flex items-center gap-1"
+							>
+								Volume Docs <ExternalLink className="h-3 w-3" />
+							</a>
+						</div>
+						<VolumeMountEditor
+							clusterId={clusterId}
+							pvcVolumes={pvcVolumes}
+							emptyDirVolumes={emptyDirVolumes}
+							onChange={(v) => {
+								setPvcVolumes(v.pvcVolumes);
+								setEmptyDirVolumes(v.emptyDirVolumes);
+							}}
+						/>
+					</div>
+					<div className="flex justify-end gap-2 pt-4">
+						<Button
+							onClick={() => saveDeploymentMutation.mutate()}
+							disabled={saveDeploymentMutation.isPending}
+						>
+							{saveDeploymentMutation.isPending
+								? "Updating..."
+								: "Update Deployment"}
+						</Button>
+					</div>
+				</TabsContent>
+
 				{/* Labels Tab */}
 				<TabsContent
 					value="labels"
@@ -978,7 +1063,9 @@ export function DeploymentLogs({
 	return (
 		<div className="h-full flex flex-col gap-3 text-foreground">
 			<div className="flex items-center justify-between">
-				<p className="text-sm font-medium text-foreground">Live Deployment Logs</p>
+				<p className="text-sm font-medium text-foreground">
+					Live Deployment Logs
+				</p>
 				<Button
 					variant={autoScroll ? "default" : "outline"}
 					size="sm"
