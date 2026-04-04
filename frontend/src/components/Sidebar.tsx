@@ -135,13 +135,6 @@ export function Sidebar({ role, className }: SidebarProps) {
 			permission: "cluster:read" as PermissionFilter,
 			exact: false,
 		},
-		{
-			to: `/dashboard/cluster/${clusterId}/pvcs`,
-			label: "PVCs",
-			icon: Database,
-			permission: "pvc:read" as PermissionFilter,
-			exact: false,
-		},
 	];
 
 	const links = isInCluster ? clusterLinks : globalLinks;
