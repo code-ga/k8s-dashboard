@@ -11,8 +11,8 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import { api } from "@/lib/api";
 import { usePermissions } from "@/hooks/use-permissions";
+import { api } from "@/lib/api";
 
 export const Route = createFileRoute("/dashboard/cluster/$id/pods/")({
 	component: ClusterPods,
@@ -20,7 +20,7 @@ export const Route = createFileRoute("/dashboard/cluster/$id/pods/")({
 
 function ClusterPods() {
 	const { id } = useParams({ from: "/dashboard/cluster/$id/pods/" });
-	const { can } = usePermissions();
+	const { can, isLoading: isLoadingPermissions } = usePermissions();
 
 	const { data: pods, isLoading } = useQuery({
 		queryKey: ["pods", id],
@@ -33,7 +33,23 @@ function ClusterPods() {
 				throw new Error(res.data.message || "Failed to fetch pods");
 			return res.data.data;
 		},
+		enabled: can("pod:read") || can("pod:manage"),
 	});
+
+	if (!can("pod:read") && !can("pod:manage") && !isLoadingPermissions) {
+		return (
+			<div className="flex items-center justify-center py-12">
+				<div className="text-center">
+					<h2 className="text-xl font-semibold text-muted-foreground">
+						Access Denied
+					</h2>
+					<p className="text-sm text-muted-foreground mt-2">
+						You don't have permission to view pods.
+					</p>
+				</div>
+			</div>
+		);
+	}
 
 	if (isLoading) return <div>Loading pods...</div>;
 

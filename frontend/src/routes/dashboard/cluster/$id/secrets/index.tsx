@@ -11,8 +11,8 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import { api } from "@/lib/api";
 import { usePermissions } from "@/hooks/use-permissions";
+import { api } from "@/lib/api";
 
 export const Route = createFileRoute("/dashboard/cluster/$id/secrets/")({
 	component: ClusterSecrets,
@@ -20,7 +20,7 @@ export const Route = createFileRoute("/dashboard/cluster/$id/secrets/")({
 
 function ClusterSecrets() {
 	const { id } = useParams({ from: "/dashboard/cluster/$id/secrets/" });
-	const { can } = usePermissions();
+	const { can, isLoading: isLoadingPermissions } = usePermissions();
 
 	const { data: secrets, isLoading } = useQuery({
 		queryKey: ["secrets", id],
@@ -33,7 +33,23 @@ function ClusterSecrets() {
 				throw new Error(res.data.message || "Failed to fetch secrets");
 			return res.data.data;
 		},
+		enabled: can("secret:read") || can("secret:manage"),
 	});
+
+	if (!can("secret:read") && !can("secret:manage") && !isLoadingPermissions) {
+		return (
+			<div className="flex items-center justify-center py-12">
+				<div className="text-center">
+					<h2 className="text-xl font-semibold text-muted-foreground">
+						Access Denied
+					</h2>
+					<p className="text-sm text-muted-foreground mt-2">
+						You don't have permission to view secrets.
+					</p>
+				</div>
+			</div>
+		);
+	}
 
 	if (isLoading) return <div>Loading secrets...</div>;
 

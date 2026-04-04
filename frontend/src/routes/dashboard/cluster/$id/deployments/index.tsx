@@ -34,9 +34,9 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
+import { usePermissions } from "@/hooks/use-permissions";
 import type { databaseTypes, SchemaStatic } from "@/lib/api";
 import { api } from "@/lib/api";
-import { usePermissions } from "@/hooks/use-permissions";
 
 export const Route = createFileRoute("/dashboard/cluster/$id/deployments/")({
 	component: ClusterDeployments,
@@ -216,7 +216,7 @@ import {
 
 function ClusterDeployments() {
 	const { id } = useParams({ from: "/dashboard/cluster/$id/deployments/" });
-	const { can } = usePermissions();
+	const { can, isLoading: isLoadingPermissions } = usePermissions();
 
 	const { data: deployments, isLoading } = useQuery({
 		queryKey: ["deployments", id],
@@ -229,7 +229,27 @@ function ClusterDeployments() {
 				throw new Error(res.data.message || "Failed to fetch deployments");
 			return res.data.data as Deployment[];
 		},
+		enabled: can("deployment:read") || can("deployment:manage"),
 	});
+
+	if (
+		!can("deployment:read") &&
+		!can("deployment:manage") &&
+		!isLoadingPermissions
+	) {
+		return (
+			<div className="flex items-center justify-center py-12">
+				<div className="text-center">
+					<h2 className="text-xl font-semibold text-muted-foreground">
+						Access Denied
+					</h2>
+					<p className="text-sm text-muted-foreground mt-2">
+						You don't have permission to view deployments.
+					</p>
+				</div>
+			</div>
+		);
+	}
 
 	if (isLoading) return <div>Loading deployments...</div>;
 

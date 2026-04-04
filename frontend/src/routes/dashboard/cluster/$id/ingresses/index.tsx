@@ -13,9 +13,9 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
+import { usePermissions } from "@/hooks/use-permissions";
 import type { databaseTypes, SchemaStatic } from "@/lib/api";
 import { api } from "@/lib/api";
-import { usePermissions } from "@/hooks/use-permissions";
 
 export const Route = createFileRoute("/dashboard/cluster/$id/ingresses/")({
 	component: ClusterIngresses,
@@ -25,7 +25,7 @@ type Ingress = SchemaStatic<databaseTypes.databaseTypes["k8sIngresses"]>;
 
 function ClusterIngresses() {
 	const { id } = useParams({ from: "/dashboard/cluster/$id/ingresses/" });
-	const { can } = usePermissions();
+	const { can, isLoading: isLoadingPermissions } = usePermissions();
 	const queryClient = useQueryClient();
 
 	const { data: ingresses, isLoading } = useQuery({
@@ -39,6 +39,7 @@ function ClusterIngresses() {
 				throw new Error(res.data.message || "Failed to fetch ingresses");
 			return res.data.data as Ingress[];
 		},
+		enabled: can("ingress:read") || can("ingress:manage"),
 	});
 
 	const deleteMutation = useMutation({
@@ -60,6 +61,21 @@ function ClusterIngresses() {
 			toast.error(error.message || "Failed to delete ingress");
 		},
 	});
+
+	if (!can("ingress:read") && !can("ingress:manage") && !isLoadingPermissions) {
+		return (
+			<div className="flex items-center justify-center py-12">
+				<div className="text-center">
+					<h2 className="text-xl font-semibold text-muted-foreground">
+						Access Denied
+					</h2>
+					<p className="text-sm text-muted-foreground mt-2">
+						You don't have permission to view ingresses.
+					</p>
+				</div>
+			</div>
+		);
+	}
 
 	if (isLoading) return <div>Loading ingresses...</div>;
 

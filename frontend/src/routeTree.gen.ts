@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as DashboardLayoutRouteImport } from './routes/dashboard-layout'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
 import { Route as DemoTanstackQueryRouteImport } from './routes/demo/tanstack-query'
@@ -49,6 +50,11 @@ const OnboardingRoute = OnboardingRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardLayoutRoute = DashboardLayoutRouteImport.update({
+  id: '/dashboard-layout',
+  path: '/dashboard-layout',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -219,6 +225,7 @@ const DashboardClusterIdConfigmapsConfigmapIdRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/dashboard-layout': typeof DashboardLayoutRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
   '/dashboard/roles': typeof DashboardRolesRoute
@@ -252,6 +259,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/dashboard-layout': typeof DashboardLayoutRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
   '/dashboard/roles': typeof DashboardRolesRoute
@@ -286,6 +294,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/dashboard-layout': typeof DashboardLayoutRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
   '/dashboard/roles': typeof DashboardRolesRoute
@@ -321,6 +330,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/dashboard-layout'
     | '/login'
     | '/onboarding'
     | '/dashboard/roles'
@@ -354,6 +364,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/dashboard-layout'
     | '/login'
     | '/onboarding'
     | '/dashboard/roles'
@@ -387,6 +398,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/dashboard-layout'
     | '/login'
     | '/onboarding'
     | '/dashboard/roles'
@@ -421,6 +433,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  DashboardLayoutRoute: typeof DashboardLayoutRoute
   LoginRoute: typeof LoginRoute
   OnboardingRoute: typeof OnboardingRoute
   DashboardRolesRoute: typeof DashboardRolesRoute
@@ -467,6 +480,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard-layout': {
+      id: '/dashboard-layout'
+      path: '/dashboard-layout'
+      fullPath: '/dashboard-layout'
+      preLoaderRoute: typeof DashboardLayoutRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -677,6 +697,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  DashboardLayoutRoute: DashboardLayoutRoute,
   LoginRoute: LoginRoute,
   OnboardingRoute: OnboardingRoute,
   DashboardRolesRoute: DashboardRolesRoute,

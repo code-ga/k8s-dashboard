@@ -1,6 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
-import { ArrowLeft, Eye, Network, Plus, ShieldAlert, ShieldCheck, Trash2, Unplug } from "lucide-react";
+import {
+	ArrowLeft,
+	Eye,
+	Network,
+	Plus,
+	ShieldAlert,
+	ShieldCheck,
+	Trash2,
+	Unplug,
+} from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -39,9 +48,9 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
+import { usePermissions } from "@/hooks/use-permissions";
 import type { databaseTypes, SchemaStatic } from "@/lib/api";
 import { api } from "@/lib/api";
-import { usePermissions } from "@/hooks/use-permissions";
 
 export const Route = createFileRoute("/dashboard/cluster/$id/services/")({
 	component: ClusterServices,
@@ -69,7 +78,8 @@ function ExposureDialog({
 		defaultValues: {
 			protocol: (ingress?.protocol as "http" | "tcp" | "udp") || "http",
 			domain: ingress?.domain || "",
-			internalPort: ingress?.internalPort || (service.ports as any[])?.[0]?.port || 80,
+			internalPort:
+				ingress?.internalPort || (service.ports as any[])?.[0]?.port || 80,
 		},
 	});
 
@@ -232,7 +242,8 @@ function ExposureDialog({
 							)}
 							{(can("ingress:create") ||
 								can("ingress:manage") ||
-								(ingress && can("ingress:update"))) && (
+								(ingress &&
+									(can("ingress:update") || can("ingress:manage")))) && (
 								<Button type="submit" disabled={exposeMutation.isPending}>
 									{ingress ? "Update" : "Expose"}
 								</Button>
@@ -247,7 +258,7 @@ function ExposureDialog({
 
 function ClusterServices() {
 	const { id } = useParams({ from: "/dashboard/cluster/$id/services/" });
-	const { can } = usePermissions();
+	const { can, isLoading: isLoadingPermissions } = usePermissions();
 	const queryClient = useQueryClient();
 
 	const { data: services, isLoading } = useQuery({
@@ -261,6 +272,7 @@ function ClusterServices() {
 				throw new Error(res.data.message || "Failed to fetch services");
 			return res.data.data; // as Service[];
 		},
+		enabled: can("service:read") || can("service:manage"),
 	});
 
 	const deleteMutation = useMutation({
@@ -279,6 +291,21 @@ function ClusterServices() {
 			toast.error(error.message || "Failed to delete service");
 		},
 	});
+
+	if (!can("service:read") && !can("service:manage") && !isLoadingPermissions) {
+		return (
+			<div className="flex items-center justify-center py-12">
+				<div className="text-center">
+					<h2 className="text-xl font-semibold text-muted-foreground">
+						Access Denied
+					</h2>
+					<p className="text-sm text-muted-foreground mt-2">
+						You don't have permission to view services.
+					</p>
+				</div>
+			</div>
+		);
+	}
 
 	if (isLoading) return <div>Loading services...</div>;
 

@@ -24,9 +24,9 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { usePermissions } from "@/hooks/use-permissions";
 import { api, getEdenErrorMessage } from "@/lib/api";
 import { BACKEND_URL } from "../../../../constants";
-import { usePermissions } from "@/hooks/use-permissions";
 
 export const Route = createFileRoute("/dashboard/cluster/$id/")({
 	component: ClusterOverview,
@@ -35,7 +35,7 @@ export const Route = createFileRoute("/dashboard/cluster/$id/")({
 function ClusterOverview() {
 	const { id } = useParams({ from: "/dashboard/cluster/$id/" });
 	const queryClient = useQueryClient();
-	const { can } = usePermissions();
+	const { can, isLoading: isLoadingPermissions } = usePermissions();
 	const [acmeEmail, setAcmeEmail] = useState("");
 
 	const { data: cluster, isLoading } = useQuery({
@@ -47,6 +47,7 @@ function ClusterOverview() {
 				throw new Error(res.data.message || "Failed to fetch cluster");
 			return res.data.data;
 		},
+		enabled: can("cluster:read"),
 	});
 
 	const { data: agentConfig } = useQuery({
@@ -58,6 +59,7 @@ function ClusterOverview() {
 				throw new Error(res.data.message || "Failed to fetch agent config");
 			return res.data.data;
 		},
+		enabled: can("cluster:read"),
 	});
 
 	const updateAcmeEmailMutation = useMutation({
@@ -80,7 +82,21 @@ function ClusterOverview() {
 		},
 	});
 
-	// Initialize acmeEmail state when cluster data loads
+	if (!can("cluster:read") && !isLoadingPermissions) {
+		return (
+			<div className="flex items-center justify-center py-12">
+				<div className="text-center">
+					<h2 className="text-xl font-semibold text-muted-foreground">
+						Access Denied
+					</h2>
+					<p className="text-sm text-muted-foreground mt-2">
+						You don't have permission to view this cluster.
+					</p>
+				</div>
+			</div>
+		);
+	}
+
 	if (cluster && acmeEmail === "" && cluster.acmeEmail) {
 		setAcmeEmail(cluster.acmeEmail);
 	}

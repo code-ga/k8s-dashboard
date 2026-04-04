@@ -3,14 +3,16 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { Server } from "lucide-react";
 import { CreateClusterDialog } from "@/components/cluster/create-cluster-dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { api } from "@/lib/api";
 import { usePermissions } from "@/hooks/use-permissions";
+import { api } from "@/lib/api";
 
 export const Route = createFileRoute("/dashboard/")({
 	component: DashboardIndex,
 });
 
 function DashboardIndex() {
+	const { can, isLoading: isLoadingPermissions } = usePermissions();
+
 	const { data: clusters, isLoading } = useQuery({
 		queryKey: ["clusters"],
 		queryFn: async () => {
@@ -20,10 +22,25 @@ function DashboardIndex() {
 				throw new Error(res.data.message || "Failed to fetch clusters");
 			return res.data.data;
 		},
+		enabled: can("cluster:read"),
 	});
 
-	const { can, isLoading: isLoadingPermissions } = usePermissions();
 	const canCreate = can("cluster:create");
+
+	if (!can("cluster:read") && !isLoadingPermissions) {
+		return (
+			<div className="flex items-center justify-center py-12">
+				<div className="text-center">
+					<h2 className="text-xl font-semibold text-muted-foreground">
+						Access Denied
+					</h2>
+					<p className="text-sm text-muted-foreground mt-2">
+						You don't have permission to view clusters.
+					</p>
+				</div>
+			</div>
+		);
+	}
 
 	if (isLoading || isLoadingPermissions) return <div>Loading clusters...</div>;
 

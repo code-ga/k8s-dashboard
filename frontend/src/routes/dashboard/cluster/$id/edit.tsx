@@ -1,6 +1,6 @@
+import { useForm } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useForm } from "@tanstack/react-form";
 import { ArrowLeft, Save } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -14,8 +14,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { api, getEdenErrorMessage } from "@/lib/api";
 import { usePermissions } from "@/hooks/use-permissions";
+import { api, getEdenErrorMessage } from "@/lib/api";
 
 export const Route = createFileRoute("/dashboard/cluster/$id/edit")({
 	component: EditCluster,
@@ -25,7 +25,7 @@ function EditCluster() {
 	const { id } = Route.useParams();
 	const navigate = useNavigate();
 	const queryClient = useQueryClient();
-	const { can } = usePermissions();
+	const { can, isLoading: isLoadingPermissions } = usePermissions();
 
 	const { data: cluster, isLoading } = useQuery({
 		queryKey: ["cluster", id],
@@ -36,6 +36,7 @@ function EditCluster() {
 				throw new Error(res.data.message || "Failed to fetch cluster");
 			return res.data.data;
 		},
+		enabled: can("cluster:update") || can("cluster:manage"),
 	});
 
 	const updateMutation = useMutation({
@@ -99,22 +100,27 @@ function EditCluster() {
 		form.setFieldValue("acmeEmail", cluster.acmeEmail || "");
 	}
 
-	if (isLoading) return <div>Loading cluster...</div>;
-	if (!cluster) return <div>Cluster not found</div>;
-
-	if (!can("cluster:manage")) {
+	if (
+		!can("cluster:update") &&
+		!can("cluster:manage") &&
+		!isLoadingPermissions
+	) {
 		return (
-			<div className="flex flex-col items-center justify-center h-[50vh] space-y-4">
-				<h1 className="text-2xl font-bold">Unauthorized</h1>
-				<p className="text-muted-foreground">
-					You do not have permission to edit this cluster.
-				</p>
-				<Link to="/dashboard/cluster/$id" params={{ id }}>
-					<Button>Go Back</Button>
-				</Link>
+			<div className="flex items-center justify-center py-12">
+				<div className="text-center">
+					<h2 className="text-xl font-semibold text-muted-foreground">
+						Access Denied
+					</h2>
+					<p className="text-sm text-muted-foreground mt-2">
+						You don't have permission to edit this cluster.
+					</p>
+				</div>
 			</div>
 		);
 	}
+
+	if (isLoading) return <div>Loading cluster...</div>;
+	if (!cluster) return <div>Cluster not found</div>;
 
 	return (
 		<div className="space-y-6">

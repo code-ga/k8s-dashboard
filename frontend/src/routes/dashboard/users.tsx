@@ -1,5 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
+import { toast } from "sonner";
+import { RoleBadge } from "@/components/RoleBadge";
 import {
 	Card,
 	CardContent,
@@ -14,10 +16,8 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { api, getEdenErrorMessage } from "@/lib/api";
-import { toast } from "sonner";
 import { usePermissions } from "@/hooks/use-permissions";
-import { RoleBadge } from "@/components/RoleBadge";
+import { api, getEdenErrorMessage } from "@/lib/api";
 
 export const Route = createFileRoute("/dashboard/users")({
 	component: UserManagement,
@@ -31,7 +31,7 @@ interface UserProfile {
 
 function UserManagement() {
 	const queryClient = useQueryClient();
-	const { can } = usePermissions();
+	const { can, isLoading: isLoadingPermissions } = usePermissions();
 
 	const { data: users, isLoading } = useQuery({
 		queryKey: ["users"],
@@ -42,9 +42,9 @@ function UserManagement() {
 			}
 			return res.data.data;
 		},
+		enabled: can("user:read"),
 	});
 
-	// Fetch available roles
 	const { data: availableRoles } = useQuery({
 		queryKey: ["available-roles"],
 		queryFn: async () => {
@@ -54,6 +54,7 @@ function UserManagement() {
 			}
 			return res.data.data;
 		},
+		enabled: can("user:read"),
 	});
 
 	const addRoleMutation = useMutation({
@@ -104,6 +105,21 @@ function UserManagement() {
 		},
 	});
 
+	if (!can("user:read") && !isLoadingPermissions) {
+		return (
+			<div className="flex items-center justify-center py-12">
+				<div className="text-center">
+					<h2 className="text-xl font-semibold text-muted-foreground">
+						Access Denied
+					</h2>
+					<p className="text-sm text-muted-foreground mt-2">
+						You don't have permission to view users.
+					</p>
+				</div>
+			</div>
+		);
+	}
+
 	if (isLoading) return <div>Loading users...</div>;
 
 	return (
@@ -124,7 +140,9 @@ function UserManagement() {
 						</CardHeader>
 						<CardContent>
 							<div className="flex flex-wrap gap-2 items-center">
-								<span className="text-sm font-medium mr-2">Assigned Roles:</span>
+								<span className="text-sm font-medium mr-2">
+									Assigned Roles:
+								</span>
 								{user.rolesIDs.map((roleId: string) => (
 									<RoleBadge
 										key={roleId}

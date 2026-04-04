@@ -1,4 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { RoleAssignments } from "@/components/roles/role-assignments";
+import { RolesList } from "@/components/roles/roles-list";
 import {
 	Card,
 	CardContent,
@@ -7,14 +9,30 @@ import {
 	CardTitle,
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { RolesList } from "@/components/roles/roles-list";
-import { RoleAssignments } from "@/components/roles/role-assignments";
+import { usePermissions } from "@/hooks/use-permissions";
 
 export const Route = createFileRoute("/dashboard/roles")({
 	component: RolesPage,
 });
 
 function RolesPage() {
+	const { can, isLoading: isLoadingPermissions } = usePermissions();
+
+	if (!can("role:read") && !isLoadingPermissions) {
+		return (
+			<div className="flex items-center justify-center py-12">
+				<div className="text-center">
+					<h2 className="text-xl font-semibold text-muted-foreground">
+						Access Denied
+					</h2>
+					<p className="text-sm text-muted-foreground mt-2">
+						You don't have permission to view roles.
+					</p>
+				</div>
+			</div>
+		);
+	}
+
 	return (
 		<div className="p-6 space-y-6">
 			<div>

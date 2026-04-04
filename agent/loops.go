@@ -37,6 +37,9 @@ func readLoop(c *websocket.Conn, safeConn *SafeConn, kubeClient *k8s.K8sClient, 
 				}
 
 				data, cmdErr := handleCommand(kubeClient, cmd)
+				if cmdErr != nil {
+					data = cmdErr.Error()
+				}
 				sendAck(safeConn, cmd.Id, cmdErr == nil, data)
 			}
 
