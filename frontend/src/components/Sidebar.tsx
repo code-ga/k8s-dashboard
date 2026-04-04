@@ -61,7 +61,7 @@ export function Sidebar({ role, className }: SidebarProps) {
 			icon: Shield,
 			permission: "role:read" as PermissionFilter,
 			exact: false,
-		}
+		},
 	];
 
 	const clusterLinks = [
@@ -133,6 +133,13 @@ export function Sidebar({ role, className }: SidebarProps) {
 			label: "Events",
 			icon: Activity,
 			permission: "cluster:read" as PermissionFilter,
+			exact: false,
+		},
+		{
+			to: `/dashboard/cluster/${clusterId}/pvcs`,
+			label: "PVCs",
+			icon: Database,
+			permission: "pvc:read" as PermissionFilter,
 			exact: false,
 		},
 	];
