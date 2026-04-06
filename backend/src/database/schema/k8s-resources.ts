@@ -10,6 +10,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { profile } from "./auth";
 import { k8sCluster, k8sClusterNode } from "./cluster";
+import type { ServicePortDTO } from "../../utils/k8s-manifest";
 
 export const k8sDeployments = pgTable(
 	"k8sDeployments",
@@ -40,7 +41,7 @@ export const k8sDeployments = pgTable(
 		args: text("args").default("").notNull(),
 		envVariables: text("env_variables").default("").notNull(),
 		ports: jsonb("ports")
-			.$type<{ data: any[] }>()
+			.$type<{ data: { containerPort: number; name?: string }[] }>()
 			.default({ data: [] })
 			.notNull(), // Array of ServicePortDTO
 
@@ -179,7 +180,7 @@ export const k8sServices = pgTable(
 			.notNull()
 			.$type<Record<string, string>>(), // JSON string
 		ports: jsonb("ports")
-			.$type<{ data: any[] }>()
+			.$type<{ data: ServicePortDTO[] }>()
 			.default({ data: [] })
 			.notNull(), // Array of ServicePortDTO
 

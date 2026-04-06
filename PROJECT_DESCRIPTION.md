@@ -150,6 +150,56 @@ If you are asked to support a new K8s resource (e.g., *PersistentVolumeClaims*, 
 
 ---
 
+## 🔗 Feature Flow: Frontend UI (M2 - StorageClasses & PVs)
+
+### Frontend Routes Added
+
+```
+frontend/src/routes/dashboard/cluster/$id/
+├── storage-classes/
+│   ├── index.tsx       # List view with CRUD + set default
+│   └── create.tsx      # Create form with provisioner selection
+└── persistent-volumes/
+    ├── index.tsx       # List view with CRUD
+    └── create.tsx      # Create form (NFS/hostPath sources)
+```
+
+### Sidebar Navigation
+
+Added to `frontend/src/components/Sidebar.tsx`:
+- **Storage Classes** (`storageclass:read`) - lists all StorageClasses with provisioner info
+- **Persistent Volumes** (`pv:read`) - lists all PVs with capacity, status, access modes
+
+### UI Components
+
+1. **StorageClasses List** (`storage-classes/index.tsx`)
+   - Table: Name, Provisioner, Reclaim Policy, Volume Binding, Default badge, Actions
+   - Actions: Set Default (star icon), Delete
+   - Create button navigates to create form
+
+2. **StorageClasses Create** (`storage-classes/create.tsx`)
+   - Form fields: Name, Provisioner (dropdown), Reclaim Policy, Volume Binding Mode, Allow Volume Expansion toggle
+   - JSON inputs for Annotations/Labels
+
+3. **PersistentVolumes List** (`persistent-volumes/index.tsx`)
+   - Table: Name, Capacity, Status, StorageClass, Access Modes, Claim, Reclaim Policy, Actions
+   - Capacity displayed in GiB, Status badges (Bound/Available/Failed)
+   - Access modes shown as badges
+
+4. **PersistentVolumes Create** (`persistent-volumes/create.tsx`)
+   - Form fields: Name, Capacity (GiB), StorageClass, Reclaim Policy
+   - Source type tabs: NFS or HostPath
+   - NFS: Server, Path, ReadOnly checkbox
+   - HostPath: Path, Type (Directory/DirectoryOrCreate/File/FileOrCreate)
+   - Access modes: multi-select buttons (RWO, ROX, RWX)
+
+### Integration with Existing PVC UI
+
+- PVC creation form can reference StorageClasses (uses `/api/storageclasses/:clusterId`)
+- No changes needed for M2 as volume mount section already exists
+
+---
+
 ## ⚠️ Drizzle ORM Type Notes
 
 When defining JSONB columns in Drizzle ORM, avoid using `.$type<T[]>()` with array types as it generates incorrect TypeBox definitions. Use the wrapper pattern instead:
@@ -161,6 +211,6 @@ accessModes: jsonb("access_modes").$type<string[]>().default([]).notNull()
 // ✅ Correct - uses wrapper object
 accessModes: jsonb("access_modes").$type<{ data: string[] }>().default({ data: [] }).notNull()
 ```
-
 ---
-*Last updated: 2026-04-06 (Milestone 2: StorageClasses & PVs implemented)*
+
+*Last updated: 2026-04-06 (Milestone 2: StorageClasses & PVs + Frontend UI implemented)*

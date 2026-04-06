@@ -79,7 +79,7 @@ export function CreateIngressDialog({
 					serviceName: selectedService.name,
 					namespace: selectedService.namespace,
 					protocol: values.protocol,
-					internalPort: (selectedService.ports as any[])?.[0]?.port || 80, // Default to first port
+					internalPort: selectedService.ports?.data?.[0]?.port || 80, // Default to first port
 					// externalPort: values.port, // This might need to be added to UI if custom port is needed
 					domain: values.domain || undefined,
 				});

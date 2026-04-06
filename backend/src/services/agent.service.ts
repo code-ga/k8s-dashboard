@@ -516,7 +516,12 @@ export class AgentService {
 					selector: JSON.stringify(svc.selector),
 					k8sUid: svc.uid,
 					labels: JSON.stringify(svc.labels),
-					ports: { data: svc.ports },
+					ports: {
+						data: svc.ports.map((p) => /**fix protocol type incompatible.*/ ({
+							...p,
+							protocol: ["TCP", "UDP"].includes(p.protocol) ? p.protocol as "TCP" | "UDP" : "TCP",
+						})),
+					},
 					updatedAt: new Date(),
 					annotations: svc.annotations || {},
 					resourceConfig: svc.resourceConfig || "",

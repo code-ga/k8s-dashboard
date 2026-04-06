@@ -8,6 +8,8 @@ export type ResourceKey =
 	| "configmap"
 	| "secret"
 	| "pvc"
+	| "pv"
+	| "storageclass"
 	| "user"
 	| "role";
 

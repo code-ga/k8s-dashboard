@@ -197,7 +197,7 @@ function ServiceDetailPage() {
 							</TableRow>
 						</TableHeader>
 						<TableBody>
-							{(service.ports as any[])?.map((port, _i) => (
+							{(service.ports as any)?.data?.map((port: any, _i: any) => (
 								<TableRow key={port.name + service.id}>
 									<TableCell>{port.name || "-"}</TableCell>
 									<TableCell>{port.protocol}</TableCell>
@@ -205,7 +205,9 @@ function ServiceDetailPage() {
 									<TableCell>{port.targetPort}</TableCell>
 								</TableRow>
 							))}
-							{(!service.ports || (service.ports as any[]).length === 0) && (
+							{(!service.ports ||
+								!service.ports?.data ||
+								service.ports.data.length === 0) && (
 								<TableRow>
 									<TableCell colSpan={4} className="text-center py-4">
 										No ports defined

@@ -2,7 +2,6 @@ import { Type } from "@sinclair/typebox";
 import { Elysia } from "elysia";
 import { Command_CommandType } from "../../pb-generated/agent-backend/websocket";
 import { db } from "../database";
-import { k8sCluster, k8sStorageClasses } from "../database/schema";
 import { dbSchemaTypes } from "../database/type";
 import { authenticationMiddleware } from "../middleware/auth";
 import { agentManagerService } from "../services/agentManager";
@@ -17,6 +16,30 @@ export const storageclassRoute = new Elysia({
 	.use(agentManagerService)
 	.guard({ userAuth: { requiredProfile: true } }, (app) =>
 		app
+			.get(
+				"/all",
+				async (ctx) => {
+					const { clusterId } = ctx.params;
+					const storageClasses = await db.query.k8sStorageClasses.findMany({
+						where: { clusterId: Number(clusterId) },
+					});
+					return ctx.status(200, {
+						success: true,
+						message: "StorageClasses fetched successfully",
+						data: storageClasses,
+						timestamp: Date.now(),
+					});
+				},
+				{
+					roleAuth: "storageclass:manage",
+					response: {
+						200: baseResponseSchema(
+							Type.Array(Type.Object(dbSchemaTypes.k8sStorageClasses)),
+						),
+						404: errorResponseSchema,
+					},
+				},
+			)
 			.get(
 				"/",
 				async (ctx) => {

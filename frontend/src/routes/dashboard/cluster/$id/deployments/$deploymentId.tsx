@@ -171,7 +171,11 @@ function ManageDeploymentPage() {
 				logger.error("Failed to parse env variables", _e);
 				setEnvVars([]);
 			}
-			setPorts(deployment.ports || []);
+			setPorts(
+				Array.isArray(deployment.ports)
+					? deployment.ports
+					: (deployment.ports as any)?.data || [],
+			);
 			setCpuRequest(`${deployment.cpuRequest}m`);
 			setCpuLimit(`${deployment.cpuLimit}m`);
 			setMemoryRequest(`${deployment.memoryRequest}Mi`);
@@ -395,7 +399,13 @@ function ManageDeploymentPage() {
 							clusterId={clusterId}
 							defaultName={deployment.name}
 							defaultNamespace={deployment.namespace}
-							defaultInternalPort={deployment.ports?.[0]?.containerPort || 80}
+							defaultInternalPort={
+								(deployment.ports as any)?.data?.[0]?.containerPort ||
+								(Array.isArray(deployment.ports)
+									? deployment.ports[0]?.containerPort
+									: 0) ||
+								80
+							}
 							selector={selector}
 						/>
 						<Button
@@ -989,7 +999,7 @@ function ManageDeploymentPage() {
 				>
 					<DeploymentLogs
 						deployment={
-							deployment as SchemaStatic<
+							deployment as unknown as SchemaStatic<
 								databaseTypes.databaseTypes["k8sDeployments"]
 							>
 						}

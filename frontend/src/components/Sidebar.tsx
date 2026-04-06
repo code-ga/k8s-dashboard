@@ -6,8 +6,9 @@ import {
 	Cpu,
 	Database,
 	FileJson,
-	LayoutDashboard,
+	HardDrive,
 	Layers,
+	LayoutDashboard,
 	Lock,
 	Network,
 	Server,
@@ -16,9 +17,9 @@ import {
 	Users,
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
-import { cn } from "@/lib/utils";
 import { usePermissions } from "@/hooks/use-permissions";
 import type { PermissionFilter } from "@/lib/permission-matcher";
+import { cn } from "@/lib/utils";
 
 interface SidebarProps {
 	role: string;
@@ -126,6 +127,20 @@ export function Sidebar({ role, className }: SidebarProps) {
 			label: "PVCs",
 			icon: Database,
 			permission: "pvc:read" as PermissionFilter,
+			exact: false,
+		},
+		{
+			to: `/dashboard/cluster/${clusterId}/storage-classes`,
+			label: "Storage Classes",
+			icon: HardDrive,
+			permission: "storageclass:read" as PermissionFilter,
+			exact: false,
+		},
+		{
+			to: `/dashboard/cluster/${clusterId}/persistent-volumes`,
+			label: "Persistent Volumes",
+			icon: HardDrive,
+			permission: "pv:read" as PermissionFilter,
 			exact: false,
 		},
 		{

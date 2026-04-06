@@ -2,7 +2,6 @@ import { Type } from "@sinclair/typebox";
 import { Elysia } from "elysia";
 import { Command_CommandType } from "../../pb-generated/agent-backend/websocket";
 import { db } from "../database";
-import { k8sCluster, k8sPersistentVolumes } from "../database/schema";
 import { dbSchemaTypes } from "../database/type";
 import { authenticationMiddleware } from "../middleware/auth";
 import { agentManagerService } from "../services/agentManager";
@@ -17,6 +16,30 @@ export const pvRoute = new Elysia({
 	.use(agentManagerService)
 	.guard({ userAuth: { requiredProfile: true } }, (app) =>
 		app
+			.get(
+				"/all",
+				async (ctx) => {
+					const { clusterId } = ctx.params;
+					const pvs = await db.query.k8sPersistentVolumes.findMany({
+						where: { clusterId: Number(clusterId) },
+					});
+					return ctx.status(200, {
+						success: true,
+						message: "PersistentVolumes fetched successfully",
+						data: pvs,
+						timestamp: Date.now(),
+					});
+				},
+				{
+					roleAuth: "pv:manage",
+					response: {
+						200: baseResponseSchema(
+							Type.Array(Type.Object(dbSchemaTypes.k8sPersistentVolumes)),
+						),
+						404: errorResponseSchema,
+					},
+				},
+			)
 			.get(
 				"/",
 				async (ctx) => {

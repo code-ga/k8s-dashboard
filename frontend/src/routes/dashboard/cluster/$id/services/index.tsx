@@ -79,7 +79,7 @@ function ExposureDialog({
 			protocol: (ingress?.protocol as "http" | "tcp" | "udp") || "http",
 			domain: ingress?.domain || "",
 			internalPort:
-				ingress?.internalPort || (service.ports as any[])?.[0]?.port || 80,
+				ingress?.internalPort || service.ports?.data?.[0]?.port || 80,
 		},
 	});
 
@@ -366,7 +366,7 @@ function ClusterServices() {
 									<TableCell>{svc.type || "ClusterIP"}</TableCell>
 									<TableCell>
 										<div className="flex flex-col gap-1">
-											{(svc.ports as any[])?.map((p) => (
+											{(svc.ports as any)?.data?.map((p: any) => (
 												<div key={p.port} className="text-xs">
 													{p.port} → {p.targetPort} ({p.protocol})
 												</div>
