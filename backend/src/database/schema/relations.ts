@@ -1,6 +1,6 @@
 import { defineRelations } from "drizzle-orm";
-import { AppState, gatewayPorts } from "./app";
 import { agentCommands } from "./agent-commands";
+import { AppState, gatewayPorts } from "./app";
 import { account, profile, role, session, user, verification } from "./auth";
 import { clusterAgent, k8sCluster, k8sClusterNode } from "./cluster";
 import {
@@ -32,9 +32,11 @@ import {
 	k8sDeployments,
 	k8sIngresses,
 	k8sPersistentVolumeClaims,
+	k8sPersistentVolumes,
 	k8sPods,
 	k8sSecrets,
 	k8sServices,
+	k8sStorageClasses,
 } from "./k8s-resources";
 
 export const schema = {
@@ -54,6 +56,8 @@ export const schema = {
 	k8sConfigMaps,
 	k8sSecrets,
 	k8sPersistentVolumeClaims,
+	k8sStorageClasses,
+	k8sPersistentVolumes,
 	agentCommands,
 	gatewayPorts,
 	AppState,
@@ -96,6 +100,8 @@ export const schemaRelations = defineRelations(schema, (r) => ({
 		configMaps: r.many.k8sConfigMaps(),
 		secrets: r.many.k8sSecrets(),
 		pvcs: r.many.k8sPersistentVolumeClaims(),
+		storageClasses: r.many.k8sStorageClasses(),
+		persistentVolumes: r.many.k8sPersistentVolumes(),
 		agentCommands: r.many.agentCommands(),
 	},
 	clusterAgent: {
@@ -268,6 +274,18 @@ export const schemaRelations = defineRelations(schema, (r) => ({
 		owner: r.one.profile({
 			from: r.k8sPersistentVolumeClaims.ownerId,
 			to: r.profile.id,
+		}),
+	},
+	k8sStorageClasses: {
+		cluster: r.one.k8sCluster({
+			from: r.k8sStorageClasses.clusterId,
+			to: r.k8sCluster.id,
+		}),
+	},
+	k8sPersistentVolumes: {
+		cluster: r.one.k8sCluster({
+			from: r.k8sPersistentVolumes.clusterId,
+			to: r.k8sCluster.id,
 		}),
 	},
 	// Reverse relations for normalized reference tables

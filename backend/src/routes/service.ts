@@ -195,6 +195,7 @@ export const serviceRoute = new Elysia({
 						| undefined;
 
 					try {
+						const portsInput = body.ports;
 						[newSvc] = await db
 							.insert(schema.k8sServices)
 							.values({
@@ -205,7 +206,7 @@ export const serviceRoute = new Elysia({
 								type: body.type,
 								selector: JSON.stringify(body.selector),
 								labels: JSON.stringify(body.labels || {}),
-								ports: body.ports,
+								ports: { data: portsInput },
 								annotations: body.annotations || {},
 								updatedAt: new Date(),
 							})

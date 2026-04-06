@@ -1,4 +1,3 @@
-import { logger } from "../utils/logger";
 import { Type } from "@sinclair/typebox";
 import { eq, type InferInsertModel } from "drizzle-orm";
 import { Elysia } from "elysia";
@@ -14,23 +13,26 @@ import {
 	generateIngressRouteManifest,
 	generateServiceManifest,
 } from "../utils/k8s-manifest";
+import { logger } from "../utils/logger";
 
 const ingressWithServiceSchema = Type.Object({
 	...dbSchemaTypes.k8sIngresses,
 	service: Type.Union([
 		Type.Object({
 			...dbSchemaTypes.k8sServices,
-			ports: Type.Array(
-				Type.Object({
-					port: Type.Number(),
-					targetPort: Type.Number(),
-					nodePort: Type.Optional(Type.Number()),
-					protocol: Type.Optional(
-						Type.Union([Type.Literal("TCP"), Type.Literal("UDP")]),
-					),
-					name: Type.Optional(Type.String()),
-				}),
-			),
+			ports: Type.Object({
+				data: Type.Array(
+					Type.Object({
+						port: Type.Number(),
+						targetPort: Type.Number(),
+						nodePort: Type.Optional(Type.Number()),
+						protocol: Type.Optional(
+							Type.Union([Type.Literal("TCP"), Type.Literal("UDP")]),
+						),
+						name: Type.Optional(Type.String()),
+					}),
+				),
+			}),
 		}),
 		Type.Null(),
 	]),
@@ -261,13 +263,15 @@ export const ingressRoute = new Elysia({
 									type: "ClusterIP", // Default for exposure
 									selector: JSON.stringify(body.selector),
 									labels: JSON.stringify(body.labels || {}),
-									ports: [
-										{
-											port: body.internalPort,
-											targetPort: body.internalPort,
-											protocol: svcProtocol,
-										},
-									],
+									ports: {
+										data: [
+											{
+												port: body.internalPort,
+												targetPort: body.internalPort,
+												protocol: svcProtocol,
+											},
+										],
+									},
 									updatedAt: new Date(),
 								})
 								.returning();
@@ -327,7 +331,8 @@ export const ingressRoute = new Elysia({
 						if (!isSvcManager && existingSvc.ownerId !== ctx.profile?.id) {
 							return ctx.status(403, {
 								success: false,
-								message: "Forbidden: You do not own the service you are trying to expose",
+								message:
+									"Forbidden: You do not own the service you are trying to expose",
 								timestamp: Date.now(),
 							});
 						}

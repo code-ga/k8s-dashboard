@@ -39,7 +39,10 @@ export const k8sDeployments = pgTable(
 		command: text("command").default("").notNull(),
 		args: text("args").default("").notNull(),
 		envVariables: text("env_variables").default("").notNull(),
-		ports: jsonb("ports").$type<any>().default([]).notNull(),
+		ports: jsonb("ports")
+			.$type<{ data: any[] }>()
+			.default({ data: [] })
+			.notNull(), // Array of ServicePortDTO
 
 		// ConfigMap and Secret references
 		configMapRefs: jsonb("configmap_refs")
@@ -106,8 +109,9 @@ export const k8sPods = pgTable(
 		deploymentId: integer("deployment_id").references(() => k8sDeployments.id, {
 			onDelete: "set null",
 		}), // Pods can exist without deployment (bare pods)
-		nodeId: integer("node_id")
-			.references(() => k8sClusterNode.id, { onDelete: "cascade" }),
+		nodeId: integer("node_id").references(() => k8sClusterNode.id, {
+			onDelete: "cascade",
+		}),
 		ownerId: text("owner_id")
 			.notNull()
 			.references(() => profile.id, { onDelete: "cascade" }),
@@ -174,7 +178,10 @@ export const k8sServices = pgTable(
 			.default({})
 			.notNull()
 			.$type<Record<string, string>>(), // JSON string
-		ports: jsonb("ports").$type<any[]>().default([]).notNull(), // Array of ServicePortDTO
+		ports: jsonb("ports")
+			.$type<{ data: any[] }>()
+			.default({ data: [] })
+			.notNull(), // Array of ServicePortDTO
 
 		createdAt: timestamp("created_at").defaultNow().notNull(),
 		updatedAt: timestamp("updated_at")
@@ -349,6 +356,82 @@ export const k8sPersistentVolumeClaims = pgTable(
 		clusterUidIdx: uniqueIndex("pvc_cluster_uid_idx").on(
 			table.clusterId,
 			table.k8sUid,
+		),
+	}),
+);
+
+export const k8sStorageClasses = pgTable(
+	"k8sStorageClasses",
+	{
+		id: serial("id").primaryKey(),
+		clusterId: integer("cluster_id")
+			.notNull()
+			.references(() => k8sCluster.id, { onDelete: "cascade" }),
+		name: text("name").notNull(),
+		provisioner: text("provisioner").notNull(),
+		reclaimPolicy: text("reclaim_policy"),
+		volumeBindingMode: text("volume_binding_mode"),
+		allowVolumeExpansion: boolean("allow_volume_expansion")
+			.default(false)
+			.notNull(),
+		annotations: jsonb("annotations")
+			.default({})
+			.notNull()
+			.$type<Record<string, string>>(),
+		labels: jsonb("labels")
+			.default({})
+			.notNull()
+			.$type<Record<string, string>>(),
+		isDefault: boolean("is_default").default(false).notNull(),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+		updatedAt: timestamp("updated_at")
+			.$onUpdate(() => /* @__PURE__ */ new Date())
+			.notNull(),
+		resourceConfig: text("resource_config").default("").notNull(),
+	},
+	(table) => ({
+		clusterNameIdx: uniqueIndex("sc_cluster_name_idx").on(
+			table.clusterId,
+			table.name,
+		),
+	}),
+);
+
+export const k8sPersistentVolumes = pgTable(
+	"k8sPersistentVolumes",
+	{
+		id: serial("id").primaryKey(),
+		clusterId: integer("cluster_id")
+			.notNull()
+			.references(() => k8sCluster.id, { onDelete: "cascade" }),
+		name: text("name").notNull(),
+		capacity: integer("capacity").notNull(), // in MiB
+		phase: text("phase").notNull(),
+		reclaimPolicy: text("reclaim_policy"),
+		storageClass: text("storage_class"),
+		boundPvc: text("bound_pvc"), // namespace/name of bound PVC
+		accessModes: jsonb("access_modes")
+			.$type<{ data: string[] }>()
+			.default({ data: [] })
+			.notNull(),
+		annotations: jsonb("annotations")
+			.default({})
+			.notNull()
+			.$type<Record<string, string>>(),
+		labels: jsonb("labels")
+			.default({})
+			.notNull()
+			.$type<Record<string, string>>(),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+		updatedAt: timestamp("updated_at")
+			.$onUpdate(() => /* @__PURE__ */ new Date())
+			.notNull(),
+		resourceConfig: text("resource_config").default("").notNull(),
+	},
+	(table) => ({
+		clusterNameIdx: uniqueIndex("pv_cluster_name_idx").on(
+			table.clusterId,
+			table.name,
 		),
 	}),
 );

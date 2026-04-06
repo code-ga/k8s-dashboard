@@ -83,7 +83,7 @@ If you are asked to support a new K8s resource (e.g., *PersistentVolumeClaims*, 
 
     - [x] **Storage & Volume Management**: 
     - [x] **Milestone 1 (PVC Full CRUD)**: Implemented Protobuf sync, Backend CRUD (Sync/Create/Resize/Delete), and Dashboard UI for PVCs.
-    - [ ] **Milestone 2 (StorageClasses & PVs)**: Add remaining storage resources to Heartbeat and UI.
+    - [x] **Milestone 2 (StorageClasses & PVs)**: Implemented Protobuf sync (StorageClass, PV), Agent sync functions, Backend DB schemas, CRUD API routes, manifest generators, and RBAC permissions.
     - [x] **Milestone 3 (Pod Creation Integration)**: Add volume mount builder to Deployment/Pod creation forms. Integrated PVC and emptyDir support across manifest generation, ownership validation, and UI details.
 - [ ] **Virtual Cluster Isolation**: Native namespace isolation with `NetworkPolicies` and `RoleBindings`.
 - [ ] **Scale-to-Zero**: Integration with **Sablier** and Traefik for request-based automatic scaling.
@@ -121,4 +121,46 @@ If you are asked to support a new K8s resource (e.g., *PersistentVolumeClaims*, 
 5. **Frontend UI**: Shared `VolumeMountEditor.tsx` integrated across creation and detail/edit pages.
 
 ---
-*Last updated: 2026-04-03 (Added Storage Volume Mounts support)*
+
+## 🔗 Feature Flow: StorageClasses & PersistentVolumes (M2)
+
+### StorageClass (cluster-wide resource)
+1. **Protobuf**: Added `StorageClass` message to `protobuf/agent-backend/websocket.proto` with fields: `name`, `provisioner`, `reclaim_policy`, `volume_binding_mode`, `allow_volume_expansion`, `annotations`, `labels`, `resource_config`.
+2. **Command Types**: Added `CREATE_STORAGE_CLASS`, `DELETE_STORAGE_CLASS`, `SET_DEFAULT_STORAGE_CLASS`.
+3. **Agent**: `agent/service/k8s/resources.go` adds `GetStorageClasses()` using `client-go StorageV1()`. `stats.go` serializes into `Heartbeat.storageClasses`.
+4. **Command Handler**: `agent/command.go` handles StorageClass creation/deletion and default annotation updates.
+5. **Database**: Added `k8sStorageClasses` table in `backend/src/database/schema/k8s-resources.ts` with clusterId, name, provisioner, reclaimPolicy, volumeBindingMode, allowVolumeExpansion, isDefault.
+6. **Backend Sync**: `agent.service.ts` adds `syncStorageClasses()` to upsert from heartbeat.
+7. **API Routes**: `backend/src/routes/storageclass.ts` provides GET /api/storageclasses/:clusterId, POST, DELETE, PATCH /set-default.
+8. **Permissions**: Added `storageclass:read`, `storageclass:create`, `storageclass:update`, `storageclass:delete`, `storageclass:manage` to `permissions.ts`.
+9. **Manifest Generator**: Added `generateStorageClassManifest()` in `k8s-manifest.ts`.
+
+### PersistentVolume (cluster-wide resource)
+1. **Protobuf**: Added `PV` message with fields: `name`, `capacity`, `phase`, `reclaim_policy`, `storage_class`, `bound_pvc`, `access_modes`, `annotations`, `labels`, `resource_config`.
+2. **Command Types**: Added `CREATE_PV`, `DELETE_PV`.
+3. **Agent**: `resources.go` adds `GetPVs()` using `client-go CoreV1()`. `stats.go` serializes into `Heartbeat.pvs`.
+4. **Command Handler**: `agent/command.go` handles PV creation/deletion.
+5. **Database**: Added `k8sPersistentVolumes` table with clusterId, name, capacity, phase, reclaimPolicy, storageClass, boundPvc, accessModes.
+6. **Backend Sync**: `agent.service.ts` adds `syncPVs()` to upsert from heartbeat.
+7. **API Routes**: `backend/src/routes/pv.ts` provides GET /api/pvs/:clusterId, POST, DELETE.
+8. **Permissions**: Added `pv:read`, `pv:create`, `pv:delete`, `pv:manage` to `permissions.ts`.
+9. **Manifest Generator**: Added `generatePVManifest()` in `k8s-manifest.ts` supporting NFS and hostPath.
+
+**Note**: PV/StorageClass are cluster-scoped (not namespaced) unlike PVC which is namespace-scoped.
+
+---
+
+## ⚠️ Drizzle ORM Type Notes
+
+When defining JSONB columns in Drizzle ORM, avoid using `.$type<T[]>()` with array types as it generates incorrect TypeBox definitions. Use the wrapper pattern instead:
+
+```typescript
+// ❌ Incorrect - causes TypeBox issues
+accessModes: jsonb("access_modes").$type<string[]>().default([]).notNull()
+
+// ✅ Correct - uses wrapper object
+accessModes: jsonb("access_modes").$type<{ data: string[] }>().default({ data: [] }).notNull()
+```
+
+---
+*Last updated: 2026-04-06 (Milestone 2: StorageClasses & PVs implemented)*

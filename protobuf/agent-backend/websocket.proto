@@ -72,6 +72,12 @@ message Heartbeat {
   // List of Persistent Volume Claims
   repeated PVC pvcs = 10;
 
+  // List of StorageClasses
+  repeated StorageClass storage_classes = 11;
+
+  // List of PersistentVolumes
+  repeated PV pvs = 12;
+
   // Timestamp of the heartbeat
   int64 timestamp = 5;
 }
@@ -265,6 +271,32 @@ message PVC {
   string resource_config = 10;
 }
 
+message StorageClass {
+  string name = 1;
+  string provisioner = 2;
+  string reclaim_policy = 3;
+  string volume_binding_mode = 4;
+  bool allow_volume_expansion = 5;
+  map<string, string> annotations = 6;
+  map<string, string> labels = 7;
+
+  string resource_config = 8;
+}
+
+message PV {
+  string name = 1;
+  int64 capacity = 2; // in MiB
+  string phase = 3; // Available, Bound, Released, Failed
+  string reclaim_policy = 4;
+  string storage_class = 5;
+  string bound_pvc = 6; // namespace/name of bound PVC
+  repeated string access_modes = 7;
+  map<string, string> annotations = 8;
+  map<string, string> labels = 9;
+
+  string resource_config = 10;
+}
+
 message Command {
   string id = 1;
   enum CommandType {
@@ -296,6 +328,11 @@ message Command {
     DELETE_PVC = 25;
     EDIT_PVC = 26;
     RESIZE_PVC = 27;
+    CREATE_STORAGE_CLASS = 28;
+    DELETE_STORAGE_CLASS = 29;
+    SET_DEFAULT_STORAGE_CLASS = 30;
+    CREATE_PV = 31;
+    DELETE_PV = 32;
   }
   CommandType type = 2;
   

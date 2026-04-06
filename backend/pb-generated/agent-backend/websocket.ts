@@ -97,6 +97,10 @@ export interface Heartbeat {
   ingresses: Ingress[];
   /** List of Persistent Volume Claims */
   pvcs: PVC[];
+  /** List of StorageClasses */
+  storageClasses: StorageClass[];
+  /** List of PersistentVolumes */
+  pvs: PV[];
   /** Timestamp of the heartbeat */
   timestamp: number;
 }
@@ -391,6 +395,53 @@ export interface PVC_AnnotationsEntry {
   value: string;
 }
 
+export interface StorageClass {
+  name: string;
+  provisioner: string;
+  reclaimPolicy: string;
+  volumeBindingMode: string;
+  allowVolumeExpansion: boolean;
+  annotations: { [key: string]: string };
+  labels: { [key: string]: string };
+  resourceConfig: string;
+}
+
+export interface StorageClass_AnnotationsEntry {
+  key: string;
+  value: string;
+}
+
+export interface StorageClass_LabelsEntry {
+  key: string;
+  value: string;
+}
+
+export interface PV {
+  name: string;
+  /** in MiB */
+  capacity: number;
+  /** Available, Bound, Released, Failed */
+  phase: string;
+  reclaimPolicy: string;
+  storageClass: string;
+  /** namespace/name of bound PVC */
+  boundPvc: string;
+  accessModes: string[];
+  annotations: { [key: string]: string };
+  labels: { [key: string]: string };
+  resourceConfig: string;
+}
+
+export interface PV_AnnotationsEntry {
+  key: string;
+  value: string;
+}
+
+export interface PV_LabelsEntry {
+  key: string;
+  value: string;
+}
+
 export interface Command {
   id: string;
   type: Command_CommandType;
@@ -430,6 +481,11 @@ export enum Command_CommandType {
   DELETE_PVC = 25,
   EDIT_PVC = 26,
   RESIZE_PVC = 27,
+  CREATE_STORAGE_CLASS = 28,
+  DELETE_STORAGE_CLASS = 29,
+  SET_DEFAULT_STORAGE_CLASS = 30,
+  CREATE_PV = 31,
+  DELETE_PV = 32,
   UNRECOGNIZED = -1,
 }
 
@@ -519,6 +575,21 @@ export function command_CommandTypeFromJSON(object: any): Command_CommandType {
     case 27:
     case "RESIZE_PVC":
       return Command_CommandType.RESIZE_PVC;
+    case 28:
+    case "CREATE_STORAGE_CLASS":
+      return Command_CommandType.CREATE_STORAGE_CLASS;
+    case 29:
+    case "DELETE_STORAGE_CLASS":
+      return Command_CommandType.DELETE_STORAGE_CLASS;
+    case 30:
+    case "SET_DEFAULT_STORAGE_CLASS":
+      return Command_CommandType.SET_DEFAULT_STORAGE_CLASS;
+    case 31:
+    case "CREATE_PV":
+      return Command_CommandType.CREATE_PV;
+    case 32:
+    case "DELETE_PV":
+      return Command_CommandType.DELETE_PV;
     case -1:
     case "UNRECOGNIZED":
     default:
@@ -584,6 +655,16 @@ export function command_CommandTypeToJSON(object: Command_CommandType): string {
       return "EDIT_PVC";
     case Command_CommandType.RESIZE_PVC:
       return "RESIZE_PVC";
+    case Command_CommandType.CREATE_STORAGE_CLASS:
+      return "CREATE_STORAGE_CLASS";
+    case Command_CommandType.DELETE_STORAGE_CLASS:
+      return "DELETE_STORAGE_CLASS";
+    case Command_CommandType.SET_DEFAULT_STORAGE_CLASS:
+      return "SET_DEFAULT_STORAGE_CLASS";
+    case Command_CommandType.CREATE_PV:
+      return "CREATE_PV";
+    case Command_CommandType.DELETE_PV:
+      return "DELETE_PV";
     case Command_CommandType.UNRECOGNIZED:
     default:
       return "UNRECOGNIZED";
@@ -1093,6 +1174,8 @@ function createBaseHeartbeat(): Heartbeat {
     secrets: [],
     ingresses: [],
     pvcs: [],
+    storageClasses: [],
+    pvs: [],
     timestamp: 0,
   };
 }
@@ -1125,6 +1208,12 @@ export const Heartbeat: MessageFns<Heartbeat> = {
     }
     for (const v of message.pvcs) {
       PVC.encode(v!, writer.uint32(82).fork()).join();
+    }
+    for (const v of message.storageClasses) {
+      StorageClass.encode(v!, writer.uint32(90).fork()).join();
+    }
+    for (const v of message.pvs) {
+      PV.encode(v!, writer.uint32(98).fork()).join();
     }
     if (message.timestamp !== 0) {
       writer.uint32(40).int64(message.timestamp);
@@ -1211,6 +1300,22 @@ export const Heartbeat: MessageFns<Heartbeat> = {
           message.pvcs.push(PVC.decode(reader, reader.uint32()));
           continue;
         }
+        case 11: {
+          if (tag !== 90) {
+            break;
+          }
+
+          message.storageClasses.push(StorageClass.decode(reader, reader.uint32()));
+          continue;
+        }
+        case 12: {
+          if (tag !== 98) {
+            break;
+          }
+
+          message.pvs.push(PV.decode(reader, reader.uint32()));
+          continue;
+        }
         case 5: {
           if (tag !== 40) {
             break;
@@ -1251,6 +1356,12 @@ export const Heartbeat: MessageFns<Heartbeat> = {
         ? object.ingresses.map((e: any) => Ingress.fromJSON(e))
         : [],
       pvcs: globalThis.Array.isArray(object?.pvcs) ? object.pvcs.map((e: any) => PVC.fromJSON(e)) : [],
+      storageClasses: globalThis.Array.isArray(object?.storageClasses)
+        ? object.storageClasses.map((e: any) => StorageClass.fromJSON(e))
+        : globalThis.Array.isArray(object?.storage_classes)
+        ? object.storage_classes.map((e: any) => StorageClass.fromJSON(e))
+        : [],
+      pvs: globalThis.Array.isArray(object?.pvs) ? object.pvs.map((e: any) => PV.fromJSON(e)) : [],
       timestamp: isSet(object.timestamp) ? globalThis.Number(object.timestamp) : 0,
     };
   },
@@ -1284,6 +1395,12 @@ export const Heartbeat: MessageFns<Heartbeat> = {
     if (message.pvcs?.length) {
       obj.pvcs = message.pvcs.map((e) => PVC.toJSON(e));
     }
+    if (message.storageClasses?.length) {
+      obj.storageClasses = message.storageClasses.map((e) => StorageClass.toJSON(e));
+    }
+    if (message.pvs?.length) {
+      obj.pvs = message.pvs.map((e) => PV.toJSON(e));
+    }
     if (message.timestamp !== 0) {
       obj.timestamp = Math.round(message.timestamp);
     }
@@ -1306,6 +1423,8 @@ export const Heartbeat: MessageFns<Heartbeat> = {
     message.secrets = object.secrets?.map((e) => Secret.fromPartial(e)) || [];
     message.ingresses = object.ingresses?.map((e) => Ingress.fromPartial(e)) || [];
     message.pvcs = object.pvcs?.map((e) => PVC.fromPartial(e)) || [];
+    message.storageClasses = object.storageClasses?.map((e) => StorageClass.fromPartial(e)) || [];
+    message.pvs = object.pvs?.map((e) => PV.fromPartial(e)) || [];
     message.timestamp = object.timestamp ?? 0;
     return message;
   },
@@ -6213,6 +6332,844 @@ export const PVC_AnnotationsEntry: MessageFns<PVC_AnnotationsEntry> = {
   },
   fromPartial<I extends Exact<DeepPartial<PVC_AnnotationsEntry>, I>>(object: I): PVC_AnnotationsEntry {
     const message = createBasePVC_AnnotationsEntry();
+    message.key = object.key ?? "";
+    message.value = object.value ?? "";
+    return message;
+  },
+};
+
+function createBaseStorageClass(): StorageClass {
+  return {
+    name: "",
+    provisioner: "",
+    reclaimPolicy: "",
+    volumeBindingMode: "",
+    allowVolumeExpansion: false,
+    annotations: {},
+    labels: {},
+    resourceConfig: "",
+  };
+}
+
+export const StorageClass: MessageFns<StorageClass> = {
+  encode(message: StorageClass, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.name !== "") {
+      writer.uint32(10).string(message.name);
+    }
+    if (message.provisioner !== "") {
+      writer.uint32(18).string(message.provisioner);
+    }
+    if (message.reclaimPolicy !== "") {
+      writer.uint32(26).string(message.reclaimPolicy);
+    }
+    if (message.volumeBindingMode !== "") {
+      writer.uint32(34).string(message.volumeBindingMode);
+    }
+    if (message.allowVolumeExpansion !== false) {
+      writer.uint32(40).bool(message.allowVolumeExpansion);
+    }
+    globalThis.Object.entries(message.annotations).forEach(([key, value]: [string, string]) => {
+      StorageClass_AnnotationsEntry.encode({ key: key as any, value }, writer.uint32(50).fork()).join();
+    });
+    globalThis.Object.entries(message.labels).forEach(([key, value]: [string, string]) => {
+      StorageClass_LabelsEntry.encode({ key: key as any, value }, writer.uint32(58).fork()).join();
+    });
+    if (message.resourceConfig !== "") {
+      writer.uint32(66).string(message.resourceConfig);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): StorageClass {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseStorageClass();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.name = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.provisioner = reader.string();
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.reclaimPolicy = reader.string();
+          continue;
+        }
+        case 4: {
+          if (tag !== 34) {
+            break;
+          }
+
+          message.volumeBindingMode = reader.string();
+          continue;
+        }
+        case 5: {
+          if (tag !== 40) {
+            break;
+          }
+
+          message.allowVolumeExpansion = reader.bool();
+          continue;
+        }
+        case 6: {
+          if (tag !== 50) {
+            break;
+          }
+
+          const entry6 = StorageClass_AnnotationsEntry.decode(reader, reader.uint32());
+          if (entry6.value !== undefined) {
+            message.annotations[entry6.key] = entry6.value;
+          }
+          continue;
+        }
+        case 7: {
+          if (tag !== 58) {
+            break;
+          }
+
+          const entry7 = StorageClass_LabelsEntry.decode(reader, reader.uint32());
+          if (entry7.value !== undefined) {
+            message.labels[entry7.key] = entry7.value;
+          }
+          continue;
+        }
+        case 8: {
+          if (tag !== 66) {
+            break;
+          }
+
+          message.resourceConfig = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): StorageClass {
+    return {
+      name: isSet(object.name) ? globalThis.String(object.name) : "",
+      provisioner: isSet(object.provisioner) ? globalThis.String(object.provisioner) : "",
+      reclaimPolicy: isSet(object.reclaimPolicy)
+        ? globalThis.String(object.reclaimPolicy)
+        : isSet(object.reclaim_policy)
+        ? globalThis.String(object.reclaim_policy)
+        : "",
+      volumeBindingMode: isSet(object.volumeBindingMode)
+        ? globalThis.String(object.volumeBindingMode)
+        : isSet(object.volume_binding_mode)
+        ? globalThis.String(object.volume_binding_mode)
+        : "",
+      allowVolumeExpansion: isSet(object.allowVolumeExpansion)
+        ? globalThis.Boolean(object.allowVolumeExpansion)
+        : isSet(object.allow_volume_expansion)
+        ? globalThis.Boolean(object.allow_volume_expansion)
+        : false,
+      annotations: isObject(object.annotations)
+        ? (globalThis.Object.entries(object.annotations) as [string, any][]).reduce(
+          (acc: { [key: string]: string }, [key, value]: [string, any]) => {
+            acc[key] = globalThis.String(value);
+            return acc;
+          },
+          {},
+        )
+        : {},
+      labels: isObject(object.labels)
+        ? (globalThis.Object.entries(object.labels) as [string, any][]).reduce(
+          (acc: { [key: string]: string }, [key, value]: [string, any]) => {
+            acc[key] = globalThis.String(value);
+            return acc;
+          },
+          {},
+        )
+        : {},
+      resourceConfig: isSet(object.resourceConfig)
+        ? globalThis.String(object.resourceConfig)
+        : isSet(object.resource_config)
+        ? globalThis.String(object.resource_config)
+        : "",
+    };
+  },
+
+  toJSON(message: StorageClass): unknown {
+    const obj: any = {};
+    if (message.name !== "") {
+      obj.name = message.name;
+    }
+    if (message.provisioner !== "") {
+      obj.provisioner = message.provisioner;
+    }
+    if (message.reclaimPolicy !== "") {
+      obj.reclaimPolicy = message.reclaimPolicy;
+    }
+    if (message.volumeBindingMode !== "") {
+      obj.volumeBindingMode = message.volumeBindingMode;
+    }
+    if (message.allowVolumeExpansion !== false) {
+      obj.allowVolumeExpansion = message.allowVolumeExpansion;
+    }
+    if (message.annotations) {
+      const entries = globalThis.Object.entries(message.annotations) as [string, string][];
+      if (entries.length > 0) {
+        obj.annotations = {};
+        entries.forEach(([k, v]) => {
+          obj.annotations[k] = v;
+        });
+      }
+    }
+    if (message.labels) {
+      const entries = globalThis.Object.entries(message.labels) as [string, string][];
+      if (entries.length > 0) {
+        obj.labels = {};
+        entries.forEach(([k, v]) => {
+          obj.labels[k] = v;
+        });
+      }
+    }
+    if (message.resourceConfig !== "") {
+      obj.resourceConfig = message.resourceConfig;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<StorageClass>, I>>(base?: I): StorageClass {
+    return StorageClass.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<StorageClass>, I>>(object: I): StorageClass {
+    const message = createBaseStorageClass();
+    message.name = object.name ?? "";
+    message.provisioner = object.provisioner ?? "";
+    message.reclaimPolicy = object.reclaimPolicy ?? "";
+    message.volumeBindingMode = object.volumeBindingMode ?? "";
+    message.allowVolumeExpansion = object.allowVolumeExpansion ?? false;
+    message.annotations = (globalThis.Object.entries(object.annotations ?? {}) as [string, string][]).reduce(
+      (acc: { [key: string]: string }, [key, value]: [string, string]) => {
+        if (value !== undefined) {
+          acc[key] = globalThis.String(value);
+        }
+        return acc;
+      },
+      {},
+    );
+    message.labels = (globalThis.Object.entries(object.labels ?? {}) as [string, string][]).reduce(
+      (acc: { [key: string]: string }, [key, value]: [string, string]) => {
+        if (value !== undefined) {
+          acc[key] = globalThis.String(value);
+        }
+        return acc;
+      },
+      {},
+    );
+    message.resourceConfig = object.resourceConfig ?? "";
+    return message;
+  },
+};
+
+function createBaseStorageClass_AnnotationsEntry(): StorageClass_AnnotationsEntry {
+  return { key: "", value: "" };
+}
+
+export const StorageClass_AnnotationsEntry: MessageFns<StorageClass_AnnotationsEntry> = {
+  encode(message: StorageClass_AnnotationsEntry, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.key !== "") {
+      writer.uint32(10).string(message.key);
+    }
+    if (message.value !== "") {
+      writer.uint32(18).string(message.value);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): StorageClass_AnnotationsEntry {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseStorageClass_AnnotationsEntry();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.key = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.value = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): StorageClass_AnnotationsEntry {
+    return {
+      key: isSet(object.key) ? globalThis.String(object.key) : "",
+      value: isSet(object.value) ? globalThis.String(object.value) : "",
+    };
+  },
+
+  toJSON(message: StorageClass_AnnotationsEntry): unknown {
+    const obj: any = {};
+    if (message.key !== "") {
+      obj.key = message.key;
+    }
+    if (message.value !== "") {
+      obj.value = message.value;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<StorageClass_AnnotationsEntry>, I>>(base?: I): StorageClass_AnnotationsEntry {
+    return StorageClass_AnnotationsEntry.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<StorageClass_AnnotationsEntry>, I>>(
+    object: I,
+  ): StorageClass_AnnotationsEntry {
+    const message = createBaseStorageClass_AnnotationsEntry();
+    message.key = object.key ?? "";
+    message.value = object.value ?? "";
+    return message;
+  },
+};
+
+function createBaseStorageClass_LabelsEntry(): StorageClass_LabelsEntry {
+  return { key: "", value: "" };
+}
+
+export const StorageClass_LabelsEntry: MessageFns<StorageClass_LabelsEntry> = {
+  encode(message: StorageClass_LabelsEntry, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.key !== "") {
+      writer.uint32(10).string(message.key);
+    }
+    if (message.value !== "") {
+      writer.uint32(18).string(message.value);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): StorageClass_LabelsEntry {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseStorageClass_LabelsEntry();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.key = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.value = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): StorageClass_LabelsEntry {
+    return {
+      key: isSet(object.key) ? globalThis.String(object.key) : "",
+      value: isSet(object.value) ? globalThis.String(object.value) : "",
+    };
+  },
+
+  toJSON(message: StorageClass_LabelsEntry): unknown {
+    const obj: any = {};
+    if (message.key !== "") {
+      obj.key = message.key;
+    }
+    if (message.value !== "") {
+      obj.value = message.value;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<StorageClass_LabelsEntry>, I>>(base?: I): StorageClass_LabelsEntry {
+    return StorageClass_LabelsEntry.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<StorageClass_LabelsEntry>, I>>(object: I): StorageClass_LabelsEntry {
+    const message = createBaseStorageClass_LabelsEntry();
+    message.key = object.key ?? "";
+    message.value = object.value ?? "";
+    return message;
+  },
+};
+
+function createBasePV(): PV {
+  return {
+    name: "",
+    capacity: 0,
+    phase: "",
+    reclaimPolicy: "",
+    storageClass: "",
+    boundPvc: "",
+    accessModes: [],
+    annotations: {},
+    labels: {},
+    resourceConfig: "",
+  };
+}
+
+export const PV: MessageFns<PV> = {
+  encode(message: PV, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.name !== "") {
+      writer.uint32(10).string(message.name);
+    }
+    if (message.capacity !== 0) {
+      writer.uint32(16).int64(message.capacity);
+    }
+    if (message.phase !== "") {
+      writer.uint32(26).string(message.phase);
+    }
+    if (message.reclaimPolicy !== "") {
+      writer.uint32(34).string(message.reclaimPolicy);
+    }
+    if (message.storageClass !== "") {
+      writer.uint32(42).string(message.storageClass);
+    }
+    if (message.boundPvc !== "") {
+      writer.uint32(50).string(message.boundPvc);
+    }
+    for (const v of message.accessModes) {
+      writer.uint32(58).string(v!);
+    }
+    globalThis.Object.entries(message.annotations).forEach(([key, value]: [string, string]) => {
+      PV_AnnotationsEntry.encode({ key: key as any, value }, writer.uint32(66).fork()).join();
+    });
+    globalThis.Object.entries(message.labels).forEach(([key, value]: [string, string]) => {
+      PV_LabelsEntry.encode({ key: key as any, value }, writer.uint32(74).fork()).join();
+    });
+    if (message.resourceConfig !== "") {
+      writer.uint32(82).string(message.resourceConfig);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): PV {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBasePV();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.name = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 16) {
+            break;
+          }
+
+          message.capacity = longToNumber(reader.int64());
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.phase = reader.string();
+          continue;
+        }
+        case 4: {
+          if (tag !== 34) {
+            break;
+          }
+
+          message.reclaimPolicy = reader.string();
+          continue;
+        }
+        case 5: {
+          if (tag !== 42) {
+            break;
+          }
+
+          message.storageClass = reader.string();
+          continue;
+        }
+        case 6: {
+          if (tag !== 50) {
+            break;
+          }
+
+          message.boundPvc = reader.string();
+          continue;
+        }
+        case 7: {
+          if (tag !== 58) {
+            break;
+          }
+
+          message.accessModes.push(reader.string());
+          continue;
+        }
+        case 8: {
+          if (tag !== 66) {
+            break;
+          }
+
+          const entry8 = PV_AnnotationsEntry.decode(reader, reader.uint32());
+          if (entry8.value !== undefined) {
+            message.annotations[entry8.key] = entry8.value;
+          }
+          continue;
+        }
+        case 9: {
+          if (tag !== 74) {
+            break;
+          }
+
+          const entry9 = PV_LabelsEntry.decode(reader, reader.uint32());
+          if (entry9.value !== undefined) {
+            message.labels[entry9.key] = entry9.value;
+          }
+          continue;
+        }
+        case 10: {
+          if (tag !== 82) {
+            break;
+          }
+
+          message.resourceConfig = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): PV {
+    return {
+      name: isSet(object.name) ? globalThis.String(object.name) : "",
+      capacity: isSet(object.capacity) ? globalThis.Number(object.capacity) : 0,
+      phase: isSet(object.phase) ? globalThis.String(object.phase) : "",
+      reclaimPolicy: isSet(object.reclaimPolicy)
+        ? globalThis.String(object.reclaimPolicy)
+        : isSet(object.reclaim_policy)
+        ? globalThis.String(object.reclaim_policy)
+        : "",
+      storageClass: isSet(object.storageClass)
+        ? globalThis.String(object.storageClass)
+        : isSet(object.storage_class)
+        ? globalThis.String(object.storage_class)
+        : "",
+      boundPvc: isSet(object.boundPvc)
+        ? globalThis.String(object.boundPvc)
+        : isSet(object.bound_pvc)
+        ? globalThis.String(object.bound_pvc)
+        : "",
+      accessModes: globalThis.Array.isArray(object?.accessModes)
+        ? object.accessModes.map((e: any) => globalThis.String(e))
+        : globalThis.Array.isArray(object?.access_modes)
+        ? object.access_modes.map((e: any) => globalThis.String(e))
+        : [],
+      annotations: isObject(object.annotations)
+        ? (globalThis.Object.entries(object.annotations) as [string, any][]).reduce(
+          (acc: { [key: string]: string }, [key, value]: [string, any]) => {
+            acc[key] = globalThis.String(value);
+            return acc;
+          },
+          {},
+        )
+        : {},
+      labels: isObject(object.labels)
+        ? (globalThis.Object.entries(object.labels) as [string, any][]).reduce(
+          (acc: { [key: string]: string }, [key, value]: [string, any]) => {
+            acc[key] = globalThis.String(value);
+            return acc;
+          },
+          {},
+        )
+        : {},
+      resourceConfig: isSet(object.resourceConfig)
+        ? globalThis.String(object.resourceConfig)
+        : isSet(object.resource_config)
+        ? globalThis.String(object.resource_config)
+        : "",
+    };
+  },
+
+  toJSON(message: PV): unknown {
+    const obj: any = {};
+    if (message.name !== "") {
+      obj.name = message.name;
+    }
+    if (message.capacity !== 0) {
+      obj.capacity = Math.round(message.capacity);
+    }
+    if (message.phase !== "") {
+      obj.phase = message.phase;
+    }
+    if (message.reclaimPolicy !== "") {
+      obj.reclaimPolicy = message.reclaimPolicy;
+    }
+    if (message.storageClass !== "") {
+      obj.storageClass = message.storageClass;
+    }
+    if (message.boundPvc !== "") {
+      obj.boundPvc = message.boundPvc;
+    }
+    if (message.accessModes?.length) {
+      obj.accessModes = message.accessModes;
+    }
+    if (message.annotations) {
+      const entries = globalThis.Object.entries(message.annotations) as [string, string][];
+      if (entries.length > 0) {
+        obj.annotations = {};
+        entries.forEach(([k, v]) => {
+          obj.annotations[k] = v;
+        });
+      }
+    }
+    if (message.labels) {
+      const entries = globalThis.Object.entries(message.labels) as [string, string][];
+      if (entries.length > 0) {
+        obj.labels = {};
+        entries.forEach(([k, v]) => {
+          obj.labels[k] = v;
+        });
+      }
+    }
+    if (message.resourceConfig !== "") {
+      obj.resourceConfig = message.resourceConfig;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<PV>, I>>(base?: I): PV {
+    return PV.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<PV>, I>>(object: I): PV {
+    const message = createBasePV();
+    message.name = object.name ?? "";
+    message.capacity = object.capacity ?? 0;
+    message.phase = object.phase ?? "";
+    message.reclaimPolicy = object.reclaimPolicy ?? "";
+    message.storageClass = object.storageClass ?? "";
+    message.boundPvc = object.boundPvc ?? "";
+    message.accessModes = object.accessModes?.map((e) => e) || [];
+    message.annotations = (globalThis.Object.entries(object.annotations ?? {}) as [string, string][]).reduce(
+      (acc: { [key: string]: string }, [key, value]: [string, string]) => {
+        if (value !== undefined) {
+          acc[key] = globalThis.String(value);
+        }
+        return acc;
+      },
+      {},
+    );
+    message.labels = (globalThis.Object.entries(object.labels ?? {}) as [string, string][]).reduce(
+      (acc: { [key: string]: string }, [key, value]: [string, string]) => {
+        if (value !== undefined) {
+          acc[key] = globalThis.String(value);
+        }
+        return acc;
+      },
+      {},
+    );
+    message.resourceConfig = object.resourceConfig ?? "";
+    return message;
+  },
+};
+
+function createBasePV_AnnotationsEntry(): PV_AnnotationsEntry {
+  return { key: "", value: "" };
+}
+
+export const PV_AnnotationsEntry: MessageFns<PV_AnnotationsEntry> = {
+  encode(message: PV_AnnotationsEntry, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.key !== "") {
+      writer.uint32(10).string(message.key);
+    }
+    if (message.value !== "") {
+      writer.uint32(18).string(message.value);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): PV_AnnotationsEntry {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBasePV_AnnotationsEntry();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.key = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.value = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): PV_AnnotationsEntry {
+    return {
+      key: isSet(object.key) ? globalThis.String(object.key) : "",
+      value: isSet(object.value) ? globalThis.String(object.value) : "",
+    };
+  },
+
+  toJSON(message: PV_AnnotationsEntry): unknown {
+    const obj: any = {};
+    if (message.key !== "") {
+      obj.key = message.key;
+    }
+    if (message.value !== "") {
+      obj.value = message.value;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<PV_AnnotationsEntry>, I>>(base?: I): PV_AnnotationsEntry {
+    return PV_AnnotationsEntry.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<PV_AnnotationsEntry>, I>>(object: I): PV_AnnotationsEntry {
+    const message = createBasePV_AnnotationsEntry();
+    message.key = object.key ?? "";
+    message.value = object.value ?? "";
+    return message;
+  },
+};
+
+function createBasePV_LabelsEntry(): PV_LabelsEntry {
+  return { key: "", value: "" };
+}
+
+export const PV_LabelsEntry: MessageFns<PV_LabelsEntry> = {
+  encode(message: PV_LabelsEntry, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.key !== "") {
+      writer.uint32(10).string(message.key);
+    }
+    if (message.value !== "") {
+      writer.uint32(18).string(message.value);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): PV_LabelsEntry {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBasePV_LabelsEntry();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.key = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.value = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): PV_LabelsEntry {
+    return {
+      key: isSet(object.key) ? globalThis.String(object.key) : "",
+      value: isSet(object.value) ? globalThis.String(object.value) : "",
+    };
+  },
+
+  toJSON(message: PV_LabelsEntry): unknown {
+    const obj: any = {};
+    if (message.key !== "") {
+      obj.key = message.key;
+    }
+    if (message.value !== "") {
+      obj.value = message.value;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<PV_LabelsEntry>, I>>(base?: I): PV_LabelsEntry {
+    return PV_LabelsEntry.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<PV_LabelsEntry>, I>>(object: I): PV_LabelsEntry {
+    const message = createBasePV_LabelsEntry();
     message.key = object.key ?? "";
     message.value = object.value ?? "";
     return message;

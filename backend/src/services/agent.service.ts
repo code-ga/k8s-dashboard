@@ -1,8 +1,8 @@
 import {
 	and,
 	eq,
-	inArray,
 	type InferInsertModel,
+	inArray,
 	isNull,
 	notInArray,
 	or,
@@ -19,19 +19,21 @@ import {
 	k8sConfigMaps,
 	k8sDeployments,
 	k8sIngresses,
+	k8sPersistentVolumeClaims,
+	k8sPersistentVolumes,
 	k8sPods,
 	k8sSecrets,
-	k8sPersistentVolumeClaims,
+	k8sStorageClasses,
 	profile,
 	schema,
 } from "../database/schema";
 import { decrypt, encrypt } from "../utils/crypto";
+import { decryptEnvVars } from "../utils/env-utils";
 import {
 	generateDeploymentManifest,
 	generateIngressRouteManifest,
 	generatePodManifest,
 } from "../utils/k8s-manifest";
-import { decryptEnvVars } from "../utils/env-utils";
 import { logger } from "../utils/logger";
 import {
 	deleteDeploymentPorts,
@@ -66,7 +68,7 @@ export class AgentService {
 			replicas: dbDep.replicas,
 			labels: dbDep.labels ? JSON.parse(dbDep.labels) : undefined,
 			selector: dbDep.selector ? JSON.parse(dbDep.selector) : undefined,
-			ports: dbDep.ports,
+			ports: dbDep.ports?.data,
 			annotations: dbDep.annotations,
 			env: envVars,
 			command: dbDep.command ? dbDep.command.split(" ") : undefined,
@@ -112,8 +114,6 @@ export class AgentService {
 			env: envVars,
 		});
 	}
-
-
 
 	// ─── Phase 1: Sync heartbeat → DB ─────────────────────────────────────────
 
@@ -516,7 +516,7 @@ export class AgentService {
 					selector: JSON.stringify(svc.selector),
 					k8sUid: svc.uid,
 					labels: JSON.stringify(svc.labels),
-					ports: svc.ports,
+					ports: { data: svc.ports },
 					updatedAt: new Date(),
 					annotations: svc.annotations || {},
 					resourceConfig: svc.resourceConfig || "",
@@ -953,7 +953,7 @@ export class AgentService {
 					spec: {
 						type: dbSvc.type || "ClusterIP",
 						selector: dbSvc.selector ? JSON.parse(dbSvc.selector) : {},
-						ports: dbSvc.ports,
+						ports: dbSvc.ports?.data,
 					},
 				};
 
@@ -1299,6 +1299,123 @@ export class AgentService {
 		}
 	}
 
+	private async syncStorageClasses(
+		clusterId: number,
+		storageClasses: Heartbeat["storageClasses"],
+	): Promise<void> {
+		try {
+			for (const sc of storageClasses) {
+				const existing = await db
+					.select()
+					.from(k8sStorageClasses)
+					.where(
+						and(
+							eq(k8sStorageClasses.clusterId, clusterId),
+							eq(k8sStorageClasses.name, sc.name),
+						),
+					);
+
+				const isDefault =
+					sc.annotations?.["storageclass.kubernetes.io/is-default-class"] ===
+					"true";
+
+				const scData: InferInsertModel<typeof k8sStorageClasses> = {
+					clusterId,
+					name: sc.name,
+					provisioner: sc.provisioner,
+					reclaimPolicy: sc.reclaimPolicy || "Delete",
+					volumeBindingMode: sc.volumeBindingMode || "Immediate",
+					allowVolumeExpansion: sc.allowVolumeExpansion || false,
+					annotations: sc.annotations || {},
+					labels: sc.labels || {},
+					isDefault,
+					updatedAt: new Date(),
+					resourceConfig: sc.resourceConfig || "",
+				};
+
+				if (existing.length > 0 && existing[0]) {
+					await db
+						.update(k8sStorageClasses)
+						.set(scData)
+						.where(eq(k8sStorageClasses.id, existing[0].id));
+				} else {
+					await db.insert(k8sStorageClasses).values(scData);
+				}
+			}
+
+			// Cleanup: remove storage classes no longer present
+			const heartbeatNames = storageClasses
+				.map((sc) => sc.name)
+				.filter((name): name is string => !!name);
+			const deleteFilter = [eq(k8sStorageClasses.clusterId, clusterId)];
+			if (heartbeatNames.length > 0) {
+				deleteFilter.push(notInArray(k8sStorageClasses.name, heartbeatNames));
+			}
+			await db.delete(k8sStorageClasses).where(and(...deleteFilter));
+		} catch (error) {
+			logger.error("Failed to sync StorageClasses", { clusterId, error });
+			throw error;
+		}
+	}
+
+	private async syncPVs(
+		clusterId: number,
+		pvs: Heartbeat["pvs"],
+	): Promise<void> {
+		try {
+			for (const pv of pvs) {
+				const existing = await db
+					.select()
+					.from(k8sPersistentVolumes)
+					.where(
+						and(
+							eq(k8sPersistentVolumes.clusterId, clusterId),
+							eq(k8sPersistentVolumes.name, pv.name),
+						),
+					);
+
+				const pvData: InferInsertModel<typeof k8sPersistentVolumes> = {
+					clusterId,
+					name: pv.name,
+					capacity: Number(pv.capacity),
+					phase: pv.phase,
+					reclaimPolicy: pv.reclaimPolicy || "Retain",
+					storageClass: pv.storageClass || null,
+					boundPvc: pv.boundPvc || null,
+					accessModes: { data: pv.accessModes || [] },
+					annotations: pv.annotations || {},
+					labels: pv.labels || {},
+					updatedAt: new Date(),
+					resourceConfig: pv.resourceConfig || "",
+				};
+
+				if (existing.length > 0 && existing[0]) {
+					await db
+						.update(k8sPersistentVolumes)
+						.set(pvData)
+						.where(eq(k8sPersistentVolumes.id, existing[0].id));
+				} else {
+					await db.insert(k8sPersistentVolumes).values(pvData);
+				}
+			}
+
+			// Cleanup: remove PVs no longer present
+			const heartbeatNames = pvs
+				.map((pv) => pv.name)
+				.filter((name): name is string => !!name);
+			const deleteFilter = [eq(k8sPersistentVolumes.clusterId, clusterId)];
+			if (heartbeatNames.length > 0) {
+				deleteFilter.push(
+					notInArray(k8sPersistentVolumes.name, heartbeatNames),
+				);
+			}
+			await db.delete(k8sPersistentVolumes).where(and(...deleteFilter));
+		} catch (error) {
+			logger.error("Failed to sync PVs", { clusterId, error });
+			throw error;
+		}
+	}
+
 	/** Returns true if a command was sent. */
 	private async validateIngresses(
 		agentId: number,
@@ -1340,14 +1457,19 @@ export class AgentService {
 				where: { id: ingress.serviceId },
 			});
 
-			if (!service || !service.ports || service.ports.length === 0) {
+			if (
+				!service ||
+				!service.ports ||
+				!service.ports.data ||
+				service.ports.data.length === 0
+			) {
 				logger.error(
 					`Cannot restore ingress ${ingress.name}: linked service not found or has no ports`,
 				);
 				continue;
 			}
 
-			const internalPort = service.ports[0].port;
+			const internalPort = service.ports.data[0].port;
 			const protocol = (ingress.protocol || "http") as "http" | "tcp" | "udp";
 
 			logger.info(
@@ -1425,6 +1547,8 @@ export class AgentService {
 			await this.syncSecrets(cluster.id, heartbeat.secrets || []);
 			await this.syncIngresses(cluster.id, heartbeat.ingresses || []);
 			await this.syncPVCs(cluster.id, heartbeat.pvcs || []);
+			await this.syncStorageClasses(cluster.id, heartbeat.storageClasses || []);
+			await this.syncPVs(cluster.id, heartbeat.pvs || []);
 		});
 
 		// 3. Validate DB state → cluster (one command per heartbeat cycle)

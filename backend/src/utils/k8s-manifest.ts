@@ -148,6 +148,31 @@ export interface PVCDTO {
 	annotations?: Record<string, string>;
 }
 
+export interface StorageClassDTO {
+	name: string;
+	provisioner: string;
+	reclaimPolicy?: "Delete" | "Retain";
+	volumeBindingMode?: "Immediate" | "WaitForFirstConsumer";
+	allowVolumeExpansion?: boolean;
+	annotations?: Record<string, string>;
+	labels?: Record<string, string>;
+}
+
+export interface PVDTO {
+	name: string;
+	capacity: string; // e.g. "10Gi"
+	storageClass?: string;
+	accessModes?: string[];
+	reclaimPolicy?: "Delete" | "Retain";
+	nfs?: {
+		server: string;
+		path: string;
+	};
+	hostPath?: string;
+	labels?: Record<string, string>;
+	annotations?: Record<string, string>;
+}
+
 const cleanResources = (res?: ResourceResources) => {
 	if (!res) return undefined;
 	const requests: Record<string, string | number> = {};
@@ -737,6 +762,71 @@ export const generatePVCManifest = (dto: PVCDTO): string => {
 					storage: dto.capacity,
 				},
 			},
+		},
+	};
+	return YAML.stringify(manifest);
+};
+
+export const generateStorageClassManifest = (dto: StorageClassDTO): string => {
+	const manifest = {
+		apiVersion: "storage.k8s.io/v1",
+		kind: "StorageClass",
+		metadata: {
+			name: dto.name,
+			annotations: dto.annotations,
+			labels: dto.labels,
+		},
+		provisioner: dto.provisioner,
+		reclaimPolicy: dto.reclaimPolicy || "Delete",
+		volumeBindingMode: dto.volumeBindingMode || "Immediate",
+		allowVolumeExpansion: dto.allowVolumeExpansion ?? true,
+	};
+	return YAML.stringify(manifest);
+};
+
+export const generatePVManifest = (dto: PVDTO): string => {
+	const spec: Record<string, any> = {
+		capacity: {
+			storage: dto.capacity,
+		},
+		accessModes: dto.accessModes || ["ReadWriteOnce"],
+		persistentVolumeReclaimPolicy: dto.reclaimPolicy || "Retain",
+	};
+
+	if (dto.storageClass) {
+		spec.storageClassName = dto.storageClass;
+	}
+
+	let volumeSource: Record<string, any> = {};
+
+	if (dto.nfs) {
+		volumeSource = {
+			nfs: {
+				server: dto.nfs.server,
+				path: dto.nfs.path,
+			},
+		};
+	} else if (dto.hostPath) {
+		volumeSource = {
+			hostPath: {
+				path: dto.hostPath,
+			},
+		};
+	} else {
+		throw new Error("PV must specify either nfs or hostPath");
+	}
+
+	const manifest = {
+		apiVersion: "v1",
+		kind: "PersistentVolume",
+		metadata: {
+			name: dto.name,
+			labels: dto.labels,
+			annotations: dto.annotations,
+		},
+		spec: {
+			...spec,
+			...volumeSource,
 		},
 	};
 	return YAML.stringify(manifest);

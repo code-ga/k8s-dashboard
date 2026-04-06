@@ -70,34 +70,39 @@ func (StreamData_StreamDataType) EnumDescriptor() ([]byte, []int) {
 type Command_CommandType int32
 
 const (
-	Command_UNKNOWN             Command_CommandType = 0
-	Command_EDIT_RESOURCE       Command_CommandType = 1
-	Command_CREATE_DEPLOYMENT   Command_CommandType = 2
-	Command_SCALE_DEPLOYMENT    Command_CommandType = 3
-	Command_DELETE_DEPLOYMENT   Command_CommandType = 4
-	Command_CREATE_POD          Command_CommandType = 5
-	Command_DELETE_POD          Command_CommandType = 6
-	Command_DELETE_NODE         Command_CommandType = 7
-	Command_GET_JOIN_TOKEN      Command_CommandType = 8
-	Command_STREAM_LOGS         Command_CommandType = 9
-	Command_EXEC                Command_CommandType = 10
-	Command_CREATE_SERVICE      Command_CommandType = 11
-	Command_DELETE_SERVICE      Command_CommandType = 12
-	Command_DELETE_RESOURCE     Command_CommandType = 13
-	Command_CREATE_RESOURCE     Command_CommandType = 14
-	Command_CREATE_INGRESS      Command_CommandType = 15
-	Command_DELETE_INGRESS      Command_CommandType = 16
-	Command_CREATE_CONFIGMAP    Command_CommandType = 17
-	Command_DELETE_CONFIGMAP    Command_CommandType = 18
-	Command_CREATE_SECRET       Command_CommandType = 19
-	Command_DELETE_SECRET       Command_CommandType = 20
-	Command_DESCRIBE_RESOURCE   Command_CommandType = 21
-	Command_GET_ALL_EVENTS      Command_CommandType = 22
-	Command_REDEPLOY_DEPLOYMENT Command_CommandType = 23
-	Command_CREATE_PVC          Command_CommandType = 24
-	Command_DELETE_PVC          Command_CommandType = 25
-	Command_EDIT_PVC            Command_CommandType = 26
-	Command_RESIZE_PVC          Command_CommandType = 27
+	Command_UNKNOWN                   Command_CommandType = 0
+	Command_EDIT_RESOURCE             Command_CommandType = 1
+	Command_CREATE_DEPLOYMENT         Command_CommandType = 2
+	Command_SCALE_DEPLOYMENT          Command_CommandType = 3
+	Command_DELETE_DEPLOYMENT         Command_CommandType = 4
+	Command_CREATE_POD                Command_CommandType = 5
+	Command_DELETE_POD                Command_CommandType = 6
+	Command_DELETE_NODE               Command_CommandType = 7
+	Command_GET_JOIN_TOKEN            Command_CommandType = 8
+	Command_STREAM_LOGS               Command_CommandType = 9
+	Command_EXEC                      Command_CommandType = 10
+	Command_CREATE_SERVICE            Command_CommandType = 11
+	Command_DELETE_SERVICE            Command_CommandType = 12
+	Command_DELETE_RESOURCE           Command_CommandType = 13
+	Command_CREATE_RESOURCE           Command_CommandType = 14
+	Command_CREATE_INGRESS            Command_CommandType = 15
+	Command_DELETE_INGRESS            Command_CommandType = 16
+	Command_CREATE_CONFIGMAP          Command_CommandType = 17
+	Command_DELETE_CONFIGMAP          Command_CommandType = 18
+	Command_CREATE_SECRET             Command_CommandType = 19
+	Command_DELETE_SECRET             Command_CommandType = 20
+	Command_DESCRIBE_RESOURCE         Command_CommandType = 21
+	Command_GET_ALL_EVENTS            Command_CommandType = 22
+	Command_REDEPLOY_DEPLOYMENT       Command_CommandType = 23
+	Command_CREATE_PVC                Command_CommandType = 24
+	Command_DELETE_PVC                Command_CommandType = 25
+	Command_EDIT_PVC                  Command_CommandType = 26
+	Command_RESIZE_PVC                Command_CommandType = 27
+	Command_CREATE_STORAGE_CLASS      Command_CommandType = 28
+	Command_DELETE_STORAGE_CLASS      Command_CommandType = 29
+	Command_SET_DEFAULT_STORAGE_CLASS Command_CommandType = 30
+	Command_CREATE_PV                 Command_CommandType = 31
+	Command_DELETE_PV                 Command_CommandType = 32
 )
 
 // Enum value maps for Command_CommandType.
@@ -131,36 +136,46 @@ var (
 		25: "DELETE_PVC",
 		26: "EDIT_PVC",
 		27: "RESIZE_PVC",
+		28: "CREATE_STORAGE_CLASS",
+		29: "DELETE_STORAGE_CLASS",
+		30: "SET_DEFAULT_STORAGE_CLASS",
+		31: "CREATE_PV",
+		32: "DELETE_PV",
 	}
 	Command_CommandType_value = map[string]int32{
-		"UNKNOWN":             0,
-		"EDIT_RESOURCE":       1,
-		"CREATE_DEPLOYMENT":   2,
-		"SCALE_DEPLOYMENT":    3,
-		"DELETE_DEPLOYMENT":   4,
-		"CREATE_POD":          5,
-		"DELETE_POD":          6,
-		"DELETE_NODE":         7,
-		"GET_JOIN_TOKEN":      8,
-		"STREAM_LOGS":         9,
-		"EXEC":                10,
-		"CREATE_SERVICE":      11,
-		"DELETE_SERVICE":      12,
-		"DELETE_RESOURCE":     13,
-		"CREATE_RESOURCE":     14,
-		"CREATE_INGRESS":      15,
-		"DELETE_INGRESS":      16,
-		"CREATE_CONFIGMAP":    17,
-		"DELETE_CONFIGMAP":    18,
-		"CREATE_SECRET":       19,
-		"DELETE_SECRET":       20,
-		"DESCRIBE_RESOURCE":   21,
-		"GET_ALL_EVENTS":      22,
-		"REDEPLOY_DEPLOYMENT": 23,
-		"CREATE_PVC":          24,
-		"DELETE_PVC":          25,
-		"EDIT_PVC":            26,
-		"RESIZE_PVC":          27,
+		"UNKNOWN":                   0,
+		"EDIT_RESOURCE":             1,
+		"CREATE_DEPLOYMENT":         2,
+		"SCALE_DEPLOYMENT":          3,
+		"DELETE_DEPLOYMENT":         4,
+		"CREATE_POD":                5,
+		"DELETE_POD":                6,
+		"DELETE_NODE":               7,
+		"GET_JOIN_TOKEN":            8,
+		"STREAM_LOGS":               9,
+		"EXEC":                      10,
+		"CREATE_SERVICE":            11,
+		"DELETE_SERVICE":            12,
+		"DELETE_RESOURCE":           13,
+		"CREATE_RESOURCE":           14,
+		"CREATE_INGRESS":            15,
+		"DELETE_INGRESS":            16,
+		"CREATE_CONFIGMAP":          17,
+		"DELETE_CONFIGMAP":          18,
+		"CREATE_SECRET":             19,
+		"DELETE_SECRET":             20,
+		"DESCRIBE_RESOURCE":         21,
+		"GET_ALL_EVENTS":            22,
+		"REDEPLOY_DEPLOYMENT":       23,
+		"CREATE_PVC":                24,
+		"DELETE_PVC":                25,
+		"EDIT_PVC":                  26,
+		"RESIZE_PVC":                27,
+		"CREATE_STORAGE_CLASS":      28,
+		"DELETE_STORAGE_CLASS":      29,
+		"SET_DEFAULT_STORAGE_CLASS": 30,
+		"CREATE_PV":                 31,
+		"DELETE_PV":                 32,
 	}
 )
 
@@ -188,7 +203,7 @@ func (x Command_CommandType) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use Command_CommandType.Descriptor instead.
 func (Command_CommandType) EnumDescriptor() ([]byte, []int) {
-	return file_agent_backend_websocket_proto_rawDescGZIP(), []int{17, 0}
+	return file_agent_backend_websocket_proto_rawDescGZIP(), []int{19, 0}
 }
 
 // Wrapper for all messages sent from Agent to Server
@@ -569,6 +584,10 @@ type Heartbeat struct {
 	Ingresses []*Ingress `protobuf:"bytes,9,rep,name=ingresses,proto3" json:"ingresses,omitempty"`
 	// List of Persistent Volume Claims
 	Pvcs []*PVC `protobuf:"bytes,10,rep,name=pvcs,proto3" json:"pvcs,omitempty"`
+	// List of StorageClasses
+	StorageClasses []*StorageClass `protobuf:"bytes,11,rep,name=storage_classes,json=storageClasses,proto3" json:"storage_classes,omitempty"`
+	// List of PersistentVolumes
+	Pvs []*PV `protobuf:"bytes,12,rep,name=pvs,proto3" json:"pvs,omitempty"`
 	// Timestamp of the heartbeat
 	Timestamp     int64 `protobuf:"varint,5,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -664,6 +683,20 @@ func (x *Heartbeat) GetIngresses() []*Ingress {
 func (x *Heartbeat) GetPvcs() []*PVC {
 	if x != nil {
 		return x.Pvcs
+	}
+	return nil
+}
+
+func (x *Heartbeat) GetStorageClasses() []*StorageClass {
+	if x != nil {
+		return x.StorageClasses
+	}
+	return nil
+}
+
+func (x *Heartbeat) GetPvs() []*PV {
+	if x != nil {
+		return x.Pvs
 	}
 	return nil
 }
@@ -2059,6 +2092,222 @@ func (x *PVC) GetResourceConfig() string {
 	return ""
 }
 
+type StorageClass struct {
+	state                protoimpl.MessageState `protogen:"open.v1"`
+	Name                 string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Provisioner          string                 `protobuf:"bytes,2,opt,name=provisioner,proto3" json:"provisioner,omitempty"`
+	ReclaimPolicy        string                 `protobuf:"bytes,3,opt,name=reclaim_policy,json=reclaimPolicy,proto3" json:"reclaim_policy,omitempty"`
+	VolumeBindingMode    string                 `protobuf:"bytes,4,opt,name=volume_binding_mode,json=volumeBindingMode,proto3" json:"volume_binding_mode,omitempty"`
+	AllowVolumeExpansion bool                   `protobuf:"varint,5,opt,name=allow_volume_expansion,json=allowVolumeExpansion,proto3" json:"allow_volume_expansion,omitempty"`
+	Annotations          map[string]string      `protobuf:"bytes,6,rep,name=annotations,proto3" json:"annotations,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Labels               map[string]string      `protobuf:"bytes,7,rep,name=labels,proto3" json:"labels,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	ResourceConfig       string                 `protobuf:"bytes,8,opt,name=resource_config,json=resourceConfig,proto3" json:"resource_config,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
+}
+
+func (x *StorageClass) Reset() {
+	*x = StorageClass{}
+	mi := &file_agent_backend_websocket_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StorageClass) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StorageClass) ProtoMessage() {}
+
+func (x *StorageClass) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_backend_websocket_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StorageClass.ProtoReflect.Descriptor instead.
+func (*StorageClass) Descriptor() ([]byte, []int) {
+	return file_agent_backend_websocket_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *StorageClass) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *StorageClass) GetProvisioner() string {
+	if x != nil {
+		return x.Provisioner
+	}
+	return ""
+}
+
+func (x *StorageClass) GetReclaimPolicy() string {
+	if x != nil {
+		return x.ReclaimPolicy
+	}
+	return ""
+}
+
+func (x *StorageClass) GetVolumeBindingMode() string {
+	if x != nil {
+		return x.VolumeBindingMode
+	}
+	return ""
+}
+
+func (x *StorageClass) GetAllowVolumeExpansion() bool {
+	if x != nil {
+		return x.AllowVolumeExpansion
+	}
+	return false
+}
+
+func (x *StorageClass) GetAnnotations() map[string]string {
+	if x != nil {
+		return x.Annotations
+	}
+	return nil
+}
+
+func (x *StorageClass) GetLabels() map[string]string {
+	if x != nil {
+		return x.Labels
+	}
+	return nil
+}
+
+func (x *StorageClass) GetResourceConfig() string {
+	if x != nil {
+		return x.ResourceConfig
+	}
+	return ""
+}
+
+type PV struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Name           string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Capacity       int64                  `protobuf:"varint,2,opt,name=capacity,proto3" json:"capacity,omitempty"` // in MiB
+	Phase          string                 `protobuf:"bytes,3,opt,name=phase,proto3" json:"phase,omitempty"`        // Available, Bound, Released, Failed
+	ReclaimPolicy  string                 `protobuf:"bytes,4,opt,name=reclaim_policy,json=reclaimPolicy,proto3" json:"reclaim_policy,omitempty"`
+	StorageClass   string                 `protobuf:"bytes,5,opt,name=storage_class,json=storageClass,proto3" json:"storage_class,omitempty"`
+	BoundPvc       string                 `protobuf:"bytes,6,opt,name=bound_pvc,json=boundPvc,proto3" json:"bound_pvc,omitempty"` // namespace/name of bound PVC
+	AccessModes    []string               `protobuf:"bytes,7,rep,name=access_modes,json=accessModes,proto3" json:"access_modes,omitempty"`
+	Annotations    map[string]string      `protobuf:"bytes,8,rep,name=annotations,proto3" json:"annotations,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Labels         map[string]string      `protobuf:"bytes,9,rep,name=labels,proto3" json:"labels,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	ResourceConfig string                 `protobuf:"bytes,10,opt,name=resource_config,json=resourceConfig,proto3" json:"resource_config,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *PV) Reset() {
+	*x = PV{}
+	mi := &file_agent_backend_websocket_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PV) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PV) ProtoMessage() {}
+
+func (x *PV) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_backend_websocket_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PV.ProtoReflect.Descriptor instead.
+func (*PV) Descriptor() ([]byte, []int) {
+	return file_agent_backend_websocket_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *PV) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *PV) GetCapacity() int64 {
+	if x != nil {
+		return x.Capacity
+	}
+	return 0
+}
+
+func (x *PV) GetPhase() string {
+	if x != nil {
+		return x.Phase
+	}
+	return ""
+}
+
+func (x *PV) GetReclaimPolicy() string {
+	if x != nil {
+		return x.ReclaimPolicy
+	}
+	return ""
+}
+
+func (x *PV) GetStorageClass() string {
+	if x != nil {
+		return x.StorageClass
+	}
+	return ""
+}
+
+func (x *PV) GetBoundPvc() string {
+	if x != nil {
+		return x.BoundPvc
+	}
+	return ""
+}
+
+func (x *PV) GetAccessModes() []string {
+	if x != nil {
+		return x.AccessModes
+	}
+	return nil
+}
+
+func (x *PV) GetAnnotations() map[string]string {
+	if x != nil {
+		return x.Annotations
+	}
+	return nil
+}
+
+func (x *PV) GetLabels() map[string]string {
+	if x != nil {
+		return x.Labels
+	}
+	return nil
+}
+
+func (x *PV) GetResourceConfig() string {
+	if x != nil {
+		return x.ResourceConfig
+	}
+	return ""
+}
+
 type Command struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -2074,7 +2323,7 @@ type Command struct {
 
 func (x *Command) Reset() {
 	*x = Command{}
-	mi := &file_agent_backend_websocket_proto_msgTypes[17]
+	mi := &file_agent_backend_websocket_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2086,7 +2335,7 @@ func (x *Command) String() string {
 func (*Command) ProtoMessage() {}
 
 func (x *Command) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_backend_websocket_proto_msgTypes[17]
+	mi := &file_agent_backend_websocket_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2099,7 +2348,7 @@ func (x *Command) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Command.ProtoReflect.Descriptor instead.
 func (*Command) Descriptor() ([]byte, []int) {
-	return file_agent_backend_websocket_proto_rawDescGZIP(), []int{17}
+	return file_agent_backend_websocket_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *Command) GetId() string {
@@ -2150,7 +2399,7 @@ type JoinTokenData struct {
 
 func (x *JoinTokenData) Reset() {
 	*x = JoinTokenData{}
-	mi := &file_agent_backend_websocket_proto_msgTypes[18]
+	mi := &file_agent_backend_websocket_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2162,7 +2411,7 @@ func (x *JoinTokenData) String() string {
 func (*JoinTokenData) ProtoMessage() {}
 
 func (x *JoinTokenData) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_backend_websocket_proto_msgTypes[18]
+	mi := &file_agent_backend_websocket_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2175,7 +2424,7 @@ func (x *JoinTokenData) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use JoinTokenData.ProtoReflect.Descriptor instead.
 func (*JoinTokenData) Descriptor() ([]byte, []int) {
-	return file_agent_backend_websocket_proto_rawDescGZIP(), []int{18}
+	return file_agent_backend_websocket_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *JoinTokenData) GetCommand() string {
@@ -2247,7 +2496,7 @@ const file_agent_backend_websocket_proto_rawDesc = "" +
 	"\acommand\x18\x01 \x01(\v2\f.api.CommandH\x00R\acommand\x122\n" +
 	"\vstream_data\x18\x02 \x01(\v2\x0f.api.StreamDataH\x00R\n" +
 	"streamDataB\t\n" +
-	"\apayload\"\xa8\x03\n" +
+	"\apayload\"\xff\x03\n" +
 	"\tHeartbeat\x12?\n" +
 	"\x10cluster_resource\x18\x01 \x01(\v2\x14.api.ClusterResourceR\x0fclusterResource\x12\x1f\n" +
 	"\x05nodes\x18\x02 \x03(\v2\t.api.NodeR\x05nodes\x12\x1c\n" +
@@ -2259,7 +2508,9 @@ const file_agent_backend_websocket_proto_rawDesc = "" +
 	"\asecrets\x18\b \x03(\v2\v.api.SecretR\asecrets\x12*\n" +
 	"\tingresses\x18\t \x03(\v2\f.api.IngressR\tingresses\x12\x1c\n" +
 	"\x04pvcs\x18\n" +
-	" \x03(\v2\b.api.PVCR\x04pvcs\x12\x1c\n" +
+	" \x03(\v2\b.api.PVCR\x04pvcs\x12:\n" +
+	"\x0fstorage_classes\x18\v \x03(\v2\x11.api.StorageClassR\x0estorageClasses\x12\x19\n" +
+	"\x03pvs\x18\f \x03(\v2\a.api.PVR\x03pvs\x12\x1c\n" +
 	"\ttimestamp\x18\x05 \x01(\x03R\ttimestamp\",\n" +
 	"\x14AGENT_AUTHORIZE_USER\x12\x14\n" +
 	"\x05token\x18\x01 \x01(\tR\x05token\"\xb8\x01\n" +
@@ -2467,14 +2718,47 @@ const file_agent_backend_websocket_proto_rawDesc = "" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1a>\n" +
 	"\x10AnnotationsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xcf\x05\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xf2\x03\n" +
+	"\fStorageClass\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12 \n" +
+	"\vprovisioner\x18\x02 \x01(\tR\vprovisioner\x12%\n" +
+	"\x0ereclaim_policy\x18\x03 \x01(\tR\rreclaimPolicy\x12.\n" +
+	"\x13volume_binding_mode\x18\x04 \x01(\tR\x11volumeBindingMode\x124\n" +
+	"\x16allow_volume_expansion\x18\x05 \x01(\bR\x14allowVolumeExpansion\x12D\n" +
+	"\vannotations\x18\x06 \x03(\v2\".api.StorageClass.AnnotationsEntryR\vannotations\x125\n" +
+	"\x06labels\x18\a \x03(\v2\x1d.api.StorageClass.LabelsEntryR\x06labels\x12'\n" +
+	"\x0fresource_config\x18\b \x01(\tR\x0eresourceConfig\x1a>\n" +
+	"\x10AnnotationsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1a9\n" +
+	"\vLabelsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xe3\x03\n" +
+	"\x02PV\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1a\n" +
+	"\bcapacity\x18\x02 \x01(\x03R\bcapacity\x12\x14\n" +
+	"\x05phase\x18\x03 \x01(\tR\x05phase\x12%\n" +
+	"\x0ereclaim_policy\x18\x04 \x01(\tR\rreclaimPolicy\x12#\n" +
+	"\rstorage_class\x18\x05 \x01(\tR\fstorageClass\x12\x1b\n" +
+	"\tbound_pvc\x18\x06 \x01(\tR\bboundPvc\x12!\n" +
+	"\faccess_modes\x18\a \x03(\tR\vaccessModes\x12:\n" +
+	"\vannotations\x18\b \x03(\v2\x18.api.PV.AnnotationsEntryR\vannotations\x12+\n" +
+	"\x06labels\x18\t \x03(\v2\x13.api.PV.LabelsEntryR\x06labels\x12'\n" +
+	"\x0fresource_config\x18\n" +
+	" \x01(\tR\x0eresourceConfig\x1a>\n" +
+	"\x10AnnotationsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1a9\n" +
+	"\vLabelsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xc0\x06\n" +
 	"\aCommand\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12,\n" +
 	"\x04type\x18\x02 \x01(\x0e2\x18.api.Command.CommandTypeR\x04type\x12\x18\n" +
 	"\apayload\x18\x03 \x01(\tR\apayload\x12)\n" +
 	"\x10target_namespace\x18\x04 \x01(\tR\x0ftargetNamespace\x12\x1f\n" +
 	"\vtarget_name\x18\x05 \x01(\tR\n" +
-	"targetName\"\x9f\x04\n" +
+	"targetName\"\x90\x05\n" +
 	"\vCommandType\x12\v\n" +
 	"\aUNKNOWN\x10\x00\x12\x11\n" +
 	"\rEDIT_RESOURCE\x10\x01\x12\x15\n" +
@@ -2509,7 +2793,12 @@ const file_agent_backend_websocket_proto_rawDesc = "" +
 	"DELETE_PVC\x10\x19\x12\f\n" +
 	"\bEDIT_PVC\x10\x1a\x12\x0e\n" +
 	"\n" +
-	"RESIZE_PVC\x10\x1b\"\xcf\x01\n" +
+	"RESIZE_PVC\x10\x1b\x12\x18\n" +
+	"\x14CREATE_STORAGE_CLASS\x10\x1c\x12\x18\n" +
+	"\x14DELETE_STORAGE_CLASS\x10\x1d\x12\x1d\n" +
+	"\x19SET_DEFAULT_STORAGE_CLASS\x10\x1e\x12\r\n" +
+	"\tCREATE_PV\x10\x1f\x12\r\n" +
+	"\tDELETE_PV\x10 \"\xcf\x01\n" +
 	"\rJoinTokenData\x12\x18\n" +
 	"\acommand\x18\x01 \x01(\tR\acommand\x12\x14\n" +
 	"\x05token\x18\x02 \x01(\tR\x05token\x12>\n" +
@@ -2532,7 +2821,7 @@ func file_agent_backend_websocket_proto_rawDescGZIP() []byte {
 }
 
 var file_agent_backend_websocket_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_agent_backend_websocket_proto_msgTypes = make([]protoimpl.MessageInfo, 41)
+var file_agent_backend_websocket_proto_msgTypes = make([]protoimpl.MessageInfo, 47)
 var file_agent_backend_websocket_proto_goTypes = []any{
 	(StreamData_StreamDataType)(0), // 0: api.StreamData.StreamDataType
 	(Command_CommandType)(0),       // 1: api.Command.CommandType
@@ -2553,30 +2842,36 @@ var file_agent_backend_websocket_proto_goTypes = []any{
 	(*Secret)(nil),                 // 16: api.Secret
 	(*Ingress)(nil),                // 17: api.Ingress
 	(*PVC)(nil),                    // 18: api.PVC
-	(*Command)(nil),                // 19: api.Command
-	(*JoinTokenData)(nil),          // 20: api.JoinTokenData
-	nil,                            // 21: api.Node.LabelsEntry
-	nil,                            // 22: api.Node.AnnotationsEntry
-	nil,                            // 23: api.Deployment.LabelsEntry
-	nil,                            // 24: api.Deployment.SelectorEntry
-	nil,                            // 25: api.Deployment.AnnotationsEntry
-	nil,                            // 26: api.Deployment.TemplateAnnotationsEntry
-	nil,                            // 27: api.Pod.LabelsEntry
-	nil,                            // 28: api.Pod.AnnotationsEntry
-	nil,                            // 29: api.Service.SelectorEntry
-	nil,                            // 30: api.Service.LabelsEntry
-	nil,                            // 31: api.Service.AnnotationsEntry
-	nil,                            // 32: api.ConfigMap.DataEntry
-	nil,                            // 33: api.ConfigMap.BinaryDataEntry
-	nil,                            // 34: api.ConfigMap.LabelsEntry
-	nil,                            // 35: api.ConfigMap.AnnotationsEntry
-	nil,                            // 36: api.Secret.DataEntry
-	nil,                            // 37: api.Secret.LabelsEntry
-	nil,                            // 38: api.Secret.AnnotationsEntry
-	nil,                            // 39: api.Ingress.LabelsEntry
-	nil,                            // 40: api.Ingress.AnnotationsEntry
-	nil,                            // 41: api.PVC.LabelsEntry
-	nil,                            // 42: api.PVC.AnnotationsEntry
+	(*StorageClass)(nil),           // 19: api.StorageClass
+	(*PV)(nil),                     // 20: api.PV
+	(*Command)(nil),                // 21: api.Command
+	(*JoinTokenData)(nil),          // 22: api.JoinTokenData
+	nil,                            // 23: api.Node.LabelsEntry
+	nil,                            // 24: api.Node.AnnotationsEntry
+	nil,                            // 25: api.Deployment.LabelsEntry
+	nil,                            // 26: api.Deployment.SelectorEntry
+	nil,                            // 27: api.Deployment.AnnotationsEntry
+	nil,                            // 28: api.Deployment.TemplateAnnotationsEntry
+	nil,                            // 29: api.Pod.LabelsEntry
+	nil,                            // 30: api.Pod.AnnotationsEntry
+	nil,                            // 31: api.Service.SelectorEntry
+	nil,                            // 32: api.Service.LabelsEntry
+	nil,                            // 33: api.Service.AnnotationsEntry
+	nil,                            // 34: api.ConfigMap.DataEntry
+	nil,                            // 35: api.ConfigMap.BinaryDataEntry
+	nil,                            // 36: api.ConfigMap.LabelsEntry
+	nil,                            // 37: api.ConfigMap.AnnotationsEntry
+	nil,                            // 38: api.Secret.DataEntry
+	nil,                            // 39: api.Secret.LabelsEntry
+	nil,                            // 40: api.Secret.AnnotationsEntry
+	nil,                            // 41: api.Ingress.LabelsEntry
+	nil,                            // 42: api.Ingress.AnnotationsEntry
+	nil,                            // 43: api.PVC.LabelsEntry
+	nil,                            // 44: api.PVC.AnnotationsEntry
+	nil,                            // 45: api.StorageClass.AnnotationsEntry
+	nil,                            // 46: api.StorageClass.LabelsEntry
+	nil,                            // 47: api.PV.AnnotationsEntry
+	nil,                            // 48: api.PV.LabelsEntry
 }
 var file_agent_backend_websocket_proto_depIdxs = []int32{
 	6,  // 0: api.AgentPayload.heartbeat:type_name -> api.Heartbeat
@@ -2584,7 +2879,7 @@ var file_agent_backend_websocket_proto_depIdxs = []int32{
 	3,  // 2: api.AgentPayload.stream_data:type_name -> api.StreamData
 	7,  // 3: api.AgentPayload.authorize_user:type_name -> api.AGENT_AUTHORIZE_USER
 	0,  // 4: api.StreamData.type:type_name -> api.StreamData.StreamDataType
-	19, // 5: api.ServerPayload.command:type_name -> api.Command
+	21, // 5: api.ServerPayload.command:type_name -> api.Command
 	3,  // 6: api.ServerPayload.stream_data:type_name -> api.StreamData
 	8,  // 7: api.Heartbeat.cluster_resource:type_name -> api.ClusterResource
 	10, // 8: api.Heartbeat.nodes:type_name -> api.Node
@@ -2595,37 +2890,43 @@ var file_agent_backend_websocket_proto_depIdxs = []int32{
 	16, // 13: api.Heartbeat.secrets:type_name -> api.Secret
 	17, // 14: api.Heartbeat.ingresses:type_name -> api.Ingress
 	18, // 15: api.Heartbeat.pvcs:type_name -> api.PVC
-	21, // 16: api.Node.labels:type_name -> api.Node.LabelsEntry
-	22, // 17: api.Node.annotations:type_name -> api.Node.AnnotationsEntry
-	23, // 18: api.Deployment.labels:type_name -> api.Deployment.LabelsEntry
-	24, // 19: api.Deployment.selector:type_name -> api.Deployment.SelectorEntry
-	9,  // 20: api.Deployment.ports:type_name -> api.ContainerPort
-	25, // 21: api.Deployment.annotations:type_name -> api.Deployment.AnnotationsEntry
-	26, // 22: api.Deployment.template_annotations:type_name -> api.Deployment.TemplateAnnotationsEntry
-	9,  // 23: api.Pod.ports:type_name -> api.ContainerPort
-	27, // 24: api.Pod.labels:type_name -> api.Pod.LabelsEntry
-	28, // 25: api.Pod.annotations:type_name -> api.Pod.AnnotationsEntry
-	29, // 26: api.Service.selector:type_name -> api.Service.SelectorEntry
-	30, // 27: api.Service.labels:type_name -> api.Service.LabelsEntry
-	13, // 28: api.Service.ports:type_name -> api.ServicePort
-	31, // 29: api.Service.annotations:type_name -> api.Service.AnnotationsEntry
-	32, // 30: api.ConfigMap.data:type_name -> api.ConfigMap.DataEntry
-	33, // 31: api.ConfigMap.binary_data:type_name -> api.ConfigMap.BinaryDataEntry
-	34, // 32: api.ConfigMap.labels:type_name -> api.ConfigMap.LabelsEntry
-	35, // 33: api.ConfigMap.annotations:type_name -> api.ConfigMap.AnnotationsEntry
-	36, // 34: api.Secret.data:type_name -> api.Secret.DataEntry
-	37, // 35: api.Secret.labels:type_name -> api.Secret.LabelsEntry
-	38, // 36: api.Secret.annotations:type_name -> api.Secret.AnnotationsEntry
-	39, // 37: api.Ingress.labels:type_name -> api.Ingress.LabelsEntry
-	40, // 38: api.Ingress.annotations:type_name -> api.Ingress.AnnotationsEntry
-	41, // 39: api.PVC.labels:type_name -> api.PVC.LabelsEntry
-	42, // 40: api.PVC.annotations:type_name -> api.PVC.AnnotationsEntry
-	1,  // 41: api.Command.type:type_name -> api.Command.CommandType
-	42, // [42:42] is the sub-list for method output_type
-	42, // [42:42] is the sub-list for method input_type
-	42, // [42:42] is the sub-list for extension type_name
-	42, // [42:42] is the sub-list for extension extendee
-	0,  // [0:42] is the sub-list for field type_name
+	19, // 16: api.Heartbeat.storage_classes:type_name -> api.StorageClass
+	20, // 17: api.Heartbeat.pvs:type_name -> api.PV
+	23, // 18: api.Node.labels:type_name -> api.Node.LabelsEntry
+	24, // 19: api.Node.annotations:type_name -> api.Node.AnnotationsEntry
+	25, // 20: api.Deployment.labels:type_name -> api.Deployment.LabelsEntry
+	26, // 21: api.Deployment.selector:type_name -> api.Deployment.SelectorEntry
+	9,  // 22: api.Deployment.ports:type_name -> api.ContainerPort
+	27, // 23: api.Deployment.annotations:type_name -> api.Deployment.AnnotationsEntry
+	28, // 24: api.Deployment.template_annotations:type_name -> api.Deployment.TemplateAnnotationsEntry
+	9,  // 25: api.Pod.ports:type_name -> api.ContainerPort
+	29, // 26: api.Pod.labels:type_name -> api.Pod.LabelsEntry
+	30, // 27: api.Pod.annotations:type_name -> api.Pod.AnnotationsEntry
+	31, // 28: api.Service.selector:type_name -> api.Service.SelectorEntry
+	32, // 29: api.Service.labels:type_name -> api.Service.LabelsEntry
+	13, // 30: api.Service.ports:type_name -> api.ServicePort
+	33, // 31: api.Service.annotations:type_name -> api.Service.AnnotationsEntry
+	34, // 32: api.ConfigMap.data:type_name -> api.ConfigMap.DataEntry
+	35, // 33: api.ConfigMap.binary_data:type_name -> api.ConfigMap.BinaryDataEntry
+	36, // 34: api.ConfigMap.labels:type_name -> api.ConfigMap.LabelsEntry
+	37, // 35: api.ConfigMap.annotations:type_name -> api.ConfigMap.AnnotationsEntry
+	38, // 36: api.Secret.data:type_name -> api.Secret.DataEntry
+	39, // 37: api.Secret.labels:type_name -> api.Secret.LabelsEntry
+	40, // 38: api.Secret.annotations:type_name -> api.Secret.AnnotationsEntry
+	41, // 39: api.Ingress.labels:type_name -> api.Ingress.LabelsEntry
+	42, // 40: api.Ingress.annotations:type_name -> api.Ingress.AnnotationsEntry
+	43, // 41: api.PVC.labels:type_name -> api.PVC.LabelsEntry
+	44, // 42: api.PVC.annotations:type_name -> api.PVC.AnnotationsEntry
+	45, // 43: api.StorageClass.annotations:type_name -> api.StorageClass.AnnotationsEntry
+	46, // 44: api.StorageClass.labels:type_name -> api.StorageClass.LabelsEntry
+	47, // 45: api.PV.annotations:type_name -> api.PV.AnnotationsEntry
+	48, // 46: api.PV.labels:type_name -> api.PV.LabelsEntry
+	1,  // 47: api.Command.type:type_name -> api.Command.CommandType
+	48, // [48:48] is the sub-list for method output_type
+	48, // [48:48] is the sub-list for method input_type
+	48, // [48:48] is the sub-list for extension type_name
+	48, // [48:48] is the sub-list for extension extendee
+	0,  // [0:48] is the sub-list for field type_name
 }
 
 func init() { file_agent_backend_websocket_proto_init() }
@@ -2649,7 +2950,7 @@ func file_agent_backend_websocket_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agent_backend_websocket_proto_rawDesc), len(file_agent_backend_websocket_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   41,
+			NumMessages:   47,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

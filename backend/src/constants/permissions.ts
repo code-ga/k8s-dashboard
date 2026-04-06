@@ -111,6 +111,25 @@ export const RESOURCE_DEFINITIONS = {
 			manage: "Manage PersistentVolumeClaims",
 		},
 	},
+	storageclass: {
+		description: "Kubernetes StorageClass management",
+		actions: {
+			read: "View StorageClasses",
+			create: "Create a StorageClass",
+			update: "Update a StorageClass",
+			delete: "Delete a StorageClass",
+			manage: "Manage StorageClasses",
+		},
+	},
+	pv: {
+		description: "Kubernetes PersistentVolume management",
+		actions: {
+			read: "View PersistentVolumes",
+			create: "Create a PersistentVolume",
+			delete: "Delete a PersistentVolume",
+			manage: "Manage PersistentVolumes",
+		},
+	},
 } as const;
 
 export type ResourceKey = keyof typeof RESOURCE_DEFINITIONS;

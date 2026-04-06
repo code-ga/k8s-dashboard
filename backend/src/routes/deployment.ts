@@ -324,17 +324,55 @@ export const deploymentRoute = new Elysia({
 									}),
 								),
 								configMapRefs: Type.Object({
-									env: Type.Optional(Type.Array(Type.Object({ configMapName: Type.String(), key: Type.String(), name: Type.String() }))),
-									envFrom: Type.Optional(Type.Array(Type.Object({ configMapName: Type.String() }))),
-									volumes: Type.Optional(Type.Array(Type.Object({ configMapName: Type.String(), mountPath: Type.String(), name: Type.String() }))),
+									env: Type.Optional(
+										Type.Array(
+											Type.Object({
+												configMapName: Type.String(),
+												key: Type.String(),
+												name: Type.String(),
+											}),
+										),
+									),
+									envFrom: Type.Optional(
+										Type.Array(Type.Object({ configMapName: Type.String() })),
+									),
+									volumes: Type.Optional(
+										Type.Array(
+											Type.Object({
+												configMapName: Type.String(),
+												mountPath: Type.String(),
+												name: Type.String(),
+											}),
+										),
+									),
 								}),
 								secretRefs: Type.Object({
-									env: Type.Optional(Type.Array(Type.Object({ secretName: Type.String(), key: Type.String(), name: Type.String() }))),
-									envFrom: Type.Optional(Type.Array(Type.Object({ secretName: Type.String() }))),
-									volumes: Type.Optional(Type.Array(Type.Object({ secretName: Type.String(), mountPath: Type.String(), name: Type.String() }))),
+									env: Type.Optional(
+										Type.Array(
+											Type.Object({
+												secretName: Type.String(),
+												key: Type.String(),
+												name: Type.String(),
+											}),
+										),
+									),
+									envFrom: Type.Optional(
+										Type.Array(Type.Object({ secretName: Type.String() })),
+									),
+									volumes: Type.Optional(
+										Type.Array(
+											Type.Object({
+												secretName: Type.String(),
+												mountPath: Type.String(),
+												name: Type.String(),
+											}),
+										),
+									),
 								}),
 								pvcVolumes: Type.Optional(Type.Array(PvcVolumeRefSchema)),
-								emptyDirVolumes: Type.Optional(Type.Array(EmptyDirVolumeRefSchema)),
+								emptyDirVolumes: Type.Optional(
+									Type.Array(EmptyDirVolumeRefSchema),
+								),
 							}),
 						),
 						400: errorResponseSchema,
@@ -472,61 +510,49 @@ export const deploymentRoute = new Elysia({
 						? encrypt(JSON.stringify(body.env))
 						: "";
 
+					const createData: InferInsertModel<typeof schema.k8sDeployments> = {
+						clusterId: cluster.id,
+						ownerId: ctx.profile.id,
+						name: body.name,
+						namespace: body.namespace,
+						replicas: body.replicas,
+						availableReplicas: 0,
+						unavailableReplicas: body.replicas,
+						dockerImage: body.image,
+						labels: body.labels ? JSON.stringify(body.labels) : null,
+						selector: body.selector ? JSON.stringify(body.selector) : null,
+						envVariables: envEncrypted,
+						command: body.command ? body.command.join(" ") : "",
+						args: body.args ? body.args.join(" ") : "",
+						ports: { data: [] },
+						configMapRefs: { env: [], envFrom: [], volumes: [] },
+						secretRefs: { env: [], envFrom: [], volumes: [] },
+						cpuRequest: body.resources?.requests?.cpu
+							? parseCpuStr(body.resources.requests.cpu)
+							: 0,
+						cpuLimit: body.resources?.limits?.cpu
+							? parseCpuStr(body.resources.limits.cpu)
+							: 0,
+						memoryRequest: body.resources?.requests?.memory
+							? parseMemoryStr(body.resources.requests.memory)
+							: 0,
+						memoryLimit: body.resources?.limits?.memory
+							? parseMemoryStr(body.resources.limits.memory)
+							: 0,
+						annotations: body.annotations || {},
+						templateAnnotations: body.templateAnnotations || {},
+						idleTimeoutSeconds: body.idleTimeoutSeconds || 0,
+						isAutoScaling: body.isAutoScaling || false,
+						isAlwaysRunning: body.isAlwaysRunning ?? true,
+						resourceConfig: "",
+					};
+
 					let newDeployment:
 						| SchemaStatic<typeof dbSchemaTypes.k8sDeployments>
 						| undefined;
 
+					let portsForManifest: any[] = [];
 					try {
-						// DefaultOwner logic?
-						// Implementation plan says "Enforce ownership checks".
-						// We have ctx.profile.id.
-
-						if (!ctx.profile) {
-							throw new Error("Unauthorized");
-						}
-
-						const createData: InferInsertModel<typeof schema.k8sDeployments> = {
-							clusterId: cluster.id,
-							ownerId: ctx.profile.id,
-							name: body.name,
-							namespace: body.namespace,
-							replicas: body.replicas,
-							availableReplicas: 0,
-							unavailableReplicas: body.replicas,
-							dockerImage: body.image,
-							labels: body.labels ? JSON.stringify(body.labels) : null,
-							selector: body.selector ? JSON.stringify(body.selector) : null,
-							envVariables: envEncrypted,
-							command: body.command ? body.command.join(" ") : "",
-							args: body.args ? body.args.join(" ") : "",
-							ports: [], // Now stored in normalized tables
-							configMapRefs: { env: [], envFrom: [], volumes: [] }, // Legacy field
-							secretRefs: { env: [], envFrom: [], volumes: [] }, // Legacy field
-							cpuRequest: body.resources?.requests?.cpu
-								? parseCpuStr(body.resources.requests.cpu)
-								: 0,
-							cpuLimit: body.resources?.limits?.cpu
-								? parseCpuStr(body.resources.limits.cpu)
-								: 0,
-							memoryRequest: body.resources?.requests?.memory
-								? parseMemoryStr(body.resources.requests.memory)
-								: 0,
-							memoryLimit: body.resources?.limits?.memory
-								? parseMemoryStr(body.resources.limits.memory)
-								: 0,
-							annotations: body.annotations ? body.annotations : undefined,
-							templateAnnotations: body.templateAnnotations
-								? body.templateAnnotations
-								: undefined,
-							updatedAt: new Date(),
-						};
-						if (body.isAutoScaling !== undefined)
-							createData.isAutoScaling = body.isAutoScaling;
-						if (body.isAlwaysRunning !== undefined)
-							createData.isAlwaysRunning = body.isAlwaysRunning;
-						if (body.idleTimeoutSeconds !== undefined)
-							createData.idleTimeoutSeconds = body.idleTimeoutSeconds;
-
 						[newDeployment] = await db
 							.insert(schema.k8sDeployments)
 							.values(createData)
@@ -540,9 +566,10 @@ export const deploymentRoute = new Elysia({
 						}
 
 						// Insert resource refs into normalized tables
+						portsForManifest = body.ports || [];
 						await insertAllDeploymentResourceRefs(
 							newDeployment.id,
-							body.ports || [],
+							portsForManifest,
 							{
 								configMapRefs: body.configMapRefs,
 								secretRefs: body.secretRefs,
@@ -707,12 +734,8 @@ export const deploymentRoute = new Elysia({
 								),
 							}),
 						),
-						pvcVolumes: Type.Optional(
-							Type.Array(PvcVolumeRefSchema),
-						),
-						emptyDirVolumes: Type.Optional(
-							Type.Array(EmptyDirVolumeRefSchema),
-						),
+						pvcVolumes: Type.Optional(Type.Array(PvcVolumeRefSchema)),
+						emptyDirVolumes: Type.Optional(Type.Array(EmptyDirVolumeRefSchema)),
 						ports: Type.Optional(
 							Type.Array(
 								Type.Object({
@@ -920,7 +943,8 @@ export const deploymentRoute = new Elysia({
 							updateData.idleTimeoutSeconds = body.idleTimeoutSeconds;
 						let newDeployment:
 							| InferSelectModel<typeof schema.k8sDeployments>
-							| undefined = undefined;
+							| undefined;
+						let portsForManifest: any[] = [];
 						try {
 							newDeployment = await db
 								.update(schema.k8sDeployments)
@@ -930,8 +954,9 @@ export const deploymentRoute = new Elysia({
 								.then((res) => res[0]);
 
 							// Update resource refs in normalized tables if provided
+							portsForManifest = body.ports || [];
 							if (body.ports || body.configMapRefs || body.secretRefs) {
-								await updateAllDeploymentResourceRefs(depId, body.ports || [], {
+								await updateAllDeploymentResourceRefs(depId, portsForManifest, {
 									configMapRefs: body.configMapRefs,
 									secretRefs: body.secretRefs,
 									pvcVolumes: body.pvcVolumes,
@@ -958,7 +983,10 @@ export const deploymentRoute = new Elysia({
 						// Re-calculate payload with correct Env/ConfigMap/Secret preservation
 						let finalEnv = body.env;
 						if (!finalEnv && deployment.envVariables) {
-							finalEnv = decryptEnvVars(deployment.envVariables, deployment.name);
+							finalEnv = decryptEnvVars(
+								deployment.envVariables,
+								deployment.name,
+							);
 						}
 
 						let finalConfigMapRefs = body.configMapRefs;
@@ -995,13 +1023,17 @@ export const deploymentRoute = new Elysia({
 								secretRefs: finalSecretRefs,
 								pvcVolumes: body.pvcVolumes,
 								emptyDirVolumes: body.emptyDirVolumes,
-								labels: body.labels || (deployment.labels ? JSON.parse(deployment.labels) : undefined),
+								labels:
+									body.labels ||
+									(deployment.labels
+										? JSON.parse(deployment.labels)
+										: undefined),
 								selector:
 									body.selector ||
 									(deployment.selector
 										? JSON.parse(deployment.selector)
 										: undefined),
-								ports: newDeployment.ports,
+								ports: deployment.ports?.data || [],
 								resources: {
 									requests: {
 										cpu:
@@ -1175,12 +1207,8 @@ export const deploymentRoute = new Elysia({
 								),
 							}),
 						),
-						pvcVolumes: Type.Optional(
-							Type.Array(PvcVolumeRefSchema),
-						),
-						emptyDirVolumes: Type.Optional(
-							Type.Array(EmptyDirVolumeRefSchema),
-						),
+						pvcVolumes: Type.Optional(Type.Array(PvcVolumeRefSchema)),
+						emptyDirVolumes: Type.Optional(Type.Array(EmptyDirVolumeRefSchema)),
 						command: Type.Optional(Type.Array(Type.String())),
 						args: Type.Optional(Type.Array(Type.String())),
 						ports: Type.Optional(
@@ -1618,7 +1646,7 @@ export const deploymentRoute = new Elysia({
 							selector: newDeployment.selector
 								? JSON.parse(newDeployment.selector)
 								: undefined,
-							ports: newDeployment.ports,
+							ports: newDeployment.ports?.data || [],
 							resources: {
 								requests: {
 									cpu: newDeployment.cpuRequest

@@ -12,6 +12,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	storagev1 "k8s.io/api/storage/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
@@ -78,6 +79,22 @@ func (kc *K8sClient) GetPVCs(namespace string) (*corev1.PersistentVolumeClaimLis
 		return nil, err
 	}
 	return pvcs, nil
+}
+
+func (kc *K8sClient) GetStorageClasses() (*storagev1.StorageClassList, error) {
+	scs, err := kc.Clientset.StorageV1().StorageClasses().List(kc.Context, metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+	return scs, nil
+}
+
+func (kc *K8sClient) GetPVs() (*corev1.PersistentVolumeList, error) {
+	pvs, err := kc.Clientset.CoreV1().PersistentVolumes().List(kc.Context, metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+	return pvs, nil
 }
 
 // traefikGVR returns the GroupVersionResource for a Traefik CRD type.
@@ -240,16 +257,16 @@ func (kc *K8sClient) GetIngressRoutes() ([]*pb.Ingress, error) {
 			}
 
 			ingresses = append(ingresses, &pb.Ingress{
-				Name:         name,
-				Namespace:    namespace,
-				Uid:          uid,
-				Labels:       labels,
-				Protocol:     k.protocol,
-				Port:         externalPort,
-				InternalPort: internalPort,
-				ServiceName:  serviceName,
-				Domain:       domain,
-				Path:         path,
+				Name:           name,
+				Namespace:      namespace,
+				Uid:            uid,
+				Labels:         labels,
+				Protocol:       k.protocol,
+				Port:           externalPort,
+				InternalPort:   internalPort,
+				ServiceName:    serviceName,
+				Domain:         domain,
+				Path:           path,
 				ResourceConfig: string(ingressJSON),
 			})
 		}
@@ -290,4 +307,34 @@ func (k *K8sClient) WaitForPodRunning(namespace, podName string, timeout time.Du
 		}
 		time.Sleep(5 * time.Second)
 	}
+}
+
+func (kc *K8sClient) DeleteStorageClass(name string) error {
+	return kc.Clientset.StorageV1().StorageClasses().Delete(kc.Context, name, metav1.DeleteOptions{})
+}
+
+func (kc *K8sClient) SetDefaultStorageClass(name string, isDefault bool) error {
+	sc, err := kc.Clientset.StorageV1().StorageClasses().Get(kc.Context, name, metav1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to get StorageClass %s: %w", name, err)
+	}
+
+	annotations := sc.Annotations
+	if annotations == nil {
+		annotations = make(map[string]string)
+	}
+
+	if isDefault {
+		annotations["storageclass.kubernetes.io/is-default-class"] = "true"
+	} else {
+		delete(annotations, "storageclass.kubernetes.io/is-default-class")
+	}
+
+	sc.Annotations = annotations
+	_, err = kc.Clientset.StorageV1().StorageClasses().Update(kc.Context, sc, metav1.UpdateOptions{})
+	return err
+}
+
+func (kc *K8sClient) DeletePV(name string) error {
+	return kc.Clientset.CoreV1().PersistentVolumes().Delete(kc.Context, name, metav1.DeleteOptions{})
 }

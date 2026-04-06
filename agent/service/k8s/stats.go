@@ -123,14 +123,14 @@ func (kc *K8sClient) GetFullClusterState() (*pb.Heartbeat, error) {
 		}
 
 		pbNodes = append(pbNodes, &pb.Node{
-			Name:        node.Name,
-			CpuCapacity: cpuCap,
-			RamCapacity: memCap,
-			Labels:      labels,
-			Uid:         string(node.UID),
-			Status:      status,
-			Roles:       roles,
-			Annotations:  annotations,
+			Name:           node.Name,
+			CpuCapacity:    cpuCap,
+			RamCapacity:    memCap,
+			Labels:         labels,
+			Uid:            string(node.UID),
+			Status:         status,
+			Roles:          roles,
+			Annotations:    annotations,
 			ResourceConfig: string(nodeJSON),
 			// CpuUsage: ... (requires metrics server or manual aggregation)
 			// RamUsage: ...
@@ -265,25 +265,25 @@ func (kc *K8sClient) GetFullClusterState() (*pb.Heartbeat, error) {
 		}
 
 		pbPods = append(pbPods, &pb.Pod{
-			Name:          pod.Name,
-			Namespace:     pod.Namespace,
-			NodeName:      pod.Spec.NodeName,
-			DockerImage:   image,
-			Replicas:      replicas,
-			Status:        string(pod.Status.Phase),
-			CpuRequest:    cpuReq,
-			CpuLimit:      cpuLim,
-			MemoryRequest: memReq,
-			MemoryLimit:   memLim,
-			Command:       cmdStr,
-			Args:          argsStr,
-			Uid:           string(pod.UID),
-			EnvVariables:  envEncrypted,
-			Ports:         pbPorts,
-			CpuUsage:      podMetricsMap[fmt.Sprintf("%s/%s", pod.Namespace, pod.Name)]["cpu"],
-			RamUsage:      podMetricsMap[fmt.Sprintf("%s/%s", pod.Namespace, pod.Name)]["memory"],
-			Labels:        pod.Labels,
-			Annotations:   annotations,
+			Name:           pod.Name,
+			Namespace:      pod.Namespace,
+			NodeName:       pod.Spec.NodeName,
+			DockerImage:    image,
+			Replicas:       replicas,
+			Status:         string(pod.Status.Phase),
+			CpuRequest:     cpuReq,
+			CpuLimit:       cpuLim,
+			MemoryRequest:  memReq,
+			MemoryLimit:    memLim,
+			Command:        cmdStr,
+			Args:           argsStr,
+			Uid:            string(pod.UID),
+			EnvVariables:   envEncrypted,
+			Ports:          pbPorts,
+			CpuUsage:       podMetricsMap[fmt.Sprintf("%s/%s", pod.Namespace, pod.Name)]["cpu"],
+			RamUsage:       podMetricsMap[fmt.Sprintf("%s/%s", pod.Namespace, pod.Name)]["memory"],
+			Labels:         pod.Labels,
+			Annotations:    annotations,
 			ResourceConfig: string(podJSON),
 		})
 
@@ -311,15 +311,15 @@ func (kc *K8sClient) GetFullClusterState() (*pb.Heartbeat, error) {
 			return nil, fmt.Errorf("failed to marshal service: %w", err)
 		}
 		pbServices = append(pbServices, &pb.Service{
-			Name:      scv.Name,
-			Namespace: scv.Namespace,
-			Type:      string(scv.Spec.Type),
-			ClusterIp: scv.Spec.ClusterIP,
-			Selector:  scv.Spec.Selector,
-			Uid:       string(scv.UID),
-			Labels:    scv.Labels,
-			Ports:     ports,
-			Annotations: scv.Annotations,
+			Name:           scv.Name,
+			Namespace:      scv.Namespace,
+			Type:           string(scv.Spec.Type),
+			ClusterIp:      scv.Spec.ClusterIP,
+			Selector:       scv.Spec.Selector,
+			Uid:            string(scv.UID),
+			Labels:         scv.Labels,
+			Ports:          ports,
+			Annotations:    scv.Annotations,
 			ResourceConfig: string(serviceJSON),
 		})
 	}
@@ -408,7 +408,7 @@ func (kc *K8sClient) GetFullClusterState() (*pb.Heartbeat, error) {
 			Ports:               pbPorts,
 			Annotations:         dep.Annotations,
 			TemplateAnnotations: dep.Spec.Template.Annotations,
-			ResourceConfig: string(deploymentJSON),
+			ResourceConfig:      string(deploymentJSON),
 		})
 
 	}
@@ -426,14 +426,14 @@ func (kc *K8sClient) GetFullClusterState() (*pb.Heartbeat, error) {
 				return nil, fmt.Errorf("failed to marshal config map: %w", err)
 			}
 			pbConfigMaps = append(pbConfigMaps, &pb.ConfigMap{
-				Name:       cm.Name,
-				Namespace:  cm.Namespace,
-				Data:       cm.Data,
-				BinaryData: cm.BinaryData,
-				Uid:        string(cm.UID),
-				Labels:     cm.Labels,
-				Immutable:  cm.Immutable != nil && *cm.Immutable,
-				Annotations: cm.Annotations,
+				Name:           cm.Name,
+				Namespace:      cm.Namespace,
+				Data:           cm.Data,
+				BinaryData:     cm.BinaryData,
+				Uid:            string(cm.UID),
+				Labels:         cm.Labels,
+				Immutable:      cm.Immutable != nil && *cm.Immutable,
+				Annotations:    cm.Annotations,
 				ResourceConfig: string(configMapJSON),
 			})
 		}
@@ -452,14 +452,14 @@ func (kc *K8sClient) GetFullClusterState() (*pb.Heartbeat, error) {
 				return nil, fmt.Errorf("failed to marshal secret: %w", err)
 			}
 			pbSecrets = append(pbSecrets, &pb.Secret{
-				Name:      sec.Name,
-				Namespace: sec.Namespace,
-				Data:      sec.Data,
-				Type:      string(sec.Type),
-				Uid:       string(sec.UID),
-				Labels:    sec.Labels,
-				Immutable: sec.Immutable != nil && *sec.Immutable,
-				Annotations: sec.Annotations,
+				Name:           sec.Name,
+				Namespace:      sec.Namespace,
+				Data:           sec.Data,
+				Type:           string(sec.Type),
+				Uid:            string(sec.UID),
+				Labels:         sec.Labels,
+				Immutable:      sec.Immutable != nil && *sec.Immutable,
+				Annotations:    sec.Annotations,
 				ResourceConfig: string(secretJSON),
 				// Note: We do not include the decoded secret data for security reasons.
 			})
@@ -476,7 +476,7 @@ func (kc *K8sClient) GetFullClusterState() (*pb.Heartbeat, error) {
 	if err != nil {
 		fmt.Printf("Warning: Failed to fetch ingress routes: %v\n", err)
 	}
-	
+
 	// Fetch PVCs
 	pvcs, err := kc.GetPVCs("")
 	if err != nil {
@@ -489,7 +489,7 @@ func (kc *K8sClient) GetFullClusterState() (*pb.Heartbeat, error) {
 			if q, ok := pvc.Status.Capacity[corev1.ResourceStorage]; ok {
 				capacity = q.Value() / (1024 * 1024) // in MiB
 			}
-			
+
 			storageClass := ""
 			if pvc.Spec.StorageClassName != nil {
 				storageClass = *pvc.Spec.StorageClassName
@@ -499,18 +499,109 @@ func (kc *K8sClient) GetFullClusterState() (*pb.Heartbeat, error) {
 			if err != nil {
 				return nil, fmt.Errorf("failed to marshal pvc: %w", err)
 			}
-			
+
 			pbPvcs = append(pbPvcs, &pb.PVC{
-				Name:         pvc.Name,
-				Namespace:    pvc.Namespace,
-				Capacity:     capacity,
-				Phase:        string(pvc.Status.Phase),
-				StorageClass: storageClass,
-				VolumeName:   pvc.Spec.VolumeName,
-				Uid:          string(pvc.UID),
-				Labels:       pvc.Labels,
-				Annotations:  pvc.Annotations,
+				Name:           pvc.Name,
+				Namespace:      pvc.Namespace,
+				Capacity:       capacity,
+				Phase:          string(pvc.Status.Phase),
+				StorageClass:   storageClass,
+				VolumeName:     pvc.Spec.VolumeName,
+				Uid:            string(pvc.UID),
+				Labels:         pvc.Labels,
+				Annotations:    pvc.Annotations,
 				ResourceConfig: string(pvcJSON),
+			})
+		}
+	}
+
+	// Fetch StorageClasses
+	scs, err := kc.GetStorageClasses()
+	if err != nil {
+		fmt.Printf("Warning: Failed to fetch StorageClasses: %v\n", err)
+	}
+	var pbStorageClasses []*pb.StorageClass
+	if scs != nil {
+		for _, sc := range scs.Items {
+			allowVolumeExpansion := false
+			if sc.AllowVolumeExpansion != nil {
+				allowVolumeExpansion = *sc.AllowVolumeExpansion
+			}
+
+			volumeBindingMode := ""
+			if sc.VolumeBindingMode != nil {
+				volumeBindingMode = string(*sc.VolumeBindingMode)
+			}
+
+			reclaimPolicy := ""
+			if sc.ReclaimPolicy != nil {
+				reclaimPolicy = string(*sc.ReclaimPolicy)
+			}
+
+			scJSON, err := json.Marshal(sc)
+			if err != nil {
+				return nil, fmt.Errorf("failed to marshal StorageClass: %w", err)
+			}
+
+			pbStorageClasses = append(pbStorageClasses, &pb.StorageClass{
+				Name:                 sc.Name,
+				Provisioner:          sc.Provisioner,
+				ReclaimPolicy:        reclaimPolicy,
+				VolumeBindingMode:    volumeBindingMode,
+				AllowVolumeExpansion: allowVolumeExpansion,
+				Annotations:          sc.Annotations,
+				Labels:               sc.Labels,
+				ResourceConfig:       string(scJSON),
+			})
+		}
+	}
+
+	// Fetch PersistentVolumes
+	pvs, err := kc.GetPVs()
+	if err != nil {
+		fmt.Printf("Warning: Failed to fetch PVs: %v\n", err)
+	}
+	var pbPVs []*pb.PV
+	if pvs != nil {
+		for _, pv := range pvs.Items {
+			var capacity int64
+			if q, ok := pv.Spec.Capacity[corev1.ResourceStorage]; ok {
+				capacity = q.Value() / (1024 * 1024) // in MiB
+			}
+
+			var boundPvc string
+			if pv.Spec.ClaimRef != nil {
+				boundPvc = pv.Spec.ClaimRef.Namespace + "/" + pv.Spec.ClaimRef.Name
+			}
+
+			var accessModes []string
+			for _, am := range pv.Spec.AccessModes {
+				accessModes = append(accessModes, string(am))
+			}
+
+			reclaimPolicy := string(pv.Spec.PersistentVolumeReclaimPolicy)
+
+			pvJSON, err := json.Marshal(pv)
+			if err != nil {
+				return nil, fmt.Errorf("failed to marshal PV: %w", err)
+			}
+
+			storageClass := ""
+			if pv.Spec.StorageClassName != "" {
+				storageClass = pv.Spec.StorageClassName
+			}
+
+			pbPVs = append(pbPVs, &pb.PV{
+				Name:           pv.Name,
+				Capacity:       capacity,
+				Phase:          string(pv.Status.Phase),
+				ReclaimPolicy:  reclaimPolicy,
+				StorageClass:   storageClass,
+				BoundPvc:       boundPvc,
+				AccessModes:    accessModes,
+				Annotations:    pv.Annotations,
+				Labels:         pv.Labels,
+				ResourceConfig: string(pvJSON),
 			})
 		}
 	}
@@ -523,15 +614,17 @@ func (kc *K8sClient) GetFullClusterState() (*pb.Heartbeat, error) {
 			RamUsage:      totalMemUsage,
 			ClusterDomain: clusterDomain,
 		},
-		Nodes:       pbNodes,
-		Pods:        pbPods,
-		Services:    pbServices,
-		Deployments: pbDeployments,
-		ConfigMaps:  pbConfigMaps,
-		Secrets:     pbSecrets,
-		Ingresses:   pbIngresses,
-		Pvcs:        pbPvcs,
-		Timestamp:   time.Now().Unix(),
+		Nodes:          pbNodes,
+		Pods:           pbPods,
+		Services:       pbServices,
+		Deployments:    pbDeployments,
+		ConfigMaps:     pbConfigMaps,
+		Secrets:        pbSecrets,
+		Ingresses:      pbIngresses,
+		Pvcs:           pbPvcs,
+		StorageClasses: pbStorageClasses,
+		Pvs:            pbPVs,
+		Timestamp:      time.Now().Unix(),
 	}
 
 	return heartbeat, nil

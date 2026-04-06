@@ -158,6 +158,56 @@ func handleCommand(kc *k8s.K8sClient, cmd *pb.Command) (string, error) {
 		} else {
 			err = fmt.Errorf("missing target or payload for RESIZE_PVC command")
 		}
+	case pb.Command_CREATE_STORAGE_CLASS:
+		if cmd.Payload != "" {
+			log.Printf("[Command] Applying StorageClass manifest for command ID:%s (Payload size: %d bytes)", cmd.Id, len(cmd.Payload))
+			err = kc.ApplyManifest(cmd.Payload)
+			if err == nil {
+				resultData = "StorageClass applied successfully"
+			}
+		} else {
+			err = fmt.Errorf("payload empty for CREATE_STORAGE_CLASS command")
+		}
+	case pb.Command_DELETE_STORAGE_CLASS:
+		if cmd.TargetName != "" {
+			log.Printf("[Command] Deleting StorageClass %s", cmd.TargetName)
+			err = kc.DeleteStorageClass(cmd.TargetName)
+			if err == nil {
+				resultData = "StorageClass deleted successfully"
+			}
+		} else {
+			err = fmt.Errorf("missing target_name for DELETE_STORAGE_CLASS command")
+		}
+	case pb.Command_SET_DEFAULT_STORAGE_CLASS:
+		if cmd.TargetName != "" && cmd.Payload != "" {
+			log.Printf("[Command] Setting StorageClass %s as default", cmd.TargetName)
+			err = kc.SetDefaultStorageClass(cmd.TargetName, cmd.Payload == "true")
+			if err == nil {
+				resultData = fmt.Sprintf("StorageClass %s default set to %s", cmd.TargetName, cmd.Payload)
+			}
+		} else {
+			err = fmt.Errorf("missing target_name or payload for SET_DEFAULT_STORAGE_CLASS command")
+		}
+	case pb.Command_CREATE_PV:
+		if cmd.Payload != "" {
+			log.Printf("[Command] Applying PV manifest for command ID:%s (Payload size: %d bytes)", cmd.Id, len(cmd.Payload))
+			err = kc.ApplyManifest(cmd.Payload)
+			if err == nil {
+				resultData = "PersistentVolume applied successfully"
+			}
+		} else {
+			err = fmt.Errorf("payload empty for CREATE_PV command")
+		}
+	case pb.Command_DELETE_PV:
+		if cmd.TargetName != "" {
+			log.Printf("[Command] Deleting PV %s", cmd.TargetName)
+			err = kc.DeletePV(cmd.TargetName)
+			if err == nil {
+				resultData = "PersistentVolume deleted successfully"
+			}
+		} else {
+			err = fmt.Errorf("missing target_name for DELETE_PV command")
+		}
 	default:
 		log.Printf("[Command] Unknown command type: %v (ID:%s)", cmd.Type, cmd.Id)
 		return "", fmt.Errorf("unknown command type: %v", cmd.Type)
