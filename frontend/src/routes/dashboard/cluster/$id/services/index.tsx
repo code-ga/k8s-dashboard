@@ -366,7 +366,7 @@ function ClusterServices() {
 									<TableCell>{svc.type || "ClusterIP"}</TableCell>
 									<TableCell>
 										<div className="flex flex-col gap-1">
-											{(svc.ports as any)?.data?.map((p: any) => (
+											{svc.ports?.data?.map((p) => (
 												<div key={p.port} className="text-xs">
 													{p.port} → {p.targetPort} ({p.protocol})
 												</div>

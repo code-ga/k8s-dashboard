@@ -51,7 +51,7 @@ function ClusterPVCs() {
 			.pvcs({ clusterId: id })({ id: pvcId.toString() })
 			.delete();
 		if (res.error) {
-			toast.error((res.error.value as any)?.message || "Failed to delete PVC");
+			toast.error(res.error.value?.message || "Failed to delete PVC");
 		} else {
 			toast.success("PVC deletion initiated");
 			refetch();

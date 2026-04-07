@@ -174,7 +174,7 @@ function ManageDeploymentPage() {
 			setPorts(
 				Array.isArray(deployment.ports)
 					? deployment.ports
-					: (deployment.ports as any)?.data || [],
+					: (deployment.ports as any)?.data || [], // fallback for backward compatibility
 			);
 			setCpuRequest(`${deployment.cpuRequest}m`);
 			setCpuLimit(`${deployment.cpuLimit}m`);
@@ -252,7 +252,7 @@ function ManageDeploymentPage() {
 					command:
 						command.length > 0 && command[0] !== "" ? command : undefined,
 					args: args.length > 0 && args[0] !== "" ? args : undefined,
-					env: envPayload as any,
+					env: envPayload,
 					configMapRefs:
 						configMapEnvRefs.length > 0 || configMapEnvFromRefs.length > 0
 							? {

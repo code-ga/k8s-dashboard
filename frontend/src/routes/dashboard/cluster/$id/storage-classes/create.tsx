@@ -78,8 +78,10 @@ function CreateStorageClass() {
 			const payload = {
 				name: formData.name,
 				provisioner: formData.provisioner,
-				reclaimPolicy: formData.reclaimPolicy,
-				volumeBindingMode: formData.volumeBindingMode,
+				reclaimPolicy: formData.reclaimPolicy as "Delete" | "Retain",
+				volumeBindingMode: formData.volumeBindingMode as
+					| "Immediate"
+					| "WaitForFirstConsumer",
 				allowVolumeExpansion: formData.allowVolumeExpansion,
 				annotations: formData.annotations
 					? JSON.parse(formData.annotations)
@@ -91,7 +93,7 @@ function CreateStorageClass() {
 
 			if (res.error) {
 				toast.error(
-					(res.error.value as any)?.message || "Failed to create StorageClass",
+					res.error.value?.message || "Failed to create StorageClass",
 				);
 			} else {
 				toast.success("StorageClass creation initiated successfully");

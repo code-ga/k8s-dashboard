@@ -197,7 +197,7 @@ function ServiceDetailPage() {
 							</TableRow>
 						</TableHeader>
 						<TableBody>
-							{(service.ports as any)?.data?.map((port: any, _i: any) => (
+							{service.ports?.data?.map((port: any, _i: any) => (
 								<TableRow key={port.name + service.id}>
 									<TableCell>{port.name || "-"}</TableCell>
 									<TableCell>{port.protocol}</TableCell>

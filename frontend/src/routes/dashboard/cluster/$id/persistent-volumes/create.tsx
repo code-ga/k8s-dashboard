@@ -89,8 +89,7 @@ function CreatePersistentVolume() {
 
 			if (res.error) {
 				toast.error(
-					(res.error.value as any)?.message ||
-						"Failed to create PersistentVolume",
+					res.error.value?.message || "Failed to create PersistentVolume",
 				);
 			} else {
 				toast.success("PersistentVolume creation initiated successfully");

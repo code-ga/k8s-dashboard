@@ -58,8 +58,7 @@ function ClusterPersistentVolumes() {
 		const res = await api.api.pvs({ clusterId: id })({ name }).delete();
 		if (res.error) {
 			toast.error(
-				(res.error.value as any)?.message ||
-					"Failed to delete PersistentVolume",
+				res.error.value?.message || "Failed to delete PersistentVolume",
 			);
 		} else {
 			toast.success("PersistentVolume deletion initiated");

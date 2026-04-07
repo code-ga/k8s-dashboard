@@ -66,9 +66,7 @@ function ClusterStorageClasses() {
 			.storageclasses({ clusterId: id })({ name })
 			.delete();
 		if (res.error) {
-			toast.error(
-				(res.error.value as any)?.message || "Failed to delete StorageClass",
-			);
+			toast.error(res.error.value?.message || "Failed to delete StorageClass");
 		} else {
 			toast.success("StorageClass deletion initiated");
 			refetch();

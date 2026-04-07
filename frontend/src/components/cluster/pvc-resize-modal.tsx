@@ -45,7 +45,7 @@ export function ResizePVCModal({
 				.patch({ capacity: newCapacity });
 
 			if (res.error) {
-				toast.error((res.error.value as any)?.message || "Failed to resize PVC");
+				toast.error(res.error.value?.message || "Failed to resize PVC");
 			} else {
 				toast.success("PVC resizing initiated successfully");
 				onSuccess();
@@ -65,9 +65,12 @@ export function ResizePVCModal({
 					<div className="mx-auto w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-4">
 						<Maximize2 className="h-6 w-6 text-blue-600" />
 					</div>
-					<DialogTitle className="text-center text-xl font-bold">Resize Storage Claim</DialogTitle>
+					<DialogTitle className="text-center text-xl font-bold">
+						Resize Storage Claim
+					</DialogTitle>
 					<DialogDescription className="text-center">
-						Expand the storage capacity for <span className="font-bold text-foreground">{pvc.name}</span>.
+						Expand the storage capacity for{" "}
+						<span className="font-bold text-foreground">{pvc.name}</span>.
 					</DialogDescription>
 				</DialogHeader>
 
@@ -75,19 +78,28 @@ export function ResizePVCModal({
 					<div className="bg-yellow-50 border border-yellow-100 rounded-lg p-3 flex gap-3 text-[11px] text-yellow-800">
 						<AlertTriangle className="h-4 w-4 shrink-0 text-yellow-600" />
 						<p>
-							<span className="font-bold">Important:</span> In Kubernetes, storage volumes can only be <span className="font-bold underline">expanded</span>. Shriking is not supported.
+							<span className="font-bold">Important:</span> In Kubernetes,
+							storage volumes can only be{" "}
+							<span className="font-bold underline">expanded</span>. Shriking is
+							not supported.
 						</p>
 					</div>
 
 					<div className="flex justify-between items-center px-2 py-2 bg-muted rounded-md border border-border/50">
 						<div className="flex flex-col">
-							<span className="text-[10px] font-bold uppercase text-muted-foreground">Original Capacity</span>
+							<span className="text-[10px] font-bold uppercase text-muted-foreground">
+								Original Capacity
+							</span>
 							<span className="text-sm font-semibold">{pvc.capacity} MiB</span>
 						</div>
 						<div className="h-8 w-[1px] bg-border" />
 						<div className="flex flex-col text-right">
-							<span className="text-[10px] font-bold uppercase text-blue-600">New Capacity</span>
-							<span className="text-sm font-bold text-blue-600">{newCapacity} MiB</span>
+							<span className="text-[10px] font-bold uppercase text-blue-600">
+								New Capacity
+							</span>
+							<span className="text-sm font-bold text-blue-600">
+								{newCapacity} MiB
+							</span>
 						</div>
 					</div>
 

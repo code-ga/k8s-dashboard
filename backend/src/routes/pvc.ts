@@ -22,7 +22,7 @@ export const pvcRoute = new Elysia({
 					const { clusterId } = ctx.params;
 					const pvcs = await db.query.k8sPersistentVolumeClaims.findMany({
 						where: { clusterId: Number(clusterId) },
-					} as any);
+					});
 					return ctx.status(200, {
 						success: true,
 						message: "PVCs fetched successfully",
@@ -49,7 +49,7 @@ export const pvcRoute = new Elysia({
 							clusterId: Number(clusterId),
 							ownerId: ctx.profile?.id ?? "",
 						},
-					} as any);
+					});
 					return ctx.status(200, {
 						success: true,
 						message: "PVCs fetched successfully",
@@ -71,12 +71,12 @@ export const pvcRoute = new Elysia({
 				"/",
 				async (ctx) => {
 					const { clusterId } = ctx.params;
-					const body = ctx.body as any;
+					const body = ctx.body;
 
-					const cluster = (await db.query.k8sCluster.findFirst({
+					const cluster = await db.query.k8sCluster.findFirst({
 						where: { id: Number(clusterId) },
 						with: { agent: true },
-					})) as any;
+					});
 
 					if (!cluster || !cluster.agent) {
 						return ctx.status(404, {
@@ -136,14 +136,14 @@ export const pvcRoute = new Elysia({
 				"/:id",
 				async (ctx) => {
 					const { clusterId, id } = ctx.params;
-					const body = ctx.body as any;
+					const body = ctx.body;
 
-					const pvc = (await db.query.k8sPersistentVolumeClaims.findFirst({
+					const pvc = await db.query.k8sPersistentVolumeClaims.findFirst({
 						where: {
 							id: Number(id),
 							clusterId: Number(clusterId),
 						},
-					})) as any;
+					});
 
 					if (!pvc) {
 						return ctx.status(404, {
@@ -153,10 +153,10 @@ export const pvcRoute = new Elysia({
 						});
 					}
 
-					const cluster = (await db.query.k8sCluster.findFirst({
+					const cluster = await db.query.k8sCluster.findFirst({
 						where: { id: Number(clusterId) },
 						with: { agent: true },
-					})) as any;
+					});
 
 					if (!cluster || !cluster.agent) {
 						return ctx.status(404, {
@@ -213,12 +213,12 @@ export const pvcRoute = new Elysia({
 				"/:id",
 				async (ctx) => {
 					const { clusterId, id } = ctx.params;
-					const pvc = (await db.query.k8sPersistentVolumeClaims.findFirst({
+					const pvc = await db.query.k8sPersistentVolumeClaims.findFirst({
 						where: {
 							id: Number(id),
 							clusterId: Number(clusterId),
 						},
-					})) as any;
+					});
 
 					if (!pvc) {
 						return ctx.status(404, {
@@ -238,10 +238,10 @@ export const pvcRoute = new Elysia({
 						});
 					}
 
-					const cluster = (await db.query.k8sCluster.findFirst({
+					const cluster = await db.query.k8sCluster.findFirst({
 						where: { id: Number(clusterId) },
 						with: { agent: true },
-					})) as any;
+					});
 
 					if (!cluster || !cluster.agent) {
 						return ctx.status(404, {

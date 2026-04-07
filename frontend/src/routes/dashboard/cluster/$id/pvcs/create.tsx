@@ -1,8 +1,19 @@
 import { useState } from "react";
-import { createFileRoute, Link, useNavigate, useParams } from "@tanstack/react-router";
+import {
+	createFileRoute,
+	Link,
+	useNavigate,
+	useParams,
+} from "@tanstack/react-router";
 import { ArrowLeft, Database, Loader2, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+	Card,
+	CardContent,
+	CardHeader,
+	CardTitle,
+	CardDescription,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { api } from "@/lib/api";
@@ -33,7 +44,7 @@ function CreatePVC() {
 			const res = await api.api.pvcs({ clusterId: id }).post(formData);
 
 			if (res.error) {
-				toast.error((res.error.value as any)?.message || "Failed to create PVC");
+				toast.error(res.error.value?.message || "Failed to create PVC");
 			} else {
 				toast.success("PVC creation initiated successfully");
 				navigate({ to: "/dashboard/cluster/$id/pvcs", params: { id } });
@@ -54,8 +65,12 @@ function CreatePVC() {
 					</Button>
 				</Link>
 				<div>
-					<h2 className="text-2xl font-bold tracking-tight">Create Persistent Volume Claim</h2>
-					<p className="text-muted-foreground">Provision new storage for your applications</p>
+					<h2 className="text-2xl font-bold tracking-tight">
+						Create Persistent Volume Claim
+					</h2>
+					<p className="text-muted-foreground">
+						Provision new storage for your applications
+					</p>
 				</div>
 			</div>
 
@@ -79,7 +94,9 @@ function CreatePVC() {
 									placeholder="my-data-pvc"
 									required
 									value={formData.name}
-									onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+									onChange={(e) =>
+										setFormData({ ...formData, name: e.target.value })
+									}
 								/>
 							</div>
 							<div className="space-y-2">
@@ -89,7 +106,9 @@ function CreatePVC() {
 									placeholder="default"
 									required
 									value={formData.namespace}
-									onChange={(e) => setFormData({ ...formData, namespace: e.target.value })}
+									onChange={(e) =>
+										setFormData({ ...formData, namespace: e.target.value })
+									}
 								/>
 							</div>
 						</div>
@@ -100,7 +119,9 @@ function CreatePVC() {
 								id="storageClass"
 								placeholder="local-path, nfs, etc."
 								value={formData.storageClass}
-								onChange={(e) => setFormData({ ...formData, storageClass: e.target.value })}
+								onChange={(e) =>
+									setFormData({ ...formData, storageClass: e.target.value })
+								}
 							/>
 							<p className="text-[10px] text-muted-foreground italic">
 								Leave empty to use the cluster's default storage class.
@@ -115,16 +136,27 @@ function CreatePVC() {
 								min={1}
 								required
 								value={formData.capacity}
-								onChange={(e) => setFormData({ ...formData, capacity: parseInt(e.target.value) })}
+								onChange={(e) =>
+									setFormData({
+										...formData,
+										capacity: parseInt(e.target.value),
+									})
+								}
 							/>
 							<div className="flex justify-between text-[10px] font-medium text-muted-foreground mt-1">
 								<span>1024 MiB = 1 GiB</span>
-								<span className="text-blue-600">{(formData.capacity / 1024).toFixed(2)} GiB</span>
+								<span className="text-blue-600">
+									{(formData.capacity / 1024).toFixed(2)} GiB
+								</span>
 							</div>
 						</div>
 
 						<div className="pt-4 flex justify-end">
-							<Button type="submit" disabled={loading} className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-indigo-600">
+							<Button
+								type="submit"
+								disabled={loading}
+								className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-indigo-600"
+							>
 								{loading ? (
 									<>
 										<Loader2 className="mr-2 h-4 w-4 animate-spin" />

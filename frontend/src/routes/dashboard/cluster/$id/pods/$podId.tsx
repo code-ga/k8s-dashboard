@@ -234,7 +234,7 @@ function ManagePodPage() {
 					command:
 						command.length > 0 && command[0] !== "" ? command : undefined,
 					args: args.length > 0 && args[0] !== "" ? args : undefined,
-					env: envPayload as any,
+					env: envPayload,
 					configMapRefs:
 						(configMapEnvRefs && configMapEnvRefs?.length > 0) ||
 						(configMapEnvFromRefs && configMapEnvFromRefs?.length > 0)

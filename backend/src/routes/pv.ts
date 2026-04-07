@@ -68,12 +68,12 @@ export const pvRoute = new Elysia({
 				"/",
 				async (ctx) => {
 					const { clusterId } = ctx.params;
-					const body = ctx.body as any;
+					const body = ctx.body;
 
-					const cluster = (await db.query.k8sCluster.findFirst({
+					const cluster = await db.query.k8sCluster.findFirst({
 						where: { id: Number(clusterId) },
 						with: { agent: true },
-					})) as any;
+					});
 
 					if (!cluster || !cluster.agent) {
 						return ctx.status(404, {
@@ -124,7 +124,9 @@ export const pvRoute = new Elysia({
 						capacity: Type.String(),
 						storageClass: Type.Optional(Type.String()),
 						accessModes: Type.Optional(Type.Array(Type.String())),
-						reclaimPolicy: Type.Optional(Type.String()),
+						reclaimPolicy: Type.Optional(
+							Type.Union([Type.Literal("Retain"), Type.Literal("Delete")]),
+						),
 						nfs: Type.Optional(
 							Type.Object({
 								server: Type.String(),
@@ -149,12 +151,12 @@ export const pvRoute = new Elysia({
 				async (ctx) => {
 					const { clusterId, name } = ctx.params;
 
-					const pv = (await db.query.k8sPersistentVolumes.findFirst({
+					const pv = await db.query.k8sPersistentVolumes.findFirst({
 						where: {
 							clusterId: Number(clusterId),
 							name: name as string,
 						},
-					})) as any;
+					});
 
 					if (!pv) {
 						return ctx.status(404, {
@@ -164,10 +166,10 @@ export const pvRoute = new Elysia({
 						});
 					}
 
-					const cluster = (await db.query.k8sCluster.findFirst({
+					const cluster = await db.query.k8sCluster.findFirst({
 						where: { id: Number(clusterId) },
 						with: { agent: true },
-					})) as any;
+					});
 
 					if (!cluster || !cluster.agent) {
 						return ctx.status(404, {

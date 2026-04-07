@@ -1474,7 +1474,7 @@ export class AgentService {
 				continue;
 			}
 
-			const internalPort = service.ports.data[0].port;
+			const internalPort = service.ports.data[0]?.port || 0;
 			const protocol = (ingress.protocol || "http") as "http" | "tcp" | "udp";
 
 			logger.info(

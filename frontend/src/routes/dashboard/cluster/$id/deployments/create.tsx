@@ -83,9 +83,9 @@ function CreateDeploymentPage() {
 		ISecretEnvFromRef[]
 	>([]);
 	const [pvcVolumes, setPvcVolumes] = useState<IPvcVolumeMount[]>([]);
-	const [emptyDirVolumes, setEmptyDirVolumes] = useState<IEmptyDirVolumeMount[]>(
-		[],
-	);
+	const [emptyDirVolumes, setEmptyDirVolumes] = useState<
+		IEmptyDirVolumeMount[]
+	>([]);
 
 	const mutation = useMutation({
 		mutationFn: async (values: z.infer<typeof deploymentSchema>) => {
@@ -118,14 +118,17 @@ function CreateDeploymentPage() {
 				args: values.args ? values.args.split(" ") : undefined,
 				env:
 					envVars.length > 0
-						? (envVars
+						? envVars
 								.filter((v) => v.name)
 								.map((v) => {
-									if (v.type === "fieldRef" || (!v.type && v.valueFrom?.fieldRef)) {
+									if (
+										v.type === "fieldRef" ||
+										(!v.type && v.valueFrom?.fieldRef)
+									) {
 										return { name: v.name, valueFrom: v.valueFrom };
 									}
 									return { name: v.name, value: v.value };
-								}) as any)
+								})
 						: undefined,
 				configMapRefs:
 					configMapEnvRefs.length > 0 || configMapEnvFromRefs.length > 0
@@ -148,7 +151,8 @@ function CreateDeploymentPage() {
 				labels: parseLabels(values.labels),
 				selector: parseLabels(values.selector),
 				pvcVolumes: pvcVolumes.length > 0 ? pvcVolumes : undefined,
-				emptyDirVolumes: emptyDirVolumes.length > 0 ? emptyDirVolumes : undefined,
+				emptyDirVolumes:
+					emptyDirVolumes.length > 0 ? emptyDirVolumes : undefined,
 			});
 
 			if (res.error) {
@@ -213,8 +217,8 @@ function CreateDeploymentPage() {
 						<div>
 							<CardTitle>Deployment Configuration</CardTitle>
 							<CardDescription>
-								Configure the basic settings, resources, and environment for your
-								deployment.
+								Configure the basic settings, resources, and environment for
+								your deployment.
 							</CardDescription>
 						</div>
 						<a

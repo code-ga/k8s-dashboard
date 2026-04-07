@@ -68,12 +68,12 @@ export const storageclassRoute = new Elysia({
 				"/",
 				async (ctx) => {
 					const { clusterId } = ctx.params;
-					const body = ctx.body as any;
+					const body = ctx.body;
 
-					const cluster = (await db.query.k8sCluster.findFirst({
+					const cluster = await db.query.k8sCluster.findFirst({
 						where: { id: Number(clusterId) },
 						with: { agent: true },
-					})) as any;
+					});
 
 					if (!cluster || !cluster.agent) {
 						return ctx.status(404, {
@@ -120,8 +120,15 @@ export const storageclassRoute = new Elysia({
 					body: Type.Object({
 						name: Type.String(),
 						provisioner: Type.String(),
-						reclaimPolicy: Type.Optional(Type.String()),
-						volumeBindingMode: Type.Optional(Type.String()),
+						reclaimPolicy: Type.Optional(
+							Type.Union([Type.Literal("Delete"), Type.Literal("Retain")]),
+						),
+						volumeBindingMode: Type.Optional(
+							Type.Union([
+								Type.Literal("Immediate"),
+								Type.Literal("WaitForFirstConsumer"),
+							]),
+						),
 						allowVolumeExpansion: Type.Optional(Type.Boolean()),
 						annotations: Type.Optional(
 							Type.Object(Type.String(), Type.String()),
@@ -140,12 +147,12 @@ export const storageclassRoute = new Elysia({
 				async (ctx) => {
 					const { clusterId, name } = ctx.params;
 
-					const storageClass = (await db.query.k8sStorageClasses.findFirst({
+					const storageClass = await db.query.k8sStorageClasses.findFirst({
 						where: {
 							clusterId: Number(clusterId),
 							name: name as string,
 						},
-					})) as any;
+					});
 
 					if (!storageClass) {
 						return ctx.status(404, {
@@ -155,10 +162,10 @@ export const storageclassRoute = new Elysia({
 						});
 					}
 
-					const cluster = (await db.query.k8sCluster.findFirst({
+					const cluster = await db.query.k8sCluster.findFirst({
 						where: { id: Number(clusterId) },
 						with: { agent: true },
-					})) as any;
+					});
 
 					if (!cluster || !cluster.agent) {
 						return ctx.status(404, {
@@ -204,15 +211,15 @@ export const storageclassRoute = new Elysia({
 				"/:name/set-default",
 				async (ctx) => {
 					const { clusterId, name } = ctx.params;
-					const body = ctx.body as any;
+					const body = ctx.body;
 					const isDefault = body.isDefault ?? true;
 
-					const storageClass = (await db.query.k8sStorageClasses.findFirst({
+					const storageClass = await db.query.k8sStorageClasses.findFirst({
 						where: {
 							clusterId: Number(clusterId),
 							name: name as string,
 						},
-					})) as any;
+					});
 
 					if (!storageClass) {
 						return ctx.status(404, {
@@ -222,10 +229,10 @@ export const storageclassRoute = new Elysia({
 						});
 					}
 
-					const cluster = (await db.query.k8sCluster.findFirst({
+					const cluster = await db.query.k8sCluster.findFirst({
 						where: { id: Number(clusterId) },
 						with: { agent: true },
-					})) as any;
+					});
 
 					if (!cluster || !cluster.agent) {
 						return ctx.status(404, {
