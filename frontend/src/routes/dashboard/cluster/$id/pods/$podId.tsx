@@ -16,9 +16,17 @@ import {
 	Trash2,
 	X,
 } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Terminal } from "xterm";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
+import { DebugPodModal } from "@/components/cluster/debug-pod-modal";
 import { ExposeDialog } from "@/components/service/expose-dialog";
 import { EnvEditor, type EnvVar } from "@/components/shared/env-editor";
 import RefsEditor, {
@@ -75,6 +83,40 @@ function ManagePodPage() {
 			return res.data.data;
 		},
 	});
+
+	const { data: livePodData } = useQuery({
+		queryKey: ["pod-describe", clusterId, podId],
+		queryFn: async () => {
+			const res = await api.api
+				.pods({ clusterId })({ id: podId })
+				.describe.get();
+			if (res.error) throw res.error;
+			return res.data.data;
+		},
+		enabled: !!pod,
+		refetchInterval: 5000, // Refresh every 5 seconds to catch new containers
+	});
+
+	// Extract containers from live data
+	const containers = useMemo(() => {
+		if (!livePodData?.resource)
+			return pod ? [pod.dockerImage.split(":")[0]] : [];
+		const resource = livePodData.resource as {
+			spec?: {
+				containers?: Array<{ name: string }>;
+				initContainers?: Array<{ name: string }>;
+				ephemeralContainers?: Array<{ name: string }>;
+			};
+		};
+		const specContainers = (resource.spec?.containers || []).map((c) => c.name);
+		const initContainers = (resource.spec?.initContainers || []).map(
+			(c) => c.name,
+		);
+		const ephemeralContainers = (resource.spec?.ephemeralContainers || []).map(
+			(c) => c.name,
+		);
+		return [...specContainers, ...initContainers, ...ephemeralContainers];
+	}, [livePodData, pod]);
 
 	// State for all configurable fields
 	const [image, setImage] = useState("");
@@ -324,6 +366,12 @@ function ManagePodPage() {
 						</div>
 					</div>
 					<div className="flex gap-2 ml-4 flex-shrink-0">
+						<DebugPodModal
+							clusterId={clusterId}
+							podId={podId}
+							podName={pod.name}
+							containers={containers}
+						/>
 						<ExposeDialog
 							clusterId={clusterId}
 							defaultName={pod.name}
@@ -816,6 +864,7 @@ function ManagePodPage() {
 						pod={pod as SchemaStatic<databaseTypes.databaseTypes["k8sPods"]>}
 						clusterId={clusterId}
 						isActive={activeTab === "logs"}
+						containers={containers}
 					/>
 				</TabsContent>
 
@@ -825,8 +874,16 @@ function ManagePodPage() {
 					className="flex-1 overflow-auto p-6 flex flex-col"
 				>
 					<PodEvents
-						podId={podId}
-						clusterId={clusterId}
+						events={
+							(livePodData?.events || []) as Array<{
+								lastSeen: string;
+								type: string;
+								reason: string;
+								message: string;
+								object: string;
+								namespace: string;
+							}>
+						}
 						isActive={activeTab === "events"}
 					/>
 				</TabsContent>
@@ -840,6 +897,7 @@ function ManagePodPage() {
 						pod={pod as SchemaStatic<databaseTypes.databaseTypes["k8sPods"]>}
 						clusterId={clusterId}
 						isActive={activeTab === "terminal"}
+						containers={containers}
 					/>
 				</TabsContent>
 			</Tabs>
@@ -851,13 +909,32 @@ interface PodLogsProps {
 	pod: SchemaStatic<databaseTypes.databaseTypes["k8sPods"]>;
 	clusterId: string;
 	isActive: boolean;
+	containers: string[];
 }
 
-export function PodLogs({ pod, clusterId, isActive }: PodLogsProps) {
+export function PodLogs({
+	pod,
+	clusterId,
+	isActive,
+	containers,
+}: PodLogsProps) {
 	const [logs, setLogs] = useState<string>("");
 	const [autoScroll, setAutoScroll] = useState(true);
+	const [selectedContainer, setSelectedContainer] = useState(
+		containers[0] || "",
+	);
 	const logsRef = useRef<HTMLPreElement>(null);
 	const wsRef = useRef<WebSocket | null>(null);
+
+	// Reset logs and container when switching tabs or pod
+	useEffect(() => {
+		if (isActive) {
+			setLogs("");
+			if (!containers.includes(selectedContainer)) {
+				setSelectedContainer(containers[0] || "");
+			}
+		}
+	}, [isActive, containers, selectedContainer]);
 
 	useEffect(() => {
 		if (!isActive) {
@@ -869,7 +946,7 @@ export function PodLogs({ pod, clusterId, isActive }: PodLogsProps) {
 		const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
 		const backendUrl = new URL(BACKEND_URL);
 		const ws = new WebSocket(
-			`${protocol}//${backendUrl.host}/api/pods/${clusterId}/logs/${pod.id}`,
+			`${protocol}//${backendUrl.host}/api/pods/${clusterId}/logs/${pod.id}?container=${selectedContainer}`,
 		);
 		wsRef.current = ws;
 
@@ -892,7 +969,7 @@ export function PodLogs({ pod, clusterId, isActive }: PodLogsProps) {
 			ws.close();
 			wsRef.current = null;
 		};
-	}, [isActive, pod.id, clusterId]);
+	}, [isActive, selectedContainer, clusterId, pod.id]);
 
 	// biome-ignore lint/correctness/useExhaustiveDependencies: auto-scroll logic
 	useEffect(() => {
@@ -904,7 +981,29 @@ export function PodLogs({ pod, clusterId, isActive }: PodLogsProps) {
 	return (
 		<div className="h-full flex flex-col gap-3 text-foreground">
 			<div className="flex items-center justify-between">
-				<div className="text-sm font-medium text-foreground">Live Pod Logs</div>
+				<div className="flex items-center gap-4">
+					<div className="text-sm font-medium text-foreground">
+						Live Pod Logs
+					</div>
+					<Select
+						value={selectedContainer}
+						onValueChange={(val) => {
+							setLogs("");
+							setSelectedContainer(val);
+						}}
+					>
+						<SelectTrigger className="w-[200px] h-8 text-xs">
+							<SelectValue placeholder="Select container" />
+						</SelectTrigger>
+						<SelectContent>
+							{containers.map((c) => (
+								<SelectItem key={c} value={c}>
+									{c}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
+				</div>
 				<Button
 					variant={autoScroll ? "default" : "outline"}
 					size="sm"
@@ -927,9 +1026,18 @@ interface PodTerminalProps {
 	pod: SchemaStatic<databaseTypes.databaseTypes["k8sPods"]>;
 	clusterId: string;
 	isActive: boolean;
+	containers: string[];
 }
 
-export function PodTerminal({ pod, clusterId, isActive }: PodTerminalProps) {
+export function PodTerminal({
+	pod,
+	clusterId,
+	isActive,
+	containers,
+}: PodTerminalProps) {
+	const [selectedContainer, setSelectedContainer] = useState(
+		containers[0] || "",
+	);
 	const terminalRef = useRef<HTMLDivElement>(null);
 	const xtermRef = useRef<Terminal | null>(null);
 	const fitAddonRef = useRef<FitAddon | null>(null);
@@ -998,7 +1106,7 @@ export function PodTerminal({ pod, clusterId, isActive }: PodTerminalProps) {
 			const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
 			const backendUrl = new URL(BACKEND_URL);
 			ws = new WebSocket(
-				`${protocol}//${backendUrl.host}/api/pods/${clusterId}/exec/${pod.id}`,
+				`${protocol}//${backendUrl.host}/api/pods/${clusterId}/exec/${pod.id}?container=${selectedContainer}`,
 			);
 			wsRef.current = ws;
 
@@ -1061,55 +1169,36 @@ export function PodTerminal({ pod, clusterId, isActive }: PodTerminalProps) {
 			xtermRef.current = null;
 			wsRef.current = null;
 		};
-	}, [isActive, pod.id, clusterId, sendResize]);
+	}, [isActive, pod.id, clusterId, sendResize, selectedContainer]);
 
 	return (
-		<div
-			ref={terminalRef}
-			className="h-full w-full rounded-lg overflow-hidden"
-			style={{ minHeight: "300px" }}
-		/>
+		<div className="h-full flex flex-col gap-3">
+			<div className="flex items-center gap-4">
+				<span className="text-sm font-medium">Target Container:</span>
+				<Select value={selectedContainer} onValueChange={setSelectedContainer}>
+					<SelectTrigger className="w-[200px] h-8 text-xs">
+						<SelectValue placeholder="Select container" />
+					</SelectTrigger>
+					<SelectContent>
+						{containers.map((c) => (
+							<SelectItem key={c} value={c}>
+								{c}
+							</SelectItem>
+						))}
+					</SelectContent>
+				</Select>
+			</div>
+			<div
+				ref={terminalRef}
+				className="flex-1 w-full rounded-lg overflow-hidden"
+				style={{ minHeight: "300px" }}
+			/>
+		</div>
 	);
 }
 
 interface PodEventsProps {
-	podId: string;
-	clusterId: string;
-	isActive: boolean;
-}
-
-export function PodEvents({ podId, clusterId, isActive }: PodEventsProps) {
-	const { data, isLoading, error } = useQuery({
-		queryKey: ["pod-describe", clusterId, podId],
-		queryFn: async () => {
-			const res = await api.api
-				.pods({ clusterId })({ id: podId })
-				.describe.get();
-			if (res.error) throw res.error;
-			return res.data.data;
-		},
-		enabled: isActive,
-	});
-
-	if (isLoading)
-		return (
-			<div className="flex-1 flex items-center justify-center">
-				<div className="text-sm text-muted-foreground animate-pulse">
-					Fetching events from agent...
-				</div>
-			</div>
-		);
-
-	if (error)
-		return (
-			<div className="flex-1 flex items-center justify-center">
-				<div className="text-sm text-destructive font-semibold">
-					Error: {(error as Error).message}
-				</div>
-			</div>
-		);
-
-	const events = (data?.events || []) as Array<{
+	events: Array<{
 		lastSeen: string;
 		type: string;
 		reason: string;
@@ -1117,7 +1206,10 @@ export function PodEvents({ podId, clusterId, isActive }: PodEventsProps) {
 		object: string;
 		namespace: string;
 	}>;
+	isActive: boolean;
+}
 
+export function PodEvents({ events, isActive }: PodEventsProps) {
 	return (
 		<div className="flex-1 overflow-hidden flex flex-col gap-4">
 			<div className="flex items-center justify-between">

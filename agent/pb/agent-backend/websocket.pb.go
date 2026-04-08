@@ -70,39 +70,40 @@ func (StreamData_StreamDataType) EnumDescriptor() ([]byte, []int) {
 type Command_CommandType int32
 
 const (
-	Command_UNKNOWN                   Command_CommandType = 0
-	Command_EDIT_RESOURCE             Command_CommandType = 1
-	Command_CREATE_DEPLOYMENT         Command_CommandType = 2
-	Command_SCALE_DEPLOYMENT          Command_CommandType = 3
-	Command_DELETE_DEPLOYMENT         Command_CommandType = 4
-	Command_CREATE_POD                Command_CommandType = 5
-	Command_DELETE_POD                Command_CommandType = 6
-	Command_DELETE_NODE               Command_CommandType = 7
-	Command_GET_JOIN_TOKEN            Command_CommandType = 8
-	Command_STREAM_LOGS               Command_CommandType = 9
-	Command_EXEC                      Command_CommandType = 10
-	Command_CREATE_SERVICE            Command_CommandType = 11
-	Command_DELETE_SERVICE            Command_CommandType = 12
-	Command_DELETE_RESOURCE           Command_CommandType = 13
-	Command_CREATE_RESOURCE           Command_CommandType = 14
-	Command_CREATE_INGRESS            Command_CommandType = 15
-	Command_DELETE_INGRESS            Command_CommandType = 16
-	Command_CREATE_CONFIGMAP          Command_CommandType = 17
-	Command_DELETE_CONFIGMAP          Command_CommandType = 18
-	Command_CREATE_SECRET             Command_CommandType = 19
-	Command_DELETE_SECRET             Command_CommandType = 20
-	Command_DESCRIBE_RESOURCE         Command_CommandType = 21
-	Command_GET_ALL_EVENTS            Command_CommandType = 22
-	Command_REDEPLOY_DEPLOYMENT       Command_CommandType = 23
-	Command_CREATE_PVC                Command_CommandType = 24
-	Command_DELETE_PVC                Command_CommandType = 25
-	Command_EDIT_PVC                  Command_CommandType = 26
-	Command_RESIZE_PVC                Command_CommandType = 27
-	Command_CREATE_STORAGE_CLASS      Command_CommandType = 28
-	Command_DELETE_STORAGE_CLASS      Command_CommandType = 29
-	Command_SET_DEFAULT_STORAGE_CLASS Command_CommandType = 30
-	Command_CREATE_PV                 Command_CommandType = 31
-	Command_DELETE_PV                 Command_CommandType = 32
+	Command_UNKNOWN                    Command_CommandType = 0
+	Command_EDIT_RESOURCE              Command_CommandType = 1
+	Command_CREATE_DEPLOYMENT          Command_CommandType = 2
+	Command_SCALE_DEPLOYMENT           Command_CommandType = 3
+	Command_DELETE_DEPLOYMENT          Command_CommandType = 4
+	Command_CREATE_POD                 Command_CommandType = 5
+	Command_DELETE_POD                 Command_CommandType = 6
+	Command_DELETE_NODE                Command_CommandType = 7
+	Command_GET_JOIN_TOKEN             Command_CommandType = 8
+	Command_STREAM_LOGS                Command_CommandType = 9
+	Command_EXEC                       Command_CommandType = 10
+	Command_CREATE_SERVICE             Command_CommandType = 11
+	Command_DELETE_SERVICE             Command_CommandType = 12
+	Command_DELETE_RESOURCE            Command_CommandType = 13
+	Command_CREATE_RESOURCE            Command_CommandType = 14
+	Command_CREATE_INGRESS             Command_CommandType = 15
+	Command_DELETE_INGRESS             Command_CommandType = 16
+	Command_CREATE_CONFIGMAP           Command_CommandType = 17
+	Command_DELETE_CONFIGMAP           Command_CommandType = 18
+	Command_CREATE_SECRET              Command_CommandType = 19
+	Command_DELETE_SECRET              Command_CommandType = 20
+	Command_DESCRIBE_RESOURCE          Command_CommandType = 21
+	Command_GET_ALL_EVENTS             Command_CommandType = 22
+	Command_REDEPLOY_DEPLOYMENT        Command_CommandType = 23
+	Command_CREATE_PVC                 Command_CommandType = 24
+	Command_DELETE_PVC                 Command_CommandType = 25
+	Command_EDIT_PVC                   Command_CommandType = 26
+	Command_RESIZE_PVC                 Command_CommandType = 27
+	Command_CREATE_STORAGE_CLASS       Command_CommandType = 28
+	Command_DELETE_STORAGE_CLASS       Command_CommandType = 29
+	Command_SET_DEFAULT_STORAGE_CLASS  Command_CommandType = 30
+	Command_CREATE_PV                  Command_CommandType = 31
+	Command_DELETE_PV                  Command_CommandType = 32
+	Command_CREATE_EPHEMERAL_CONTAINER Command_CommandType = 33
 )
 
 // Enum value maps for Command_CommandType.
@@ -141,41 +142,43 @@ var (
 		30: "SET_DEFAULT_STORAGE_CLASS",
 		31: "CREATE_PV",
 		32: "DELETE_PV",
+		33: "CREATE_EPHEMERAL_CONTAINER",
 	}
 	Command_CommandType_value = map[string]int32{
-		"UNKNOWN":                   0,
-		"EDIT_RESOURCE":             1,
-		"CREATE_DEPLOYMENT":         2,
-		"SCALE_DEPLOYMENT":          3,
-		"DELETE_DEPLOYMENT":         4,
-		"CREATE_POD":                5,
-		"DELETE_POD":                6,
-		"DELETE_NODE":               7,
-		"GET_JOIN_TOKEN":            8,
-		"STREAM_LOGS":               9,
-		"EXEC":                      10,
-		"CREATE_SERVICE":            11,
-		"DELETE_SERVICE":            12,
-		"DELETE_RESOURCE":           13,
-		"CREATE_RESOURCE":           14,
-		"CREATE_INGRESS":            15,
-		"DELETE_INGRESS":            16,
-		"CREATE_CONFIGMAP":          17,
-		"DELETE_CONFIGMAP":          18,
-		"CREATE_SECRET":             19,
-		"DELETE_SECRET":             20,
-		"DESCRIBE_RESOURCE":         21,
-		"GET_ALL_EVENTS":            22,
-		"REDEPLOY_DEPLOYMENT":       23,
-		"CREATE_PVC":                24,
-		"DELETE_PVC":                25,
-		"EDIT_PVC":                  26,
-		"RESIZE_PVC":                27,
-		"CREATE_STORAGE_CLASS":      28,
-		"DELETE_STORAGE_CLASS":      29,
-		"SET_DEFAULT_STORAGE_CLASS": 30,
-		"CREATE_PV":                 31,
-		"DELETE_PV":                 32,
+		"UNKNOWN":                    0,
+		"EDIT_RESOURCE":              1,
+		"CREATE_DEPLOYMENT":          2,
+		"SCALE_DEPLOYMENT":           3,
+		"DELETE_DEPLOYMENT":          4,
+		"CREATE_POD":                 5,
+		"DELETE_POD":                 6,
+		"DELETE_NODE":                7,
+		"GET_JOIN_TOKEN":             8,
+		"STREAM_LOGS":                9,
+		"EXEC":                       10,
+		"CREATE_SERVICE":             11,
+		"DELETE_SERVICE":             12,
+		"DELETE_RESOURCE":            13,
+		"CREATE_RESOURCE":            14,
+		"CREATE_INGRESS":             15,
+		"DELETE_INGRESS":             16,
+		"CREATE_CONFIGMAP":           17,
+		"DELETE_CONFIGMAP":           18,
+		"CREATE_SECRET":              19,
+		"DELETE_SECRET":              20,
+		"DESCRIBE_RESOURCE":          21,
+		"GET_ALL_EVENTS":             22,
+		"REDEPLOY_DEPLOYMENT":        23,
+		"CREATE_PVC":                 24,
+		"DELETE_PVC":                 25,
+		"EDIT_PVC":                   26,
+		"RESIZE_PVC":                 27,
+		"CREATE_STORAGE_CLASS":       28,
+		"DELETE_STORAGE_CLASS":       29,
+		"SET_DEFAULT_STORAGE_CLASS":  30,
+		"CREATE_PV":                  31,
+		"DELETE_PV":                  32,
+		"CREATE_EPHEMERAL_CONTAINER": 33,
 	}
 )
 
@@ -2751,14 +2754,14 @@ const file_agent_backend_websocket_proto_rawDesc = "" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1a9\n" +
 	"\vLabelsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xc0\x06\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xe0\x06\n" +
 	"\aCommand\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12,\n" +
 	"\x04type\x18\x02 \x01(\x0e2\x18.api.Command.CommandTypeR\x04type\x12\x18\n" +
 	"\apayload\x18\x03 \x01(\tR\apayload\x12)\n" +
 	"\x10target_namespace\x18\x04 \x01(\tR\x0ftargetNamespace\x12\x1f\n" +
 	"\vtarget_name\x18\x05 \x01(\tR\n" +
-	"targetName\"\x90\x05\n" +
+	"targetName\"\xb0\x05\n" +
 	"\vCommandType\x12\v\n" +
 	"\aUNKNOWN\x10\x00\x12\x11\n" +
 	"\rEDIT_RESOURCE\x10\x01\x12\x15\n" +
@@ -2798,7 +2801,8 @@ const file_agent_backend_websocket_proto_rawDesc = "" +
 	"\x14DELETE_STORAGE_CLASS\x10\x1d\x12\x1d\n" +
 	"\x19SET_DEFAULT_STORAGE_CLASS\x10\x1e\x12\r\n" +
 	"\tCREATE_PV\x10\x1f\x12\r\n" +
-	"\tDELETE_PV\x10 \"\xcf\x01\n" +
+	"\tDELETE_PV\x10 \x12\x1e\n" +
+	"\x1aCREATE_EPHEMERAL_CONTAINER\x10!\"\xcf\x01\n" +
 	"\rJoinTokenData\x12\x18\n" +
 	"\acommand\x18\x01 \x01(\tR\acommand\x12\x14\n" +
 	"\x05token\x18\x02 \x01(\tR\x05token\x12>\n" +

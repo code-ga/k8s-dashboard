@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/table";
 import { usePermissions } from "@/hooks/use-permissions";
 import { api } from "@/lib/api";
+import { DebugPodModal } from "@/components/cluster/debug-pod-modal";
 
 export const Route = createFileRoute("/dashboard/cluster/$id/pods/")({
 	component: ClusterPods,
@@ -109,7 +110,13 @@ function ClusterPods() {
 									<TableCell>
 										{pod.cpuRequest}m / {pod.memoryRequest}Mi
 									</TableCell>
-									<TableCell className="text-right">
+									<TableCell className="text-right flex justify-end gap-2">
+										<DebugPodModal
+											clusterId={id}
+											podId={pod.id.toString()}
+											podName={pod.name}
+											containers={[pod.dockerImage.split(":")[0]]}
+										/>
 										<Link
 											to="/dashboard/cluster/$id/pods/$podId"
 											params={{ id, podId: pod.id.toString() }}

@@ -455,10 +455,11 @@ export const podRoute = new Elysia({
 							},
 							timestamp: Date.now(),
 						});
-					} catch (error: any) {
+					} catch (error: unknown) {
+						const errorMessage = error instanceof Error ? error.message : String(error);
 						return ctx.status(500, {
 							success: false,
-							message: error.message || "Failed to fetch describe",
+							message: errorMessage || "Failed to fetch describe",
 							timestamp: Date.now(),
 						});
 					}
@@ -1186,6 +1187,100 @@ export const podRoute = new Elysia({
 					},
 				},
 			)
+			.post(
+				"/:id/ephemeral-containers",
+				async (ctx) => {
+					const clusterId = Number(ctx.params.clusterId);
+					const id = Number(ctx.params.id);
+					const { image, name, targetContainer } = ctx.body;
+
+					const cluster = await db.query.k8sCluster.findFirst({
+						where: { id: clusterId },
+						with: { agent: true },
+					});
+
+					if (!cluster || !cluster.agent) {
+						return ctx.status(404, {
+							success: false,
+							message: "Cluster or agent not found",
+							timestamp: Date.now(),
+						});
+					}
+
+					const pod = await db.query.k8sPods.findFirst({
+						where: { id: id, clusterId: clusterId },
+					});
+
+					if (!pod) {
+						return ctx.status(404, {
+							success: false,
+							message: "Pod not found",
+							timestamp: Date.now(),
+						});
+					}
+
+					// Ownership Check
+					const isManager = ctx.userPermissions.has("pod:manage");
+					if (!isManager && pod.ownerId !== ctx.profile?.id) {
+						return ctx.status(403, {
+							success: false,
+							message: "Forbidden",
+							timestamp: Date.now(),
+						});
+					}
+
+					const ephemeralContainer = {
+						name: name || `debug-${globalThis.crypto.randomUUID().split("-")[0]}`,
+						image: image,
+						stdin: true,
+						tty: true,
+						targetContainerName: targetContainer,
+					};
+
+					try {
+						const response = await ctx.agentManager.sendCommand(
+							cluster.agent.id,
+							cluster.id,
+							{
+								id: globalThis.crypto.randomUUID(),
+								type: Command_CommandType.CREATE_EPHEMERAL_CONTAINER,
+								targetNamespace: pod.namespace,
+								targetName: pod.name,
+								payload: JSON.stringify(ephemeralContainer),
+							},
+						);
+
+						return ctx.status(200, {
+							success: true,
+							message: "Ephemeral container creation initiated",
+							data: response.data,
+							timestamp: Date.now(),
+						});
+					} catch (error: any) {
+						return ctx.status(500, {
+							success: false,
+							message: error.message || "Failed to create ephemeral container",
+							timestamp: Date.now(),
+						});
+					}
+				},
+				{
+					detail: { tags: ["Pods"] },
+					roleAuth: "pod:update",
+					body: Type.Object({
+						image: Type.String(),
+						name: Type.Optional(Type.String()),
+						targetContainer: Type.Optional(Type.String()),
+					}),
+					response: {
+						200: baseResponseSchema(Type.Any()),
+						400: errorResponseSchema,
+						403: errorResponseSchema,
+						404: errorResponseSchema,
+						500: errorResponseSchema,
+					},
+				},
+			)
 			.ws("/logs/:podId", {
 				detail: { tags: ["Pods"] },
 				roleAuth: "pod:read",
@@ -1247,14 +1342,12 @@ export const podRoute = new Elysia({
 					}
 
 					// Start stream
-					// Payload for LOGS: "namespace/podName" or just JSON?
-					// Agent expects something. Let's send "namespace/podName" for simplicity
-					// or JSON { namespace, name, container? }
-					// Let's use JSON.
+					// Payload for LOGS: JSON { namespace, name, container, tailLines, follow }
+					const container = ws.data.query?.container as string | undefined;
 					const payload = JSON.stringify({
 						namespace: pod.namespace,
 						name: pod.name,
-						// container: ... (optional, default to first)
+						container: container,
 						tailLines: 100,
 						follow: true,
 					});
@@ -1270,11 +1363,7 @@ export const podRoute = new Elysia({
 							ws,
 						);
 						logger.info("Stream ID:", streamId);
-						// Store streamId in ws.data for cleanup
-						// ws.data.streamId = streamId;
-						// ws.data.agentId = cluster.agent.id;
 						ws.data.websocketData.set(ws.id, {
-							// ws,
 							clusterId: Number(clusterId),
 							streamId,
 							podId: Number(podId),
@@ -1303,11 +1392,11 @@ export const podRoute = new Elysia({
 				detail: { tags: ["Pods"] },
 				roleAuth: "pod:read",
 				open: async (ws) => {
-					const { clusterId, podId } = ws.data.params;
-					const profile = ws.data.profile;
-					logger.info("Cluster ID:", clusterId);
-					logger.info("Pod ID:", podId);
-					logger.info("Profile:", profile);
+					const ctx = ws.data;
+					const { clusterId, podId } = ctx.params;
+					const container = ctx.query?.container as string | undefined;
+					const profile = ctx.profile;
+					logger.info("Cluster ID:", clusterId, "Pod ID:", podId, "Container:", container);
 
 					if (!clusterId || !podId) {
 						logger.info("Missing params");
@@ -1331,8 +1420,8 @@ export const podRoute = new Elysia({
 					}
 
 					const isManager =
-						ws.data.userPermissions.has("pod:manage") ||
-						ws.data.userPermissions.has("pod:update");
+						ctx.userPermissions.has("pod:manage") ||
+						ctx.userPermissions.has("pod:update");
 					if (!isManager && pod.ownerId !== profile?.id) {
 						logger.info("Unauthorized");
 						ws.send("Unauthorized");
@@ -1353,12 +1442,11 @@ export const podRoute = new Elysia({
 					}
 
 					// Payload for EXEC: JSON { namespace, name, container, command }
-					// Command can be ["/bin/sh"]
 					const payload = JSON.stringify({
 						namespace: pod.namespace,
 						name: pod.name,
+						container: container,
 						command: ["/bin/sh"],
-						// container?
 					});
 					logger.info("Payload:", payload);
 

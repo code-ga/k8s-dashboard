@@ -85,6 +85,7 @@ If you are asked to support a new K8s resource (e.g., *PersistentVolumeClaims*, 
     - [x] **Milestone 1 (PVC Full CRUD)**: Implemented Protobuf sync, Backend CRUD (Sync/Create/Resize/Delete), and Dashboard UI for PVCs.
     - [x] **Milestone 2 (StorageClasses & PVs)**: Implemented Protobuf sync (StorageClass, PV), Agent sync functions, Backend DB schemas, CRUD API routes, manifest generators, and RBAC permissions.
     - [x] **Milestone 3 (Pod Creation Integration)**: Add volume mount builder to Deployment/Pod creation forms. Integrated PVC and emptyDir support across manifest generation, ownership validation, and UI details.
+    - [x] **Native Ephemeral Container Debugging**: Implemented in-place pod troubleshooting via K8s Ephemeral Containers. Supports image injection, namespace sharing, and live terminal interaction.
 - [ ] **Virtual Cluster Isolation**: Native namespace isolation with `NetworkPolicies` and `RoleBindings`.
 - [ ] **Scale-to-Zero**: Integration with **Sablier** and Traefik for request-based automatic scaling.
 - [ ] **Compose-to-K8s**: Support for `docker-compose.yml` conversion via Kompose.
@@ -119,6 +120,18 @@ If you are asked to support a new K8s resource (e.g., *PersistentVolumeClaims*, 
 3. **Database Layer**: `backend/src/database/schema/k8s-normalized.ts` stores relationships; CRUD handled in `resource-refs.ts`.
 4. **API Routes**: `backend/src/routes/pod.ts` / `deployment.ts` handle POST/PATCH and manifest coordination.
 5. **Frontend UI**: Shared `VolumeMountEditor.tsx` integrated across creation and detail/edit pages.
+
+---
+
+## 🔗 Feature Flow: Native Ephemeral Container Debugging
+1. **Protobuf**: Added `CREATE_EPHEMERAL_CONTAINER` command type.
+2. **Agent**: `agent/service/k8s/resources.go` implements `CreateEphemeralContainer` using `kc.Clientset.CoreV1().Pods(ns).UpdateEphemeralContainers()` (patching the `ephemeralcontainers` subresource).
+3. **Backend API**: `POST /api/clusters/:id/pods/:podId/ephemeral-containers` triggers the agent command.
+4. **WebSocket Headers**: `/exec/:podId` and `/logs/:podId` routes updated to support a `container` query parameter.
+5. **Frontend UI**:
+    - `DebugPodModal.tsx`: Form to select debug image (`netshoot`, `busybox`, etc.) and target container for process namespace sharing.
+    - `ManagePodPage`: Uses a live `pod-describe` query (re-fetching every 5s) to detect newly injected ephemeral containers.
+    - `PodTerminal` / `PodLogs`: Updated with a container selector dropdown that triggers WebSocket reconnection to the specific container.
 
 ---
 
@@ -213,4 +226,4 @@ accessModes: jsonb("access_modes").$type<{ data: string[] }>().default({ data: [
 ```
 ---
 
-*Last updated: 2026-04-06 (Milestone 2: StorageClasses & PVs + Frontend UI implemented)*
+*Last updated: 2026-04-08 (Native Ephemeral Container Debugging implemented)*

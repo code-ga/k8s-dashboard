@@ -338,3 +338,20 @@ func (kc *K8sClient) SetDefaultStorageClass(name string, isDefault bool) error {
 func (kc *K8sClient) DeletePV(name string) error {
 	return kc.Clientset.CoreV1().PersistentVolumes().Delete(kc.Context, name, metav1.DeleteOptions{})
 }
+
+func (kc *K8sClient) CreateEphemeralContainer(namespace, podName string, ec *corev1.EphemeralContainer) error {
+	pod, err := kc.Clientset.CoreV1().Pods(namespace).Get(kc.Context, podName, metav1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to get pod %s/%s: %w", namespace, podName, err)
+	}
+
+	pod.Spec.EphemeralContainers = append(pod.Spec.EphemeralContainers, *ec)
+
+	_, err = kc.Clientset.CoreV1().Pods(namespace).UpdateEphemeralContainers(kc.Context, podName, pod, metav1.UpdateOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to update ephemeral containers for pod %s/%s: %w", namespace, podName, err)
+	}
+
+	return nil
+}
+

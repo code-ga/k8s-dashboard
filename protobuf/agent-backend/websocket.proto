@@ -333,6 +333,7 @@ message Command {
     SET_DEFAULT_STORAGE_CLASS = 30;
     CREATE_PV = 31;
     DELETE_PV = 32;
+    CREATE_EPHEMERAL_CONTAINER = 33;
   }
   CommandType type = 2;
   

@@ -8,6 +8,7 @@ import (
 
 	pb "k8s-dashboard/agents/pb/agent-backend"
 	"k8s-dashboard/agents/service/k8s"
+	corev1 "k8s.io/api/core/v1"
 )
 
 func handleCommand(kc *k8s.K8sClient, cmd *pb.Command) (string, error) {
@@ -207,6 +208,21 @@ func handleCommand(kc *k8s.K8sClient, cmd *pb.Command) (string, error) {
 			}
 		} else {
 			err = fmt.Errorf("missing target_name for DELETE_PV command")
+		}
+	case pb.Command_CREATE_EPHEMERAL_CONTAINER:
+		if cmd.TargetNamespace != "" && cmd.TargetName != "" && cmd.Payload != "" {
+			var ec corev1.EphemeralContainer
+			if unmarshalErr := json.Unmarshal([]byte(cmd.Payload), &ec); unmarshalErr != nil {
+				err = fmt.Errorf("invalid payload for CREATE_EPHEMERAL_CONTAINER: %v", unmarshalErr)
+			} else {
+				log.Printf("[Command] Creating ephemeral container in pod %s/%s", cmd.TargetNamespace, cmd.TargetName)
+				err = kc.CreateEphemeralContainer(cmd.TargetNamespace, cmd.TargetName, &ec)
+				if err == nil {
+					resultData = "Ephemeral container created successfully"
+				}
+			}
+		} else {
+			err = fmt.Errorf("missing target or payload for CREATE_EPHEMERAL_CONTAINER command")
 		}
 	default:
 		log.Printf("[Command] Unknown command type: %v (ID:%s)", cmd.Type, cmd.Id)

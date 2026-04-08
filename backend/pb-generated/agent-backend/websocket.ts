@@ -486,6 +486,7 @@ export enum Command_CommandType {
   SET_DEFAULT_STORAGE_CLASS = 30,
   CREATE_PV = 31,
   DELETE_PV = 32,
+  CREATE_EPHEMERAL_CONTAINER = 33,
   UNRECOGNIZED = -1,
 }
 
@@ -590,6 +591,9 @@ export function command_CommandTypeFromJSON(object: any): Command_CommandType {
     case 32:
     case "DELETE_PV":
       return Command_CommandType.DELETE_PV;
+    case 33:
+    case "CREATE_EPHEMERAL_CONTAINER":
+      return Command_CommandType.CREATE_EPHEMERAL_CONTAINER;
     case -1:
     case "UNRECOGNIZED":
     default:
@@ -665,6 +669,8 @@ export function command_CommandTypeToJSON(object: Command_CommandType): string {
       return "CREATE_PV";
     case Command_CommandType.DELETE_PV:
       return "DELETE_PV";
+    case Command_CommandType.CREATE_EPHEMERAL_CONTAINER:
+      return "CREATE_EPHEMERAL_CONTAINER";
     case Command_CommandType.UNRECOGNIZED:
     default:
       return "UNRECOGNIZED";
