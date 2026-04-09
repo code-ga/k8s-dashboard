@@ -1209,7 +1209,7 @@ interface PodEventsProps {
 	isActive: boolean;
 }
 
-export function PodEvents({ events, isActive }: PodEventsProps) {
+export function PodEvents({ events }: PodEventsProps) {
 	return (
 		<div className="flex-1 overflow-hidden flex flex-col gap-4">
 			<div className="flex items-center justify-between">
