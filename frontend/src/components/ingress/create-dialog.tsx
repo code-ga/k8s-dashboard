@@ -23,6 +23,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import type { databaseTypes, SchemaStatic } from "@/lib/api";
 import { api } from "@/lib/api";
 
@@ -34,6 +35,7 @@ const ingressSchema = z.object({
 	path: z.string().default("/"),
 	port: z.number().optional(),
 	protocol: z.enum(["http", "tcp", "udp"]),
+	tls: z.boolean().default(true),
 });
 
 interface CreateIngressDialogProps {
@@ -79,9 +81,9 @@ export function CreateIngressDialog({
 					serviceName: selectedService.name,
 					namespace: selectedService.namespace,
 					protocol: values.protocol,
-					internalPort: selectedService.ports?.data?.[0]?.port || 80, // Default to first port
-					// externalPort: values.port, // This might need to be added to UI if custom port is needed
+					internalPort: selectedService.ports?.data?.[0]?.port || 80,
 					domain: values.domain || undefined,
+					tls: values.tls,
 				});
 
 			if (res.error) {
@@ -111,6 +113,7 @@ export function CreateIngressDialog({
 			path: "/",
 			port: undefined as number | undefined,
 			protocol: "http" as "http" | "tcp" | "udp",
+			tls: true,
 		},
 		onSubmit: async ({ value }) => {
 			await mutation.mutateAsync(value);
@@ -191,20 +194,34 @@ export function CreateIngressDialog({
 						{(protocol) => (
 							<>
 								{protocol === "http" && (
-									<div className="space-y-2">
-										<Label htmlFor="domain">Domain</Label>
-										<form.Field name="domain">
-											{(field) => (
-												<Input
-													id="domain"
-													value={field.state.value}
-													onBlur={field.handleBlur}
-													onChange={(e) => field.handleChange(e.target.value)}
-													placeholder="myapp.example.com"
-												/>
-											)}
-										</form.Field>
-									</div>
+									<>
+										<div className="space-y-2">
+											<Label htmlFor="domain">Domain</Label>
+											<form.Field name="domain">
+												{(field) => (
+													<Input
+														id="domain"
+														value={field.state.value}
+														onBlur={field.handleBlur}
+														onChange={(e) => field.handleChange(e.target.value)}
+														placeholder="myapp.example.com"
+													/>
+												)}
+											</form.Field>
+										</div>
+										<div className="flex items-center justify-between space-y-2">
+											<Label htmlFor="tls">Enable TLS</Label>
+											<form.Field name="tls">
+												{(field) => (
+													<Switch
+														id="tls"
+														checked={field.state.value}
+														onCheckedChange={field.handleChange}
+													/>
+												)}
+											</form.Field>
+										</div>
+									</>
 								)}
 							</>
 						)}

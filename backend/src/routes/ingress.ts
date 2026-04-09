@@ -382,7 +382,7 @@ export const ingressRoute = new Elysia({
 							ownerId: ctx.profile?.id,
 							labels: body.labels || {},
 							annotations: body.annotations || {},
-							tls: body.tls !== false,
+							tls: body.tls,
 							certResolver: "letsencrypt",
 						};
 						const [newIngress] = await db

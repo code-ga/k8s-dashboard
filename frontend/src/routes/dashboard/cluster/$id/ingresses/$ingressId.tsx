@@ -114,6 +114,21 @@ function IngressDetailPage() {
 							</div>
 
 							<div className="text-sm font-medium text-muted-foreground">
+								TLS
+							</div>
+							<div className="text-sm">
+								{ingress.tls ? (
+									<span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+										Enabled
+									</span>
+								) : (
+									<span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
+										Disabled
+									</span>
+								)}
+							</div>
+
+							<div className="text-sm font-medium text-muted-foreground">
 								Domain
 							</div>
 							<div className="text-sm font-mono">{ingress.domain || "-"}</div>

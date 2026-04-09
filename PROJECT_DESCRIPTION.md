@@ -86,6 +86,7 @@ If you are asked to support a new K8s resource (e.g., *PersistentVolumeClaims*, 
     - [x] **Milestone 2 (StorageClasses & PVs)**: Implemented Protobuf sync (StorageClass, PV), Agent sync functions, Backend DB schemas, CRUD API routes, manifest generators, and RBAC permissions.
     - [x] **Milestone 3 (Pod Creation Integration)**: Add volume mount builder to Deployment/Pod creation forms. Integrated PVC and emptyDir support across manifest generation, ownership validation, and UI details.
     - [x] **Native Ephemeral Container Debugging**: Implemented in-place pod troubleshooting via K8s Ephemeral Containers. Supports image injection, namespace sharing, and live terminal interaction.
+    - [x] **TLS for Ingress**: Added UI toggle in Ingress creation dialog to enable/disable TLS. Backend passes `tls` boolean to manifest generator.
 - [ ] **Virtual Cluster Isolation**: Native namespace isolation with `NetworkPolicies` and `RoleBindings`.
 - [ ] **Scale-to-Zero**: Integration with **Sablier** and Traefik for request-based automatic scaling.
 - [ ] **Compose-to-K8s**: Support for `docker-compose.yml` conversion via Kompose.
@@ -132,6 +133,36 @@ If you are asked to support a new K8s resource (e.g., *PersistentVolumeClaims*, 
     - `DebugPodModal.tsx`: Form to select debug image (`netshoot`, `busybox`, etc.) and target container for process namespace sharing.
     - `ManagePodPage`: Uses a live `pod-describe` query (re-fetching every 5s) to detect newly injected ephemeral containers.
     - `PodTerminal` / `PodLogs`: Updated with a container selector dropdown that triggers WebSocket reconnection to the specific container.
+
+---
+
+## 🔗 Feature Flow: TLS for Ingress
+
+### Overview
+Added ability for users to enable/disable TLS when creating HTTP Ingress resources. TLS is enabled by default and uses Traefik's Let's Encrypt integration.
+
+### Changes Made
+
+1. **Backend Route** (`backend/src/routes/ingress.ts`):
+   - Added `tls: Type.Optional(Type.Boolean())` to the body schema of the `expose` endpoint.
+   - Passes `tls` value to `generateIngressRouteManifest()`.
+
+2. **Manifest Generator** (`backend/src/utils/k8s-manifest.ts`):
+   - `IngressRouteDTO` interface includes optional `tls?: boolean` and `certResolver?: string`.
+   - `generateIngressRouteManifest()` handles TLS configuration:
+     - When `tls: false`: Uses `web` entrypoint only, sets `traefik.ingress.kubernetes.io/router.tls: "false"`.
+     - When `tls: true` (default): Uses both `web` and `websecure` entrypoints, configures certResolver if provided.
+
+3. **Frontend Creation Dialog** (`frontend/src/components/ingress/create-dialog.tsx`):
+   - Added `tls: z.boolean().default(true)` to schema.
+   - Added Switch component to toggle TLS (visible only for HTTP protocol).
+   - Passes `tls` value in API request.
+
+4. **Frontend List View** (`frontend/src/routes/dashboard/cluster/$id/ingresses/index.tsx`):
+   - Added TLS badge display next to protocol for each ingress row.
+
+5. **Frontend Detail View** (`frontend/src/routes/dashboard/cluster/$id/ingresses/$ingressId.tsx`):
+   - Added TLS status row in Configuration card showing Enabled/Disabled.
 
 ---
 
