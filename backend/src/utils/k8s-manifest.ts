@@ -645,7 +645,7 @@ export const generateIngressRouteManifest = (dto: IngressRouteDTO): string => {
 			},
 			spec: {
 				entryPoints: dto.tls === false ? ["web"] : ["web", "websecure"],
-				tls: Object.keys(tlsConfig).length > 0 ? tlsConfig : undefined,
+				...(Object.keys(tlsConfig).length > 0 ? { tls: tlsConfig } : undefined),
 				routes: [
 					{
 						match: `Host(\`${dto.domain}\`)`,
