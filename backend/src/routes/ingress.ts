@@ -231,6 +231,8 @@ export const ingressRoute = new Elysia({
 						domain: body.domain,
 						labels: body.labels,
 						annotations: body.annotations,
+						tls: body.tls,
+						certResolver: "letsencrypt",
 					});
 
 					// --- SERVICE CREATION LOGIC ---
@@ -380,6 +382,8 @@ export const ingressRoute = new Elysia({
 							ownerId: ctx.profile?.id,
 							labels: body.labels || {},
 							annotations: body.annotations || {},
+							tls: body.tls !== false,
+							certResolver: "letsencrypt",
 						};
 						const [newIngress] = await db
 							.insert(schema.k8sIngresses)
@@ -426,6 +430,7 @@ export const ingressRoute = new Elysia({
 						annotations: Type.Optional(
 							Type.Record(Type.String(), Type.String()),
 						),
+						tls: Type.Optional(Type.Boolean()),
 					}),
 					response: {
 						201: baseResponseSchema(Type.Object(dbSchemaTypes.k8sIngresses)),

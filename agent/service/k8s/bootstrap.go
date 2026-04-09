@@ -114,6 +114,17 @@ func (kc *K8sClient) EnsureGatewayInstalled() error {
 			"--certificatesresolvers.letsencrypt.acme.storage=/data/acme.json",
 			"--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web",
 		},
+		"certResolvers": map[string]interface{}{
+			"letsencrypt": map[string]interface{}{
+				"acme": map[string]interface{}{
+					"email":   acmeEmail,
+					"storage": "/data/acme.json",
+					"httpChallenge": map[string]interface{}{
+						"entryPoint": "web",
+					},
+				},
+			},
+		},
 		// Persistence is required to store the ACME JSON file across restarts.
 		// Without persistence, Traefik requests new certificates on every restart,
 		// which can hit Let's Encrypt rate limits.
@@ -171,7 +182,15 @@ func (kc *K8sClient) applyK3sTraefikConfig(acmeEmail string, claimName string) e
 persistence:
   enabled: true
   existingClaim: %s
-`, acmeEmail, claimName)
+
+certResolvers:
+  letsencrypt:
+    acme:
+      email: %s
+      storage: /data/acme.json
+      httpChallenge:
+        entryPoint: web
+`, acmeEmail, claimName, acmeEmail)
 
 	obj := &unstructured.Unstructured{
 		Object: map[string]interface{}{

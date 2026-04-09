@@ -8,9 +8,9 @@ import {
 	timestamp,
 	uniqueIndex,
 } from "drizzle-orm/pg-core";
+import type { ServicePortDTO } from "../../utils/k8s-manifest";
 import { profile } from "./auth";
 import { k8sCluster, k8sClusterNode } from "./cluster";
-import type { ServicePortDTO } from "../../utils/k8s-manifest";
 
 export const k8sDeployments = pgTable(
 	"k8sDeployments",
@@ -223,6 +223,8 @@ export const k8sIngresses = pgTable(
 		internalPort: integer("internal_port"), // service port
 		protocol: text("protocol"), // http | tcp | udp
 		path: text("path"),
+		tls: boolean("tls").default(true).notNull(),
+		certResolver: text("cert_resolver"), // e.g., "letsencrypt" or null for no TLS
 		annotations: jsonb("annotations")
 			.default({})
 			.notNull()

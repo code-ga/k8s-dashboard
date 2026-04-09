@@ -519,7 +519,9 @@ export class AgentService {
 					ports: {
 						data: svc.ports.map((p) => /**fix protocol type incompatible.*/ ({
 							...p,
-							protocol: ["TCP", "UDP"].includes(p.protocol) ? p.protocol as "TCP" | "UDP" : "TCP",
+							protocol: ["TCP", "UDP"].includes(p.protocol)
+								? (p.protocol as "TCP" | "UDP")
+								: "TCP",
 						})),
 					},
 					updatedAt: new Date(),
@@ -1491,6 +1493,8 @@ export class AgentService {
 				annotations: ingress.annotations || {},
 				labels: ingress.labels || {},
 				domain: ingress.domain || undefined,
+				tls: ingress.tls,
+				certResolver: ingress.certResolver || undefined,
 			});
 
 			await agentManager.sendCommand(agentId, clusterId, {

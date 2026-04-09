@@ -117,6 +117,7 @@ export interface IngressRouteDTO {
 	domain?: string;
 	labels?: Record<string, string>;
 	tls?: boolean; // Only applicable for HTTP routes
+	certResolver?: string; // Certificate resolver name (e.g., "letsencrypt"). If not set, TLS will be configured without certResolver
 	annotations?: Record<string, string>;
 }
 
@@ -621,6 +622,13 @@ export const generateIngressRouteManifest = (dto: IngressRouteDTO): string => {
 			: `${dto.protocol === "tcp" ? "p" : "u"}${dto.port}`;
 
 	if (dto.protocol === "http") {
+		const tlsConfig: Record<string, unknown> = {};
+		if (dto.tls !== false) {
+			if (dto.certResolver) {
+				tlsConfig.certResolver = dto.certResolver;
+			}
+		}
+
 		const manifest = {
 			apiVersion: "traefik.io/v1alpha1",
 			kind: "IngressRoute",
@@ -636,9 +644,7 @@ export const generateIngressRouteManifest = (dto: IngressRouteDTO): string => {
 			},
 			spec: {
 				entryPoints: dto.tls === false ? ["web"] : ["web", "websecure"],
-				tls: {
-					certResolver: "letsencrypt",
-				},
+				tls: Object.keys(tlsConfig).length > 0 ? tlsConfig : undefined,
 				routes: [
 					{
 						match: `Host(\`${dto.domain}\`)`,
