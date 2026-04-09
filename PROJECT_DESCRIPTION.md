@@ -158,11 +158,24 @@ Added ability for users to enable/disable TLS when creating HTTP Ingress resourc
    - Added Switch component to toggle TLS (visible only for HTTP protocol).
    - Passes `tls` value in API request.
 
-4. **Frontend List View** (`frontend/src/routes/dashboard/cluster/$id/ingresses/index.tsx`):
+4. **Frontend Expose Dialog** (`frontend/src/components/service/expose-dialog.tsx`):
+   - Added `tls: z.boolean().default(true)` to schema.
+   - Added Switch component to toggle TLS (visible only for HTTP protocol).
+   - Passes `tls` value in API request.
+
+5. **Frontend Service Detail Dialog** (`frontend/src/routes/dashboard/cluster/$id/services/index.tsx`):
+   - Added `tls` field to form default values (defaults to true).
+   - Added Switch component in expose form for HTTP protocol.
+   - Passes `tls` value when exposing service.
+
+6. **Frontend List View** (`frontend/src/routes/dashboard/cluster/$id/ingresses/index.tsx`):
    - Added TLS badge display next to protocol for each ingress row.
 
-5. **Frontend Detail View** (`frontend/src/routes/dashboard/cluster/$id/ingresses/$ingressId.tsx`):
+7. **Frontend Detail View** (`frontend/src/routes/dashboard/cluster/$id/ingresses/$ingressId.tsx`):
    - Added TLS status row in Configuration card showing Enabled/Disabled.
+
+8. **Frontend Service Detail Page** (`frontend/src/routes/dashboard/cluster/$id/services/$serviceId.tsx`):
+   - Added TLS badge display in ingress table for HTTP protocols.
 
 ---
 

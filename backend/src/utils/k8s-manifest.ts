@@ -616,6 +616,7 @@ export const generateServiceManifest = (dto: ServiceDTO): string => {
 };
 
 export const generateIngressRouteManifest = (dto: IngressRouteDTO): string => {
+	console.log("Generating IngressRoute manifest with DTO:", dto);
 	const entryPoint =
 		dto.protocol === "http"
 			? "websecure"

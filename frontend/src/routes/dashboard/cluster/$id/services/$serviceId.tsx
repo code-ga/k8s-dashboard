@@ -255,7 +255,16 @@ function ServiceDetailPage() {
 										<TableCell>{ing.protocol?.toUpperCase()}</TableCell>
 										<TableCell>
 											{ing.protocol === "http" ? (
-												<span className="font-mono text-xs">{ing.domain}</span>
+												<div className="flex items-center gap-2">
+													<span className="font-mono text-xs">
+														{ing.domain}
+													</span>
+													{ing.tls && (
+														<span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+															TLS
+														</span>
+													)}
+												</div>
 											) : (
 												<span className="font-mono text-xs">
 													Port: {ing.port}

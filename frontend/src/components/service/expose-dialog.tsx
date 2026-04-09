@@ -24,6 +24,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { api } from "@/lib/api";
 
 const exposeSchema = z.object({
@@ -33,6 +34,7 @@ const exposeSchema = z.object({
 	internalPort: z.number().min(1).max(65535),
 	externalPort: z.number().optional(),
 	domain: z.string().optional(),
+	tls: z.boolean().default(true),
 });
 
 interface ExposeDialogProps {
@@ -69,7 +71,8 @@ export function ExposeDialog({
 					externalPort: values.externalPort,
 					domain: values.domain || undefined,
 					selector: selector,
-					labels: { app: defaultName }, // Generic label
+					labels: { app: defaultName },
+					tls: values.tls,
 				});
 
 			if (res.error) {
@@ -97,6 +100,7 @@ export function ExposeDialog({
 			internalPort: defaultInternalPort || 80,
 			externalPort: undefined as number | undefined,
 			domain: "",
+			tls: true,
 		},
 		// validatorAdapter: zodValidator(),
 		// validators: {
@@ -206,20 +210,34 @@ export function ExposeDialog({
 						{(protocol) => (
 							<>
 								{protocol === "http" && (
-									<div className="space-y-2">
-										<Label htmlFor="domain">Domain</Label>
-										<form.Field name="domain">
-											{(field) => (
-												<Input
-													id="domain"
-													value={field.state.value}
-													onBlur={field.handleBlur}
-													onChange={(e) => field.handleChange(e.target.value)}
-													placeholder="myapp.example.com"
-												/>
-											)}
-										</form.Field>
-									</div>
+									<>
+										<div className="space-y-2">
+											<Label htmlFor="domain">Domain</Label>
+											<form.Field name="domain">
+												{(field) => (
+													<Input
+														id="domain"
+														value={field.state.value}
+														onBlur={field.handleBlur}
+														onChange={(e) => field.handleChange(e.target.value)}
+														placeholder="myapp.example.com"
+													/>
+												)}
+											</form.Field>
+										</div>
+										<div className="flex items-center justify-between space-y-2">
+											<Label htmlFor="tls">Enable TLS</Label>
+											<form.Field name="tls">
+												{(field) => (
+													<Switch
+														id="tls"
+														checked={field.state.value}
+														onCheckedChange={field.handleChange}
+													/>
+												)}
+											</form.Field>
+										</div>
+									</>
 								)}
 								{protocol !== "http" && (
 									<div className="space-y-2">

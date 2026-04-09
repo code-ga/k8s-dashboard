@@ -27,6 +27,7 @@ import {
 import {
 	Form,
 	FormControl,
+	FormDescription,
 	FormField,
 	FormItem,
 	FormLabel,
@@ -40,6 +41,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import {
 	Table,
 	TableBody,
@@ -80,6 +82,7 @@ function ExposureDialog({
 			domain: ingress?.domain || "",
 			internalPort:
 				ingress?.internalPort || service.ports?.data?.[0]?.port || 80,
+			tls: ingress?.tls ?? true,
 		},
 	});
 
@@ -91,6 +94,7 @@ function ExposureDialog({
 				protocol: values.protocol,
 				internalPort: values.internalPort,
 				domain: values.protocol === "http" ? values.domain : undefined,
+				tls: values.protocol === "http" ? values.tls : undefined,
 			});
 			if (res.error) throw res.error;
 			return res.data;
@@ -194,19 +198,41 @@ function ExposureDialog({
 						/>
 
 						{protocol === "http" && (
-							<FormField
-								control={form.control}
-								name="domain"
-								render={({ field }) => (
-									<FormItem>
-										<FormLabel>Domain Name</FormLabel>
-										<FormControl>
-											<Input placeholder="myapp.example.com" {...field} />
-										</FormControl>
-										<FormMessage />
-									</FormItem>
-								)}
-							/>
+							<>
+								<FormField
+									control={form.control}
+									name="domain"
+									render={({ field }) => (
+										<FormItem>
+											<FormLabel>Domain Name</FormLabel>
+											<FormControl>
+												<Input placeholder="myapp.example.com" {...field} />
+											</FormControl>
+											<FormMessage />
+										</FormItem>
+									)}
+								/>
+								<FormField
+									control={form.control}
+									name="tls"
+									render={({ field }) => (
+										<FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+											<div className="space-y-0.5">
+												<FormLabel className="text-base">Enable TLS</FormLabel>
+												<FormDescription>
+													Use Let's Encrypt for automatic TLS certificate
+												</FormDescription>
+											</div>
+											<FormControl>
+												<Switch
+													checked={field.value}
+													onCheckedChange={field.onChange}
+												/>
+											</FormControl>
+										</FormItem>
+									)}
+								/>
+							</>
 						)}
 
 						<FormField
@@ -385,6 +411,11 @@ function ClusterServices() {
 														{ing.protocol?.toUpperCase()}
 														{ing.port ? `:${ing.port}` : ""}
 														{ing.domain ? ` (${ing.domain})` : ""}
+														{ing.tls && ing.protocol === "http" && (
+															<span className="inline-flex items-center px-1 py-0.5 rounded text-[10px] font-medium bg-green-100 text-green-800">
+																TLS
+															</span>
+														)}
 													</div>
 												))}
 											</div>

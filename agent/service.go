@@ -56,7 +56,6 @@ WorkingDirectory=%s
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=full
-ProtectHome=true
 
 [Install]
 WantedBy=multi-user.target
