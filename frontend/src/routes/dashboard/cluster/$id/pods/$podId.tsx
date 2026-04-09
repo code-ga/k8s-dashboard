@@ -926,13 +926,17 @@ export function PodLogs({
 	const logsRef = useRef<HTMLPreElement>(null);
 	const wsRef = useRef<WebSocket | null>(null);
 
-	// Reset logs and container when switching tabs or pod
+	// Reset logs when the log tab becomes active or when the selected container is no longer available.
 	useEffect(() => {
 		if (isActive) {
 			setLogs("");
-			if (!containers.includes(selectedContainer)) {
-				setSelectedContainer(containers[0] || "");
-			}
+		}
+	}, [isActive]);
+
+	useEffect(() => {
+		if (isActive && !containers.includes(selectedContainer)) {
+			setSelectedContainer(containers[0] || "");
+			setLogs("");
 		}
 	}, [isActive, containers, selectedContainer]);
 
