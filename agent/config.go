@@ -45,8 +45,23 @@ func loadFileConfig(path string) (*agentFileConfig, error) {
 	return cfg, err
 }
 
+func saveFileConfig(path string, cfg *agentFileConfig) error {
+	var data []byte
+	var err error
+	if strings.ToLower(filepath.Ext(path)) == ".json" {
+		data, err = json.MarshalIndent(cfg, "", "  ")
+	} else {
+		data, err = yaml.Marshal(cfg)
+	}
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(path, data, 0644)
+}
+
 // resolveConfig merges values from the config file and environment variables
 // into the flag variables for any flag that was not explicitly set on the CLI.
+// If --addr or --token are provided via CLI flags, they are saved to config file.
 func resolveConfig() {
 	flagsSet := map[string]bool{}
 	flag.Visit(func(f *flag.Flag) { flagsSet[f.Name] = true })
@@ -92,6 +107,27 @@ func resolveConfig() {
 			*skipUpdate = true
 		} else if v := os.Getenv("AGENT_SKIP_UPDATE"); v != "" {
 			*skipUpdate = v == "true" || v == "1" || v == "yes"
+		}
+	}
+
+	// If addr or token were provided via CLI flags, save them to config file.
+	if flagsSet["addr"] || flagsSet["token"] || flagsSet["skip-update"] {
+		if cfgPath == "" {
+			cfgPath = "agent.yaml"
+		}
+		if flagsSet["addr"] {
+			fileCfg.Addr = *addr
+		}
+		if flagsSet["token"] {
+			fileCfg.Token = *token
+		}
+		if flagsSet["skip-update"] {
+			fileCfg.SkipUpdate = *skipUpdate
+		}
+		if err := saveFileConfig(cfgPath, fileCfg); err != nil {
+			log.Printf("Warning: failed to save config to %q: %v", cfgPath, err)
+		} else {
+			log.Printf("Config saved to %s", cfgPath)
 		}
 	}
 
