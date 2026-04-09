@@ -638,8 +638,11 @@ export const generateIngressRouteManifest = (dto: IngressRouteDTO): string => {
 				namespace: dto.namespace,
 				labels: dto.labels,
 				annotations: {
-					"traefik.ingress.kubernetes.io/router.tls":
-						dto.tls === false ? "false" : "true",
+					...(dto.tls
+						? {
+								"traefik.ingress.kubernetes.io/router.tls": "true",
+							}
+						: {}),
 					...dto.annotations,
 				},
 			},
