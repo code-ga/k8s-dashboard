@@ -660,6 +660,7 @@ export const generateIngressRouteManifest = (dto: IngressRouteDTO): string => {
 				],
 			},
 		};
+		console.log("Generated IngressRoute manifest:", manifest);
 		return YAML.stringify(manifest);
 	}
 
