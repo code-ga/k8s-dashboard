@@ -19,13 +19,6 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Terminal } from "xterm";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
 import { DebugPodModal } from "@/components/cluster/debug-pod-modal";
 import { ExposeDialog } from "@/components/service/expose-dialog";
 import { EnvEditor, type EnvVar } from "@/components/shared/env-editor";
@@ -42,6 +35,13 @@ import VolumeMountEditor, {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
 import {
 	Table,
 	TableBody,
@@ -943,30 +943,53 @@ export function PodLogs({
 			return;
 		}
 
-		const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-		const backendUrl = new URL(BACKEND_URL);
-		const ws = new WebSocket(
-			`${protocol}//${backendUrl.host}/api/pods/${clusterId}/logs/${pod.id}?container=${selectedContainer}`,
-		);
-		wsRef.current = ws;
+		let ws: WebSocket | null = null;
+		let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
+		let isUnmounting = false;
 
-		ws.onmessage = (event) => {
-			if (event.data instanceof Blob) {
-				event.data.text().then((text) => {
-					setLogs((prev) => prev + text);
-				});
-			} else {
-				setLogs((prev) => prev + event.data);
-			}
+		const connect = () => {
+			if (isUnmounting) return;
+
+			const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+			const backendUrl = new URL(BACKEND_URL);
+			ws = new WebSocket(
+				`${protocol}//${backendUrl.host}/api/pods/${clusterId}/logs/${pod.id}?container=${selectedContainer}`,
+			);
+			wsRef.current = ws;
+
+			ws.onmessage = (event) => {
+				if (event.data instanceof Blob) {
+					event.data.text().then((text) => {
+						setLogs((prev) => prev + text);
+					});
+				} else {
+					setLogs((prev) => prev + event.data);
+				}
+			};
+
+			ws.onerror = (error) => {
+				logger.error("WebSocket error:", error);
+			};
+
+			ws.onclose = (event) => {
+				logger.info("WebSocket closed", event.code, event.reason);
+				if (!event.wasClean && !isUnmounting && isActive) {
+					setLogs(
+						(prev) =>
+							prev +
+							"\r\n\x1b[33mConnection lost. Reconnecting in 3 seconds...\x1b[0m\r\n",
+					);
+					reconnectTimeout = setTimeout(connect, 3000);
+				}
+			};
 		};
 
-		ws.onerror = (error) => {
-			logger.error("WebSocket error:", error);
-			toast.error("Failed to connect to log stream");
-		};
+		connect();
 
 		return () => {
-			ws.close();
+			isUnmounting = true;
+			if (reconnectTimeout) clearTimeout(reconnectTimeout);
+			ws?.close();
 			wsRef.current = null;
 		};
 	}, [isActive, selectedContainer, clusterId, pod.id]);
