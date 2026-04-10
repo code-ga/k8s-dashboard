@@ -270,4 +270,32 @@ accessModes: jsonb("access_modes").$type<{ data: string[] }>().default({ data: [
 ```
 ---
 
-*Last updated: 2026-04-08 (Native Ephemeral Container Debugging implemented)*
+## 🔗 Feature Flow: Delete Cluster
+
+### Overview
+Added a delete cluster button with full permission checking on the cluster overview page.
+
+### Changes Made
+
+1. **Frontend Cluster Overview** (`frontend/src/routes/dashboard/cluster/$id/index.tsx`):
+   - Added `deleteDialogOpen` state for delete confirmation dialog
+   - Added `deleteConfirmText` state for user confirmation input
+   - Added delete cluster mutation with success/error handlers
+   - Added "Delete Cluster" button with `cluster:delete` permission check
+   - Added confirmation dialog requiring user to type cluster name to confirm
+   - Redirects to dashboard on successful deletion
+
+2. **Permission Check**:
+   - Button only visible when user has `cluster:delete` permission
+   - Delete action requires `cluster:delete` permission (enforced by backend)
+
+### Delete Confirmation Flow
+1. User clicks "Delete Cluster" button (only if they have `cluster:delete` permission)
+2. Dialog opens requiring user to type the cluster name
+3. Delete button is disabled until cluster name matches exactly
+4. On confirm, API call to `DELETE /api/clusters/:id` triggers
+5. On success, redirects to dashboard
+
+---
+
+*Last updated: 2026-04-10 (Delete Cluster button implemented)*

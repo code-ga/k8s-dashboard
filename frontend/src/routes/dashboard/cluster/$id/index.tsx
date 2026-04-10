@@ -22,6 +22,14 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { usePermissions } from "@/hooks/use-permissions";
@@ -37,6 +45,8 @@ function ClusterOverview() {
 	const queryClient = useQueryClient();
 	const { can, isLoading: isLoadingPermissions } = usePermissions();
 	const [acmeEmail, setAcmeEmail] = useState("");
+	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+	const [deleteConfirmText, setDeleteConfirmText] = useState("");
 
 	const { data: cluster, isLoading } = useQuery({
 		queryKey: ["cluster", id],
@@ -82,6 +92,24 @@ function ClusterOverview() {
 		},
 	});
 
+	const deleteClusterMutation = useMutation({
+		mutationFn: async () => {
+			const res = await api.api.cluster({ id }).delete();
+			if (res.error) {
+				const message = getEdenErrorMessage(res.error);
+				throw new Error(message);
+			}
+			return res.data;
+		},
+		onSuccess: () => {
+			toast.success("Cluster deleted successfully");
+			window.location.href = "/dashboard";
+		},
+		onError: (error: Error) => {
+			toast.error(error.message);
+		},
+	});
+
 	if (!can("cluster:read") && !isLoadingPermissions) {
 		return (
 			<div className="flex items-center justify-center py-12">
@@ -106,18 +134,31 @@ function ClusterOverview() {
 
 	return (
 		<div className="space-y-6">
-			<div className="flex items-center gap-4">
-				<Link to="/dashboard">
-					<Button variant="ghost" size="icon">
-						<ArrowLeft className="h-4 w-4" />
-					</Button>
-				</Link>
-				<div>
-					<h1 className="text-4xl font-bold tracking-tight">{cluster.name}</h1>
-					<p className="text-sm text-muted-foreground mt-1">
-						{cluster.clusterDomain}
-					</p>
+			<div className="flex items-center justify-between gap-4">
+				<div className="flex items-center gap-4">
+					<Link to="/dashboard">
+						<Button variant="ghost" size="icon">
+							<ArrowLeft className="h-4 w-4" />
+						</Button>
+					</Link>
+					<div>
+						<h1 className="text-4xl font-bold tracking-tight">
+							{cluster.name}
+						</h1>
+						<p className="text-sm text-muted-foreground mt-1">
+							{cluster.clusterDomain}
+						</p>
+					</div>
 				</div>
+				{can("cluster:delete") && (
+					<Button
+						variant="destructive"
+						size="sm"
+						onClick={() => setDeleteDialogOpen(true)}
+					>
+						Delete Cluster
+					</Button>
+				)}
 			</div>
 
 			{/* Metrics Cards */}
@@ -399,6 +440,54 @@ function ClusterOverview() {
 					</CardContent>
 				</Card>
 			)}
+
+			<Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+				<DialogContent>
+					<DialogHeader>
+						<DialogTitle>Delete Cluster</DialogTitle>
+						<DialogDescription>
+							Are you sure you want to delete the cluster &quot;{cluster.name}
+							&quot;? This action cannot be undone and will remove all
+							associated data.
+						</DialogDescription>
+					</DialogHeader>
+					<div className="space-y-2">
+						<Label htmlFor="delete-confirm">
+							Type <span className="font-mono font-bold">{cluster.name}</span>{" "}
+							to confirm
+						</Label>
+						<Input
+							id="delete-confirm"
+							value={deleteConfirmText}
+							onChange={(e) => setDeleteConfirmText(e.target.value)}
+							placeholder={cluster.name}
+						/>
+					</div>
+					<DialogFooter>
+						<Button
+							variant="outline"
+							onClick={() => setDeleteDialogOpen(false)}
+						>
+							Cancel
+						</Button>
+						<Button
+							variant="destructive"
+							disabled={
+								deleteConfirmText !== cluster.name ||
+								deleteClusterMutation.isPending
+							}
+							onClick={() => {
+								setDeleteDialogOpen(false);
+								deleteClusterMutation.mutate();
+							}}
+						>
+							{deleteClusterMutation.isPending
+								? "Deleting..."
+								: "Delete Cluster"}
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
 		</div>
 	);
 }
