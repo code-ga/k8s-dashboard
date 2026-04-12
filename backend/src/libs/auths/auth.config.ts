@@ -3,18 +3,14 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { openAPI } from "better-auth/plugins";
 import { FRONTEND_URLs } from "../../constants";
 import { db } from "../../database";
-import {
-	account,
-	session,
-	user,
-	verification,
-} from "../../database/schema";
+import { account, session, user, verification } from "../../database/schema";
 
 export const auth = betterAuth({
 	database: drizzleAdapter(db, {
 		provider: "pg",
 		schema: { user, session, account, verification },
 	}),
+	basePath: "/api/auth",
 	emailAndPassword: {
 		enabled: true,
 		autoSignIn: true,
