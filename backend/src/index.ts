@@ -10,6 +10,7 @@ import { OpenAPI } from "./libs/auths/openAPI";
 import { apiRouter } from "./routes";
 import { scalingController } from "./services/scaling.controller";
 import { generateSeedRoles } from "./utils/role";
+import { auth } from "./libs/auths/auth.config";
 
 scalingController.start();
 await generateSeedRoles();
@@ -25,6 +26,7 @@ export const app = new Elysia()
 			credentials: true,
 		}),
 	)
+	.mount("/auth",auth.handler)	
 	.get("/", () => ({ hello: "Bun👋" }))
 	.use(
 		openapi({

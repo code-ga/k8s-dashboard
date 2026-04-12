@@ -1,7 +1,6 @@
 import Elysia from "elysia";
 import { agentManagerService } from "../services/agentManager";
 import { agentRoute } from "./agent";
-import { betterAuthRouter } from "./auth";
 import { clusterRoute } from "./cluster";
 import { configmapRoute } from "./configmap";
 import { deploymentRoute } from "./deployment";
@@ -19,7 +18,6 @@ import { storageclassRoute } from "./storageclass";
 
 const apiRouter = new Elysia({ prefix: "/api" })
 	.use(agentManagerService)
-	.use(betterAuthRouter)
 	.use(healthRoutes)
 	.use(clusterRoute)
 	.use(agentRoute)
