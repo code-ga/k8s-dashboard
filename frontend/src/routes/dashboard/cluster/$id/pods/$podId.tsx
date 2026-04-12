@@ -1,4 +1,3 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
 	createFileRoute,
 	Link,
@@ -19,6 +18,11 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Terminal } from "xterm";
+import {
+	buildEnvPayload,
+	buildLabelsPayload,
+	parseResourceConfig,
+} from "@/api/utils";
 import { DebugPodModal } from "@/components/cluster/debug-pod-modal";
 import { ExposeDialog } from "@/components/service/expose-dialog";
 import { EnvEditor, type EnvVar } from "@/components/shared/env-editor";
@@ -51,15 +55,16 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { BACKEND_URL } from "@/constants";
 import {
-	api,
-	type databaseTypes,
-	getEdenErrorMessage,
-	type SchemaStatic,
-} from "@/lib/api";
+	useDeletePod,
+	usePod,
+	usePodDescribe,
+	useUpdatePod,
+} from "@/hooks/queries";
+import type { databaseTypes, SchemaStatic } from "@/lib/api";
+import { logger } from "@/lib/logger";
 import "xterm/css/xterm.css";
-import { BACKEND_URL } from "../../../../../constants";
-import { logger } from "../../../../../lib/logger";
 
 export const Route = createFileRoute("/dashboard/cluster/$id/pods/$podId")({
 	component: ManagePodPage,
@@ -70,31 +75,14 @@ function ManagePodPage() {
 		from: "/dashboard/cluster/$id/pods/$podId",
 	});
 	const navigate = useNavigate();
-	const queryClient = useQueryClient();
 	const [activeTab, setActiveTab] = useState("overview");
 
-	const { data: pod, isLoading } = useQuery({
-		queryKey: ["pod", clusterId, podId],
-		queryFn: async () => {
-			const res = await api.api.pods({ clusterId })({ id: podId }).get();
-			if (res.error) throw res.error;
-			if (!res.data.data)
-				throw new Error(res.data.message || "Failed to fetch pod");
-			return res.data.data;
-		},
-	});
+	const numericClusterId = Number(clusterId);
+	const numericPodId = Number(podId);
 
-	const { data: livePodData } = useQuery({
-		queryKey: ["pod-describe", clusterId, podId],
-		queryFn: async () => {
-			const res = await api.api
-				.pods({ clusterId })({ id: podId })
-				.describe.get();
-			if (res.error) throw res.error;
-			return res.data.data;
-		},
+	const { data: pod, isLoading } = usePod(numericClusterId, numericPodId);
+	const { data: livePodData } = usePodDescribe(numericClusterId, numericPodId, {
 		enabled: !!pod,
-		refetchInterval: 5000, // Refresh every 5 seconds to catch new containers
 	});
 
 	// Extract containers from live data
@@ -148,101 +136,29 @@ function ManagePodPage() {
 
 	useEffect(() => {
 		if (pod) {
-			setImage(pod.dockerImage || "");
-			setCommand(pod.command ? pod.command.split(" ") : []);
-			setArgs(pod.args ? pod.args.split(" ") : []);
-			try {
-				if (pod.envVariables) {
-					const parsed = JSON.parse(pod.envVariables);
-					if (Array.isArray(parsed)) {
-						setEnvVars(
-							parsed.map((v) => ({
-								...v,
-								type: v.valueFrom?.fieldRef ? "fieldRef" : "text",
-							})),
-						);
-					} else {
-						// Backward compatibility
-						setEnvVars(
-							Object.entries(parsed as Record<string, string>).map(
-								([name, value]) => ({ name, value, type: "text" }),
-							),
-						);
-					}
-				} else {
-					setEnvVars([]);
-				}
-			} catch (_e) {
-				logger.error("Failed to parse env variables", _e);
-				setEnvVars([]);
-			}
-			setPorts(pod.ports || []);
-
-			setCpuRequest(`${pod.cpuRequest}m`);
-			setCpuLimit(`${pod.cpuLimit}m`);
-			setMemoryRequest(`${pod.memoryRequest}Mi`);
-			setMemoryLimit(`${pod.memoryLimit}Mi`);
-			try {
-				if (pod.labels) {
-					const parsed = JSON.parse(pod.labels);
-					setLabels(
-						Object.entries(parsed).map(([name, value]) => ({
-							name,
-							value: String(value),
-						})),
-					);
-				} else {
-					setLabels([]);
-				}
-			} catch (_e) {
-				setLabels([]);
-			}
-
-			// load refs if present
-			try {
-				if (pod.configMapRefs) {
-					setConfigMapEnvRefs(pod.configMapRefs.env || []);
-					setConfigMapEnvFromRefs(pod.configMapRefs.envFrom || []);
-				} else {
-					setConfigMapEnvRefs([]);
-					setConfigMapEnvFromRefs([]);
-				}
-			} catch {
-				setConfigMapEnvRefs([]);
-				setConfigMapEnvFromRefs([]);
-			}
-
-			try {
-				if (pod.secretRefs) {
-					setSecretEnvRefs(pod.secretRefs.env || []);
-					setSecretEnvFromRefs(pod.secretRefs.envFrom || []);
-				} else {
-					setSecretEnvRefs([]);
-					setSecretEnvFromRefs([]);
-				}
-			} catch {
-				setSecretEnvRefs([]);
-				setSecretEnvFromRefs([]);
-			}
-
-			setPvcVolumes(pod.pvcVolumes || []);
-			setEmptyDirVolumes(pod.emptyDirVolumes || []);
+			const config = parseResourceConfig(pod);
+			setImage(config.image);
+			setCommand(config.command);
+			setArgs(config.args);
+			setEnvVars(config.envVars);
+			setPorts(config.ports);
+			setCpuRequest(config.cpuRequest);
+			setCpuLimit(config.cpuLimit);
+			setMemoryRequest(config.memoryRequest);
+			setMemoryLimit(config.memoryLimit);
+			setLabels(config.labels);
+			setConfigMapEnvRefs(config.configMapEnvRefs);
+			setConfigMapEnvFromRefs(config.configMapEnvFromRefs);
+			setSecretEnvRefs(config.secretEnvRefs);
+			setSecretEnvFromRefs(config.secretEnvFromRefs);
+			setPvcVolumes(config.pvcVolumes);
+			setEmptyDirVolumes(config.emptyDirVolumes);
 		}
 	}, [pod]);
 
-	const deleteMutation = useMutation({
-		mutationFn: async () => {
-			const res = await api.api
-				.pods({ clusterId })({ id: podId.toString() })
-				.delete();
-			if (res.error) {
-				throw new Error(getEdenErrorMessage(res.error));
-			}
-			return res.data;
-		},
+	const deleteMutation = useDeletePod({
 		onSuccess: () => {
 			toast.success("Pod deleted successfully");
-			queryClient.invalidateQueries({ queryKey: ["pods", clusterId] });
 			navigate({
 				to: `/dashboard/cluster/$id/pods`,
 				params: { id: clusterId },
@@ -253,82 +169,68 @@ function ManagePodPage() {
 		},
 	});
 
-	const savePodMutation = useMutation({
-		mutationFn: async () => {
-			const envPayload = envVars
-				.filter((v) => v.name)
-				.map((v) => {
-					if (v.type === "fieldRef" || (!v.type && v.valueFrom?.fieldRef)) {
-						return { name: v.name, valueFrom: v.valueFrom };
-					}
-					return { name: v.name, value: v.value };
-				});
+	const handleDelete = () => {
+		deleteMutation.mutate({ clusterId: numericClusterId, podId: numericPodId });
+	};
 
-			const labelsMap: Record<string, string> = {};
-			for (const l of labels) {
-				if (l.name && l.value) labelsMap[l.name] = l.value;
-			}
-
-			const res = await api.api
-				.pods({ clusterId })({ id: podId.toString() })
-				.patch({
-					image,
-					command:
-						command.length > 0 && command[0] !== "" ? command : undefined,
-					args: args.length > 0 && args[0] !== "" ? args : undefined,
-					env: envPayload,
-					configMapRefs:
-						(configMapEnvRefs && configMapEnvRefs?.length > 0) ||
-						(configMapEnvFromRefs && configMapEnvFromRefs?.length > 0)
-							? {
-									env:
-										configMapEnvRefs && configMapEnvRefs?.length > 0
-											? configMapEnvRefs
-											: undefined,
-									envFrom:
-										configMapEnvFromRefs && configMapEnvFromRefs?.length > 0
-											? configMapEnvFromRefs
-											: undefined,
-								}
-							: undefined,
-					secretRefs:
-						(secretEnvRefs && secretEnvRefs?.length > 0) ||
-						(secretEnvFromRefs && secretEnvFromRefs?.length > 0)
-							? {
-									env:
-										secretEnvRefs && secretEnvRefs?.length > 0
-											? secretEnvRefs
-											: undefined,
-									envFrom:
-										secretEnvFromRefs && secretEnvFromRefs?.length > 0
-											? secretEnvFromRefs
-											: undefined,
-								}
-							: undefined,
-					labels: labelsMap,
-					resources: {
-						requests: { cpu: cpuRequest, memory: memoryRequest },
-						limits: { cpu: cpuLimit, memory: memoryLimit },
-					},
-					ports: ports.length > 0 ? ports : undefined,
-					pvcVolumes: pvcVolumes.length > 0 ? pvcVolumes : undefined,
-					emptyDirVolumes:
-						emptyDirVolumes.length > 0 ? emptyDirVolumes : undefined,
-				});
-			if (res.error) {
-				throw new Error(getEdenErrorMessage(res.error));
-			}
-			return res.data;
-		},
+	const savePodMutation = useUpdatePod({
 		onSuccess: () => {
 			toast.success("Pod update initiated (recreation)");
-			queryClient.invalidateQueries({ queryKey: ["pods", clusterId] });
-			queryClient.invalidateQueries({ queryKey: ["pod", clusterId, podId] });
-		},
-		onError: (error: Error) => {
-			toast.error(error.message);
 		},
 	});
+
+	const handleSavePod = () => {
+		const envPayload = buildEnvPayload(envVars);
+		const labelsMap = buildLabelsPayload(labels);
+
+		savePodMutation.mutate({
+			clusterId: numericClusterId,
+			podId: numericPodId,
+			data: {
+				image,
+				command: command.length > 0 && command[0] !== "" ? command : undefined,
+				args: args.length > 0 && args[0] !== "" ? args : undefined,
+				env: envPayload,
+				configMapRefs:
+					(configMapEnvRefs && configMapEnvRefs?.length > 0) ||
+					(configMapEnvFromRefs && configMapEnvFromRefs?.length > 0)
+						? {
+								env:
+									configMapEnvRefs && configMapEnvRefs?.length > 0
+										? configMapEnvRefs
+										: undefined,
+								envFrom:
+									configMapEnvFromRefs && configMapEnvFromRefs?.length > 0
+										? configMapEnvFromRefs
+										: undefined,
+							}
+						: undefined,
+				secretRefs:
+					(secretEnvRefs && secretEnvRefs?.length > 0) ||
+					(secretEnvFromRefs && secretEnvFromRefs?.length > 0)
+						? {
+								env:
+									secretEnvRefs && secretEnvRefs?.length > 0
+										? secretEnvRefs
+										: undefined,
+								envFrom:
+									secretEnvFromRefs && secretEnvFromRefs?.length > 0
+										? secretEnvFromRefs
+										: undefined,
+							}
+						: undefined,
+				labels: labelsMap,
+				resources: {
+					requests: { cpu: cpuRequest, memory: memoryRequest },
+					limits: { cpu: cpuLimit, memory: memoryLimit },
+				},
+				ports: ports.length > 0 ? ports : undefined,
+				pvcVolumes: pvcVolumes.length > 0 ? pvcVolumes : undefined,
+				emptyDirVolumes:
+					emptyDirVolumes.length > 0 ? emptyDirVolumes : undefined,
+			},
+		});
+	};
 
 	const RecreationWarning = () => (
 		<div className="bg-yellow-500/10 border border-yellow-500/50 rounded-lg p-3 flex gap-3 items-start">
@@ -385,7 +287,7 @@ function ManagePodPage() {
 						/>
 						<Button
 							variant="destructive"
-							onClick={() => deleteMutation.mutate()}
+							onClick={handleDelete}
 							disabled={deleteMutation.isPending}
 							size="sm"
 						>
@@ -643,7 +545,7 @@ function ManagePodPage() {
 					</div>
 					<div className="flex justify-end gap-2 pt-4">
 						<Button
-							onClick={() => savePodMutation.mutate()}
+							onClick={handleSavePod}
 							disabled={savePodMutation.isPending}
 						>
 							{savePodMutation.isPending ? "Updating..." : "Update Pod"}
@@ -684,7 +586,7 @@ function ManagePodPage() {
 					</div>
 					<div className="flex justify-end gap-2 pt-4">
 						<Button
-							onClick={() => savePodMutation.mutate()}
+							onClick={handleSavePod}
 							disabled={savePodMutation.isPending}
 						>
 							{savePodMutation.isPending ? "Updating..." : "Update Pod"}
@@ -738,7 +640,7 @@ function ManagePodPage() {
 					</div>
 					<div className="flex justify-end gap-2 pt-4">
 						<Button
-							onClick={() => savePodMutation.mutate()}
+							onClick={handleSavePod}
 							disabled={savePodMutation.isPending}
 						>
 							{savePodMutation.isPending ? "Updating..." : "Update Pod"}
@@ -816,7 +718,7 @@ function ManagePodPage() {
 					</div>
 					<div className="flex justify-end gap-2 pt-4">
 						<Button
-							onClick={() => savePodMutation.mutate()}
+							onClick={handleSavePod}
 							disabled={savePodMutation.isPending}
 						>
 							{savePodMutation.isPending ? "Updating..." : "Update Pod"}
@@ -847,7 +749,7 @@ function ManagePodPage() {
 					<EnvEditor variables={labels} onChange={setLabels} />
 					<div className="flex justify-end gap-2 pt-4">
 						<Button
-							onClick={() => savePodMutation.mutate()}
+							onClick={handleSavePod}
 							disabled={savePodMutation.isPending}
 						>
 							{savePodMutation.isPending ? "Updating..." : "Update Pod"}

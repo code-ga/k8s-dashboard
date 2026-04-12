@@ -1,30 +1,27 @@
-import { logger } from "../utils/logger";
 import { Type } from "@sinclair/typebox";
 import { eq, type InferInsertModel } from "drizzle-orm";
 import { Elysia } from "elysia";
+import { Command_CommandType } from "../../pb-generated/agent-backend/websocket";
 import { db } from "../database";
 import { schema } from "../database/schema";
 import { dbSchemaTypes, type SchemaStatic } from "../database/type";
 import { authenticationMiddleware } from "../middleware/auth";
-import { Command_CommandType } from "../../pb-generated/agent-backend/websocket";
 import { agentManagerService } from "../services/agentManager";
-import { baseResponseSchema, errorResponseSchema } from "../types";
+import {
+	baseResponseSchema,
+	errorResponseSchema,
+	fullPodSchema,
+} from "../types";
 import { decrypt, encrypt } from "../utils/crypto";
 import { decryptEnvVars } from "../utils/env-utils";
 import { generatePodManifest } from "../utils/k8s-manifest";
+import { logger } from "../utils/logger";
 import {
-	ConfigMapEnvFromRefSchema,
-	ConfigMapEnvRefSchema,
-	ConfigMapVolumeRefSchema,
 	EmptyDirVolumeRefSchema,
 	fetchAllPodResourceRefs,
 	insertAllPodResourceRefs,
-	PortRefSchema,
 	PvcVolumeRefSchema,
-	SecretEnvFromRefSchema,
-	SecretEnvRefSchema,
-	SecretVolumeRefSchema,
-	updateAllPodResourceRefs,
+	updateAllPodResourceRefs
 } from "../utils/resource-refs";
 
 const parseCpuStr = (cpu: string): number => {
@@ -55,92 +52,104 @@ export const podRoute = new Elysia({
 	.use(authenticationMiddleware)
 	.use(agentManagerService)
 	.decorate("websocketData", new Map<string, WebSocketData>())
-	.decorate("validateResourceRefs", async (
-		clusterId: number,
-		profileId: string,
-		userPermissions: Set<string>,
-		configMapRefs?: {
-			env?: Array<{ configMapName: string }>;
-			envFrom?: Array<{ configMapName: string }>;
-			volumes?: Array<{ configMapName: string }>;
+	.decorate(
+		"validateResourceRefs",
+		async (
+			clusterId: number,
+			profileId: string,
+			userPermissions: Set<string>,
+			configMapRefs?: {
+				env?: Array<{ configMapName: string }>;
+				envFrom?: Array<{ configMapName: string }>;
+				volumes?: Array<{ configMapName: string }>;
+			},
+			secretRefs?: {
+				env?: Array<{ secretName: string }>;
+				envFrom?: Array<{ secretName: string }>;
+				volumes?: Array<{ secretName: string }>;
+			},
+			pvcVolumes?: Array<{ pvcName: string }>,
+		) => {
+			if (configMapRefs) {
+				const cmNames = new Set<string>();
+				if (configMapRefs.env) {
+					for (const r of configMapRefs.env) cmNames.add(r.configMapName);
+				}
+				if (configMapRefs.envFrom) {
+					for (const r of configMapRefs.envFrom) cmNames.add(r.configMapName);
+				}
+				if (configMapRefs.volumes) {
+					for (const r of configMapRefs.volumes) cmNames.add(r.configMapName);
+				}
+
+				for (const name of cmNames) {
+					const cm = await db.query.k8sConfigMaps.findFirst({
+						where: {
+							clusterId: clusterId,
+							name: name,
+						},
+					});
+					if (!cm) throw new Error(`ConfigMap '${name}' not found in cluster`);
+					if (
+						!userPermissions.has("configmap:manage") &&
+						cm.ownerId !== profileId
+					) {
+						throw new Error(`Forbidden: You do not own ConfigMap '${name}'`);
+					}
+				}
+			}
+
+			if (secretRefs) {
+				const secretNames = new Set<string>();
+				if (secretRefs.env) {
+					for (const r of secretRefs.env) secretNames.add(r.secretName);
+				}
+				if (secretRefs.envFrom) {
+					for (const r of secretRefs.envFrom) secretNames.add(r.secretName);
+				}
+				if (secretRefs.volumes) {
+					for (const r of secretRefs.volumes) secretNames.add(r.secretName);
+				}
+
+				for (const name of secretNames) {
+					const secret = await db.query.k8sSecrets.findFirst({
+						where: {
+							clusterId: clusterId,
+							name: name,
+						},
+					});
+					if (!secret) throw new Error(`Secret '${name}' not found in cluster`);
+					if (
+						!userPermissions.has("secret:manage") &&
+						secret.ownerId !== profileId
+					) {
+						throw new Error(`Forbidden: You do not own Secret '${name}'`);
+					}
+				}
+			}
+
+			if (pvcVolumes) {
+				const pvcNames = new Set<string>();
+				for (const r of pvcVolumes) pvcNames.add(r.pvcName);
+
+				for (const name of pvcNames) {
+					const pvc = await db.query.k8sPersistentVolumeClaims.findFirst({
+						where: {
+							clusterId: clusterId,
+							name: name,
+						},
+					});
+					if (!pvc) throw new Error(`PVC '${name}' not found in cluster`);
+					if (
+						!userPermissions.has("storage:manage") &&
+						pvc.ownerId !== profileId
+					) {
+						throw new Error(`Forbidden: You do not own PVC '${name}'`);
+					}
+				}
+			}
 		},
-		secretRefs?: {
-			env?: Array<{ secretName: string }>;
-			envFrom?: Array<{ secretName: string }>;
-			volumes?: Array<{ secretName: string }>;
-		},
-		pvcVolumes?: Array<{ pvcName: string }>
-	) => {
-		if (configMapRefs) {
-			const cmNames = new Set<string>();
-			if (configMapRefs.env) {
-				for (const r of configMapRefs.env) cmNames.add(r.configMapName);
-			}
-			if (configMapRefs.envFrom) {
-				for (const r of configMapRefs.envFrom) cmNames.add(r.configMapName);
-			}
-			if (configMapRefs.volumes) {
-				for (const r of configMapRefs.volumes) cmNames.add(r.configMapName);
-			}
-
-			for (const name of cmNames) {
-				const cm = await db.query.k8sConfigMaps.findFirst({
-					where: {
-						clusterId: clusterId,
-						name: name
-					}
-				});
-				if (!cm) throw new Error(`ConfigMap '${name}' not found in cluster`);
-				if (!userPermissions.has("configmap:manage") && cm.ownerId !== profileId) {
-					throw new Error(`Forbidden: You do not own ConfigMap '${name}'`);
-				}
-			}
-		}
-
-		if (secretRefs) {
-			const secretNames = new Set<string>();
-			if (secretRefs.env) {
-				for (const r of secretRefs.env) secretNames.add(r.secretName);
-			}
-			if (secretRefs.envFrom) {
-				for (const r of secretRefs.envFrom) secretNames.add(r.secretName);
-			}
-			if (secretRefs.volumes) {
-				for (const r of secretRefs.volumes) secretNames.add(r.secretName);
-			}
-
-			for (const name of secretNames) {
-				const secret = await db.query.k8sSecrets.findFirst({
-					where: {
-						clusterId: clusterId,
-						name: name
-					}
-				});
-				if (!secret) throw new Error(`Secret '${name}' not found in cluster`);
-				if (!userPermissions.has("secret:manage") && secret.ownerId !== profileId) {
-					throw new Error(`Forbidden: You do not own Secret '${name}'`);
-				}
-			}
-		}
-
-		if (pvcVolumes) {
-			const pvcNames = new Set<string>();
-			for (const r of pvcVolumes) pvcNames.add(r.pvcName);
-
-			for (const name of pvcNames) {
-				const pvc = await db.query.k8sPersistentVolumeClaims.findFirst({
-					where: {
-						clusterId: clusterId,
-						name: name
-					}
-				});
-				if (!pvc) throw new Error(`PVC '${name}' not found in cluster`);
-				if (!userPermissions.has("storage:manage") && pvc.ownerId !== profileId) {
-					throw new Error(`Forbidden: You do not own PVC '${name}'`);
-				}
-			}
-		}
-	})
+	)
 	.guard({ userAuth: { requiredProfile: true } }, (app) =>
 		app
 			.get(
@@ -365,24 +374,7 @@ export const podRoute = new Elysia({
 					detail: { tags: ["Pods"] },
 					roleAuth: "pod:read",
 					response: {
-						200: baseResponseSchema(
-							Type.Object({
-								...dbSchemaTypes.k8sPods,
-								ports: Type.Array(PortRefSchema),
-								configMapRefs: Type.Object({
-									env: Type.Optional(Type.Array(ConfigMapEnvRefSchema)),
-									envFrom: Type.Optional(Type.Array(ConfigMapEnvFromRefSchema)),
-									volumes: Type.Optional(Type.Array(ConfigMapVolumeRefSchema)),
-								}),
-								secretRefs: Type.Object({
-									env: Type.Optional(Type.Array(SecretEnvRefSchema)),
-									envFrom: Type.Optional(Type.Array(SecretEnvFromRefSchema)),
-									volumes: Type.Optional(Type.Array(SecretVolumeRefSchema)),
-								}),
-								pvcVolumes: Type.Optional(Type.Array(PvcVolumeRefSchema)),
-								emptyDirVolumes: Type.Optional(Type.Array(EmptyDirVolumeRefSchema)),
-							}),
-						),
+						200: baseResponseSchema(fullPodSchema),
 						404: errorResponseSchema,
 						400: errorResponseSchema,
 					},
@@ -456,7 +448,8 @@ export const podRoute = new Elysia({
 							timestamp: Date.now(),
 						});
 					} catch (error: unknown) {
-						const errorMessage = error instanceof Error ? error.message : String(error);
+						const errorMessage =
+							error instanceof Error ? error.message : String(error);
 						return ctx.status(500, {
 							success: false,
 							message: errorMessage || "Failed to fetch describe",
@@ -757,12 +750,8 @@ export const podRoute = new Elysia({
 								),
 							}),
 						),
-						pvcVolumes: Type.Optional(
-							Type.Array(PvcVolumeRefSchema),
-						),
-						emptyDirVolumes: Type.Optional(
-							Type.Array(EmptyDirVolumeRefSchema),
-						),
+						pvcVolumes: Type.Optional(Type.Array(PvcVolumeRefSchema)),
+						emptyDirVolumes: Type.Optional(Type.Array(EmptyDirVolumeRefSchema)),
 						annotations: Type.Optional(
 							Type.Record(Type.String(), Type.String()),
 						),
@@ -1162,12 +1151,8 @@ export const podRoute = new Elysia({
 								),
 							}),
 						),
-						pvcVolumes: Type.Optional(
-							Type.Array(PvcVolumeRefSchema),
-						),
-						emptyDirVolumes: Type.Optional(
-							Type.Array(EmptyDirVolumeRefSchema),
-						),
+						pvcVolumes: Type.Optional(Type.Array(PvcVolumeRefSchema)),
+						emptyDirVolumes: Type.Optional(Type.Array(EmptyDirVolumeRefSchema)),
 						annotations: Type.Optional(
 							Type.Record(Type.String(), Type.String()),
 						),
@@ -1230,7 +1215,8 @@ export const podRoute = new Elysia({
 					}
 
 					const ephemeralContainer = {
-						name: name || `debug-${globalThis.crypto.randomUUID().split("-")[0]}`,
+						name:
+							name || `debug-${globalThis.crypto.randomUUID().split("-")[0]}`,
 						image: image,
 						stdin: true,
 						tty: true,
@@ -1396,7 +1382,14 @@ export const podRoute = new Elysia({
 					const { clusterId, podId } = ctx.params;
 					const container = ctx.query?.container as string | undefined;
 					const profile = ctx.profile;
-					logger.info("Cluster ID:", clusterId, "Pod ID:", podId, "Container:", container);
+					logger.info(
+						"Cluster ID:",
+						clusterId,
+						"Pod ID:",
+						podId,
+						"Container:",
+						container,
+					);
 
 					if (!clusterId || !podId) {
 						logger.info("Missing params");

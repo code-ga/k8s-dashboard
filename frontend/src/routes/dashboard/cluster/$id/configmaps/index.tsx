@@ -1,4 +1,3 @@
-import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { ArrowLeft, FileJson, Plus, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -11,8 +10,8 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
+import { useAllConfigMaps, useConfigMaps } from "@/hooks/queries";
 import { usePermissions } from "@/hooks/use-permissions";
-import { api } from "@/lib/api";
 
 export const Route = createFileRoute("/dashboard/cluster/$id/configmaps/")({
 	component: ClusterConfigMaps,
@@ -21,20 +20,17 @@ export const Route = createFileRoute("/dashboard/cluster/$id/configmaps/")({
 function ClusterConfigMaps() {
 	const { id } = useParams({ from: "/dashboard/cluster/$id/configmaps/" });
 	const { can, isLoading: isLoadingPermissions } = usePermissions();
+	const numericId = Number(id);
 
-	const { data: configMaps, isLoading } = useQuery({
-		queryKey: ["configmaps", id],
-		queryFn: async () => {
-			const res = can("configmap:manage")
-				? await api.api.configmaps({ clusterId: id }).all.get()
-				: await api.api.configmaps({ clusterId: id }).get();
-			if (res.error) throw res.error;
-			if (!res.data.data)
-				throw new Error(res.data.message || "Failed to fetch config maps");
-			return res.data.data;
-		},
-		enabled: can("configmap:read") || can("configmap:manage"),
+	const { data: allConfigMaps } = useAllConfigMaps(numericId, {
+		enabled: can("configmap:manage") && !!numericId,
 	});
+
+	const { data: userConfigMaps, isLoading } = useConfigMaps(numericId, {
+		enabled: !can("configmap:manage") && can("configmap:read") && !!numericId,
+	});
+
+	const configMaps = can("configmap:manage") ? allConfigMaps : userConfigMaps;
 
 	if (
 		!can("configmap:read") &&

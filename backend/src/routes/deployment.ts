@@ -7,7 +7,11 @@ import { schema } from "../database/schema";
 import { dbSchemaTypes, type SchemaStatic } from "../database/type";
 import { authenticationMiddleware } from "../middleware/auth";
 import { agentManagerService } from "../services/agentManager";
-import { baseResponseSchema, errorResponseSchema } from "../types";
+import {
+	baseResponseSchema,
+	errorResponseSchema,
+	fullDeploymentSchema,
+} from "../types";
 import { decrypt, encrypt } from "../utils/crypto";
 import { decryptEnvVars } from "../utils/env-utils";
 import { generateDeploymentManifest } from "../utils/k8s-manifest";
@@ -314,67 +318,7 @@ export const deploymentRoute = new Elysia({
 					detail: { tags: ["Deployments"] },
 					roleAuth: "deployment:read",
 					response: {
-						200: baseResponseSchema(
-							Type.Object({
-								...dbSchemaTypes.k8sDeployments,
-								ports: Type.Array(
-									Type.Object({
-										containerPort: Type.Number(),
-										name: Type.Optional(Type.String()),
-									}),
-								),
-								configMapRefs: Type.Object({
-									env: Type.Optional(
-										Type.Array(
-											Type.Object({
-												configMapName: Type.String(),
-												key: Type.String(),
-												name: Type.String(),
-											}),
-										),
-									),
-									envFrom: Type.Optional(
-										Type.Array(Type.Object({ configMapName: Type.String() })),
-									),
-									volumes: Type.Optional(
-										Type.Array(
-											Type.Object({
-												configMapName: Type.String(),
-												mountPath: Type.String(),
-												name: Type.String(),
-											}),
-										),
-									),
-								}),
-								secretRefs: Type.Object({
-									env: Type.Optional(
-										Type.Array(
-											Type.Object({
-												secretName: Type.String(),
-												key: Type.String(),
-												name: Type.String(),
-											}),
-										),
-									),
-									envFrom: Type.Optional(
-										Type.Array(Type.Object({ secretName: Type.String() })),
-									),
-									volumes: Type.Optional(
-										Type.Array(
-											Type.Object({
-												secretName: Type.String(),
-												mountPath: Type.String(),
-												name: Type.String(),
-											}),
-										),
-									),
-								}),
-								pvcVolumes: Type.Optional(Type.Array(PvcVolumeRefSchema)),
-								emptyDirVolumes: Type.Optional(
-									Type.Array(EmptyDirVolumeRefSchema),
-								),
-							}),
-						),
+						200: baseResponseSchema(fullDeploymentSchema),
 						400: errorResponseSchema,
 						403: errorResponseSchema,
 						404: errorResponseSchema,
@@ -1560,7 +1504,10 @@ export const deploymentRoute = new Elysia({
 					}
 				},
 			})
-			.post(
+			/**
+			 * @deprecated - use POST /re-deploy/:id instead for clarity and idempotency, but keeping this for backward compatibility for now. Using /:ID/redeploy to indicate action on the resource. Will remove in future.
+			 */
+			.patch(
 				"/re-deploy/:id",
 				async (ctx) => {
 					const depId = Number(ctx.params.id);
@@ -1709,7 +1656,7 @@ export const deploymentRoute = new Elysia({
 					}
 				},
 				{
-					detail: { tags: ["Deployments"] },
+					detail: { tags: ["Deployments"], deprecated: true },
 					roleAuth: "deployment:update",
 					response: {
 						200: baseResponseSchema(

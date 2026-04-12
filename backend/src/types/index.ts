@@ -49,3 +49,4 @@ export const errorResponseSchema = t.Object({
 	),
 });
 export type ErrorResponse = Static<typeof errorResponseSchema>;
+export * from "./deployment"

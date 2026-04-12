@@ -1,6 +1,6 @@
-import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { ArrowLeft, Box, Plus, Settings } from "lucide-react";
+import { DebugPodModal } from "@/components/cluster/debug-pod-modal";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -11,9 +11,8 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
+import { useAllPods, usePods } from "@/hooks/queries";
 import { usePermissions } from "@/hooks/use-permissions";
-import { api } from "@/lib/api";
-import { DebugPodModal } from "@/components/cluster/debug-pod-modal";
 
 export const Route = createFileRoute("/dashboard/cluster/$id/pods/")({
 	component: ClusterPods,
@@ -22,20 +21,17 @@ export const Route = createFileRoute("/dashboard/cluster/$id/pods/")({
 function ClusterPods() {
 	const { id } = useParams({ from: "/dashboard/cluster/$id/pods/" });
 	const { can, isLoading: isLoadingPermissions } = usePermissions();
+	const numericId = Number(id);
 
-	const { data: pods, isLoading } = useQuery({
-		queryKey: ["pods", id],
-		queryFn: async () => {
-			const res = can("pod:manage")
-				? await api.api.pods({ clusterId: id }).all.get()
-				: await api.api.pods({ clusterId: id }).get();
-			if (res.error) throw res.error;
-			if (!res.data.data)
-				throw new Error(res.data.message || "Failed to fetch pods");
-			return res.data.data;
-		},
-		enabled: can("pod:read") || can("pod:manage"),
+	const { data: allPods } = useAllPods(numericId, {
+		enabled: can("pod:manage") && !!numericId,
 	});
+
+	const { data: userPods, isLoading } = usePods(numericId, {
+		enabled: !can("pod:manage") && can("pod:read") && !!numericId,
+	});
+
+	const pods = can("pod:manage") ? allPods : userPods;
 
 	if (!can("pod:read") && !can("pod:manage") && !isLoadingPermissions) {
 		return (

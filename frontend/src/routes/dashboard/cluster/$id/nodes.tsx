@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import {
 	ArrowLeft,
@@ -29,8 +29,8 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
+import { useDeleteNode, useNodeJoinToken, useNodes } from "@/hooks/queries";
 import { usePermissions } from "@/hooks/use-permissions";
-import { api } from "@/lib/api";
 
 export const Route = createFileRoute("/dashboard/cluster/$id/nodes")({
 	component: ClusterNodes,
@@ -41,57 +41,40 @@ function ClusterNodes() {
 	const { can, isLoading: isLoadingPermissions } = usePermissions();
 	const queryClient = useQueryClient();
 	const [isJoinDialogOpen, setIsJoinDialogOpen] = useState(false);
+	const numericId = Number(id);
 
-	const { data: nodes, isLoading } = useQuery({
-		queryKey: ["nodes", id],
-		queryFn: async () => {
-			const res = await api.api.nodes({ clusterId: id }).get();
-			if (res.error) throw res.error;
-			if (!res.data.data)
-				throw new Error(res.data.message || "Failed to fetch nodes");
-			return res.data.data;
-		},
-		enabled: can("node:read"),
+	const { data: nodes, isLoading } = useNodes(numericId, {
+		enabled: can("node:read") && !!numericId,
 	});
 
 	const {
 		data: joinToken,
-		mutate: fetchJoinToken,
-		isPending: isFetchingToken,
-	} = useMutation({
-		mutationFn: async () => {
-			const res = await api.api.nodes({ clusterId: id }).token.get();
-			if (res.error) throw res.error;
-			return res.data.data;
-		},
-		onSuccess: () => {
-			setIsJoinDialogOpen(true);
-		},
-		onError: (err) => {
-			console.error(err);
-			toast.error("Failed to fetch join token");
-		},
+		refetch: fetchJoinToken,
+		isFetching: isFetchingToken,
+	} = useNodeJoinToken(numericId, {
+		enabled: false,
 	});
 
-	const deleteNodeMutation = useMutation({
-		mutationFn: async (nodeId: number) => {
-			const res = await api.api
-				.nodes({ clusterId: id })({ id: nodeId })
-				.delete();
-			if (res.error) throw res.error;
-			if (!res.data.data)
-				throw new Error(res.data.message || "Failed to delete node");
-			return res.data.data;
-		},
+	const deleteNodeMutation = useDeleteNode({
 		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ["nodes", id] });
-			toast.success("Node deletion initiated");
+			toast.success("Node deleted successfully");
+			queryClient.invalidateQueries({ queryKey: ["nodes"] });
 		},
 		onError: (err) => {
 			console.error(err);
 			toast.error("Failed to delete node");
 		},
 	});
+
+	const handleFetchJoinToken = async () => {
+		try {
+			await fetchJoinToken();
+			setIsJoinDialogOpen(true);
+		} catch (err) {
+			console.error(err);
+			toast.error("Failed to fetch join token");
+		}
+	};
 
 	const copyToClipboard = (text: string) => {
 		navigator.clipboard.writeText(text);
@@ -128,7 +111,10 @@ function ClusterNodes() {
 					<p className="text-muted-foreground">Manage cluster nodes</p>
 				</div>
 				{can("node:manage") && (
-					<Button onClick={() => fetchJoinToken()} disabled={isFetchingToken}>
+					<Button
+						onClick={() => handleFetchJoinToken()}
+						disabled={isFetchingToken}
+					>
 						<Plus className="h-4 w-4 mr-2" />
 						Add Node
 					</Button>
@@ -221,7 +207,10 @@ function ClusterNodes() {
 															"Are you sure you want to delete this node?",
 														)
 													) {
-														deleteNodeMutation.mutate(node.id);
+														deleteNodeMutation.mutate({
+															clusterId: numericId,
+															nodeId: node.id,
+														});
 													}
 												}}
 											>

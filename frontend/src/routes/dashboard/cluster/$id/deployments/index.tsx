@@ -1,20 +1,14 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, Link, useParams } from "@tanstack/react-router";
-import {
-	ArrowLeft,
-	Layers,
-	Plus,
-	Settings,
-	Settings2,
-	ShieldCheck,
-	Zap,
-	ZapOff,
-} from "lucide-react";
-import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+	DialogTrigger,
+} from "@/components/ui/dialog";
 import {
 	Form,
 	FormControl,
@@ -34,15 +28,33 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
+import {
+	useAllDeployments,
+	useDeployments
+} from "@/hooks/queries";
 import { usePermissions } from "@/hooks/use-permissions";
-import type { databaseTypes, SchemaStatic } from "@/lib/api";
 import { api } from "@/lib/api";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { createFileRoute, Link, useParams } from "@tanstack/react-router";
+import {
+	ArrowLeft,
+	Layers,
+	Plus,
+	Settings,
+	Settings2,
+	ShieldCheck,
+	Zap,
+	ZapOff,
+} from "lucide-react";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/dashboard/cluster/$id/deployments/")({
 	component: ClusterDeployments,
 });
 
-type Deployment = SchemaStatic<databaseTypes.databaseTypes["k8sDeployments"]>;
+type Deployment = any;
 
 function ScaleSettingsDialog({
 	deployment,
@@ -53,6 +65,7 @@ function ScaleSettingsDialog({
 }) {
 	const [open, setOpen] = useState(false);
 	const queryClient = useQueryClient();
+	// const numericClusterId = Number(clusterId);
 
 	const form = useForm({
 		defaultValues: {
@@ -204,33 +217,22 @@ function ScaleSettingsDialog({
 	);
 }
 
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-	DialogTrigger,
-} from "@/components/ui/dialog";
-
 function ClusterDeployments() {
 	const { id } = useParams({ from: "/dashboard/cluster/$id/deployments/" });
 	const { can, isLoading: isLoadingPermissions } = usePermissions();
+	const numericId = Number(id);
 
-	const { data: deployments, isLoading } = useQuery({
-		queryKey: ["deployments", id],
-		queryFn: async () => {
-			const res = can("deployment:manage")
-				? await api.api.deployments({ clusterId: id }).all.get()
-				: await api.api.deployments({ clusterId: id }).get();
-			if (res.error) throw res.error;
-			if (!res.data.data)
-				throw new Error(res.data.message || "Failed to fetch deployments");
-			return res.data.data as Deployment[];
-		},
-		enabled: can("deployment:read") || can("deployment:manage"),
+	const { data: allDeployments } = useAllDeployments(numericId, {
+		enabled: can("deployment:manage") && !!numericId,
 	});
+
+	const { data: userDeployments, isLoading } = useDeployments(numericId, {
+		enabled: !can("deployment:manage") && can("deployment:read") && !!numericId,
+	});
+
+	const deployments = can("deployment:manage")
+		? allDeployments
+		: userDeployments;
 
 	if (
 		!can("deployment:read") &&

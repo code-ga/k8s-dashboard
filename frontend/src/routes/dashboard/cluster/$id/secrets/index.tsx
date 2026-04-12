@@ -1,4 +1,3 @@
-import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { ArrowLeft, Lock, Plus, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -11,8 +10,8 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
+import { useAllSecrets, useSecrets } from "@/hooks/queries";
 import { usePermissions } from "@/hooks/use-permissions";
-import { api } from "@/lib/api";
 
 export const Route = createFileRoute("/dashboard/cluster/$id/secrets/")({
 	component: ClusterSecrets,
@@ -21,20 +20,17 @@ export const Route = createFileRoute("/dashboard/cluster/$id/secrets/")({
 function ClusterSecrets() {
 	const { id } = useParams({ from: "/dashboard/cluster/$id/secrets/" });
 	const { can, isLoading: isLoadingPermissions } = usePermissions();
+	const numericId = Number(id);
 
-	const { data: secrets, isLoading } = useQuery({
-		queryKey: ["secrets", id],
-		queryFn: async () => {
-			const res = can("secret:manage")
-				? await api.api.secrets({ clusterId: id }).all.get()
-				: await api.api.secrets({ clusterId: id }).get();
-			if (res.error) throw res.error;
-			if (!res.data.data)
-				throw new Error(res.data.message || "Failed to fetch secrets");
-			return res.data.data;
-		},
-		enabled: can("secret:read") || can("secret:manage"),
+	const { data: allSecrets } = useAllSecrets(numericId, {
+		enabled: can("secret:manage") && !!numericId,
 	});
+
+	const { data: userSecrets, isLoading } = useSecrets(numericId, {
+		enabled: !can("secret:manage") && can("secret:read") && !!numericId,
+	});
+
+	const secrets = can("secret:manage") ? allSecrets : userSecrets;
 
 	if (!can("secret:read") && !can("secret:manage") && !isLoadingPermissions) {
 		return (

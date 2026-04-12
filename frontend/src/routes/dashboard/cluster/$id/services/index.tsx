@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import {
 	ArrowLeft,
@@ -13,6 +13,7 @@ import {
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { ingressApi } from "@/api/ingress";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -50,23 +51,18 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
+import { useDeleteService, useServices } from "@/hooks/queries";
 import { usePermissions } from "@/hooks/use-permissions";
-import type { databaseTypes, SchemaStatic } from "@/lib/api";
-import { api } from "@/lib/api";
 
 export const Route = createFileRoute("/dashboard/cluster/$id/services/")({
 	component: ClusterServices,
 });
 
-type Service = SchemaStatic<databaseTypes.databaseTypes["k8sServices"]> & {
-	ingresses?: SchemaStatic<databaseTypes.databaseTypes["k8sIngresses"]>[];
-};
-
 function ExposureDialog({
 	service,
 	clusterId,
 }: {
-	service: Service;
+	service: any;
 	clusterId: string;
 }) {
 	const [open, setOpen] = useState(false);
@@ -88,7 +84,7 @@ function ExposureDialog({
 
 	const exposeMutation = useMutation({
 		mutationFn: async (values: any) => {
-			const res = await api.api.ingresses({ clusterId }).expose.post({
+			await ingressApi.expose(Number(clusterId), {
 				serviceName: service.name,
 				namespace: service.namespace,
 				protocol: values.protocol,
@@ -96,8 +92,6 @@ function ExposureDialog({
 				domain: values.protocol === "http" ? values.domain : undefined,
 				tls: values.protocol === "http" ? values.tls : undefined,
 			});
-			if (res.error) throw res.error;
-			return res.data;
 		},
 		onSuccess: () => {
 			toast.success("Service exposed successfully");
@@ -117,13 +111,7 @@ function ExposureDialog({
 			);
 			if (!ingress) throw new Error("No matching ingress found to delete");
 
-			const res = await api.api
-				.ingresses({ clusterId })({
-					id: String(ingress.id),
-				})
-				.delete();
-			if (res.error) throw res.error;
-			return res.data;
+			await ingressApi.delete(Number(clusterId), ingress.id);
 		},
 		onSuccess: () => {
 			toast.success("Service de-exposed successfully");
@@ -285,33 +273,15 @@ function ExposureDialog({
 function ClusterServices() {
 	const { id } = useParams({ from: "/dashboard/cluster/$id/services/" });
 	const { can, isLoading: isLoadingPermissions } = usePermissions();
-	const queryClient = useQueryClient();
+	const numericId = Number(id);
 
-	const { data: services, isLoading } = useQuery({
-		queryKey: ["services", id],
-		queryFn: async () => {
-			const res = can("service:manage")
-				? await api.api.services({ clusterId: id }).all.get()
-				: await api.api.services({ clusterId: id }).get();
-			if (res.error) throw res.error;
-			if (!res.data.data)
-				throw new Error(res.data.message || "Failed to fetch services");
-			return res.data.data; // as Service[];
-		},
-		enabled: can("service:read") || can("service:manage"),
+	const { data: services, isLoading } = useServices(numericId, {
+		enabled: (can("service:read") || can("service:manage")) && !!numericId,
 	});
 
-	const deleteMutation = useMutation({
-		mutationFn: async (serviceId: number) => {
-			const res = await api.api
-				.services({ clusterId: id })({ id: String(serviceId) })
-				.delete();
-			if (res.error) throw res.error;
-			return res.data;
-		},
+	const deleteMutation = useDeleteService({
 		onSuccess: () => {
 			toast.success("Service deleted successfully");
-			queryClient.invalidateQueries({ queryKey: ["services", id] });
 		},
 		onError: (error: any) => {
 			toast.error(error.message || "Failed to delete service");
@@ -400,9 +370,10 @@ function ClusterServices() {
 										</div>
 									</TableCell>
 									<TableCell>
-										{svc.ingresses && svc.ingresses.length > 0 ? (
+										{(svc as any).ingresses &&
+										(svc as any).ingresses.length > 0 ? (
 											<div className="flex flex-col gap-1">
-												{svc.ingresses.map((ing) => (
+												{(svc as any).ingresses.map((ing: any) => (
 													<div
 														key={ing.id}
 														className="flex items-center gap-2 text-xs text-green-600 font-medium whitespace-nowrap"
@@ -456,7 +427,10 @@ function ClusterServices() {
 																"Are you sure you want to delete this service? This will break any ingress routes pointing to it.",
 															)
 														) {
-															deleteMutation.mutate(svc.id);
+															deleteMutation.mutate({
+																clusterId: Number(id),
+																serviceId: svc.id,
+															});
 														}
 													}}
 													disabled={deleteMutation.isPending}
