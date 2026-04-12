@@ -10,7 +10,6 @@ export const auth = betterAuth({
 		provider: "pg",
 		schema: { user, session, account, verification },
 	}),
-	basePath: "/api",
 	emailAndPassword: {
 		enabled: true,
 		autoSignIn: true,

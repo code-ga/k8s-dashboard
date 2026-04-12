@@ -2,7 +2,7 @@ import { createAuthClient } from "better-auth/react";
 import { BACKEND_URL } from "@/constants";
 
 export const authClient = createAuthClient({
-	baseURL: `${BACKEND_URL}/auth/api`,
+	baseURL: `${BACKEND_URL}`,
 	fetchOptions: {
 		redirect: "follow",
 	},

@@ -26,7 +26,7 @@ export const app = new Elysia()
 			credentials: true,
 		}),
 	)
-	.mount("/auth",auth.handler)	
+	.mount(auth.handler)
 	.get("/", () => ({ hello: "Bun👋" }))
 	.use(
 		openapi({
@@ -53,8 +53,9 @@ app.get("/route-permissions", async (_ctx) => {
 		return {
 			method: route.method,
 			path: route.path,
-			permission: (route.hooks.detail as { "x-permission"?: string } | undefined)
-				?.["x-permission"],
+			permission: (
+				route.hooks.detail as { "x-permission"?: string } | undefined
+			)?.["x-permission"],
 		};
 	});
 	return {
