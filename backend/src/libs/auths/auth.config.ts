@@ -1,9 +1,14 @@
-import { betterAuth } from "better-auth";
+import { betterAuth, type CookieOptions } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { openAPI } from "better-auth/plugins";
 import { FRONTEND_URLs } from "../../constants";
 import { db } from "../../database";
 import { account, session, user, verification } from "../../database/schema";
+
+const cookieOptions : CookieOptions = {
+	sameSite: process.env.NODE_ENV === "production" ? "None" : "lax",
+	secure: process.env.NODE_ENV === "production",
+};
 
 export const auth = betterAuth({
 	database: drizzleAdapter(db, {
@@ -42,18 +47,12 @@ export const auth = betterAuth({
 	advanced: {
 		cookies: {
 			session_token: {
-				attributes: {
-					// Set custom cookie attributes
-					sameSite: process.env.NODE_ENV === "production" ? "None" : "lax",
-					secure: process.env.NODE_ENV === "production",
-				},
+				attributes: cookieOptions,
 			},
 			state: {
-				attributes: {
-					sameSite: process.env.NODE_ENV === "production" ? "None" : "lax",
-					secure: process.env.NODE_ENV === "production",
-				},
+				attributes: cookieOptions,
 			},
 		},
+		defaultCookieAttributes: cookieOptions,
 	},
 });

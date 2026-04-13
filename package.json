@@ -1,6 +1,6 @@
 {
 	"dependencies": {
-		"elysia": "^1.4.19",
+		"elysia": "^1.4.28",
 		"@sinclair/typebox": "0.34.45"
 	},
 	"devDependencies": {
