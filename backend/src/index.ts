@@ -27,7 +27,7 @@ export const app = new Elysia()
 		}),
 	)
 	.mount(auth.handler)
-	.get("/", () => ({ hello: "Bun👋" }))
+	// .get("/", () => ({ hello: "Bun👋" }))
 	.use(
 		openapi({
 			documentation: {
