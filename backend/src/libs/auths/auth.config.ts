@@ -55,15 +55,4 @@ export const auth = betterAuth({
 		},
 		defaultCookieAttributes: cookieOptions,
 	},
-	onAPIError: {
-		errorURL: "/api/auth/error", // Change this to your preferred error page
-		// Optional: customize the default error page appearance
-		customizeDefaultErrorPage: {
-			colors: {
-				background: "#ffffff",
-				foreground: "#000000",
-				primary: "#0070f3",
-			},
-		},
-	},
 });
