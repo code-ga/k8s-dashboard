@@ -5,7 +5,7 @@ import { FRONTEND_URLs } from "../../constants";
 import { db } from "../../database";
 import { account, session, user, verification } from "../../database/schema";
 
-const cookieOptions : CookieOptions = {
+const cookieOptions: CookieOptions = {
 	sameSite: process.env.NODE_ENV === "production" ? "None" : "lax",
 	secure: process.env.NODE_ENV === "production",
 };
@@ -54,5 +54,16 @@ export const auth = betterAuth({
 			},
 		},
 		defaultCookieAttributes: cookieOptions,
+	},
+	onAPIError: {
+		errorURL: "/api/auth/error", // Change this to your preferred error page
+		// Optional: customize the default error page appearance
+		customizeDefaultErrorPage: {
+			colors: {
+				background: "#ffffff",
+				foreground: "#000000",
+				primary: "#0070f3",
+			},
+		},
 	},
 });
