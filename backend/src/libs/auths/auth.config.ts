@@ -1,11 +1,11 @@
 import { betterAuth, type CookieOptions } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { bearer, openAPI } from "better-auth/plugins";
+import { openAPI } from "better-auth/plugins";
 import { FRONTEND_URLs } from "../../constants";
 import { db } from "../../database";
 import { account, session, user, verification } from "../../database/schema";
 
-const cookieOptions: CookieOptions = {
+const cookieOptions : CookieOptions = {
 	sameSite: process.env.NODE_ENV === "production" ? "None" : "lax",
 	secure: process.env.NODE_ENV === "production",
 };
@@ -43,7 +43,7 @@ export const auth = betterAuth({
 		];
 	},
 	secret: process.env.BETTER_AUTH_SECRET!,
-	plugins: [openAPI(), bearer()],
+	plugins: [openAPI()],
 	advanced: {
 		cookies: {
 			session_token: {

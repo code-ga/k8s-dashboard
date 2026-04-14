@@ -2,8 +2,8 @@ import { eq } from "drizzle-orm";
 import Elysia from "elysia";
 import {
 	evaluatePermissionFilter,
-	type PermissionFilter,
 	resolveUserPermissions,
+	type PermissionFilter,
 } from "../constants/permissions";
 import { db } from "../database";
 import { schema } from "../database/schema";
@@ -17,19 +17,11 @@ export const authenticationMiddleware = new Elysia({
 		async resolve({ status, request: { headers, url } }) {
 			logger.info("Authentication middleware");
 			logger.info("Path: ", url);
-			let authHeaders = { ...headers };
-			const wsProtocol = headers.get("sec-websocket-protocol");
-			if (wsProtocol && wsProtocol.startsWith("Bearer ")) {
-				const token = wsProtocol.replace("Bearer ", "").trim();
-				authHeaders = new Headers(headers);
-				authHeaders.set("Authorization", `Bearer ${token}`);
-			}
 			const session = await auth.api.getSession({
-				headers: authHeaders,
+				headers,
 			});
 
-			if (!session)
-				return status(401, { success: false, message: "Unauthorized" });
+			if (!session) return status(401, { success: false, message: "Unauthorized" });
 			const profile = await db.query.profile.findFirst({
 				where: {
 					userId: session.user.id,
@@ -75,29 +67,19 @@ export const authenticationMiddleware = new Elysia({
 			}
 			return {
 				agent: agent[0],
-				cluster: cluster[0],
+				cluster: cluster[0], 
 			};
 		},
 	},
 	roleAuth: (filter: PermissionFilter) => ({
 		async resolve({ status, request: { headers } }) {
-			let authHeaders = { ...headers };
-			const wsProtocol = headers.get("sec-websocket-protocol");
-			if (wsProtocol && wsProtocol.startsWith("Bearer ")) {
-				const token = wsProtocol.replace("Bearer", "").trim();
-				authHeaders = new Headers(headers);
-				authHeaders.set("Authorization", `Bearer ${token}`);
-			}
-
-			const session = await auth.api.getSession({ headers: authHeaders });
-			if (!session)
-				return status(401, { success: false, message: "Unauthorized" });
+			const session = await auth.api.getSession({ headers });
+			if (!session) return status(401, { success: false, message: "Unauthorized" });
 
 			const profile = await db.query.profile.findFirst({
 				where: { userId: session.user.id },
 			});
-			if (!profile)
-				return status(401, { success: false, message: "Unauthorized" });
+			if (!profile) return status(401, { success: false, message: "Unauthorized" });
 
 			const userPermissions = await resolveUserPermissions(profile.rolesIDs);
 			if (!evaluatePermissionFilter(userPermissions, filter))
