@@ -1,6 +1,7 @@
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import {
 	Github,
+	Info,
 	Loader2,
 	Lock as LockIcon,
 	Mail as MailIcon,
@@ -100,6 +101,19 @@ function LoginPage() {
 					</CardDescription>
 				</CardHeader>
 				<CardContent className="grid gap-6">
+					<div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3 animate-in slide-in-from-top-1 duration-300">
+						<div className="flex items-start gap-2.5">
+							<Info className="h-4 w-4 text-amber-600 dark:text-amber-500 mt-0.5 flex-shrink-0" />
+							<p className="text-xs text-amber-800 dark:text-amber-200 leading-relaxed">
+								<span className="font-semibold">
+									Third-party cookies required.
+								</span>{" "}
+								Some browsers block cookies from external login providers by
+								default. If your login fails, try allowing third-party cookies
+								in your browser settings, or use incognito/private mode.
+							</p>
+						</div>
+					</div>
 					<div className="grid grid-cols-3 gap-3">
 						<Button
 							variant="outline"
