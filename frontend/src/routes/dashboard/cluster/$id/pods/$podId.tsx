@@ -59,6 +59,7 @@ import {
 } from "@/lib/api";
 import "xterm/css/xterm.css";
 import { BACKEND_URL } from "../../../../../constants";
+import { getBearerToken } from "../../../../../lib/auth";
 import { logger } from "../../../../../lib/logger";
 
 export const Route = createFileRoute("/dashboard/cluster/$id/pods/$podId")({
@@ -956,8 +957,10 @@ export function PodLogs({
 
 			const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
 			const backendUrl = new URL(BACKEND_URL);
+			const token = getBearerToken();
 			ws = new WebSocket(
 				`${protocol}//${backendUrl.host}/api/pods/${clusterId}/logs/${pod.id}?container=${selectedContainer}`,
+				token ? ["Bearer", token] : undefined,
 			);
 			wsRef.current = ws;
 

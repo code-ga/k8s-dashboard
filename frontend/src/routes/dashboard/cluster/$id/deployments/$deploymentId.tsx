@@ -51,6 +51,7 @@ import {
 	type SchemaStatic,
 } from "@/lib/api";
 import { BACKEND_URL } from "../../../../../constants";
+import { getBearerToken } from "../../../../../lib/auth";
 import { logger } from "../../../../../lib/logger";
 
 export const Route = createFileRoute(
@@ -1037,8 +1038,10 @@ export function DeploymentLogs({
 
 		const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
 		const backendUrl = new URL(BACKEND_URL);
+		const token = getBearerToken();
 		const ws = new WebSocket(
 			`${protocol}//${backendUrl.host}/api/deployments/${clusterId}/logs/${deployment.id}`,
+			token ? ["Bearer", token] : undefined,
 		);
 		wsRef.current = ws;
 

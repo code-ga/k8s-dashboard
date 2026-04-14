@@ -2,11 +2,14 @@ import { treaty } from "@elysiajs/eden";
 import type { App, databaseTypes } from "@k8s-dashboard/backend";
 import type { Static, TSchema } from "@sinclair/typebox";
 import { BACKEND_URL } from "@/constants";
+import { getBearerToken } from "./auth";
 
 export const api = treaty<App>(BACKEND_URL, {
-	fetch: {
-		credentials: "include",
-		redirect: "follow",
+	headers(_path) {
+		const token = getBearerToken();
+		if (token) {
+			return { Authorization: `Bearer ${token}` };
+		}
 	},
 });
 
