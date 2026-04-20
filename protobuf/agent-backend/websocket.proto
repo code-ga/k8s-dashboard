@@ -281,6 +281,7 @@ message StorageClass {
   map<string, string> labels = 7;
 
   string resource_config = 8;
+  string uid = 11;
 }
 
 message PV {
@@ -295,6 +296,7 @@ message PV {
   map<string, string> labels = 9;
 
   string resource_config = 10;
+  string uid = 11;
 }
 
 message Command {

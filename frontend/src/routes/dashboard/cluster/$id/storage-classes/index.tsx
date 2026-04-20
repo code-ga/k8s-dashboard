@@ -43,9 +43,9 @@ function ClusterStorageClasses() {
 	});
 
 	const setDefaultMutation = useMutation({
-		mutationFn: async (name: string) => {
+		mutationFn: async (scId: number) => {
 			const res = await api.api
-				.storageclasses({ clusterId: id })({ name })
+				.storageclasses({ clusterId: id })({ id: String(scId) })
 				["set-default"].patch({ isDefault: true });
 			if (res.error) throw res.error;
 			return res.data;
@@ -59,11 +59,11 @@ function ClusterStorageClasses() {
 		},
 	});
 
-	const deleteStorageClass = async (name: string) => {
+	const deleteStorageClass = async (scId: number, name: string) => {
 		if (!confirm(`Are you sure you want to delete StorageClass "${name}"?`))
 			return;
 		const res = await api.api
-			.storageclasses({ clusterId: id })({ name })
+			.storageclasses({ clusterId: id })({ id: String(scId) })
 			.delete();
 		if (res.error) {
 			toast.error(res.error.value?.message || "Failed to delete StorageClass");
@@ -73,8 +73,8 @@ function ClusterStorageClasses() {
 		}
 	};
 
-	const setDefault = (name: string) => {
-		setDefaultMutation.mutate(name);
+	const setDefault = (scId: number) => {
+		setDefaultMutation.mutate(scId);
 	};
 
 	if (
@@ -213,7 +213,7 @@ function ClusterStorageClasses() {
 													size="icon"
 													className="h-8 w-8 text-amber-600 hover:bg-amber-100"
 													title="Set as Default"
-													onClick={() => setDefault(sc.name)}
+													onClick={() => setDefault(sc.id)}
 													disabled={setDefaultMutation.isPending}
 												>
 													<Star className="h-4 w-4" />
@@ -225,7 +225,7 @@ function ClusterStorageClasses() {
 													size="icon"
 													className="h-8 w-8 text-destructive hover:bg-destructive/10"
 													title="Delete StorageClass"
-													onClick={() => deleteStorageClass(sc.name)}
+													onClick={() => deleteStorageClass(sc.id, sc.name)}
 												>
 													<Trash2 className="h-4 w-4" />
 												</Button>

@@ -1,12 +1,15 @@
 import { Type } from "@sinclair/typebox";
 import { Elysia } from "elysia";
+import { eq, type InferInsertModel } from "drizzle-orm";
 import { Command_CommandType } from "../../pb-generated/agent-backend/websocket";
 import { db } from "../database";
-import { dbSchemaTypes } from "../database/type";
+import { schema } from "../database/schema";
+import { dbSchemaTypes, type SchemaStatic } from "../database/type";
 import { authenticationMiddleware } from "../middleware/auth";
 import { agentManagerService } from "../services/agentManager";
 import { baseResponseSchema, errorResponseSchema } from "../types";
 import { generateStorageClassManifest } from "../utils/k8s-manifest";
+import { logger } from "../utils/logger";
 
 export const storageclassRoute = new Elysia({
 	prefix: "/storageclasses/:clusterId",
@@ -64,6 +67,135 @@ export const storageclassRoute = new Elysia({
 					},
 				},
 			)
+			.get(
+				"/:id",
+				async (ctx) => {
+					const { clusterId, id } = ctx.params;
+
+					const storageClass = await db.query.k8sStorageClasses.findFirst({
+						where: {
+							id: Number(id),
+							clusterId: Number(clusterId),
+						},
+					});
+
+					if (!storageClass) {
+						return ctx.status(404, {
+							success: false,
+							message: "StorageClass not found",
+							timestamp: Date.now(),
+						});
+					}
+
+					const isManager = ctx.userPermissions.has("storageclass:manage");
+					if (!isManager && storageClass.ownerId !== ctx.profile?.id) {
+						return ctx.status(403, {
+							success: false,
+							message: "Forbidden",
+							timestamp: Date.now(),
+						});
+					}
+
+					return ctx.status(200, {
+						success: true,
+						message: "StorageClass fetched successfully",
+						data: storageClass,
+						timestamp: Date.now(),
+					});
+				},
+				{
+					roleAuth: "storageclass:read",
+					response: {
+						200: baseResponseSchema(
+							Type.Object(dbSchemaTypes.k8sStorageClasses),
+						),
+						403: errorResponseSchema,
+						404: errorResponseSchema,
+					},
+				},
+			)
+			.get(
+				"/:id/describe",
+				async (ctx) => {
+					const { clusterId, id } = ctx.params;
+
+					const cluster = await db.query.k8sCluster.findFirst({
+						where: { id: Number(clusterId) },
+						with: { agent: true },
+					});
+
+					if (!cluster || !cluster.agent) {
+						return ctx.status(404, {
+							success: false,
+							message: "Cluster or agent not found",
+							timestamp: Date.now(),
+						});
+					}
+
+					const storageClass = await db.query.k8sStorageClasses.findFirst({
+						where: {
+							id: Number(id),
+							clusterId: Number(clusterId),
+						},
+					});
+
+					if (!storageClass) {
+						return ctx.status(404, {
+							success: false,
+							message: "StorageClass not found",
+							timestamp: Date.now(),
+						});
+					}
+
+					const isManager = ctx.userPermissions.has("storageclass:manage");
+					if (!isManager && storageClass.ownerId !== ctx.profile?.id) {
+						return ctx.status(403, {
+							success: false,
+							message: "Forbidden",
+							timestamp: Date.now(),
+						});
+					}
+
+					try {
+						const response = await ctx.agentManager.sendCommand(
+							cluster.agent.id,
+							cluster.id,
+							{
+								id: crypto.randomUUID(),
+								type: Command_CommandType.DESCRIBE_RESOURCE,
+								targetNamespace: "",
+								targetName: storageClass.name,
+								payload: JSON.stringify({ kind: "StorageClass" }),
+							},
+						);
+
+						const describe = JSON.parse(response.data || "{}");
+						return ctx.status(200, {
+							success: true,
+							message: "Describe fetched",
+							data: describe,
+							timestamp: Date.now(),
+						});
+					} catch (error: unknown) {
+						const errorMessage =
+							error instanceof Error ? error.message : String(error);
+						return ctx.status(500, {
+							success: false,
+							message: errorMessage || "Failed to fetch describe",
+							timestamp: Date.now(),
+						});
+					}
+				},
+				{
+					roleAuth: "storageclass:read",
+					response: {
+						200: baseResponseSchema(Type.Any()),
+						403: errorResponseSchema,
+						404: errorResponseSchema,
+						500: errorResponseSchema,
+					},
+				},
+			)
 			.post(
 				"/",
 				async (ctx) => {
@@ -79,6 +211,62 @@ export const storageclassRoute = new Elysia({
 						return ctx.status(404, {
 							success: false,
 							message: "Cluster or agent not found",
+							timestamp: Date.now(),
+						});
+					}
+
+					const existingSc = await db.query.k8sStorageClasses.findFirst({
+						where: {
+							clusterId: cluster.id,
+							name: body.name,
+						},
+					});
+					if (existingSc) {
+						return ctx.status(409, {
+							success: false,
+							message: "StorageClass with the same name already exists",
+							timestamp: Date.now(),
+						});
+					}
+
+					const createData: InferInsertModel<typeof schema.k8sStorageClasses> =
+						{
+							clusterId: cluster.id,
+							ownerId: ctx.profile?.id || "",
+							name: body.name,
+							provisioner: body.provisioner,
+							reclaimPolicy: body.reclaimPolicy || "Delete",
+							volumeBindingMode: body.volumeBindingMode || "Immediate",
+							allowVolumeExpansion: body.allowVolumeExpansion || false,
+							annotations: body.annotations || {},
+							labels: body.labels || {},
+							isDefault: body.isDefault || false,
+							autoCreated: false,
+						};
+
+					let newSc:
+						| SchemaStatic<typeof dbSchemaTypes.k8sStorageClasses>
+						| undefined;
+
+					try {
+						[newSc] = await db
+							.insert(schema.k8sStorageClasses)
+							.values(createData)
+							.returning();
+						if (!newSc) {
+							return ctx.status(500, {
+								success: false,
+								message: "Failed to create StorageClass",
+								timestamp: Date.now(),
+							});
+						}
+					} catch (dbError) {
+						logger.error("DB Insert StorageClass Failed:", dbError);
+						const message =
+							dbError instanceof Error ? dbError.message : String(dbError);
+						return ctx.status(500, {
+							success: false,
+							message: `Database error: ${message}`,
 							timestamp: Date.now(),
 						});
 					}
@@ -105,12 +293,23 @@ export const storageclassRoute = new Elysia({
 						return ctx.status(201, {
 							success: true,
 							message: "StorageClass creation initiated",
+							data: { name: body.name },
 							timestamp: Date.now(),
 						});
 					} catch (error: any) {
-						return ctx.status(500, {
-							success: false,
-							message: error.message || "Failed to send create command",
+						logger.error(
+							"Failed to send StorageClass create command to agent",
+							{
+								error: error.message,
+								scName: body.name,
+								agentId: cluster.agent?.id,
+							},
+						);
+
+						return ctx.status(200, {
+							success: true,
+							message:
+								"StorageClass created in DB but Agent is unreachable. Will sync later.",
 							timestamp: Date.now(),
 						});
 					}
@@ -118,8 +317,8 @@ export const storageclassRoute = new Elysia({
 				{
 					roleAuth: "storageclass:create",
 					body: Type.Object({
-						name: Type.String(),
-						provisioner: Type.String(),
+						name: Type.String({ minLength: 1 }),
+						provisioner: Type.String({ minLength: 1 }),
 						reclaimPolicy: Type.Optional(
 							Type.Union([Type.Literal("Delete"), Type.Literal("Retain")]),
 						),
@@ -134,23 +333,27 @@ export const storageclassRoute = new Elysia({
 							Type.Object(Type.String(), Type.String()),
 						),
 						labels: Type.Optional(Type.Object(Type.String(), Type.String())),
+						isDefault: Type.Optional(Type.Boolean()),
 					}),
 					response: {
-						201: baseResponseSchema(Type.Optional(Type.String())),
+						201: baseResponseSchema(Type.Object({ name: Type.String() })),
+						200: baseResponseSchema(Type.Optional(Type.String())),
+						403: errorResponseSchema,
 						404: errorResponseSchema,
+						409: errorResponseSchema,
 						500: errorResponseSchema,
 					},
 				},
 			)
 			.delete(
-				"/:name",
+				"/:id",
 				async (ctx) => {
-					const { clusterId, name } = ctx.params;
+					const { clusterId, id } = ctx.params;
 
 					const storageClass = await db.query.k8sStorageClasses.findFirst({
 						where: {
+							id: Number(id),
 							clusterId: Number(clusterId),
-							name: name as string,
 						},
 					});
 
@@ -158,6 +361,15 @@ export const storageclassRoute = new Elysia({
 						return ctx.status(404, {
 							success: false,
 							message: "StorageClass not found",
+							timestamp: Date.now(),
+						});
+					}
+
+					const isManager = ctx.userPermissions.has("storageclass:manage");
+					if (!isManager && storageClass.ownerId !== ctx.profile?.id) {
+						return ctx.status(403, {
+							success: false,
+							message: "Forbidden",
 							timestamp: Date.now(),
 						});
 					}
@@ -175,12 +387,23 @@ export const storageclassRoute = new Elysia({
 						});
 					}
 
+					if (!storageClass.k8sUid) {
+						await db
+							.delete(schema.k8sStorageClasses)
+							.where(eq(schema.k8sStorageClasses.id, storageClass.id));
+						return ctx.status(200, {
+							success: true,
+							message: "StorageClass deleted successfully",
+							timestamp: Date.now(),
+						});
+					}
+
 					try {
 						await ctx.agentManager.sendCommand(cluster.agent.id, cluster.id, {
 							id: crypto.randomUUID(),
 							type: Command_CommandType.DELETE_STORAGE_CLASS,
 							targetNamespace: "",
-							targetName: name as string,
+							targetName: storageClass.name,
 							payload: "StorageClass",
 						});
 
@@ -208,16 +431,16 @@ export const storageclassRoute = new Elysia({
 				},
 			)
 			.patch(
-				"/:name/set-default",
+				"/:id/set-default",
 				async (ctx) => {
-					const { clusterId, name } = ctx.params;
+					const { clusterId, id } = ctx.params;
 					const body = ctx.body;
 					const isDefault = body.isDefault ?? true;
 
 					const storageClass = await db.query.k8sStorageClasses.findFirst({
 						where: {
+							id: Number(id),
 							clusterId: Number(clusterId),
-							name: name as string,
 						},
 					});
 
@@ -225,6 +448,15 @@ export const storageclassRoute = new Elysia({
 						return ctx.status(404, {
 							success: false,
 							message: "StorageClass not found",
+							timestamp: Date.now(),
+						});
+					}
+
+					const isManager = ctx.userPermissions.has("storageclass:manage");
+					if (!isManager && storageClass.ownerId !== ctx.profile?.id) {
+						return ctx.status(403, {
+							success: false,
+							message: "Forbidden",
 							timestamp: Date.now(),
 						});
 					}
@@ -247,7 +479,7 @@ export const storageclassRoute = new Elysia({
 							id: crypto.randomUUID(),
 							type: Command_CommandType.SET_DEFAULT_STORAGE_CLASS,
 							targetNamespace: "",
-							targetName: name as string,
+							targetName: storageClass.name,
 							payload: isDefault ? "true" : "false",
 						});
 

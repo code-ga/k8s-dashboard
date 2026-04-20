@@ -1336,6 +1336,7 @@ export class AgentService {
 					annotations: sc.annotations || {},
 					labels: sc.labels || {},
 					isDefault,
+					k8sUid: sc.uid,
 					updatedAt: new Date(),
 					resourceConfig: sc.resourceConfig || "",
 				};
@@ -1346,15 +1347,25 @@ export class AgentService {
 						.set(scData)
 						.where(eq(k8sStorageClasses.id, existing[0].id));
 				} else {
-					await db.insert(k8sStorageClasses).values(scData);
+					const defaultOwner = await this.findDefaultOwner();
+					if (!defaultOwner) throw new Error("Default account not found");
+
+					await db.insert(k8sStorageClasses).values({
+						...scData,
+						ownerId: defaultOwner.id,
+						autoCreated: true,
+					});
 				}
 			}
 
-			// Cleanup: remove storage classes no longer present
+			// Cleanup: remove auto-created storage classes no longer present
 			const heartbeatNames = storageClasses
 				.map((sc) => sc.name)
 				.filter((name): name is string => !!name);
-			const deleteFilter = [eq(k8sStorageClasses.clusterId, clusterId)];
+			const deleteFilter = [
+				eq(k8sStorageClasses.clusterId, clusterId),
+				eq(k8sStorageClasses.autoCreated, true),
+			];
 			if (heartbeatNames.length > 0) {
 				deleteFilter.push(notInArray(k8sStorageClasses.name, heartbeatNames));
 			}
@@ -1392,6 +1403,7 @@ export class AgentService {
 					accessModes: { data: pv.accessModes || [] },
 					annotations: pv.annotations || {},
 					labels: pv.labels || {},
+					k8sUid: pv.uid,
 					updatedAt: new Date(),
 					resourceConfig: pv.resourceConfig || "",
 				};
@@ -1402,15 +1414,25 @@ export class AgentService {
 						.set(pvData)
 						.where(eq(k8sPersistentVolumes.id, existing[0].id));
 				} else {
-					await db.insert(k8sPersistentVolumes).values(pvData);
+					const defaultOwner = await this.findDefaultOwner();
+					if (!defaultOwner) throw new Error("Default account not found");
+
+					await db.insert(k8sPersistentVolumes).values({
+						...pvData,
+						ownerId: defaultOwner.id,
+						autoCreated: true,
+					});
 				}
 			}
 
-			// Cleanup: remove PVs no longer present
+			// Cleanup: remove auto-created PVs no longer present
 			const heartbeatNames = pvs
 				.map((pv) => pv.name)
 				.filter((name): name is string => !!name);
-			const deleteFilter = [eq(k8sPersistentVolumes.clusterId, clusterId)];
+			const deleteFilter = [
+				eq(k8sPersistentVolumes.clusterId, clusterId),
+				eq(k8sPersistentVolumes.autoCreated, true),
+			];
 			if (heartbeatNames.length > 0) {
 				deleteFilter.push(
 					notInArray(k8sPersistentVolumes.name, heartbeatNames),

@@ -552,6 +552,7 @@ func (kc *K8sClient) GetFullClusterState() (*pb.Heartbeat, error) {
 				Annotations:          sc.Annotations,
 				Labels:               sc.Labels,
 				ResourceConfig:       string(scJSON),
+				Uid:                  string(sc.UID),
 			})
 		}
 	}
@@ -602,6 +603,7 @@ func (kc *K8sClient) GetFullClusterState() (*pb.Heartbeat, error) {
 				Annotations:    pv.Annotations,
 				Labels:         pv.Labels,
 				ResourceConfig: string(pvJSON),
+				Uid:            string(pv.UID),
 			})
 		}
 	}
@@ -639,6 +641,7 @@ func (kc *K8sClient) getDeploymentNameForPod(pod *corev1.Pod) string {
 			if lastDash != -1 {
 				return owner.Name[:lastDash]
 			}
+
 			return owner.Name
 		}
 		if owner.Kind == "Deployment" {

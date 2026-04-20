@@ -52,10 +52,12 @@ function ClusterPersistentVolumes() {
 		enabled: can("pv:read") || can("pv:manage"),
 	});
 
-	const deletePV = async (name: string) => {
+	const deletePV = async (pvId: number, name: string) => {
 		if (!confirm(`Are you sure you want to delete PersistentVolume "${name}"?`))
 			return;
-		const res = await api.api.pvs({ clusterId: id })({ name }).delete();
+		const res = await api.api
+			.pvs({ clusterId: id })({ id: String(pvId) })
+			.delete();
 		if (res.error) {
 			toast.error(
 				res.error.value?.message || "Failed to delete PersistentVolume",
@@ -208,7 +210,7 @@ function ClusterPersistentVolumes() {
 													size="icon"
 													className="h-8 w-8 text-destructive hover:bg-destructive/10"
 													title="Delete PersistentVolume"
-													onClick={() => deletePV(pv.name)}
+													onClick={() => deletePV(pv.id, pv.name)}
 												>
 													<Trash2 className="h-4 w-4" />
 												</Button>

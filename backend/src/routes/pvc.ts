@@ -305,6 +305,18 @@ export const pvcRoute = new Elysia({
 						});
 					}
 
+					// If no k8sUid, delete directly from DB
+					if (!pvc.k8sUid) {
+						await db
+							.delete(schema.k8sPersistentVolumeClaims)
+							.where(eq(schema.k8sPersistentVolumeClaims.id, pvc.id));
+						return ctx.status(200, {
+							success: true,
+							message: "PVC deleted successfully",
+							timestamp: Date.now(),
+						});
+					}
+
 					const cluster = await db.query.k8sCluster.findFirst({
 						where: { id: Number(clusterId) },
 						with: { agent: true },

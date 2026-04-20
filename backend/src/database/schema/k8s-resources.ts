@@ -370,6 +370,9 @@ export const k8sStorageClasses = pgTable(
 		clusterId: integer("cluster_id")
 			.notNull()
 			.references(() => k8sCluster.id, { onDelete: "cascade" }),
+		ownerId: text("owner_id").references(() => profile.id, {
+			onDelete: "set null",
+		}),
 		name: text("name").notNull(),
 		provisioner: text("provisioner").notNull(),
 		reclaimPolicy: text("reclaim_policy"),
@@ -386,6 +389,8 @@ export const k8sStorageClasses = pgTable(
 			.notNull()
 			.$type<Record<string, string>>(),
 		isDefault: boolean("is_default").default(false).notNull(),
+		k8sUid: text("k8s_uid"),
+		autoCreated: boolean("is_auto_created").default(false).notNull(),
 		createdAt: timestamp("created_at").defaultNow().notNull(),
 		updatedAt: timestamp("updated_at")
 			.$onUpdate(() => /* @__PURE__ */ new Date())
@@ -407,6 +412,9 @@ export const k8sPersistentVolumes = pgTable(
 		clusterId: integer("cluster_id")
 			.notNull()
 			.references(() => k8sCluster.id, { onDelete: "cascade" }),
+		ownerId: text("owner_id").references(() => profile.id, {
+			onDelete: "set null",
+		}),
 		name: text("name").notNull(),
 		capacity: integer("capacity").notNull(), // in MiB
 		phase: text("phase").notNull(),
@@ -425,6 +433,8 @@ export const k8sPersistentVolumes = pgTable(
 			.default({})
 			.notNull()
 			.$type<Record<string, string>>(),
+		k8sUid: text("k8s_uid"),
+		autoCreated: boolean("is_auto_created").default(false).notNull(),
 		createdAt: timestamp("created_at").defaultNow().notNull(),
 		updatedAt: timestamp("updated_at")
 			.$onUpdate(() => /* @__PURE__ */ new Date())

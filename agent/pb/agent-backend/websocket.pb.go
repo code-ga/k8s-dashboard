@@ -2105,6 +2105,7 @@ type StorageClass struct {
 	Annotations          map[string]string      `protobuf:"bytes,6,rep,name=annotations,proto3" json:"annotations,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	Labels               map[string]string      `protobuf:"bytes,7,rep,name=labels,proto3" json:"labels,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	ResourceConfig       string                 `protobuf:"bytes,8,opt,name=resource_config,json=resourceConfig,proto3" json:"resource_config,omitempty"`
+	Uid                  string                 `protobuf:"bytes,11,opt,name=uid,proto3" json:"uid,omitempty"`
 	unknownFields        protoimpl.UnknownFields
 	sizeCache            protoimpl.SizeCache
 }
@@ -2195,6 +2196,13 @@ func (x *StorageClass) GetResourceConfig() string {
 	return ""
 }
 
+func (x *StorageClass) GetUid() string {
+	if x != nil {
+		return x.Uid
+	}
+	return ""
+}
+
 type PV struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	Name           string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
@@ -2207,6 +2215,7 @@ type PV struct {
 	Annotations    map[string]string      `protobuf:"bytes,8,rep,name=annotations,proto3" json:"annotations,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	Labels         map[string]string      `protobuf:"bytes,9,rep,name=labels,proto3" json:"labels,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	ResourceConfig string                 `protobuf:"bytes,10,opt,name=resource_config,json=resourceConfig,proto3" json:"resource_config,omitempty"`
+	Uid            string                 `protobuf:"bytes,11,opt,name=uid,proto3" json:"uid,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -2307,6 +2316,13 @@ func (x *PV) GetLabels() map[string]string {
 func (x *PV) GetResourceConfig() string {
 	if x != nil {
 		return x.ResourceConfig
+	}
+	return ""
+}
+
+func (x *PV) GetUid() string {
+	if x != nil {
+		return x.Uid
 	}
 	return ""
 }
@@ -2721,7 +2737,7 @@ const file_agent_backend_websocket_proto_rawDesc = "" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1a>\n" +
 	"\x10AnnotationsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xf2\x03\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x84\x04\n" +
 	"\fStorageClass\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12 \n" +
 	"\vprovisioner\x18\x02 \x01(\tR\vprovisioner\x12%\n" +
@@ -2730,13 +2746,14 @@ const file_agent_backend_websocket_proto_rawDesc = "" +
 	"\x16allow_volume_expansion\x18\x05 \x01(\bR\x14allowVolumeExpansion\x12D\n" +
 	"\vannotations\x18\x06 \x03(\v2\".api.StorageClass.AnnotationsEntryR\vannotations\x125\n" +
 	"\x06labels\x18\a \x03(\v2\x1d.api.StorageClass.LabelsEntryR\x06labels\x12'\n" +
-	"\x0fresource_config\x18\b \x01(\tR\x0eresourceConfig\x1a>\n" +
+	"\x0fresource_config\x18\b \x01(\tR\x0eresourceConfig\x12\x10\n" +
+	"\x03uid\x18\v \x01(\tR\x03uid\x1a>\n" +
 	"\x10AnnotationsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1a9\n" +
 	"\vLabelsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xe3\x03\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xf5\x03\n" +
 	"\x02PV\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1a\n" +
 	"\bcapacity\x18\x02 \x01(\x03R\bcapacity\x12\x14\n" +
@@ -2748,7 +2765,8 @@ const file_agent_backend_websocket_proto_rawDesc = "" +
 	"\vannotations\x18\b \x03(\v2\x18.api.PV.AnnotationsEntryR\vannotations\x12+\n" +
 	"\x06labels\x18\t \x03(\v2\x13.api.PV.LabelsEntryR\x06labels\x12'\n" +
 	"\x0fresource_config\x18\n" +
-	" \x01(\tR\x0eresourceConfig\x1a>\n" +
+	" \x01(\tR\x0eresourceConfig\x12\x10\n" +
+	"\x03uid\x18\v \x01(\tR\x03uid\x1a>\n" +
 	"\x10AnnotationsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1a9\n" +
