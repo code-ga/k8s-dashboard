@@ -7,6 +7,7 @@ import { authenticationMiddleware } from "../middleware/auth";
 import { agentManagerService } from "../services/agentManager";
 import { baseResponseSchema, errorResponseSchema } from "../types";
 import { generatePVManifest } from "../utils/k8s-manifest";
+import { schema } from "../database/schema";
 
 export const pvRoute = new Elysia({
 	prefix: "/pvs/:clusterId",
@@ -162,6 +163,17 @@ export const pvRoute = new Elysia({
 						return ctx.status(404, {
 							success: false,
 							message: "PersistentVolume not found",
+							timestamp: Date.now(),
+						});
+					}
+
+					if (!pv.k8sUid) {
+						await db
+							.delete(schema.k8sPersistentVolumes)
+							.where(eq(schema.k8sPersistentVolumes.id, pv.id));
+						return ctx.status(200, {
+							success: true,
+							message: "PersistentVolume deleted successfully",
 							timestamp: Date.now(),
 						});
 					}

@@ -55,92 +55,104 @@ export const podRoute = new Elysia({
 	.use(authenticationMiddleware)
 	.use(agentManagerService)
 	.decorate("websocketData", new Map<string, WebSocketData>())
-	.decorate("validateResourceRefs", async (
-		clusterId: number,
-		profileId: string,
-		userPermissions: Set<string>,
-		configMapRefs?: {
-			env?: Array<{ configMapName: string }>;
-			envFrom?: Array<{ configMapName: string }>;
-			volumes?: Array<{ configMapName: string }>;
+	.decorate(
+		"validateResourceRefs",
+		async (
+			clusterId: number,
+			profileId: string,
+			userPermissions: Set<string>,
+			configMapRefs?: {
+				env?: Array<{ configMapName: string }>;
+				envFrom?: Array<{ configMapName: string }>;
+				volumes?: Array<{ configMapName: string }>;
+			},
+			secretRefs?: {
+				env?: Array<{ secretName: string }>;
+				envFrom?: Array<{ secretName: string }>;
+				volumes?: Array<{ secretName: string }>;
+			},
+			pvcVolumes?: Array<{ pvcName: string }>,
+		) => {
+			if (configMapRefs) {
+				const cmNames = new Set<string>();
+				if (configMapRefs.env) {
+					for (const r of configMapRefs.env) cmNames.add(r.configMapName);
+				}
+				if (configMapRefs.envFrom) {
+					for (const r of configMapRefs.envFrom) cmNames.add(r.configMapName);
+				}
+				if (configMapRefs.volumes) {
+					for (const r of configMapRefs.volumes) cmNames.add(r.configMapName);
+				}
+
+				for (const name of cmNames) {
+					const cm = await db.query.k8sConfigMaps.findFirst({
+						where: {
+							clusterId: clusterId,
+							name: name,
+						},
+					});
+					if (!cm) throw new Error(`ConfigMap '${name}' not found in cluster`);
+					if (
+						!userPermissions.has("configmap:manage") &&
+						cm.ownerId !== profileId
+					) {
+						throw new Error(`Forbidden: You do not own ConfigMap '${name}'`);
+					}
+				}
+			}
+
+			if (secretRefs) {
+				const secretNames = new Set<string>();
+				if (secretRefs.env) {
+					for (const r of secretRefs.env) secretNames.add(r.secretName);
+				}
+				if (secretRefs.envFrom) {
+					for (const r of secretRefs.envFrom) secretNames.add(r.secretName);
+				}
+				if (secretRefs.volumes) {
+					for (const r of secretRefs.volumes) secretNames.add(r.secretName);
+				}
+
+				for (const name of secretNames) {
+					const secret = await db.query.k8sSecrets.findFirst({
+						where: {
+							clusterId: clusterId,
+							name: name,
+						},
+					});
+					if (!secret) throw new Error(`Secret '${name}' not found in cluster`);
+					if (
+						!userPermissions.has("secret:manage") &&
+						secret.ownerId !== profileId
+					) {
+						throw new Error(`Forbidden: You do not own Secret '${name}'`);
+					}
+				}
+			}
+
+			if (pvcVolumes) {
+				const pvcNames = new Set<string>();
+				for (const r of pvcVolumes) pvcNames.add(r.pvcName);
+
+				for (const name of pvcNames) {
+					const pvc = await db.query.k8sPersistentVolumeClaims.findFirst({
+						where: {
+							clusterId: clusterId,
+							name: name,
+						},
+					});
+					if (!pvc) throw new Error(`PVC '${name}' not found in cluster`);
+					if (
+						!userPermissions.has("storage:manage") &&
+						pvc.ownerId !== profileId
+					) {
+						throw new Error(`Forbidden: You do not own PVC '${name}'`);
+					}
+				}
+			}
 		},
-		secretRefs?: {
-			env?: Array<{ secretName: string }>;
-			envFrom?: Array<{ secretName: string }>;
-			volumes?: Array<{ secretName: string }>;
-		},
-		pvcVolumes?: Array<{ pvcName: string }>
-	) => {
-		if (configMapRefs) {
-			const cmNames = new Set<string>();
-			if (configMapRefs.env) {
-				for (const r of configMapRefs.env) cmNames.add(r.configMapName);
-			}
-			if (configMapRefs.envFrom) {
-				for (const r of configMapRefs.envFrom) cmNames.add(r.configMapName);
-			}
-			if (configMapRefs.volumes) {
-				for (const r of configMapRefs.volumes) cmNames.add(r.configMapName);
-			}
-
-			for (const name of cmNames) {
-				const cm = await db.query.k8sConfigMaps.findFirst({
-					where: {
-						clusterId: clusterId,
-						name: name
-					}
-				});
-				if (!cm) throw new Error(`ConfigMap '${name}' not found in cluster`);
-				if (!userPermissions.has("configmap:manage") && cm.ownerId !== profileId) {
-					throw new Error(`Forbidden: You do not own ConfigMap '${name}'`);
-				}
-			}
-		}
-
-		if (secretRefs) {
-			const secretNames = new Set<string>();
-			if (secretRefs.env) {
-				for (const r of secretRefs.env) secretNames.add(r.secretName);
-			}
-			if (secretRefs.envFrom) {
-				for (const r of secretRefs.envFrom) secretNames.add(r.secretName);
-			}
-			if (secretRefs.volumes) {
-				for (const r of secretRefs.volumes) secretNames.add(r.secretName);
-			}
-
-			for (const name of secretNames) {
-				const secret = await db.query.k8sSecrets.findFirst({
-					where: {
-						clusterId: clusterId,
-						name: name
-					}
-				});
-				if (!secret) throw new Error(`Secret '${name}' not found in cluster`);
-				if (!userPermissions.has("secret:manage") && secret.ownerId !== profileId) {
-					throw new Error(`Forbidden: You do not own Secret '${name}'`);
-				}
-			}
-		}
-
-		if (pvcVolumes) {
-			const pvcNames = new Set<string>();
-			for (const r of pvcVolumes) pvcNames.add(r.pvcName);
-
-			for (const name of pvcNames) {
-				const pvc = await db.query.k8sPersistentVolumeClaims.findFirst({
-					where: {
-						clusterId: clusterId,
-						name: name
-					}
-				});
-				if (!pvc) throw new Error(`PVC '${name}' not found in cluster`);
-				if (!userPermissions.has("storage:manage") && pvc.ownerId !== profileId) {
-					throw new Error(`Forbidden: You do not own PVC '${name}'`);
-				}
-			}
-		}
-	})
+	)
 	.guard({ userAuth: { requiredProfile: true } }, (app) =>
 		app
 			.get(
@@ -380,7 +392,9 @@ export const podRoute = new Elysia({
 									volumes: Type.Optional(Type.Array(SecretVolumeRefSchema)),
 								}),
 								pvcVolumes: Type.Optional(Type.Array(PvcVolumeRefSchema)),
-								emptyDirVolumes: Type.Optional(Type.Array(EmptyDirVolumeRefSchema)),
+								emptyDirVolumes: Type.Optional(
+									Type.Array(EmptyDirVolumeRefSchema),
+								),
 							}),
 						),
 						404: errorResponseSchema,
@@ -456,7 +470,8 @@ export const podRoute = new Elysia({
 							timestamp: Date.now(),
 						});
 					} catch (error: unknown) {
-						const errorMessage = error instanceof Error ? error.message : String(error);
+						const errorMessage =
+							error instanceof Error ? error.message : String(error);
 						return ctx.status(500, {
 							success: false,
 							message: errorMessage || "Failed to fetch describe",
@@ -642,9 +657,9 @@ export const podRoute = new Elysia({
 					detail: { tags: ["Pods"] },
 					roleAuth: "pod:create",
 					body: Type.Object({
-						name: Type.String(),
-						namespace: Type.String(),
-						image: Type.String(),
+						name: Type.String({ minLength: 1 }),
+						namespace: Type.String({ minLength: 1 }),
+						image: Type.String({ minLength: 1 }),
 						command: Type.Optional(Type.Array(Type.String())),
 						args: Type.Optional(Type.Array(Type.String())),
 						env: Type.Optional(
@@ -757,12 +772,8 @@ export const podRoute = new Elysia({
 								),
 							}),
 						),
-						pvcVolumes: Type.Optional(
-							Type.Array(PvcVolumeRefSchema),
-						),
-						emptyDirVolumes: Type.Optional(
-							Type.Array(EmptyDirVolumeRefSchema),
-						),
+						pvcVolumes: Type.Optional(Type.Array(PvcVolumeRefSchema)),
+						emptyDirVolumes: Type.Optional(Type.Array(EmptyDirVolumeRefSchema)),
 						annotations: Type.Optional(
 							Type.Record(Type.String(), Type.String()),
 						),
@@ -801,6 +812,18 @@ export const podRoute = new Elysia({
 							success: false,
 							message: "Pod not found",
 							timestamp: Date.now(),
+						});
+					}
+
+					if (!pod.k8sUid) {
+						await db
+							.delete(schema.k8sPods)
+							.where(eq(schema.k8sPods.id, podId));
+						return ctx.status(200, {
+							success: true,
+							message: "Pod deleted successfully",
+							timestamp: Date.now(),
+							data: pod,
 						});
 					}
 
@@ -1162,12 +1185,8 @@ export const podRoute = new Elysia({
 								),
 							}),
 						),
-						pvcVolumes: Type.Optional(
-							Type.Array(PvcVolumeRefSchema),
-						),
-						emptyDirVolumes: Type.Optional(
-							Type.Array(EmptyDirVolumeRefSchema),
-						),
+						pvcVolumes: Type.Optional(Type.Array(PvcVolumeRefSchema)),
+						emptyDirVolumes: Type.Optional(Type.Array(EmptyDirVolumeRefSchema)),
 						annotations: Type.Optional(
 							Type.Record(Type.String(), Type.String()),
 						),
@@ -1230,7 +1249,8 @@ export const podRoute = new Elysia({
 					}
 
 					const ephemeralContainer = {
-						name: name || `debug-${globalThis.crypto.randomUUID().split("-")[0]}`,
+						name:
+							name || `debug-${globalThis.crypto.randomUUID().split("-")[0]}`,
 						image: image,
 						stdin: true,
 						tty: true,
@@ -1396,7 +1416,14 @@ export const podRoute = new Elysia({
 					const { clusterId, podId } = ctx.params;
 					const container = ctx.query?.container as string | undefined;
 					const profile = ctx.profile;
-					logger.info("Cluster ID:", clusterId, "Pod ID:", podId, "Container:", container);
+					logger.info(
+						"Cluster ID:",
+						clusterId,
+						"Pod ID:",
+						podId,
+						"Container:",
+						container,
+					);
 
 					if (!clusterId || !podId) {
 						logger.info("Missing params");

@@ -145,6 +145,15 @@ export const nodesRoute = new Elysia({ prefix: "/nodes/:clusterId" })
 								timestamp: Date.now(),
 							});
 						}
+						if (node.k8sUid === null) {
+							await db.delete(schema.k8sClusterNode).where(eq(schema.k8sClusterNode.id, nodeId));
+							return ctx.status(200, {
+								success: true,
+								message: "Node deleted successfully",
+								data: node,
+								timestamp: Date.now(),
+							});
+						}
 
 						const cluster = await db.query.k8sCluster.findFirst({
 							where: {

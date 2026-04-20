@@ -523,6 +523,17 @@ export const configmapRoute = new Elysia({
 							timestamp: Date.now(),
 						});
 					}
+					if (!cm.k8sUid) {
+						await db
+							.delete(schema.k8sConfigMaps)
+							.where(eq(schema.k8sConfigMaps.id, id));
+						return ctx.status(200, {
+							success: true,
+							message: "ConfigMap deleted successfully",
+							timestamp: Date.now(),
+							data: cm,
+						});
+					}
 
 					// Ownership Check
 					const isManager = ctx.userPermissions.has("configmap:manage");

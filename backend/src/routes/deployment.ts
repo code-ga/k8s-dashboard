@@ -645,9 +645,9 @@ export const deploymentRoute = new Elysia({
 					detail: { tags: ["Deployments"] },
 					roleAuth: "deployment:create",
 					body: Type.Object({
-						name: Type.String(),
-						namespace: Type.String(),
-						image: Type.String(),
+						name: Type.String({ minLength: 1 }),
+						namespace: Type.String({ minLength: 1 }),
+						image: Type.String({ minLength: 1 }),
 						replicas: Type.Number({ default: 1 }),
 						command: Type.Optional(Type.Array(Type.String())),
 						args: Type.Optional(Type.Array(Type.String())),
@@ -1322,6 +1322,18 @@ export const deploymentRoute = new Elysia({
 							success: false,
 							message: "Deployment not found",
 							timestamp: Date.now(),
+						});
+					}
+
+					if (!deployment.k8sUid) {
+						await db
+							.delete(schema.k8sDeployments)
+							.where(eq(schema.k8sDeployments.id, depId));
+						return ctx.status(200, {
+							success: true,
+							message: "Deployment deleted successfully",
+							timestamp: Date.now(),
+							data: deployment,
 						});
 					}
 

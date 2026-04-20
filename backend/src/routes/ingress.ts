@@ -467,6 +467,18 @@ export const ingressRoute = new Elysia({
 						});
 					}
 
+					if (!ingress.k8sUid) {
+						await db
+							.delete(schema.k8sIngresses)
+							.where(eq(schema.k8sIngresses.id, id));
+						return ctx.status(200, {
+							success: true,
+							message: "Ingress deleted successfully",
+							data: ingress,
+							timestamp: Date.now(),
+						});
+					}
+
 					// Ownership Check
 					const isManagerCheck = ctx.userPermissions.has("ingress:manage");
 					if (!isManagerCheck && ingress.ownerId !== ctx.profile?.id) {
