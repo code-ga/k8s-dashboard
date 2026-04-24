@@ -33,6 +33,9 @@ import {
 	generateDeploymentManifest,
 	generateIngressRouteManifest,
 	generatePodManifest,
+	generatePVManifest,
+	generatePVCManifest,
+	generateStorageClassManifest,
 } from "../utils/k8s-manifest";
 import { logger } from "../utils/logger";
 import {
@@ -796,6 +799,15 @@ export class AgentService {
 			);
 
 			if (!match) {
+				if (dbDep.k8sUid) {
+					logger.info(
+						`Clearing stale k8sUid for deployment ${dbDep.name} (missing from heartbeat)`,
+					);
+					await db
+						.update(k8sDeployments)
+						.set({ k8sUid: null })
+						.where(eq(k8sDeployments.id, dbDep.id));
+				}
 				logger.info(
 					`Missing Deployment: ${dbDep.name} in ${dbDep.namespace}. Creating...`,
 				);
@@ -865,6 +877,16 @@ export class AgentService {
 					);
 					await db.delete(k8sPods).where(eq(k8sPods.id, dbPod.id));
 					continue;
+				}
+
+				if (dbPod.k8sUid) {
+					logger.info(
+						`Clearing stale k8sUid for pod ${dbPod.name} (missing from heartbeat)`,
+					);
+					await db
+						.update(k8sPods)
+						.set({ k8sUid: null })
+						.where(eq(k8sPods.id, dbPod.id));
 				}
 
 				logger.info(
@@ -943,6 +965,16 @@ export class AgentService {
 			);
 
 			if (!match) {
+				if (dbSvc.k8sUid) {
+					logger.info(
+						`Clearing stale k8sUid for service ${dbSvc.name} (missing from heartbeat)`,
+					);
+					await db
+						.update(schema.k8sServices)
+						.set({ k8sUid: null })
+						.where(eq(schema.k8sServices.id, dbSvc.id));
+				}
+
 				logger.info(
 					`Missing Service: ${dbSvc.name} in ${dbSvc.namespace}. Restoring...`,
 				);
@@ -1006,6 +1038,16 @@ export class AgentService {
 			);
 
 			if (!match) {
+				if (dbCm.k8sUid) {
+					logger.info(
+						`Clearing stale k8sUid for configmap ${dbCm.name} (missing from heartbeat)`,
+					);
+					await db
+						.update(k8sConfigMaps)
+						.set({ k8sUid: null })
+						.where(eq(k8sConfigMaps.id, dbCm.id));
+				}
+
 				logger.info(
 					`Missing ConfigMap: ${dbCm.name} in ${dbCm.namespace}. Restoring...`,
 				);
@@ -1083,6 +1125,16 @@ export class AgentService {
 			);
 
 			if (!match) {
+				if (dbSecret.k8sUid) {
+					logger.info(
+						`Clearing stale k8sUid for secret ${dbSecret.name} (missing from heartbeat)`,
+					);
+					await db
+						.update(k8sSecrets)
+						.set({ k8sUid: null })
+						.where(eq(k8sSecrets.id, dbSecret.id));
+				}
+
 				logger.info(
 					`Missing Secret: ${dbSecret.name} in ${dbSecret.namespace}. Restoring...`,
 				);
@@ -1474,6 +1526,16 @@ export class AgentService {
 
 			if (match) continue;
 
+			if (ingress.k8sUid) {
+				logger.info(
+					`Clearing stale k8sUid for ingress ${ingress.name} (missing from heartbeat)`,
+				);
+				await db
+					.update(k8sIngresses)
+					.set({ k8sUid: null })
+					.where(eq(k8sIngresses.id, ingress.id));
+			}
+
 			if (ingress.serviceId === null) {
 				logger.warn(
 					`Skipping restore of ingress ${ingress.name}: serviceId is null (linked service was deleted)`,
@@ -1527,6 +1589,193 @@ export class AgentService {
 				targetName: ingress.name,
 			});
 			return true;
+		}
+
+		return false;
+	}
+
+	/** Returns true if a command was sent. */
+	private async validatePVCs(
+		agentId: number,
+		clusterId: number,
+		heartbeat: Heartbeat,
+		agentManager: AgentManager,
+	): Promise<boolean> {
+		const configured = await db
+			.select()
+			.from(k8sPersistentVolumeClaims)
+			.where(
+				and(
+					eq(k8sPersistentVolumeClaims.clusterId, clusterId),
+					or(
+						isNull(k8sPersistentVolumeClaims.autoCreated),
+						eq(k8sPersistentVolumeClaims.autoCreated, false),
+					),
+				),
+			);
+
+		const active = heartbeat.pvcs || [];
+
+		for (const dbPvc of configured) {
+			const match = active.find(
+				(p) => p.name === dbPvc.name && p.namespace === dbPvc.namespace,
+			);
+
+			if (!match) {
+				if (dbPvc.k8sUid) {
+					logger.info(
+						`Clearing stale k8sUid for pvc ${dbPvc.name} (missing from heartbeat)`,
+					);
+					await db
+						.update(k8sPersistentVolumeClaims)
+						.set({ k8sUid: null })
+						.where(eq(k8sPersistentVolumeClaims.id, dbPvc.id));
+				}
+
+				logger.info(
+					`Missing PVC: ${dbPvc.name} in ${dbPvc.namespace}. Restoring...`,
+				);
+
+				const manifest = generatePVCManifest({
+					name: dbPvc.name,
+					namespace: dbPvc.namespace,
+					storageClass: dbPvc.storageClass || undefined,
+					capacity: `${dbPvc.capacity}Mi`,
+				});
+
+				await agentManager.sendCommand(agentId, clusterId, {
+					id: "",
+					type: Command_CommandType.CREATE_PVC,
+					payload: manifest,
+					targetNamespace: dbPvc.namespace,
+					targetName: dbPvc.name,
+				});
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/** Returns true if a command was sent. */
+	private async validatePVs(
+		agentId: number,
+		clusterId: number,
+		heartbeat: Heartbeat,
+		agentManager: AgentManager,
+	): Promise<boolean> {
+		const configured = await db
+			.select()
+			.from(k8sPersistentVolumes)
+			.where(
+				and(
+					eq(k8sPersistentVolumes.clusterId, clusterId),
+					or(
+						isNull(k8sPersistentVolumes.autoCreated),
+						eq(k8sPersistentVolumes.autoCreated, false),
+					),
+				),
+			);
+
+		const active = heartbeat.pvs || [];
+
+		for (const dbPv of configured) {
+			const match = active.find((p) => p.name === dbPv.name);
+
+			if (!match) {
+				if (dbPv.k8sUid) {
+					logger.info(
+						`Clearing stale k8sUid for pv ${dbPv.name} (missing from heartbeat)`,
+					);
+					await db
+						.update(k8sPersistentVolumes)
+						.set({ k8sUid: null })
+						.where(eq(k8sPersistentVolumes.id, dbPv.id));
+				}
+
+				logger.info(`Missing PV: ${dbPv.name}. Restoring...`);
+
+				const manifest = generatePVManifest({
+					name: dbPv.name,
+					capacity: `${dbPv.capacity}Mi`,
+					reclaimPolicy:
+						(dbPv.reclaimPolicy as "Delete" | "Retain") || "Retain",
+					storageClass: dbPv.storageClass || undefined,
+					accessModes: dbPv.accessModes?.data || [],
+				});
+
+				await agentManager.sendCommand(agentId, clusterId, {
+					id: "",
+					type: Command_CommandType.CREATE_PV,
+					payload: manifest,
+					targetNamespace: "",
+					targetName: dbPv.name,
+				});
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/** Returns true if a command was sent. */
+	private async validateStorageClasses(
+		agentId: number,
+		clusterId: number,
+		heartbeat: Heartbeat,
+		agentManager: AgentManager,
+	): Promise<boolean> {
+		const configured = await db
+			.select()
+			.from(k8sStorageClasses)
+			.where(
+				and(
+					eq(k8sStorageClasses.clusterId, clusterId),
+					or(
+						isNull(k8sStorageClasses.autoCreated),
+						eq(k8sStorageClasses.autoCreated, false),
+					),
+				),
+			);
+
+		const active = heartbeat.storageClasses || [];
+
+		for (const dbSc of configured) {
+			const match = active.find((s) => s.name === dbSc.name);
+
+			if (!match) {
+				if (dbSc.k8sUid) {
+					logger.info(
+						`Clearing stale k8sUid for storageclass ${dbSc.name} (missing from heartbeat)`,
+					);
+					await db
+						.update(k8sStorageClasses)
+						.set({ k8sUid: null })
+						.where(eq(k8sStorageClasses.id, dbSc.id));
+				}
+
+				logger.info(`Missing StorageClass: ${dbSc.name}. Restoring...`);
+
+				const manifest = generateStorageClassManifest({
+					name: dbSc.name,
+					provisioner: dbSc.provisioner,
+					reclaimPolicy:
+						(dbSc.reclaimPolicy as "Delete" | "Retain") || undefined,
+					volumeBindingMode:
+						(dbSc.volumeBindingMode as "Immediate" | "WaitForFirstConsumer") ||
+						undefined,
+					allowVolumeExpansion: dbSc.allowVolumeExpansion,
+				});
+
+				await agentManager.sendCommand(agentId, clusterId, {
+					id: "",
+					type: Command_CommandType.CREATE_STORAGE_CLASS,
+					payload: manifest,
+					targetNamespace: "",
+					targetName: dbSc.name,
+				});
+				return true;
+			}
 		}
 
 		return false;
@@ -1613,6 +1862,19 @@ export class AgentService {
 			return;
 		if (
 			await this.validateIngresses(agentId, cluster.id, heartbeat, agentManager)
+		)
+			return;
+		if (await this.validatePVCs(agentId, cluster.id, heartbeat, agentManager))
+			return;
+		if (await this.validatePVs(agentId, cluster.id, heartbeat, agentManager))
+			return;
+		if (
+			await this.validateStorageClasses(
+				agentId,
+				cluster.id,
+				heartbeat,
+				agentManager,
+			)
 		)
 			return;
 	}

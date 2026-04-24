@@ -132,12 +132,19 @@ export const pvcRoute = new Elysia({
 						.values(createData)
 						.onConflictDoNothing()
 						.returning();
+					if (!newPvc) {
+						return ctx.status(409, {
+							success: false,
+							message: "PVC with the same name and namespace already exists",
+							timestamp: Date.now(),
+						});
+					}
 
 					const manifest = generatePVCManifest({
-						name: body.name,
-						namespace: body.namespace,
-						storageClass: body.storageClass,
-						capacity: `${body.capacity}Mi`,
+						name: newPvc.name,
+						namespace: newPvc.namespace,
+						storageClass: newPvc.storageClass || undefined,
+						capacity: `${newPvc.capacity}Mi`,
 						accessModes: body.accessModes,
 					});
 
@@ -145,15 +152,15 @@ export const pvcRoute = new Elysia({
 						await ctx.agentManager.sendCommand(cluster.agent.id, cluster.id, {
 							id: crypto.randomUUID(),
 							type: Command_CommandType.CREATE_PVC,
-							targetNamespace: body.namespace,
-							targetName: body.name,
+							targetNamespace: newPvc.namespace,
+							targetName: newPvc.name,
 							payload: manifest,
 						});
 					} catch (error: any) {
 						logger.error("Failed to send PVC create command to agent", {
 							error: error.message,
-							pvcName: body.name,
-							namespace: body.namespace,
+							pvcName: newPvc.name,
+							namespace: newPvc.namespace,
 							agentId: cluster.agent?.id,
 						});
 
@@ -167,7 +174,7 @@ export const pvcRoute = new Elysia({
 					return ctx.status(201, {
 						success: true,
 						message: "PVC created successfully",
-						data: { name: body.name },
+						data: { pvc: newPvc },
 						timestamp: Date.now(),
 					});
 				},
@@ -181,7 +188,11 @@ export const pvcRoute = new Elysia({
 						accessModes: Type.Optional(Type.Array(Type.String())),
 					}),
 					response: {
-						201: baseResponseSchema(Type.Object({ name: Type.String() })),
+						201: baseResponseSchema(
+							Type.Object({
+								pvc: Type.Object(dbSchemaTypes.k8sPersistentVolumeClaims),
+							}),
+						),
 						202: baseResponseSchema(Type.Optional(Type.String())),
 						401: errorResponseSchema,
 						404: errorResponseSchema,
