@@ -320,7 +320,10 @@ export const secretRoute = new Elysia({
 						try {
 							binData = JSON.parse(decrypt(secret.data));
 						} catch (e) {
-							logger.error("Failed to decrypt existing secret data for update", e);
+							logger.error(
+								"Failed to decrypt existing secret data for update",
+								e,
+							);
 						}
 					}
 
@@ -357,7 +360,9 @@ export const secretRoute = new Elysia({
 					}
 
 					// Merge annotations
-					const annotationData = { ...((secret.annotations as Record<string, string>) || {}) };
+					const annotationData = {
+						...((secret.annotations as Record<string, string>) || {}),
+					};
 					if (body.annotations) {
 						for (const [key, val] of Object.entries(body.annotations)) {
 							if (typeof val === "string") {
@@ -428,13 +433,22 @@ export const secretRoute = new Elysia({
 					body: Type.Object({
 						type: Type.Optional(Type.String()),
 						data: Type.Optional(
-							Type.Record(Type.String(), Type.Union([Type.String(), Type.Null()])),
+							Type.Record(
+								Type.String(),
+								Type.Union([Type.String(), Type.Null()]),
+							),
 						),
 						labels: Type.Optional(
-							Type.Record(Type.String(), Type.Union([Type.String(), Type.Null()])),
+							Type.Record(
+								Type.String(),
+								Type.Union([Type.String(), Type.Null()]),
+							),
 						),
 						annotations: Type.Optional(
-							Type.Record(Type.String(), Type.Union([Type.String(), Type.Null()])),
+							Type.Record(
+								Type.String(),
+								Type.Union([Type.String(), Type.Null()]),
+							),
 						),
 					}),
 					response: {
@@ -478,6 +492,18 @@ export const secretRoute = new Elysia({
 							success: false,
 							message: "Forbidden: You do not own this Secret",
 							timestamp: Date.now(),
+						});
+					}
+
+					if (!secret.k8sUid) {
+						await db
+							.delete(schema.k8sSecrets)
+							.where(eq(schema.k8sSecrets.id, id));
+						return ctx.status(200, {
+							success: true,
+							timestamp: Date.now(),
+							message: "Secret deleted successfully",
+							data: null,
 						});
 					}
 
