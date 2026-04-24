@@ -374,6 +374,16 @@ export const storageclassRoute = new Elysia({
 						});
 					}
 
+					if (!storageClass.k8sUid) {
+						await db
+							.delete(schema.k8sStorageClasses)
+							.where(eq(schema.k8sStorageClasses.id, storageClass.id));
+						return ctx.status(200, {
+							success: true,
+							message: "StorageClass deleted successfully",
+							timestamp: Date.now(),
+						});
+					}
 					const cluster = await db.query.k8sCluster.findFirst({
 						where: { id: Number(clusterId) },
 						with: { agent: true },

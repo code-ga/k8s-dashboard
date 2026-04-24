@@ -339,6 +339,19 @@ export const serviceRoute = new Elysia({
 						});
 					}
 
+					if (!service.k8sUid) {
+						await db
+							.delete(schema.k8sServices)
+							.where(eq(schema.k8sServices.id, svcId));
+						return ctx.status(200, {
+							success: true,
+							message: "Service deleted successfully",
+							data: service,
+							timestamp: Date.now(),
+						});
+						// If no k8sUid, delete directly from DB
+					}
+
 					const cluster = await db.query.k8sCluster.findFirst({
 						where: {
 							id: clusterId,
