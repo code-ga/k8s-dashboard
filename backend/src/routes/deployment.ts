@@ -26,15 +26,15 @@ import {
 	updateAllDeploymentResourceRefs,
 } from "../utils/resource-refs";
 
-type WebSocketDataValue = {
-	clusterId: number;
-	streamId: string;
-	podId: number;
-	agentId: number;
-	type: number;
-	rows: number;
-	cols: number;
-};
+// type WebSocketDataValue = {
+// 	clusterId: number;
+// 	streamId: string;
+// 	podId: number;
+// 	agentId: number;
+// 	type: number;
+// 	rows: number;
+// 	cols: number;
+// };
 
 const parseCpuStr = (cpu: string): number => {
 	if (cpu.endsWith("m")) return parseInt(cpu);
