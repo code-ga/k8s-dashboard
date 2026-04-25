@@ -274,20 +274,17 @@ export const agentRoute = new Elysia({ prefix: "/agents" })
 					close: async (ctx) => {
 						const cluster = ctx.data.cluster;
 						const agent = ctx.data.agent;
-						
+
 						// Remove connection
-						const removed = ctx.data.agentManager.removeConnection(agent.id, ctx);
-						
-						if (removed) {
-							logger.info(
-								`Agent ${agent.id} disconnected for cluster ${cluster.name} (${cluster.id})`,
-							);
-							ctx.data.agentManager.emit("agent/disconnected", {
-								agentId: `${agent.id}`,
-							});
-							// Clean up any resources related to the disconnected agent here
-							await agentService.agentDisconnect(agent.id);
-						}
+						ctx.data.agentManager.removeConnection(agent.id, ctx);
+						ctx.data.agentManager.emit("agent/disconnected", {
+							agentId: `${agent.id}`,
+						});
+						// Clean up any resources related to the disconnected agent here
+						await agentService.agentDisconnect(agent.id);
+						logger.info(
+							`Agent ${agent.id} disconnected for cluster ${cluster.name} (${cluster.id})`,
+						);
 					},
 				}),
 	);
