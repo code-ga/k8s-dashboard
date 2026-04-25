@@ -665,7 +665,7 @@ export const podRoute = new Elysia({
 						env: Type.Optional(
 							Type.Array(
 								Type.Object({
-									name: Type.String(),
+									name: Type.String({ minLength: 1 }),
 									value: Type.Optional(Type.String()),
 									valueFrom: Type.Optional(Type.Any()),
 								}),
@@ -701,16 +701,16 @@ export const podRoute = new Elysia({
 								env: Type.Optional(
 									Type.Array(
 										Type.Object({
-											name: Type.String(),
-											configMapName: Type.String(),
-											key: Type.String(),
+											name: Type.String({ minLength: 1 }),
+											configMapName: Type.String({ minLength: 1 }),
+											key: Type.String({ minLength: 1 }),
 										}),
 									),
 								),
 								envFrom: Type.Optional(
 									Type.Array(
 										Type.Object({
-											configMapName: Type.String(),
+											configMapName: Type.String({ minLength: 1 }),
 											prefix: Type.Optional(Type.String()),
 										}),
 									),
@@ -718,14 +718,14 @@ export const podRoute = new Elysia({
 								volumes: Type.Optional(
 									Type.Array(
 										Type.Object({
-											name: Type.String(),
-											configMapName: Type.String(),
-											mountPath: Type.String(),
+											name: Type.String({ minLength: 1 }),
+											configMapName: Type.String({ minLength: 1 }),
+											mountPath: Type.String({ minLength: 1 }),
 											items: Type.Optional(
 												Type.Array(
 													Type.Object({
-														key: Type.String(),
-														path: Type.String(),
+														key: Type.String({ minLength: 1 }),
+														path: Type.String({ minLength: 1 }),
 													}),
 												),
 											),
@@ -739,16 +739,16 @@ export const podRoute = new Elysia({
 								env: Type.Optional(
 									Type.Array(
 										Type.Object({
-											name: Type.String(),
-											secretName: Type.String(),
-											key: Type.String(),
+											name: Type.String({ minLength: 1 }),
+											secretName: Type.String({ minLength: 1 }),
+											key: Type.String({ minLength: 1 }),
 										}),
 									),
 								),
 								envFrom: Type.Optional(
 									Type.Array(
 										Type.Object({
-											secretName: Type.String(),
+											secretName: Type.String({ minLength: 1 }),
 											prefix: Type.Optional(Type.String()),
 										}),
 									),
@@ -756,14 +756,14 @@ export const podRoute = new Elysia({
 								volumes: Type.Optional(
 									Type.Array(
 										Type.Object({
-											name: Type.String(),
-											secretName: Type.String(),
-											mountPath: Type.String(),
+											name: Type.String({ minLength: 1 }),
+											secretName: Type.String({ minLength: 1 }),
+											mountPath: Type.String({ minLength: 1 }),
 											items: Type.Optional(
 												Type.Array(
 													Type.Object({
-														key: Type.String(),
-														path: Type.String(),
+														key: Type.String({ minLength: 1 }),
+														path: Type.String({ minLength: 1 }),
 													}),
 												),
 											),

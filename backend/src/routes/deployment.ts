@@ -649,12 +649,12 @@ export const deploymentRoute = new Elysia({
 						namespace: Type.String({ minLength: 1 }),
 						image: Type.String({ minLength: 1 }),
 						replicas: Type.Number({ default: 1 }),
-						command: Type.Optional(Type.Array(Type.String())),
-						args: Type.Optional(Type.Array(Type.String())),
+						command: Type.Optional(Type.Array(Type.String({ minLength: 1 }))),
+						args: Type.Optional(Type.Array(Type.String({ minLength: 1 }))),
 						env: Type.Optional(
 							Type.Array(
 								Type.Object({
-									name: Type.String(),
+									name: Type.String({ minLength: 1 }),
 									value: Type.Optional(Type.String()),
 									valueFrom: Type.Optional(Type.Any()),
 								}),
@@ -665,30 +665,30 @@ export const deploymentRoute = new Elysia({
 								env: Type.Optional(
 									Type.Array(
 										Type.Object({
-											name: Type.String(),
-											configMapName: Type.String(),
-											key: Type.String(),
+											name: Type.String({ minLength: 1 }),
+											configMapName: Type.String({ minLength: 1 }),
+											key: Type.String({ minLength: 1 }),
 										}),
 									),
 								),
 								envFrom: Type.Optional(
 									Type.Array(
 										Type.Object({
-											configMapName: Type.String(),
+											configMapName: Type.String({ minLength: 1 }),
 										}),
 									),
 								),
 								volumes: Type.Optional(
 									Type.Array(
 										Type.Object({
-											name: Type.String(),
-											configMapName: Type.String(),
-											mountPath: Type.String(),
+											name: Type.String({ minLength: 1 }),
+											configMapName: Type.String({ minLength: 1 }),
+											mountPath: Type.String({ minLength: 1 }),
 											items: Type.Optional(
 												Type.Array(
 													Type.Object({
-														key: Type.String(),
-														path: Type.String(),
+														key: Type.String({ minLength: 1 }),
+														path: Type.String({ minLength: 1 }),
 													}),
 												),
 											),
@@ -702,30 +702,30 @@ export const deploymentRoute = new Elysia({
 								env: Type.Optional(
 									Type.Array(
 										Type.Object({
-											name: Type.String(),
-											secretName: Type.String(),
-											key: Type.String(),
+											name: Type.String({ minLength: 1 }),
+											secretName: Type.String({ minLength: 1 }),
+											key: Type.String({ minLength: 1 }),
 										}),
 									),
 								),
 								envFrom: Type.Optional(
 									Type.Array(
 										Type.Object({
-											secretName: Type.String(),
+											secretName: Type.String({ minLength: 1 }),
 										}),
 									),
 								),
 								volumes: Type.Optional(
 									Type.Array(
 										Type.Object({
-											name: Type.String(),
-											secretName: Type.String(),
-											mountPath: Type.String(),
+											name: Type.String({ minLength: 1 }),
+											secretName: Type.String({ minLength: 1 }),
+											mountPath: Type.String({ minLength: 1 }),
 											items: Type.Optional(
 												Type.Array(
 													Type.Object({
-														key: Type.String(),
-														path: Type.String(),
+														key: Type.String({ minLength: 1 }),
+														path: Type.String({ minLength: 1 }),
 													}),
 												),
 											),
@@ -1127,7 +1127,7 @@ export const deploymentRoute = new Elysia({
 						env: Type.Optional(
 							Type.Array(
 								Type.Object({
-									name: Type.String(),
+									name: Type.String({ minLength: 1 }),
 									value: Type.Optional(Type.String()),
 									valueFrom: Type.Optional(Type.Any()),
 								}),
@@ -1138,30 +1138,30 @@ export const deploymentRoute = new Elysia({
 								env: Type.Optional(
 									Type.Array(
 										Type.Object({
-											name: Type.String(),
-											configMapName: Type.String(),
-											key: Type.String(),
+											name: Type.String({ minLength: 1 }),
+											configMapName: Type.String({ minLength: 1 }),
+											key: Type.String({ minLength: 1 }),
 										}),
 									),
 								),
 								envFrom: Type.Optional(
 									Type.Array(
 										Type.Object({
-											configMapName: Type.String(),
+											configMapName: Type.String({ minLength: 1 }),
 										}),
 									),
 								),
 								volumes: Type.Optional(
 									Type.Array(
 										Type.Object({
-											name: Type.String(),
-											configMapName: Type.String(),
-											mountPath: Type.String(),
+											name: Type.String({ minLength: 1 }),
+											configMapName: Type.String({ minLength: 1 }),
+											mountPath: Type.String({ minLength: 1 }),
 											items: Type.Optional(
 												Type.Array(
 													Type.Object({
-														key: Type.String(),
-														path: Type.String(),
+														key: Type.String({ minLength: 1 }),
+														path: Type.String({ minLength: 1 }),
 													}),
 												),
 											),
@@ -1175,30 +1175,30 @@ export const deploymentRoute = new Elysia({
 								env: Type.Optional(
 									Type.Array(
 										Type.Object({
-											name: Type.String(),
-											secretName: Type.String(),
-											key: Type.String(),
+											name: Type.String({ minLength: 1 }),
+											secretName: Type.String({ minLength: 1 }),
+											key: Type.String({ minLength: 1 }),
 										}),
 									),
 								),
 								envFrom: Type.Optional(
 									Type.Array(
 										Type.Object({
-											secretName: Type.String(),
+											secretName: Type.String({ minLength: 1 }),
 										}),
 									),
 								),
 								volumes: Type.Optional(
 									Type.Array(
 										Type.Object({
-											name: Type.String(),
-											secretName: Type.String(),
-											mountPath: Type.String(),
+											name: Type.String({ minLength: 1 }),
+											secretName: Type.String({ minLength: 1 }),
+											mountPath: Type.String({ minLength: 1 }),
 											items: Type.Optional(
 												Type.Array(
 													Type.Object({
-														key: Type.String(),
-														path: Type.String(),
+														key: Type.String({ minLength: 1 }),
+														path: Type.String({ minLength: 1 }),
 													}),
 												),
 											),

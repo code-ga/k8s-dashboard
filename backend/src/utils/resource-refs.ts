@@ -6,15 +6,15 @@ import { schema } from "../database/schema";
 // ==================== Type Definitions ====================
 
 export const PortRefSchema = Type.Object({
-	containerPort: Type.Number(),
-	name: Type.Optional(Type.String()),
+	containerPort: Type.Number({ minimum: 1, maximum: 65535 }),
+	name: Type.Optional(Type.String({ minLength: 1 })),
 });
 export type PortRef = Static<typeof PortRefSchema>;
 
 export const ConfigMapEnvRefSchema = Type.Object({
-	name: Type.String(),
-	configMapName: Type.String(),
-	key: Type.String(),
+	name: Type.String({ minLength: 1 }),
+	configMapName: Type.String({ minLength: 1 }),
+	key: Type.String({ minLength: 1 }),
 });
 export type ConfigMapEnvRef = Static<typeof ConfigMapEnvRefSchema>;
 // export interface ConfigMapEnvRef {
@@ -24,7 +24,7 @@ export type ConfigMapEnvRef = Static<typeof ConfigMapEnvRefSchema>;
 // }
 
 export const ConfigMapEnvFromRefSchema = Type.Object({
-	configMapName: Type.String(),
+	configMapName: Type.String({ minLength: 1 }),
 	prefix: Type.Optional(Type.String()),
 });
 export type ConfigMapEnvFromRef = Static<typeof ConfigMapEnvFromRefSchema>;
@@ -34,8 +34,8 @@ export type ConfigMapEnvFromRef = Static<typeof ConfigMapEnvFromRefSchema>;
 // }
 
 export const ConfigMapVolumeItemSchema = Type.Object({
-	key: Type.String(),
-	path: Type.String(),
+	key: Type.String({ minLength: 1 }),
+	path: Type.String({ minLength: 1 }),
 });
 export type ConfigMapVolumeItem = Static<typeof ConfigMapVolumeItemSchema>;
 // export interface ConfigMapVolumeItem {
@@ -44,9 +44,9 @@ export type ConfigMapVolumeItem = Static<typeof ConfigMapVolumeItemSchema>;
 // }
 
 export const ConfigMapVolumeRefSchema = Type.Object({
-	name: Type.String(),
-	configMapName: Type.String(),
-	mountPath: Type.String(),
+	name: Type.String({ minLength: 1 }),
+	configMapName: Type.String({ minLength: 1 }),
+	mountPath: Type.String({ minLength: 1 }),
 	items: Type.Optional(Type.Array(ConfigMapVolumeItemSchema)),
 });
 export type ConfigMapVolumeRef = Static<typeof ConfigMapVolumeRefSchema>;
@@ -58,9 +58,9 @@ export type ConfigMapVolumeRef = Static<typeof ConfigMapVolumeRefSchema>;
 // }
 
 export const SecretEnvRefSchema = Type.Object({
-	name: Type.String(),
-	secretName: Type.String(),
-	key: Type.String(),
+	name: Type.String({ minLength: 1 }),
+	secretName: Type.String({ minLength: 1 }),
+	key: Type.String({ minLength: 1 }),
 });
 export type SecretEnvRef = Static<typeof SecretEnvRefSchema>;
 // export interface SecretEnvRef {
@@ -70,7 +70,7 @@ export type SecretEnvRef = Static<typeof SecretEnvRefSchema>;
 // }
 
 export const SecretEnvFromRefSchema = Type.Object({
-	secretName: Type.String(),
+	secretName: Type.String({ minLength: 1 }),
 	prefix: Type.Optional(Type.String()),
 });
 export type SecretEnvFromRef = Static<typeof SecretEnvFromRefSchema>;
@@ -80,8 +80,8 @@ export type SecretEnvFromRef = Static<typeof SecretEnvFromRefSchema>;
 // }
 
 export const SecretVolumeItemSchema = Type.Object({
-	key: Type.String(),
-	path: Type.String(),
+	key: Type.String({ minLength: 1 }),
+	path: Type.String({ minLength: 1 }),
 });
 export type SecretVolumeItem = Static<typeof SecretVolumeItemSchema>;
 // export interface SecretVolumeItem {
@@ -90,9 +90,9 @@ export type SecretVolumeItem = Static<typeof SecretVolumeItemSchema>;
 // }
 
 export const SecretVolumeRefSchema = Type.Object({
-	name: Type.String(),
-	secretName: Type.String(),
-	mountPath: Type.String(),
+	name: Type.String({ minLength: 1 }),
+	secretName: Type.String({ minLength: 1 }),
+	mountPath: Type.String({ minLength: 1 }),
 	items: Type.Optional(Type.Array(SecretVolumeItemSchema)),
 });
 export type SecretVolumeRef = Static<typeof SecretVolumeRefSchema>;
@@ -106,9 +106,9 @@ export type SecretVolumeRef = Static<typeof SecretVolumeRefSchema>;
 // ==================== PVC Volume Ref Types ====================
 
 export const PvcVolumeRefSchema = Type.Object({
-	name: Type.String(),
-	pvcName: Type.String(),
-	mountPath: Type.String(),
+	name: Type.String({ minLength: 1 }),
+	pvcName: Type.String({ minLength: 1 }),
+	mountPath: Type.String({ minLength: 1 }),
 	readOnly: Type.Optional(Type.Boolean()),
 	subPath: Type.Optional(Type.String()),
 });
@@ -117,8 +117,8 @@ export type PvcVolumeRef = Static<typeof PvcVolumeRefSchema>;
 // ==================== EmptyDir Volume Ref Types ====================
 
 export const EmptyDirVolumeRefSchema = Type.Object({
-	name: Type.String(),
-	mountPath: Type.String(),
+	name: Type.String({ minLength: 1 }),
+	mountPath: Type.String({ minLength: 1 }),
 	medium: Type.Optional(Type.String()),
 	sizeLimit: Type.Optional(Type.String()),
 });

@@ -255,15 +255,15 @@ export const configmapRoute = new Elysia({
 					detail: { tags: ["ConfigMaps"] },
 					roleAuth: "configmap:create",
 					body: Type.Object({
-						name: Type.String(),
-						namespace: Type.String(),
-						data: Type.Optional(Type.Record(Type.String(), Type.String())),
+						name: Type.String({ minLength: 1 }),
+						namespace: Type.String({ minLength: 1 }),
+						data: Type.Optional(Type.Record(Type.String({ minLength: 1 }), Type.String())),
 						binaryData: Type.Optional(
-							Type.Record(Type.String(), Type.String()),
+							Type.Record(Type.String({ minLength: 1 }), Type.String()),
 						), // Base64 encoded in requests
-						labels: Type.Optional(Type.Record(Type.String(), Type.String())),
+						labels: Type.Optional(Type.Record(Type.String({ minLength: 1 }), Type.String())),
 						annotations: Type.Optional(
-							Type.Record(Type.String(), Type.String()),
+							Type.Record(Type.String({ minLength: 1 }), Type.String()),
 						),
 					}),
 					response: {
@@ -467,25 +467,25 @@ export const configmapRoute = new Elysia({
 					body: Type.Object({
 						data: Type.Optional(
 							Type.Record(
-								Type.String(),
+								Type.String({ minLength: 1 }),
 								Type.Union([Type.String(), Type.Null()]),
 							),
 						),
 						binaryData: Type.Optional(
 							Type.Record(
-								Type.String(),
+								Type.String({ minLength: 1 }),
 								Type.Union([Type.String(), Type.Null()]),
 							),
 						),
 						labels: Type.Optional(
 							Type.Record(
-								Type.String(),
+								Type.String({ minLength: 1 }),
 								Type.Union([Type.String(), Type.Null()]),
 							),
 						),
 						annotations: Type.Optional(
 							Type.Record(
-								Type.String(),
+								Type.String({ minLength: 1 }),
 								Type.Union([Type.String(), Type.Null()]),
 							),
 						),

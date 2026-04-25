@@ -245,13 +245,13 @@ export const secretRoute = new Elysia({
 					detail: { tags: ["Secrets"] },
 					roleAuth: "secret:create",
 					body: Type.Object({
-						name: Type.String(),
-						namespace: Type.String(),
-						type: Type.Optional(Type.String()),
-						data: Type.Optional(Type.Record(Type.String(), Type.String())),
-						labels: Type.Optional(Type.Record(Type.String(), Type.String())),
+						name: Type.String({ minLength: 1 }),
+						namespace: Type.String({ minLength: 1 }),
+						type: Type.Optional(Type.String({ minLength: 1 })),
+						data: Type.Optional(Type.Record(Type.String({ minLength: 1 }), Type.String())),
+						labels: Type.Optional(Type.Record(Type.String({ minLength: 1 }), Type.String())),
 						annotations: Type.Optional(
-							Type.Record(Type.String(), Type.String()),
+							Type.Record(Type.String({ minLength: 1 }), Type.String()),
 						),
 					}),
 					response: {
@@ -431,22 +431,22 @@ export const secretRoute = new Elysia({
 					detail: { tags: ["Secrets"] },
 					roleAuth: "secret:update",
 					body: Type.Object({
-						type: Type.Optional(Type.String()),
+						type: Type.Optional(Type.String({ minLength: 1 })),
 						data: Type.Optional(
 							Type.Record(
-								Type.String(),
+								Type.String({ minLength: 1 }),
 								Type.Union([Type.String(), Type.Null()]),
 							),
 						),
 						labels: Type.Optional(
 							Type.Record(
-								Type.String(),
+								Type.String({ minLength: 1 }),
 								Type.Union([Type.String(), Type.Null()]),
 							),
 						),
 						annotations: Type.Optional(
 							Type.Record(
-								Type.String(),
+								Type.String({ minLength: 1 }),
 								Type.Union([Type.String(), Type.Null()]),
 							),
 						),

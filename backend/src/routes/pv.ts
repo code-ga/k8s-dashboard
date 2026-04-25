@@ -323,23 +323,23 @@ export const pvRoute = new Elysia({
 					roleAuth: "pv:create",
 					body: Type.Object({
 						name: Type.String({ minLength: 1 }),
-						capacity: Type.String(),
-						storageClass: Type.Optional(Type.String()),
-						accessModes: Type.Optional(Type.Array(Type.String())),
+						capacity: Type.String({ minLength: 1 }),
+						storageClass: Type.Optional(Type.String({ minLength: 1 })),
+						accessModes: Type.Optional(Type.Array(Type.String({ minLength: 1 }))),
 						reclaimPolicy: Type.Optional(
 							Type.Union([Type.Literal("Retain"), Type.Literal("Delete")]),
 						),
 						nfs: Type.Optional(
 							Type.Object({
-								server: Type.String(),
-								path: Type.String(),
+								server: Type.String({ minLength: 1 }),
+								path: Type.String({ minLength: 1 }),
 							}),
 						),
-						hostPath: Type.Optional(Type.String()),
+						hostPath: Type.Optional(Type.String({ minLength: 1 })),
 						annotations: Type.Optional(
-							Type.Object(Type.String(), Type.String()),
+							Type.Record(Type.String({ minLength: 1 }), Type.String()),
 						),
-						labels: Type.Optional(Type.Object(Type.String(), Type.String())),
+						labels: Type.Optional(Type.Record(Type.String({ minLength: 1 }), Type.String())),
 					}),
 					response: {
 						201: baseResponseSchema(Type.Object({ name: Type.String() })),

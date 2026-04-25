@@ -330,9 +330,9 @@ export const storageclassRoute = new Elysia({
 						),
 						allowVolumeExpansion: Type.Optional(Type.Boolean()),
 						annotations: Type.Optional(
-							Type.Object(Type.String(), Type.String()),
+							Type.Record(Type.String({ minLength: 1 }), Type.String()),
 						),
-						labels: Type.Optional(Type.Object(Type.String(), Type.String())),
+						labels: Type.Optional(Type.Record(Type.String({ minLength: 1 }), Type.String())),
 						isDefault: Type.Optional(Type.Boolean()),
 					}),
 					response: {

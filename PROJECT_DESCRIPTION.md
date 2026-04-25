@@ -298,4 +298,23 @@ Added a delete cluster button with full permission checking on the cluster overv
 
 ---
 
-*Last updated: 2026-04-10 (Delete Cluster button implemented)*
+*Last updated: 2026-04-24 (Strict Input Validation implemented)*
+
+## 🛡️ Input Validation & Strictness
+
+### Strategy
+The project uses **TypeBox** for strict runtime type validation of all incoming API request bodies. We have strengthened validation across all Kubernetes resource routes to ensure data integrity and prevent invalid configurations from reaching the cluster.
+
+### Key Constraints Applied
+1.  **Required Strings**: Every mandatory identifier (e.g., `name`, `namespace`, `configMapName`, `secretName`) now enforces `minLength: 1`. Sending empty strings for these fields will result in a `400 Bad Request`.
+2.  **Numeric Ranges**:
+    -   **Ports**: All port definitions (containerPort, targetPort, service port, nodePort) enforce `minimum: 1` and `maximum: 65535`.
+    -   **NodePorts**: Specifically restricted to the standard Kubernetes range `30000-32767`.
+    -   **Replicas**: Enforce `minimum: 0` (allowing scale-to-zero) or `minimum: 1` where appropriate.
+    -   **Capacity**: Storage capacity (PVC/PV) enforces `minimum: 1`.
+3.  **Shared Schemas**: Common reference structures (Ports, ConfigMap/Secret/PVC/EmptyDir references) are centralized in `backend/src/utils/resource-refs.ts` to ensure consistent validation logic across Pods, Deployments, and other resources.
+
+### Validation Flow
+1.  **Elysia Guard**: The `elysia` route guard intercepts the request and validates `ctx.body` against the TypeBox schema.
+2.  **Error Handling**: If validation fails, Elysia automatically returns a `400` error with a detailed breakdown of the failing fields.
+3.  **Ownership Check**: Beyond schema validation, routes perform secondary ownership checks (e.g., `validateResourceRefs`) to ensure users can only reference resources they own.
