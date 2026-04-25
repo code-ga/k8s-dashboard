@@ -50,6 +50,13 @@ The project consists of three main components:
 
 ---
 
+## Demo video
+
+<video width="320" height="240" controls>
+  <source src="https://user-cdn.hackclub-assets.com/019dc541-a1c7-74fa-aac4-0e5e9ce89b76/Thi%E1%BA%BFt%20k%E1%BA%BF%20ch%C6%B0a%20c%C3%B3%20t%C3%AAn.mp4" type="video/mp4">
+</video>
+
+
 ## 🚀 Getting Started
 
 ### Prerequisites
