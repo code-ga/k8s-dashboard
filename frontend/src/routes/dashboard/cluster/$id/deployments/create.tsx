@@ -33,6 +33,7 @@ import VolumeMountEditor, {
 	type IEmptyDirVolumeMount,
 	type IPvcVolumeMount,
 } from "@/components/shared/volume-mount-editor";
+import { replaceEmptyStringsWithUndefined } from "@/lib/utils";
 
 export const Route = createFileRoute(
 	"/dashboard/cluster/$id/deployments/create",
@@ -61,20 +62,26 @@ const deploymentSchema = z.object({
 	memoryLimit: z.string().optional(),
 	command: z.string().optional(),
 	args: z.string().optional(),
-	labels: z.string().optional().refine(val => {
-		if (!val) return true;
-		return val.split(",").every(pair => {
-			const [key, value] = pair.split("=").map(s => s.trim());
-			return key && value;
-		});
-	}, "Labels must be in key=value format, comma separated"),
-	selector: z.string().optional().refine(val => {
-		if (!val) return true;
-		return val.split(",").every(pair => {
-			const [key, value] = pair.split("=").map(s => s.trim());
-			return key && value;
-		});
-	}, "Selector must be in key=value format, comma separated"),
+	labels: z
+		.string()
+		.optional()
+		.refine((val) => {
+			if (!val) return true;
+			return val.split(",").every((pair) => {
+				const [key, value] = pair.split("=").map((s) => s.trim());
+				return key && value;
+			});
+		}, "Labels must be in key=value format, comma separated"),
+	selector: z
+		.string()
+		.optional()
+		.refine((val) => {
+			if (!val) return true;
+			return val.split(",").every((pair) => {
+				const [key, value] = pair.split("=").map((s) => s.trim());
+				return key && value;
+			});
+		}, "Selector must be in key=value format, comma separated"),
 	envVars: z.array(envVarSchema).optional(),
 });
 
@@ -111,61 +118,66 @@ function CreateDeploymentPage() {
 				return Object.keys(result).length > 0 ? result : undefined;
 			};
 
-			const res = await api.api.deployments({ clusterId }).post({
-				name: values.name,
-				namespace: values.namespace,
-				image: values.image,
-				replicas: values.replicas,
-				resources: {
-					requests: {
-						cpu: values.cpuRequest || undefined,
-						memory: values.memoryRequest || undefined,
+			const res = await api.api.deployments({ clusterId }).post(
+				replaceEmptyStringsWithUndefined({
+					name: values.name,
+					namespace: values.namespace,
+					image: values.image,
+					replicas: values.replicas,
+					resources: {
+						requests: {
+							cpu: values.cpuRequest || undefined,
+							memory: values.memoryRequest || undefined,
+						},
+						limits: {
+							cpu: values.cpuLimit || undefined,
+							memory: values.memoryLimit || undefined,
+						},
 					},
-					limits: {
-						cpu: values.cpuLimit || undefined,
-						memory: values.memoryLimit || undefined,
-					},
-				},
-				command: values.command ? values.command.split(" ") : undefined,
-				args: values.args ? values.args.split(" ") : undefined,
-				env:
-					envVars.length > 0
-						? envVars
-								.filter((v) => v.name)
-								.map((v) => {
-									if (
-										v.type === "fieldRef" ||
-										(!v.type && v.valueFrom?.fieldRef)
-									) {
-										return { name: v.name, valueFrom: v.valueFrom };
-									}
-									return { name: v.name, value: v.value };
-								})
-						: undefined,
-				configMapRefs:
-					configMapEnvRefs.length > 0 || configMapEnvFromRefs.length > 0
-						? {
-								env: configMapEnvRefs.length > 0 ? configMapEnvRefs : undefined,
-								envFrom:
-									configMapEnvFromRefs.length > 0
-										? configMapEnvFromRefs
-										: undefined,
-							}
-						: undefined,
-				secretRefs:
-					secretEnvRefs.length > 0 || secretEnvFromRefs.length > 0
-						? {
-								env: secretEnvRefs.length > 0 ? secretEnvRefs : undefined,
-								envFrom:
-									secretEnvFromRefs.length > 0 ? secretEnvFromRefs : undefined,
-							}
-						: undefined,
-				labels: parseLabels(values.labels),
-				selector: parseLabels(values.selector),
-				pvcVolumes: pvcVolumes.length > 0 ? pvcVolumes : undefined,
-				emptyDirVolumes:
-					emptyDirVolumes.length > 0 ? emptyDirVolumes : undefined,
-			});
+					command: values.command ? values.command.split(" ") : undefined,
+					args: values.args ? values.args.split(" ") : undefined,
+					env:
+						envVars.length > 0
+							? envVars
+									.filter((v) => v.name)
+									.map((v) => {
+										if (
+											v.type === "fieldRef" ||
+											(!v.type && v.valueFrom?.fieldRef)
+										) {
+											return { name: v.name, valueFrom: v.valueFrom };
+										}
+										return { name: v.name, value: v.value };
+									})
+							: undefined,
+					configMapRefs:
+						configMapEnvRefs.length > 0 || configMapEnvFromRefs.length > 0
+							? {
+									env:
+										configMapEnvRefs.length > 0 ? configMapEnvRefs : undefined,
+									envFrom:
+										configMapEnvFromRefs.length > 0
+											? configMapEnvFromRefs
+											: undefined,
+								}
+							: undefined,
+					secretRefs:
+						secretEnvRefs.length > 0 || secretEnvFromRefs.length > 0
+							? {
+									env: secretEnvRefs.length > 0 ? secretEnvRefs : undefined,
+									envFrom:
+										secretEnvFromRefs.length > 0
+											? secretEnvFromRefs
+											: undefined,
+								}
+							: undefined,
+					labels: parseLabels(values.labels),
+					selector: parseLabels(values.selector),
+					pvcVolumes: pvcVolumes.length > 0 ? pvcVolumes : undefined,
+					emptyDirVolumes:
+						emptyDirVolumes.length > 0 ? emptyDirVolumes : undefined,
+				}),
+			);
 
 			if (res.error) {
 				throw new Error(getEdenErrorMessage(res.error));

@@ -26,6 +26,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import type { databaseTypes, SchemaStatic } from "@/lib/api";
 import { api } from "@/lib/api";
+import { replaceEmptyStringsWithUndefined } from "@/lib/utils";
 
 type Service = SchemaStatic<databaseTypes.databaseTypes["k8sServices"]>;
 
@@ -77,14 +78,16 @@ export function CreateIngressDialog({
 				.ingresses({
 					clusterId: clusterId,
 				})
-				.expose.post({
-					serviceName: selectedService.name,
-					namespace: selectedService.namespace,
-					protocol: values.protocol,
-					internalPort: selectedService.ports?.data?.[0]?.port || 80,
-					domain: values.domain || undefined,
-					tls: values.tls,
-				});
+				.expose.post(
+					replaceEmptyStringsWithUndefined({
+						serviceName: selectedService.name,
+						namespace: selectedService.namespace,
+						protocol: values.protocol,
+						internalPort: selectedService.ports?.data?.[0]?.port || 80,
+						domain: values.domain || undefined,
+						tls: values.tls,
+					}),
+				);
 
 			if (res.error) {
 				if (typeof res.error.value === "string") {

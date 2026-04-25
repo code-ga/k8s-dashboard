@@ -25,6 +25,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { api } from "@/lib/api";
+import { replaceEmptyStringsWithUndefined } from "@/lib/utils";
 
 const ACCESS_MODES = [
 	{ value: "ReadWriteOnce", label: "ReadWriteOnce (RWO)" },
@@ -106,7 +107,7 @@ function CreatePersistentVolume() {
 				};
 			}
 
-			const res = await api.api.pvs({ clusterId: id }).post(payload);
+			const res = await api.api.pvs({ clusterId: id }).post(replaceEmptyStringsWithUndefined(payload));
 
 			if (res.error) {
 				toast.error(

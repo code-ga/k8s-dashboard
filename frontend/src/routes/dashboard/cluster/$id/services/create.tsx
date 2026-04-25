@@ -1,11 +1,22 @@
 import { useForm } from "@tanstack/react-form";
 import { useMutation } from "@tanstack/react-query";
-import { createFileRoute, Link, useNavigate, useParams } from "@tanstack/react-router";
+import {
+	createFileRoute,
+	Link,
+	useNavigate,
+	useParams,
+} from "@tanstack/react-router";
 import { ArrowLeft, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+	Card,
+	CardContent,
+	CardDescription,
+	CardHeader,
+	CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -16,6 +27,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { api } from "@/lib/api";
+import { replaceEmptyStringsWithUndefined } from "@/lib/utils";
 
 export const Route = createFileRoute("/dashboard/cluster/$id/services/create")({
 	component: CreateServicePage,
@@ -23,7 +35,10 @@ export const Route = createFileRoute("/dashboard/cluster/$id/services/create")({
 
 const portSchema = z.object({
 	id: z.string(),
-	name: z.string().optional().refine(val => !val || val.length >= 1, "Name cannot be empty"),
+	name: z
+		.string()
+		.optional()
+		.refine((val) => !val || val.length >= 1, "Name cannot be empty"),
 	port: z.number().min(1, "Min 1").max(65535, "Max 65535"),
 	targetPort: z.number().min(1, "Min 1").max(65535, "Max 65535"),
 	protocol: z.enum(["TCP", "UDP"]),
@@ -44,7 +59,9 @@ const serviceSchema = z.object({
 });
 
 function CreateServicePage() {
-	const { id: clusterId } = useParams({ from: "/dashboard/cluster/$id/services/create" });
+	const { id: clusterId } = useParams({
+		from: "/dashboard/cluster/$id/services/create",
+	});
 	const navigate = useNavigate();
 
 	const mutation = useMutation({
@@ -64,13 +81,15 @@ function CreateServicePage() {
 				.services({
 					clusterId: clusterId,
 				})
-				.post({
-					name: values.name,
-					namespace: values.namespace,
-					type: values.type,
-					selector: selectorObj,
-					ports: portsFormatted,
-				});
+				.post(
+					replaceEmptyStringsWithUndefined({
+						name: values.name,
+						namespace: values.namespace,
+						type: values.type,
+						selector: selectorObj,
+						ports: portsFormatted,
+					}),
+				);
 
 			if (res.error) {
 				throw new Error(res.error.value?.message || "Failed to create service");
@@ -80,7 +99,10 @@ function CreateServicePage() {
 		},
 		onSuccess: () => {
 			toast.success("Service created successfully");
-			navigate({ to: "/dashboard/cluster/$id/services", params: { id: clusterId } });
+			navigate({
+				to: "/dashboard/cluster/$id/services",
+				params: { id: clusterId },
+			});
 		},
 		onError: (error) => {
 			toast.error(error.message);
@@ -128,7 +150,8 @@ function CreateServicePage() {
 				<CardHeader>
 					<CardTitle>Service Configuration</CardTitle>
 					<CardDescription>
-						Provide a name, namespace, type, and selector labels for the Service.
+						Provide a name, namespace, type, and selector labels for the
+						Service.
 					</CardDescription>
 				</CardHeader>
 				<CardContent>
@@ -258,7 +281,9 @@ function CreateServicePage() {
 														newValue.splice(index, 1);
 														field.handleChange(newValue);
 													}}
-													disabled={field.state.value.length <= 1 && index === 0}
+													disabled={
+														field.state.value.length <= 1 && index === 0
+													}
 												>
 													<Trash2 className="h-4 w-4" />
 												</Button>
@@ -333,7 +358,9 @@ function CreateServicePage() {
 														value={item.targetPort}
 														onChange={(e) => {
 															const newValue = [...field.state.value];
-															newValue[index].targetPort = Number(e.target.value);
+															newValue[index].targetPort = Number(
+																e.target.value,
+															);
 															field.handleChange(newValue);
 														}}
 													/>
@@ -379,7 +406,10 @@ function CreateServicePage() {
 						</div>
 
 						<div className="flex justify-end gap-4 pt-4 border-t">
-							<Link to="/dashboard/cluster/$id/services" params={{ id: clusterId }}>
+							<Link
+								to="/dashboard/cluster/$id/services"
+								params={{ id: clusterId }}
+							>
 								<Button variant="outline" type="button">
 									Cancel
 								</Button>

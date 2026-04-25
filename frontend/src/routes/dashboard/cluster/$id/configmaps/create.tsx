@@ -22,6 +22,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { api, getEdenErrorMessage } from "@/lib/api";
+import { replaceEmptyStringsWithUndefined } from "@/lib/utils";
 
 export const Route = createFileRoute(
 	"/dashboard/cluster/$id/configmaps/create",
@@ -55,11 +56,13 @@ function CreateConfigMapPage() {
 				if (v.name) data[v.name] = v.value || "";
 			}
 
-			const res = await api.api.configmaps({ clusterId }).post({
-				name: values.name,
-				namespace: values.namespace,
-				data,
-			});
+			const res = await api.api.configmaps({ clusterId }).post(
+				replaceEmptyStringsWithUndefined({
+					name: values.name,
+					namespace: values.namespace,
+					data,
+				}),
+			);
 
 			if (res.error) {
 				const message = getEdenErrorMessage(res.error);

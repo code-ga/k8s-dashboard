@@ -33,6 +33,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { api, getEdenErrorMessage } from "@/lib/api";
+import { replaceEmptyStringsWithUndefined } from "@/lib/utils";
 
 export const Route = createFileRoute("/dashboard/cluster/$id/pods/create")({
 	component: CreatePodPage,
@@ -84,58 +85,63 @@ function CreatePodPage() {
 
 	const mutation = useMutation({
 		mutationFn: async (values: z.infer<typeof podSchema>) => {
-			const res = await api.api.pods({ clusterId }).post({
-				name: values.name,
-				namespace: values.namespace,
-				image: values.image,
-				resources: {
-					requests: {
-						cpu: values.cpuRequest || undefined,
-						memory: values.memoryRequest || undefined,
+			const res = await api.api.pods({ clusterId }).post(
+				replaceEmptyStringsWithUndefined({
+					name: values.name,
+					namespace: values.namespace,
+					image: values.image,
+					resources: {
+						requests: {
+							cpu: values.cpuRequest || undefined,
+							memory: values.memoryRequest || undefined,
+						},
+						limits: {
+							cpu: values.cpuLimit || undefined,
+							memory: values.memoryLimit || undefined,
+						},
 					},
-					limits: {
-						cpu: values.cpuLimit || undefined,
-						memory: values.memoryLimit || undefined,
-					},
-				},
-				command: values.command ? values.command.split(" ") : undefined,
-				args: values.args ? values.args.split(" ") : undefined,
-				env:
-					envVars.length > 0
-						? envVars
-								.filter((v) => v.name)
-								.map((v) => {
-									if (
-										v.type === "fieldRef" ||
-										(!v.type && v.valueFrom?.fieldRef)
-									) {
-										return { name: v.name, valueFrom: v.valueFrom };
-									}
-									return { name: v.name, value: v.value };
-								})
-						: undefined,
-				configMapRefs:
-					configMapEnvRefs.length > 0 || configMapEnvFromRefs.length > 0
-						? {
-								env: configMapEnvRefs.length > 0 ? configMapEnvRefs : undefined,
-								envFrom:
-									configMapEnvFromRefs.length > 0
-										? configMapEnvFromRefs
-										: undefined,
-							}
-						: undefined,
-				secretRefs:
-					secretEnvRefs.length > 0 || secretEnvFromRefs.length > 0
-						? {
-								env: secretEnvRefs.length > 0 ? secretEnvRefs : undefined,
-								envFrom:
-									secretEnvFromRefs.length > 0 ? secretEnvFromRefs : undefined,
-							}
-						: undefined,
-				pvcVolumes: pvcVolumes.length > 0 ? pvcVolumes : undefined,
-				emptyDirVolumes:
-					emptyDirVolumes.length > 0 ? emptyDirVolumes : undefined,
-			});
+					command: values.command ? values.command.split(" ") : undefined,
+					args: values.args ? values.args.split(" ") : undefined,
+					env:
+						envVars.length > 0
+							? envVars
+									.filter((v) => v.name)
+									.map((v) => {
+										if (
+											v.type === "fieldRef" ||
+											(!v.type && v.valueFrom?.fieldRef)
+										) {
+											return { name: v.name, valueFrom: v.valueFrom };
+										}
+										return { name: v.name, value: v.value };
+									})
+							: undefined,
+					configMapRefs:
+						configMapEnvRefs.length > 0 || configMapEnvFromRefs.length > 0
+							? {
+									env:
+										configMapEnvRefs.length > 0 ? configMapEnvRefs : undefined,
+									envFrom:
+										configMapEnvFromRefs.length > 0
+											? configMapEnvFromRefs
+											: undefined,
+								}
+							: undefined,
+					secretRefs:
+						secretEnvRefs.length > 0 || secretEnvFromRefs.length > 0
+							? {
+									env: secretEnvRefs.length > 0 ? secretEnvRefs : undefined,
+									envFrom:
+										secretEnvFromRefs.length > 0
+											? secretEnvFromRefs
+											: undefined,
+								}
+							: undefined,
+					pvcVolumes: pvcVolumes.length > 0 ? pvcVolumes : undefined,
+					emptyDirVolumes:
+						emptyDirVolumes.length > 0 ? emptyDirVolumes : undefined,
+				}),
+			);
 
 			if (res.error) {
 				throw new Error(getEdenErrorMessage(res.error));

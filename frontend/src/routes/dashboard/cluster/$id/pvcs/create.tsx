@@ -18,6 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
+import { replaceEmptyStringsWithUndefined } from "@/lib/utils";
 
 export const Route = createFileRoute("/dashboard/cluster/$id/pvcs/create")({
 	component: CreatePVC,
@@ -38,7 +39,7 @@ function CreatePVC() {
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
-		
+
 		if (!formData.name.trim()) {
 			toast.error("Name is required");
 			return;
@@ -55,7 +56,9 @@ function CreatePVC() {
 		setLoading(true);
 
 		try {
-			const res = await api.api.pvcs({ clusterId: id }).post(formData);
+			const res = await api.api
+				.pvcs({ clusterId: id })
+				.post(replaceEmptyStringsWithUndefined(formData));
 
 			if (res.error) {
 				toast.error(res.error.value?.message || "Failed to create PVC");

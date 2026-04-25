@@ -29,6 +29,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { api, getEdenErrorMessage } from "@/lib/api";
+import { replaceEmptyStringsWithUndefined } from "@/lib/utils";
 
 export const Route = createFileRoute("/dashboard/cluster/$id/secrets/create")({
 	component: CreateSecretPage,
@@ -82,12 +83,14 @@ function CreateSecretPage() {
 				if (v.name) data[v.name] = v.value || "";
 			}
 
-			const res = await api.api.secrets({ clusterId }).post({
-				name: values.name,
-				namespace: values.namespace,
-				type: values.type,
-				data,
-			});
+			const res = await api.api.secrets({ clusterId }).post(
+				replaceEmptyStringsWithUndefined({
+					name: values.name,
+					namespace: values.namespace,
+					type: values.type,
+					data,
+				}),
+			);
 
 			if (res.error) {
 				throw new Error(getEdenErrorMessage(res.error));
