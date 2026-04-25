@@ -6,6 +6,7 @@ import (
 	"os"
 
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -27,7 +28,7 @@ func (kc *K8sClient) EnsureGatewayInstalled() error {
 
 	// 1. Create Namespace
 	_, err := kc.Clientset.CoreV1().Namespaces().Get(kc.Context, namespace, metav1.GetOptions{})
-	if err != nil {
+	if apierrors.IsNotFound(err) {
 		log.Printf("Creating namespace %s...", namespace)
 		_, err = kc.Clientset.CoreV1().Namespaces().Create(kc.Context, &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{Name: namespace},
@@ -66,7 +67,7 @@ func (kc *K8sClient) EnsureGatewayInstalled() error {
 		if err != nil {
 			return fmt.Errorf("failed to ensure PVC for k3s: %w", err)
 		}
-		return kc.applyK3sTraefikConfig(acmeEmail, traefikClaim)
+		return kc.applyK3sTraefikConfig(acmeEmail)
 	}
 
 	// 5. Ensure PVC for Traefik data
@@ -112,6 +113,7 @@ func (kc *K8sClient) EnsureGatewayInstalled() error {
 		"additionalArguments": []any{
 			"--certificatesresolvers.letsencrypt.acme.email=" + acmeEmail,
 			"--certificatesresolvers.letsencrypt.acme.storage=/data/acme.json",
+			"--certificatesresolvers.letsencrypt.acme.httpchallenge=true",
 			"--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web",
 		},
 		"certResolvers": map[string]interface{}{
@@ -174,23 +176,19 @@ func (kc *K8sClient) EnsureGatewayInstalled() error {
 // applyK3sTraefikConfig configures the k3s-managed Traefik instance by creating or
 // updating a HelmChartConfig resource in kube-system. k3s reconciles this resource
 // automatically, so our ACME/certResolver settings get applied to the built-in Traefik.
-func (kc *K8sClient) applyK3sTraefikConfig(acmeEmail string, claimName string) error {
-	valuesContent := fmt.Sprintf(`additionalArguments:
+func (kc *K8sClient) applyK3sTraefikConfig(acmeEmail string) error {
+	valuesContent := fmt.Sprintf(`
+additionalArguments:
   - "--certificatesresolvers.letsencrypt.acme.email=%s"
   - "--certificatesresolvers.letsencrypt.acme.storage=/data/acme.json"
+  - "--certificatesresolvers.letsencrypt.acme.httpchallenge=true"
   - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
+
 persistence:
   enabled: true
-  existingClaim: %s
-
-certResolvers:
-  letsencrypt:
-    acme:
-      email: %s
-      storage: /data/acme.json
-      httpChallenge:
-        entryPoint: web
-`, acmeEmail, claimName, acmeEmail)
+  path: /data
+  size: 128Mi
+`, acmeEmail)
 
 	obj := &unstructured.Unstructured{
 		Object: map[string]interface{}{
@@ -206,21 +204,37 @@ certResolvers:
 		},
 	}
 
-	existing, err := kc.DynamicClient.Resource(helmChartConfigGVR).Namespace("kube-system").Get(kc.Context, "traefik", metav1.GetOptions{})
+	existing, err := kc.DynamicClient.
+		Resource(helmChartConfigGVR).
+		Namespace("kube-system").
+		Get(kc.Context, "traefik", metav1.GetOptions{})
+
 	if err != nil {
-		_, err = kc.DynamicClient.Resource(helmChartConfigGVR).Namespace("kube-system").Create(kc.Context, obj, metav1.CreateOptions{})
+		_, err = kc.DynamicClient.
+			Resource(helmChartConfigGVR).
+			Namespace("kube-system").
+			Create(kc.Context, obj, metav1.CreateOptions{})
+
 		if err != nil {
 			return fmt.Errorf("failed to create HelmChartConfig: %w", err)
 		}
-		log.Printf("Created HelmChartConfig for k3s Traefik (ACME email: %s)", acmeEmail)
-	} else {
-		obj.SetResourceVersion(existing.GetResourceVersion())
-		_, err = kc.DynamicClient.Resource(helmChartConfigGVR).Namespace("kube-system").Update(kc.Context, obj, metav1.UpdateOptions{})
-		if err != nil {
-			return fmt.Errorf("failed to update HelmChartConfig: %w", err)
-		}
-		log.Printf("Updated HelmChartConfig for k3s Traefik (ACME email: %s)", acmeEmail)
+
+		log.Printf("Created k3s Traefik config")
+		return nil
 	}
+
+	obj.SetResourceVersion(existing.GetResourceVersion())
+
+	_, err = kc.DynamicClient.
+		Resource(helmChartConfigGVR).
+		Namespace("kube-system").
+		Update(kc.Context, obj, metav1.UpdateOptions{})
+
+	if err != nil {
+		return fmt.Errorf("failed to update HelmChartConfig: %w", err)
+	}
+
+	log.Printf("Updated k3s Traefik config")
 	return nil
 }
 
