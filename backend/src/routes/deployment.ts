@@ -703,20 +703,20 @@ export const deploymentRoute = new Elysia({
 								requests: Type.Optional(
 									Type.Object({
 										cpu: Type.Optional(
-											Type.String({ minLength: 1, pattern: "^[.*\\S.*$" }),
+											Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
 										),
 										memory: Type.Optional(
-											Type.String({ minLength: 1, pattern: "^[.*\\S.*$" }),
+											Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
 										),
 									}),
 								),
 								limits: Type.Optional(
 									Type.Object({
 										cpu: Type.Optional(
-											Type.String({ minLength: 1, pattern: "^[.*\\S.*$" }),
+											Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
 										),
 										memory: Type.Optional(
-											Type.String({ minLength: 1, pattern: "^[.*\\S.*$" }),
+											Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
 										),
 									}),
 								),
@@ -1102,20 +1102,20 @@ export const deploymentRoute = new Elysia({
 								requests: Type.Optional(
 									Type.Object({
 										cpu: Type.Optional(
-											Type.String({ minLength: 1, pattern: "^[.*\\S.*$" }),
+											Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
 										),
 										memory: Type.Optional(
-											Type.String({ minLength: 1, pattern: "^[.*\\S.*$" }),
+											Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
 										),
 									}),
 								),
 								limits: Type.Optional(
 									Type.Object({
 										cpu: Type.Optional(
-											Type.String({ minLength: 1, pattern: "^[.*\\S.*$" }),
+											Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
 										),
 										memory: Type.Optional(
-											Type.String({ minLength: 1, pattern: "^[.*\\S.*$" }),
+											Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
 										),
 									}),
 								),
@@ -1124,9 +1124,9 @@ export const deploymentRoute = new Elysia({
 						env: Type.Optional(
 							Type.Array(
 								Type.Object({
-									name: Type.String({ minLength: 1, pattern: "^[.*\S.*$" }),
+									name: Type.String({ minLength: 1, pattern: "^.*\S.*$" }),
 									value: Type.Optional(
-										Type.String({ minLength: 1, pattern: "^[.*\S.*$" }),
+										Type.String({ minLength: 1, pattern: "^.*\S.*$" }),
 									),
 									valueFrom: Type.Optional(Type.Any()),
 								}),
@@ -1139,13 +1139,13 @@ export const deploymentRoute = new Elysia({
 										Type.Object({
 											name: Type.String({
 												minLength: 1,
-												pattern: "^[.*\\S.*$",
+												pattern: "^.*\\S.*$",
 											}),
 											configMapName: Type.String({
 												minLength: 1,
-												pattern: "^[.*\\S.*$",
+												pattern: "^.*\\S.*$",
 											}),
-											key: Type.String({ minLength: 1, pattern: "^[.*\\S.*$" }),
+											key: Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
 										}),
 									),
 								),
@@ -1154,7 +1154,7 @@ export const deploymentRoute = new Elysia({
 										Type.Object({
 											configMapName: Type.String({
 												minLength: 1,
-												pattern: "^[.*\\S.*$",
+												pattern: "^.*\\S.*$",
 											}),
 										}),
 									),
@@ -1164,26 +1164,26 @@ export const deploymentRoute = new Elysia({
 										Type.Object({
 											name: Type.String({
 												minLength: 1,
-												pattern: "^[.*\\S.*$",
+												pattern: "^.*\\S.*$",
 											}),
 											configMapName: Type.String({
 												minLength: 1,
-												pattern: "^[.*\\S.*$",
+												pattern: "^.*\\S.*$",
 											}),
 											mountPath: Type.String({
 												minLength: 1,
-												pattern: "^[.*\\S.*$",
+												pattern: "^.*\\S.*$",
 											}),
 											items: Type.Optional(
 												Type.Array(
 													Type.Object({
 														key: Type.String({
 															minLength: 1,
-															pattern: "^[.*\\S.*$",
+															pattern: "^.*\\S.*$",
 														}),
 														path: Type.String({
 															minLength: 1,
-															pattern: "^[.*\\S.*$",
+															pattern: "^.*\\S.*$",
 														}),
 													}),
 												),
@@ -1200,13 +1200,13 @@ export const deploymentRoute = new Elysia({
 										Type.Object({
 											name: Type.String({
 												minLength: 1,
-												pattern: "^[.*\\S.*$",
+												pattern: "^.*\\S.*$",
 											}),
 											secretName: Type.String({
 												minLength: 1,
-												pattern: "^[.*\\S.*$",
+												pattern: "^.*\\S.*$",
 											}),
-											key: Type.String({ minLength: 1, pattern: "^[.*\\S.*$" }),
+											key: Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
 										}),
 									),
 								),
@@ -1215,7 +1215,7 @@ export const deploymentRoute = new Elysia({
 										Type.Object({
 											secretName: Type.String({
 												minLength: 1,
-												pattern: "^[.*\\S.*$",
+												pattern: "^.*\\S.*$",
 											}),
 										}),
 									),
@@ -1225,26 +1225,26 @@ export const deploymentRoute = new Elysia({
 										Type.Object({
 											name: Type.String({
 												minLength: 1,
-												pattern: "^[.*\\S.*$",
+												pattern: "^.*\\S.*$",
 											}),
 											secretName: Type.String({
 												minLength: 1,
-												pattern: "^[.*\\S.*$",
+												pattern: "^.*\\S.*$",
 											}),
 											mountPath: Type.String({
 												minLength: 1,
-												pattern: "^[.*\\S.*$",
+												pattern: "^.*\\S.*$",
 											}),
 											items: Type.Optional(
 												Type.Array(
 													Type.Object({
 														key: Type.String({
 															minLength: 1,
-															pattern: "^[.*\\S.*$",
+															pattern: "^.*\\S.*$",
 														}),
 														path: Type.String({
 															minLength: 1,
-															pattern: "^[.*\\S.*$",
+															pattern: "^.*\\S.*$",
 														}),
 													}),
 												),
@@ -1257,25 +1257,25 @@ export const deploymentRoute = new Elysia({
 						pvcVolumes: Type.Optional(Type.Array(PvcVolumeRefSchema)),
 						emptyDirVolumes: Type.Optional(Type.Array(EmptyDirVolumeRefSchema)),
 						command: Type.Optional(
-							Type.Array(Type.String({ minLength: 1, pattern: "^[.*\\S.*$" })),
+							Type.Array(Type.String({ minLength: 1, pattern: "^.*\\S.*$" })),
 						),
 						args: Type.Optional(
-							Type.Array(Type.String({ minLength: 1, pattern: "^[.*\\S.*$" })),
+							Type.Array(Type.String({ minLength: 1, pattern: "^.*\\S.*$" })),
 						),
 						ports: Type.Optional(
 							Type.Array(
 								Type.Object({
 									containerPort: Type.Number({ minimum: 1, maximum: 65535 }),
 									name: Type.Optional(
-										Type.String({ minLength: 1, pattern: "^[.*\\S.*$" }),
+										Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
 									),
 								}),
 							),
 						),
 						annotations: Type.Optional(
 							Type.Record(
-								Type.String({ minLength: 1, pattern: "^[.*\\S.*$" }),
-								Type.String({ minLength: 1, pattern: "^[.*\\S.*$" }),
+								Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
+								Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
 							),
 						),
 						isAutoScaling: Type.Optional(Type.Boolean()),
