@@ -149,7 +149,7 @@ export const profileRouter = new Elysia({
 					},
 					{
 						body: Type.Object({
-							username: dbSchemaTypes.profile.username,
+							username: Type.String({ minLength: 3, pattern: "^.*\\S.*$" }),
 						}),
 						response: {
 							201: baseResponseSchema(Type.Object(dbSchemaTypes.profile)),
@@ -188,7 +188,7 @@ export const profileRouter = new Elysia({
 					},
 					{
 						body: Type.Object({
-							username: dbSchemaTypes.profile.username,
+							username: Type.String({ minLength: 3, pattern: "^.*\\S.*$" }),
 						}),
 						response: {
 							200: baseResponseSchema(Type.Object(dbSchemaTypes.profile)),

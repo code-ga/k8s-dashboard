@@ -322,24 +322,38 @@ export const pvRoute = new Elysia({
 				{
 					roleAuth: "pv:create",
 					body: Type.Object({
-						name: Type.String({ minLength: 1 }),
-						capacity: Type.String({ minLength: 1 }),
-						storageClass: Type.Optional(Type.String({ minLength: 1 })),
-						accessModes: Type.Optional(Type.Array(Type.String({ minLength: 1 }))),
+						name: Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
+						capacity: Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
+						storageClass: Type.Optional(
+							Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
+						),
+						accessModes: Type.Optional(
+							Type.Array(Type.String({ minLength: 1, pattern: "^.*\\S.*$" })),
+						),
 						reclaimPolicy: Type.Optional(
 							Type.Union([Type.Literal("Retain"), Type.Literal("Delete")]),
 						),
 						nfs: Type.Optional(
 							Type.Object({
-								server: Type.String({ minLength: 1 }),
-								path: Type.String({ minLength: 1 }),
+								server: Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
+								path: Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
 							}),
 						),
-						hostPath: Type.Optional(Type.String({ minLength: 1 })),
-						annotations: Type.Optional(
-							Type.Record(Type.String({ minLength: 1 }), Type.String()),
+						hostPath: Type.Optional(
+							Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
 						),
-						labels: Type.Optional(Type.Record(Type.String({ minLength: 1 }), Type.String())),
+						annotations: Type.Optional(
+							Type.Record(
+								Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
+								Type.String(),
+							),
+						),
+						labels: Type.Optional(
+							Type.Record(
+								Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
+								Type.String(),
+							),
+						),
 					}),
 					response: {
 						201: baseResponseSchema(Type.Object({ name: Type.String() })),

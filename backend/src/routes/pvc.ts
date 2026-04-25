@@ -181,11 +181,15 @@ export const pvcRoute = new Elysia({
 				{
 					roleAuth: "pvc:create",
 					body: Type.Object({
-						name: Type.String({ minLength: 1 }),
-						namespace: Type.String({ minLength: 1 }),
-						storageClass: Type.Optional(Type.String({ minLength: 1 })),
+						name: Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
+						namespace: Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
+						storageClass: Type.Optional(
+							Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
+						),
 						capacity: Type.Number({ minimum: 1 }),
-						accessModes: Type.Optional(Type.Array(Type.String())),
+						accessModes: Type.Optional(
+							Type.Array(Type.String({ minLength: 1, pattern: "^.*\\S.*$" })),
+						),
 					}),
 					response: {
 						201: baseResponseSchema(

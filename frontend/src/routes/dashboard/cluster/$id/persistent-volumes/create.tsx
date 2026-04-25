@@ -61,6 +61,27 @@ function CreatePersistentVolume() {
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
+
+		if (!formData.name.trim()) {
+			toast.error("Name is required");
+			return;
+		}
+		if (formData.capacity < 1) {
+			toast.error("Capacity must be at least 1 MiB");
+			return;
+		}
+		if (formData.sourceType === "nfs") {
+			if (!formData.nfsServer.trim() || !formData.nfsPath.trim()) {
+				toast.error("NFS Server and Export Path are required");
+				return;
+			}
+		} else if (formData.sourceType === "hostPath") {
+			if (!formData.hostPath.trim()) {
+				toast.error("HostPath is required");
+				return;
+			}
+		}
+
 		setLoading(true);
 
 		try {

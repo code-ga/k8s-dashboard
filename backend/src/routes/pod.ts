@@ -657,16 +657,22 @@ export const podRoute = new Elysia({
 					detail: { tags: ["Pods"] },
 					roleAuth: "pod:create",
 					body: Type.Object({
-						name: Type.String({ minLength: 1 }),
-						namespace: Type.String({ minLength: 1 }),
-						image: Type.String({ minLength: 1 }),
-						command: Type.Optional(Type.Array(Type.String())),
-						args: Type.Optional(Type.Array(Type.String())),
+						name: Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
+						namespace: Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
+						image: Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
+						command: Type.Optional(
+							Type.Array(Type.String({ minLength: 1, pattern: "^.*\\S.*$" })),
+						),
+						args: Type.Optional(
+							Type.Array(Type.String({ minLength: 1, pattern: "^.*\\S.*$" })),
+						),
 						env: Type.Optional(
 							Type.Array(
 								Type.Object({
-									name: Type.String({ minLength: 1 }),
-									value: Type.Optional(Type.String()),
+									name: Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
+									value: Type.Optional(
+										Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
+									),
 									valueFrom: Type.Optional(Type.Any()),
 								}),
 							),
@@ -674,8 +680,10 @@ export const podRoute = new Elysia({
 						ports: Type.Optional(
 							Type.Array(
 								Type.Object({
-									containerPort: Type.Number(),
-									name: Type.Optional(Type.String()),
+									containerPort: Type.Number({ minimum: 1, maximum: 65535 }),
+									name: Type.Optional(
+										Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
+									),
 								}),
 							),
 						),
@@ -683,99 +691,53 @@ export const podRoute = new Elysia({
 							Type.Object({
 								requests: Type.Optional(
 									Type.Object({
-										cpu: Type.Optional(Type.String()),
-										memory: Type.Optional(Type.String()),
+										cpu: Type.Optional(
+											Type.String({ minLength: 1, pattern: "^[.*\\S.*$" }),
+										),
+										memory: Type.Optional(
+											Type.String({ minLength: 1, pattern: "^[.*\\S.*$" }),
+										),
 									}),
 								),
 								limits: Type.Optional(
 									Type.Object({
-										cpu: Type.Optional(Type.String()),
-										memory: Type.Optional(Type.String()),
+										cpu: Type.Optional(
+											Type.String({ minLength: 1, pattern: "^[.*\\S.*$" }),
+										),
+										memory: Type.Optional(
+											Type.String({ minLength: 1, pattern: "^[.*\\S.*$" }),
+										),
 									}),
 								),
 							}),
 						),
-						labels: Type.Optional(Type.Record(Type.String(), Type.String())),
+						labels: Type.Optional(
+							Type.Record(
+								Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
+								Type.String(),
+							),
+						),
 						configMapRefs: Type.Optional(
 							Type.Object({
-								env: Type.Optional(
-									Type.Array(
-										Type.Object({
-											name: Type.String({ minLength: 1 }),
-											configMapName: Type.String({ minLength: 1 }),
-											key: Type.String({ minLength: 1 }),
-										}),
-									),
-								),
-								envFrom: Type.Optional(
-									Type.Array(
-										Type.Object({
-											configMapName: Type.String({ minLength: 1 }),
-											prefix: Type.Optional(Type.String()),
-										}),
-									),
-								),
-								volumes: Type.Optional(
-									Type.Array(
-										Type.Object({
-											name: Type.String({ minLength: 1 }),
-											configMapName: Type.String({ minLength: 1 }),
-											mountPath: Type.String({ minLength: 1 }),
-											items: Type.Optional(
-												Type.Array(
-													Type.Object({
-														key: Type.String({ minLength: 1 }),
-														path: Type.String({ minLength: 1 }),
-													}),
-												),
-											),
-										}),
-									),
-								),
+								env: Type.Optional(Type.Array(ConfigMapEnvRefSchema)),
+								envFrom: Type.Optional(Type.Array(ConfigMapEnvFromRefSchema)),
+								volumes: Type.Optional(Type.Array(ConfigMapVolumeRefSchema)),
 							}),
 						),
 						secretRefs: Type.Optional(
 							Type.Object({
-								env: Type.Optional(
-									Type.Array(
-										Type.Object({
-											name: Type.String({ minLength: 1 }),
-											secretName: Type.String({ minLength: 1 }),
-											key: Type.String({ minLength: 1 }),
-										}),
-									),
-								),
-								envFrom: Type.Optional(
-									Type.Array(
-										Type.Object({
-											secretName: Type.String({ minLength: 1 }),
-											prefix: Type.Optional(Type.String()),
-										}),
-									),
-								),
-								volumes: Type.Optional(
-									Type.Array(
-										Type.Object({
-											name: Type.String({ minLength: 1 }),
-											secretName: Type.String({ minLength: 1 }),
-											mountPath: Type.String({ minLength: 1 }),
-											items: Type.Optional(
-												Type.Array(
-													Type.Object({
-														key: Type.String({ minLength: 1 }),
-														path: Type.String({ minLength: 1 }),
-													}),
-												),
-											),
-										}),
-									),
-								),
+								env: Type.Optional(Type.Array(SecretEnvRefSchema)),
+								envFrom: Type.Optional(Type.Array(SecretEnvFromRefSchema)),
+								volumes: Type.Optional(Type.Array(SecretVolumeRefSchema)),
 							}),
 						),
 						pvcVolumes: Type.Optional(Type.Array(PvcVolumeRefSchema)),
 						emptyDirVolumes: Type.Optional(Type.Array(EmptyDirVolumeRefSchema)),
 						annotations: Type.Optional(
-							Type.Record(Type.String(), Type.String()),
+							Type.Record(
+								Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
+								Type.String(),
+							),
 						),
 					}),
 					response: {
@@ -816,9 +778,7 @@ export const podRoute = new Elysia({
 					}
 
 					if (!pod.k8sUid) {
-						await db
-							.delete(schema.k8sPods)
-							.where(eq(schema.k8sPods.id, podId));
+						await db.delete(schema.k8sPods).where(eq(schema.k8sPods.id, podId));
 						return ctx.status(200, {
 							success: true,
 							message: "Pod deleted successfully",
@@ -1072,14 +1032,22 @@ export const podRoute = new Elysia({
 					detail: { tags: ["Pods"] },
 					roleAuth: "pod:update",
 					body: Type.Object({
-						image: Type.Optional(Type.String()),
-						command: Type.Optional(Type.Array(Type.String())),
-						args: Type.Optional(Type.Array(Type.String())),
+						image: Type.Optional(
+							Type.String({ minLength: 1, pattern: "^[.*\\S.*$" }),
+						),
+						command: Type.Optional(
+							Type.Array(Type.String({ minLength: 1, pattern: "^[.*\\S.*$" })),
+						),
+						args: Type.Optional(
+							Type.Array(Type.String({ minLength: 1, pattern: "^[.*\\S.*$" })),
+						),
 						env: Type.Optional(
 							Type.Array(
 								Type.Object({
-									name: Type.String(),
-									value: Type.Optional(Type.String()),
+									name: Type.String({ minLength: 1, pattern: "^[.*\\S.*$" }),
+									value: Type.Optional(
+										Type.String({ minLength: 1, pattern: "^[.*\\S.*$" }),
+									),
 									valueFrom: Type.Optional(Type.Any()),
 								}),
 							),
@@ -1087,8 +1055,10 @@ export const podRoute = new Elysia({
 						ports: Type.Optional(
 							Type.Array(
 								Type.Object({
-									containerPort: Type.Number(),
-									name: Type.Optional(Type.String()),
+									containerPort: Type.Number({ minimum: 1, maximum: 65535 }),
+									name: Type.Optional(
+										Type.String({ minLength: 1, pattern: "^[.*\\S.*$" }),
+									),
 								}),
 							),
 						),
@@ -1096,49 +1066,88 @@ export const podRoute = new Elysia({
 							Type.Object({
 								requests: Type.Optional(
 									Type.Object({
-										cpu: Type.Optional(Type.String()),
-										memory: Type.Optional(Type.String()),
+										cpu: Type.Optional(
+											Type.String({ minLength: 1, pattern: "^[.*\\S.*$" }),
+										),
+										memory: Type.Optional(
+											Type.String({ minLength: 1, pattern: "^[.*\\S.*$" }),
+										),
 									}),
 								),
 								limits: Type.Optional(
 									Type.Object({
-										cpu: Type.Optional(Type.String()),
-										memory: Type.Optional(Type.String()),
+										cpu: Type.Optional(
+											Type.String({ minLength: 1, pattern: "^[.*\\S.*$" }),
+										),
+										memory: Type.Optional(
+											Type.String({ minLength: 1, pattern: "^[.*\\S.*$" }),
+										),
 									}),
 								),
 							}),
 						),
-						labels: Type.Optional(Type.Record(Type.String(), Type.String())),
+						labels: Type.Optional(
+							Type.Record(
+								Type.String({ minLength: 1, pattern: "^[.*\\S.*$" }),
+								Type.String({ minLength: 1, pattern: "^[.*\\S.*$" }),
+							),
+						),
 						configMapRefs: Type.Optional(
 							Type.Object({
 								env: Type.Optional(
 									Type.Array(
 										Type.Object({
-											name: Type.String(),
-											configMapName: Type.String(),
-											key: Type.String(),
+											name: Type.String({
+												minLength: 1,
+												pattern: "^[.*\\S.*$",
+											}),
+											configMapName: Type.String({
+												minLength: 1,
+												pattern: "^[.*\\S.*$",
+											}),
+											key: Type.String({ minLength: 1, pattern: "^[.*\\S.*$" }),
 										}),
 									),
 								),
 								envFrom: Type.Optional(
 									Type.Array(
 										Type.Object({
-											configMapName: Type.String(),
-											prefix: Type.Optional(Type.String()),
+											configMapName: Type.String({
+												minLength: 1,
+												pattern: "^[.*\\S.*$",
+											}),
+											prefix: Type.Optional(
+												Type.String({ minLength: 1, pattern: "^[.*\\S.*$" }),
+											),
 										}),
 									),
 								),
 								volumes: Type.Optional(
 									Type.Array(
 										Type.Object({
-											name: Type.String(),
-											configMapName: Type.String(),
-											mountPath: Type.String(),
+											name: Type.String({
+												minLength: 1,
+												pattern: "^[.*\\S.*$",
+											}),
+											configMapName: Type.String({
+												minLength: 1,
+												pattern: "^[.*\\S.*$",
+											}),
+											mountPath: Type.String({
+												minLength: 1,
+												pattern: "^[.*\\S.*$",
+											}),
 											items: Type.Optional(
 												Type.Array(
 													Type.Object({
-														key: Type.String(),
-														path: Type.String(),
+														key: Type.String({
+															minLength: 1,
+															pattern: "^[.*\\S.*$",
+														}),
+														path: Type.String({
+															minLength: 1,
+															pattern: "^[.*\\S.*$",
+														}),
 													}),
 												),
 											),
@@ -1152,31 +1161,57 @@ export const podRoute = new Elysia({
 								env: Type.Optional(
 									Type.Array(
 										Type.Object({
-											name: Type.String(),
-											secretName: Type.String(),
-											key: Type.String(),
+											name: Type.String({
+												minLength: 1,
+												pattern: "^[.*\\S.*$",
+											}),
+											secretName: Type.String({
+												minLength: 1,
+												pattern: "^[.*\\S.*$",
+											}),
+											key: Type.String({ minLength: 1, pattern: "^[.*\\S.*$" }),
 										}),
 									),
 								),
 								envFrom: Type.Optional(
 									Type.Array(
 										Type.Object({
-											secretName: Type.String(),
-											prefix: Type.Optional(Type.String()),
+											secretName: Type.String({
+												minLength: 1,
+												pattern: "^[.*\\S.*$",
+											}),
+											prefix: Type.Optional(
+												Type.String({ minLength: 1, pattern: "^[.*\\S.*$" }),
+											),
 										}),
 									),
 								),
 								volumes: Type.Optional(
 									Type.Array(
 										Type.Object({
-											name: Type.String(),
-											secretName: Type.String(),
-											mountPath: Type.String(),
+											name: Type.String({
+												minLength: 1,
+												pattern: "^[.*\\S.*$",
+											}),
+											secretName: Type.String({
+												minLength: 1,
+												pattern: "^[.*\\S.*$",
+											}),
+											mountPath: Type.String({
+												minLength: 1,
+												pattern: "^[.*\\S.*$",
+											}),
 											items: Type.Optional(
 												Type.Array(
 													Type.Object({
-														key: Type.String(),
-														path: Type.String(),
+														key: Type.String({
+															minLength: 1,
+															pattern: "^[.*\\S.*$",
+														}),
+														path: Type.String({
+															minLength: 1,
+															pattern: "^[.*\\S.*$",
+														}),
 													}),
 												),
 											),
@@ -1188,7 +1223,7 @@ export const podRoute = new Elysia({
 						pvcVolumes: Type.Optional(Type.Array(PvcVolumeRefSchema)),
 						emptyDirVolumes: Type.Optional(Type.Array(EmptyDirVolumeRefSchema)),
 						annotations: Type.Optional(
-							Type.Record(Type.String(), Type.String()),
+							Type.Record(Type.String({ minLength: 1 }), Type.String()),
 						),
 						// For simplicity, we only allow updating these fields. More can be added as needed.
 						// Note that some fields like name and namespace are immutable in Kubernetes and would require delete+recreate approach.
@@ -1288,9 +1323,11 @@ export const podRoute = new Elysia({
 					detail: { tags: ["Pods"] },
 					roleAuth: "pod:update",
 					body: Type.Object({
-						image: Type.String(),
-						name: Type.Optional(Type.String()),
-						targetContainer: Type.Optional(Type.String()),
+						image: Type.String({ minLength: 1, pattern: "^[.*\\S.*$" }),
+						name: Type.Optional(Type.String({ minLength: 1, pattern: "^[.*\\S.*$" })),
+						targetContainer: Type.Optional(
+							Type.String({ minLength: 1, pattern: "^[.*\\S.*$" }),
+						),
 					}),
 					response: {
 						200: baseResponseSchema(Type.Any()),

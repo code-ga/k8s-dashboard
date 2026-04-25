@@ -23,9 +23,9 @@ export const Route = createFileRoute("/dashboard/cluster/$id/services/create")({
 
 const portSchema = z.object({
 	id: z.string(),
-	name: z.string().optional(),
-	port: z.number().min(1).max(65535),
-	targetPort: z.number().min(1).max(65535),
+	name: z.string().optional().refine(val => !val || val.length >= 1, "Name cannot be empty"),
+	port: z.number().min(1, "Min 1").max(65535, "Max 65535"),
+	targetPort: z.number().min(1, "Min 1").max(65535, "Max 65535"),
 	protocol: z.enum(["TCP", "UDP"]),
 });
 

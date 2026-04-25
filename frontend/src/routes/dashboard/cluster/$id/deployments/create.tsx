@@ -61,8 +61,20 @@ const deploymentSchema = z.object({
 	memoryLimit: z.string().optional(),
 	command: z.string().optional(),
 	args: z.string().optional(),
-	labels: z.string().optional(),
-	selector: z.string().optional(),
+	labels: z.string().optional().refine(val => {
+		if (!val) return true;
+		return val.split(",").every(pair => {
+			const [key, value] = pair.split("=").map(s => s.trim());
+			return key && value;
+		});
+	}, "Labels must be in key=value format, comma separated"),
+	selector: z.string().optional().refine(val => {
+		if (!val) return true;
+		return val.split(",").every(pair => {
+			const [key, value] = pair.split("=").map(s => s.trim());
+			return key && value;
+		});
+	}, "Selector must be in key=value format, comma separated"),
 	envVars: z.array(envVarSchema).optional(),
 });
 

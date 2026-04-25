@@ -137,9 +137,11 @@ export const roleRoute = new Elysia({ prefix: "/role" })
 							403: errorResponseSchema,
 						},
 						body: Type.Object({
-							name: dbSchemaTypes.role.name,
-							description: dbSchemaTypes.role.description,
-							permissions: dbSchemaTypes.role.permissions,
+							name: Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
+							description: Type.Optional(
+								Type.Union([Type.String(), Type.Null()]),
+							),
+							permissions: Type.Array(Type.String({ minLength: 1, pattern: "^.*\\S.*$" })),
 						}),
 					},
 				)
@@ -271,9 +273,11 @@ export const roleRoute = new Elysia({ prefix: "/role" })
 						}),
 						body: Type.Partial(
 							Type.Object({
-								name: dbSchemaTypes.role.name,
-								description: dbSchemaTypes.role.description,
-								permissions: dbSchemaTypes.role.permissions,
+								name: Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
+								description: Type.Union([Type.String(), Type.Null()]),
+								permissions: Type.Array(
+									Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
+								),
 							}),
 						),
 					},

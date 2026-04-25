@@ -255,6 +255,11 @@ function ManagePodPage() {
 
 	const savePodMutation = useMutation({
 		mutationFn: async () => {
+			if (!image.trim()) {
+				toast.error("Image is required");
+				throw new Error("Image is required");
+			}
+
 			const envPayload = envVars
 				.filter((v) => v.name)
 				.map((v) => {
@@ -264,9 +269,27 @@ function ManagePodPage() {
 					return { name: v.name, value: v.value };
 				});
 
+			for (const v of envVars) {
+				if (!v.name && (v.value || v.valueFrom)) {
+					toast.error("All environment variables must have a name");
+					throw new Error("All environment variables must have a name");
+				}
+			}
+
 			const labelsMap: Record<string, string> = {};
 			for (const l of labels) {
+				if (!l.name && l.value) {
+					toast.error("All labels must have a key");
+					throw new Error("All labels must have a key");
+				}
 				if (l.name && l.value) labelsMap[l.name] = l.value;
+			}
+
+			for (const p of ports) {
+				if (p.containerPort < 1 || p.containerPort > 65535) {
+					toast.error(`Invalid port: ${p.containerPort}`);
+					throw new Error(`Invalid port: ${p.containerPort}`);
+				}
 			}
 
 			const res = await api.api

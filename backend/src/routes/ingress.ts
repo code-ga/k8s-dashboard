@@ -415,20 +415,37 @@ export const ingressRoute = new Elysia({
 					detail: { tags: ["Ingresses"] },
 					roleAuth: "ingress:create",
 					body: Type.Object({
-						serviceName: Type.String({ minLength: 1 }),
-						namespace: Type.String({ minLength: 1 }),
+						serviceName: Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
+						namespace: Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
 						protocol: Type.Union([
 							Type.Literal("http"),
 							Type.Literal("tcp"),
 							Type.Literal("udp"),
 						]),
 						internalPort: Type.Number({ minimum: 1, maximum: 65535 }),
-						externalPort: Type.Optional(Type.Number({ minimum: 1, maximum: 65535 })),
-						domain: Type.Optional(Type.String({ minLength: 1 })),
-						selector: Type.Optional(Type.Record(Type.String({ minLength: 1 }), Type.String({ minLength: 1 }))),
-						labels: Type.Optional(Type.Record(Type.String({ minLength: 1 }), Type.String())),
+						externalPort: Type.Optional(
+							Type.Number({ minimum: 1, maximum: 65535 }),
+						),
+						domain: Type.Optional(
+							Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
+						),
+						selector: Type.Optional(
+							Type.Record(
+								Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
+								Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
+							),
+						),
+						labels: Type.Optional(
+							Type.Record(
+								Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
+								Type.String(),
+							),
+						),
 						annotations: Type.Optional(
-							Type.Record(Type.String({ minLength: 1 }), Type.String()),
+							Type.Record(
+								Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
+								Type.String(),
+							),
 						),
 						tls: Type.Optional(Type.Boolean()),
 					}),

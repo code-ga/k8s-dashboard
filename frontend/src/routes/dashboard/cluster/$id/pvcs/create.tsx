@@ -38,6 +38,20 @@ function CreatePVC() {
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
+		
+		if (!formData.name.trim()) {
+			toast.error("Name is required");
+			return;
+		}
+		if (!formData.namespace.trim()) {
+			toast.error("Namespace is required");
+			return;
+		}
+		if (formData.capacity < 1) {
+			toast.error("Capacity must be at least 1 MiB");
+			return;
+		}
+
 		setLoading(true);
 
 		try {

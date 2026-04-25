@@ -13,10 +13,16 @@ import { decryptEnvVars } from "../utils/env-utils";
 import { generateDeploymentManifest } from "../utils/k8s-manifest";
 import { logger } from "../utils/logger";
 import {
+	ConfigMapEnvFromRefSchema,
+	ConfigMapEnvRefSchema,
+	ConfigMapVolumeRefSchema,
 	EmptyDirVolumeRefSchema,
 	fetchAllDeploymentResourceRefs,
 	insertAllDeploymentResourceRefs,
 	PvcVolumeRefSchema,
+	SecretEnvFromRefSchema,
+	SecretEnvRefSchema,
+	SecretVolumeRefSchema,
 	updateAllDeploymentResourceRefs,
 } from "../utils/resource-refs";
 
@@ -645,93 +651,39 @@ export const deploymentRoute = new Elysia({
 					detail: { tags: ["Deployments"] },
 					roleAuth: "deployment:create",
 					body: Type.Object({
-						name: Type.String({ minLength: 1 }),
-						namespace: Type.String({ minLength: 1 }),
-						image: Type.String({ minLength: 1 }),
-						replicas: Type.Number({ default: 1 }),
-						command: Type.Optional(Type.Array(Type.String({ minLength: 1 }))),
-						args: Type.Optional(Type.Array(Type.String({ minLength: 1 }))),
+						name: Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
+						namespace: Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
+						image: Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
+						replicas: Type.Number({ default: 1, minimum: 0 }),
+						command: Type.Optional(
+							Type.Array(Type.String({ minLength: 1, pattern: "^.*\\S.*$" })),
+						),
+						args: Type.Optional(
+							Type.Array(Type.String({ minLength: 1, pattern: "^.*\\S.*$" })),
+						),
 						env: Type.Optional(
 							Type.Array(
 								Type.Object({
-									name: Type.String({ minLength: 1 }),
-									value: Type.Optional(Type.String()),
+									name: Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
+									value: Type.Optional(
+										Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
+									),
 									valueFrom: Type.Optional(Type.Any()),
 								}),
 							),
 						),
 						configMapRefs: Type.Optional(
 							Type.Object({
-								env: Type.Optional(
-									Type.Array(
-										Type.Object({
-											name: Type.String({ minLength: 1 }),
-											configMapName: Type.String({ minLength: 1 }),
-											key: Type.String({ minLength: 1 }),
-										}),
-									),
-								),
-								envFrom: Type.Optional(
-									Type.Array(
-										Type.Object({
-											configMapName: Type.String({ minLength: 1 }),
-										}),
-									),
-								),
-								volumes: Type.Optional(
-									Type.Array(
-										Type.Object({
-											name: Type.String({ minLength: 1 }),
-											configMapName: Type.String({ minLength: 1 }),
-											mountPath: Type.String({ minLength: 1 }),
-											items: Type.Optional(
-												Type.Array(
-													Type.Object({
-														key: Type.String({ minLength: 1 }),
-														path: Type.String({ minLength: 1 }),
-													}),
-												),
-											),
-										}),
-									),
-								),
+								env: Type.Optional(Type.Array(ConfigMapEnvRefSchema)),
+								envFrom: Type.Optional(Type.Array(ConfigMapEnvFromRefSchema)),
+								volumes: Type.Optional(Type.Array(ConfigMapVolumeRefSchema)),
 							}),
 						),
 						secretRefs: Type.Optional(
 							Type.Object({
-								env: Type.Optional(
-									Type.Array(
-										Type.Object({
-											name: Type.String({ minLength: 1 }),
-											secretName: Type.String({ minLength: 1 }),
-											key: Type.String({ minLength: 1 }),
-										}),
-									),
-								),
-								envFrom: Type.Optional(
-									Type.Array(
-										Type.Object({
-											secretName: Type.String({ minLength: 1 }),
-										}),
-									),
-								),
-								volumes: Type.Optional(
-									Type.Array(
-										Type.Object({
-											name: Type.String({ minLength: 1 }),
-											secretName: Type.String({ minLength: 1 }),
-											mountPath: Type.String({ minLength: 1 }),
-											items: Type.Optional(
-												Type.Array(
-													Type.Object({
-														key: Type.String({ minLength: 1 }),
-														path: Type.String({ minLength: 1 }),
-													}),
-												),
-											),
-										}),
-									),
-								),
+								env: Type.Optional(Type.Array(SecretEnvRefSchema)),
+								envFrom: Type.Optional(Type.Array(SecretEnvFromRefSchema)),
+								volumes: Type.Optional(Type.Array(SecretVolumeRefSchema)),
 							}),
 						),
 						pvcVolumes: Type.Optional(Type.Array(PvcVolumeRefSchema)),
@@ -739,38 +691,60 @@ export const deploymentRoute = new Elysia({
 						ports: Type.Optional(
 							Type.Array(
 								Type.Object({
-									containerPort: Type.Number(),
-									name: Type.Optional(Type.String()),
+									containerPort: Type.Number({ minimum: 1, maximum: 65535 }),
+									name: Type.Optional(
+										Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
+									),
 								}),
 							),
 						),
 						resources: Type.Optional(
 							Type.Object({
-								// cpuRequest: Type.Optional(Type.String()),
-								// cpuLimit: Type.Optional(Type.String()),
-								// memoryRequest: Type.Optional(Type.String()),
-								// memoryLimit: Type.Optional(Type.String()),
 								requests: Type.Optional(
 									Type.Object({
-										cpu: Type.Optional(Type.String()),
-										memory: Type.Optional(Type.String()),
+										cpu: Type.Optional(
+											Type.String({ minLength: 1, pattern: "^[.*\\S.*$" }),
+										),
+										memory: Type.Optional(
+											Type.String({ minLength: 1, pattern: "^[.*\\S.*$" }),
+										),
 									}),
 								),
 								limits: Type.Optional(
 									Type.Object({
-										cpu: Type.Optional(Type.String()),
-										memory: Type.Optional(Type.String()),
+										cpu: Type.Optional(
+											Type.String({ minLength: 1, pattern: "^[.*\\S.*$" }),
+										),
+										memory: Type.Optional(
+											Type.String({ minLength: 1, pattern: "^[.*\\S.*$" }),
+										),
 									}),
 								),
 							}),
 						),
-						labels: Type.Optional(Type.Record(Type.String(), Type.String())),
-						selector: Type.Optional(Type.Record(Type.String(), Type.String())),
+						labels: Type.Optional(
+							Type.Record(
+								Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
+								Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
+							),
+						),
+						selector: Type.Optional(
+							Type.Record(
+								Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
+								Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
+							),
+						),
 						annotations: Type.Optional(
-							Type.Record(Type.String(), Type.String()),
+							Type.Record(
+								Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
+								Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
+							),
 						),
 						templateAnnotations: Type.Optional(
-							Type.Record(Type.String(), Type.String()),
+							Type.Record(
+								Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
+								Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
+							),
 						),
 						isAutoScaling: Type.Optional(Type.Boolean()),
 						isAlwaysRunning: Type.Optional(Type.Boolean()),
@@ -1100,26 +1074,49 @@ export const deploymentRoute = new Elysia({
 					detail: { tags: ["Deployments"] },
 					roleAuth: "deployment:update",
 					body: Type.Object({
-						replicas: Type.Optional(Type.Number()),
-						image: Type.Optional(Type.String()),
-						labels: Type.Optional(Type.Record(Type.String(), Type.String())),
-						selector: Type.Optional(Type.Record(Type.String(), Type.String())),
+						replicas: Type.Optional(Type.Number({ minimum: 0 })),
+						image: Type.Optional(
+							Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
+						),
+						labels: Type.Optional(
+							Type.Record(
+								Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
+								Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
+							),
+						),
+						selector: Type.Optional(
+							Type.Record(
+								Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
+								Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
+							),
+						),
 						templateAnnotations: Type.Optional(
-							Type.Record(Type.String(), Type.String()),
+							Type.Record(
+								Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
+								Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
+							),
 						),
 						// Adding other fields effectively means replacing them if provided
 						resources: Type.Optional(
 							Type.Object({
 								requests: Type.Optional(
 									Type.Object({
-										cpu: Type.Optional(Type.String()),
-										memory: Type.Optional(Type.String()),
+										cpu: Type.Optional(
+											Type.String({ minLength: 1, pattern: "^[.*\\S.*$" }),
+										),
+										memory: Type.Optional(
+											Type.String({ minLength: 1, pattern: "^[.*\\S.*$" }),
+										),
 									}),
 								),
 								limits: Type.Optional(
 									Type.Object({
-										cpu: Type.Optional(Type.String()),
-										memory: Type.Optional(Type.String()),
+										cpu: Type.Optional(
+											Type.String({ minLength: 1, pattern: "^[.*\\S.*$" }),
+										),
+										memory: Type.Optional(
+											Type.String({ minLength: 1, pattern: "^[.*\\S.*$" }),
+										),
 									}),
 								),
 							}),
@@ -1127,8 +1124,10 @@ export const deploymentRoute = new Elysia({
 						env: Type.Optional(
 							Type.Array(
 								Type.Object({
-									name: Type.String({ minLength: 1 }),
-									value: Type.Optional(Type.String()),
+									name: Type.String({ minLength: 1, pattern: "^[.*\S.*$" }),
+									value: Type.Optional(
+										Type.String({ minLength: 1, pattern: "^[.*\S.*$" }),
+									),
 									valueFrom: Type.Optional(Type.Any()),
 								}),
 							),
@@ -1138,30 +1137,54 @@ export const deploymentRoute = new Elysia({
 								env: Type.Optional(
 									Type.Array(
 										Type.Object({
-											name: Type.String({ minLength: 1 }),
-											configMapName: Type.String({ minLength: 1 }),
-											key: Type.String({ minLength: 1 }),
+											name: Type.String({
+												minLength: 1,
+												pattern: "^[.*\\S.*$",
+											}),
+											configMapName: Type.String({
+												minLength: 1,
+												pattern: "^[.*\\S.*$",
+											}),
+											key: Type.String({ minLength: 1, pattern: "^[.*\\S.*$" }),
 										}),
 									),
 								),
 								envFrom: Type.Optional(
 									Type.Array(
 										Type.Object({
-											configMapName: Type.String({ minLength: 1 }),
+											configMapName: Type.String({
+												minLength: 1,
+												pattern: "^[.*\\S.*$",
+											}),
 										}),
 									),
 								),
 								volumes: Type.Optional(
 									Type.Array(
 										Type.Object({
-											name: Type.String({ minLength: 1 }),
-											configMapName: Type.String({ minLength: 1 }),
-											mountPath: Type.String({ minLength: 1 }),
+											name: Type.String({
+												minLength: 1,
+												pattern: "^[.*\\S.*$",
+											}),
+											configMapName: Type.String({
+												minLength: 1,
+												pattern: "^[.*\\S.*$",
+											}),
+											mountPath: Type.String({
+												minLength: 1,
+												pattern: "^[.*\\S.*$",
+											}),
 											items: Type.Optional(
 												Type.Array(
 													Type.Object({
-														key: Type.String({ minLength: 1 }),
-														path: Type.String({ minLength: 1 }),
+														key: Type.String({
+															minLength: 1,
+															pattern: "^[.*\\S.*$",
+														}),
+														path: Type.String({
+															minLength: 1,
+															pattern: "^[.*\\S.*$",
+														}),
 													}),
 												),
 											),
@@ -1175,30 +1198,54 @@ export const deploymentRoute = new Elysia({
 								env: Type.Optional(
 									Type.Array(
 										Type.Object({
-											name: Type.String({ minLength: 1 }),
-											secretName: Type.String({ minLength: 1 }),
-											key: Type.String({ minLength: 1 }),
+											name: Type.String({
+												minLength: 1,
+												pattern: "^[.*\\S.*$",
+											}),
+											secretName: Type.String({
+												minLength: 1,
+												pattern: "^[.*\\S.*$",
+											}),
+											key: Type.String({ minLength: 1, pattern: "^[.*\\S.*$" }),
 										}),
 									),
 								),
 								envFrom: Type.Optional(
 									Type.Array(
 										Type.Object({
-											secretName: Type.String({ minLength: 1 }),
+											secretName: Type.String({
+												minLength: 1,
+												pattern: "^[.*\\S.*$",
+											}),
 										}),
 									),
 								),
 								volumes: Type.Optional(
 									Type.Array(
 										Type.Object({
-											name: Type.String({ minLength: 1 }),
-											secretName: Type.String({ minLength: 1 }),
-											mountPath: Type.String({ minLength: 1 }),
+											name: Type.String({
+												minLength: 1,
+												pattern: "^[.*\\S.*$",
+											}),
+											secretName: Type.String({
+												minLength: 1,
+												pattern: "^[.*\\S.*$",
+											}),
+											mountPath: Type.String({
+												minLength: 1,
+												pattern: "^[.*\\S.*$",
+											}),
 											items: Type.Optional(
 												Type.Array(
 													Type.Object({
-														key: Type.String({ minLength: 1 }),
-														path: Type.String({ minLength: 1 }),
+														key: Type.String({
+															minLength: 1,
+															pattern: "^[.*\\S.*$",
+														}),
+														path: Type.String({
+															minLength: 1,
+															pattern: "^[.*\\S.*$",
+														}),
 													}),
 												),
 											),
@@ -1209,18 +1256,27 @@ export const deploymentRoute = new Elysia({
 						),
 						pvcVolumes: Type.Optional(Type.Array(PvcVolumeRefSchema)),
 						emptyDirVolumes: Type.Optional(Type.Array(EmptyDirVolumeRefSchema)),
-						command: Type.Optional(Type.Array(Type.String())),
-						args: Type.Optional(Type.Array(Type.String())),
+						command: Type.Optional(
+							Type.Array(Type.String({ minLength: 1, pattern: "^[.*\\S.*$" })),
+						),
+						args: Type.Optional(
+							Type.Array(Type.String({ minLength: 1, pattern: "^[.*\\S.*$" })),
+						),
 						ports: Type.Optional(
 							Type.Array(
 								Type.Object({
-									containerPort: Type.Number(),
-									name: Type.Optional(Type.String()),
+									containerPort: Type.Number({ minimum: 1, maximum: 65535 }),
+									name: Type.Optional(
+										Type.String({ minLength: 1, pattern: "^[.*\\S.*$" }),
+									),
 								}),
 							),
 						),
 						annotations: Type.Optional(
-							Type.Record(Type.String(), Type.String()),
+							Type.Record(
+								Type.String({ minLength: 1, pattern: "^[.*\\S.*$" }),
+								Type.String({ minLength: 1, pattern: "^[.*\\S.*$" }),
+							),
 						),
 						isAutoScaling: Type.Optional(Type.Boolean()),
 						isAlwaysRunning: Type.Optional(Type.Boolean()),
@@ -1421,155 +1477,32 @@ export const deploymentRoute = new Elysia({
 					},
 				},
 			)
+			/**
+			 * @deprecated using pod logs websocket instead @ref /api/ws/pod/logs/:clusterId/:podId
+			 */
 			.ws("/logs/:id", {
 				detail: { tags: ["Deployments"] },
 				roleAuth: "deployment:read",
 				open: async (ws) => {
-					// 1. Auth & Validation (ws.data context)
-					const { clusterId, id } = ws.data.params;
-					const profile = ws.data.profile;
-
-					if (!clusterId || !id) {
-						ws.send("Missing params");
-						ws.close();
-						return;
-					}
-
-					// Verify Deployment access
-					const deployment = await db.query.k8sDeployments.findFirst({
-						where: {
-							id: Number(id),
-							clusterId: Number(clusterId),
-						},
+					ws.send({
+						message:
+							"please using /api/ws/pod/logs/:clusterId/:podId instead of /api/ws/deployment/logs/:clusterId/:podId",
+						reason: "deprecated API",
+						error: true,
+						success: false,
+						timestamp: Date.now(),
 					});
-
-					if (!deployment) {
-						ws.send("Deployment not found");
-						ws.close();
-						return;
-					}
-
-					// Permission Check
-					const isManager =
-						ws.data.userPermissions.has("deployment:manage") ||
-						ws.data.userPermissions.has("deployment:read");
-					if (!isManager && deployment.ownerId !== profile?.id) {
-						ws.send("Unauthorized");
-						ws.close();
-						return;
-					}
-
-					const cluster = await db.query.k8sCluster.findFirst({
-						where: { id: Number(clusterId) },
-						with: { agent: true },
-					});
-
-					if (!cluster || !cluster.agent) {
-						ws.send("Cluster/Agent not found");
-						ws.close();
-						return;
-					}
-
-					// 2. Find a running pod for this deployment
-					// We need to look up pods that belong to this deployment.
-					// Schema has `deploymentId` on k8sPods.
-
-					const pods = await db.query.k8sPods.findMany({
-						where: {
-							deploymentId: deployment.id,
-							clusterId: cluster.id,
-						},
-					});
-
-					if (pods.length === 0) {
-						ws.send("No pods found for this deployment");
-						ws.close();
-						return;
-					}
-
-					// Pick the first one (or preferably one that is 'Running' if we had status)
-					// Verify if we have status in DB? schema.ts says k8sPods has internalPort etc but not explicit 'status' column
-					// visible in the snippet provided earlier?
-					// Wait, step 5 view of pod.ts uses `dbSchemaTypes.k8sPods`.
-					// Step 7 schema.ts: k8sPods has `createdAt`, `k8sUid`, `cpuRequest`...
-					// NO `status` column in k8sPods!
-					// However, AgentService syncs pods.
-					// If we don't have status, we just pick the first one.
-					const targetPod = pods[0];
-					logger.info("targetPod", targetPod);
-					if (!targetPod) {
-						ws.send("No pods found for this deployment");
-						ws.close();
-						return;
-					}
-
-					// Start stream using existing generic STREAM_LOGS command
-					const payload = JSON.stringify({
-						namespace: targetPod.namespace,
-						name: targetPod.name,
-						tailLines: 100,
-						follow: true,
-					});
-
-					try {
-						// Command Type 9: STREAM_LOGS (from pod.ts usage)
-						const streamId = await ws.data.agentManager.startStream(
-							cluster.agent.id,
-							cluster.id,
-							9, // STREAM_LOGS
-							payload,
-							ws,
-						);
-
-						// Store stream info for cleanup
-						// We don't have `websocketData` map here unless we decorate it like in pod.ts
-						// Deployment router was created new.
-						// NEED TO CHECK IF `.decorate("websocketData", ...)` was added to deploymentRoute.
-						// It wasn't in my previous `create deployment.ts` step!
-						// I must add the decoration or use a shared one.
-
-						// Strategy: I will add the decoration to this router now.
-						// But I am inside the .ws() call which is inside a guard etc.
-						// I should have added .decorate at the top level of the router.
-						// I will rely on `ws.data` having it if I add it to the top level chain.
-
-						// For this replace_content, I'll assume ws.data.websocketData exists
-						// AND I will issue another replace to add the decorate call at the top.
-
-						if (ws.data.websocketData) {
-							ws.data.websocketData.set(ws.id, {
-								clusterId: Number(clusterId),
-								streamId,
-								podId: targetPod.id, // storing podId for tracking
-								agentId: Number(cluster.agent.id),
-								type: 0, // DATA
-								rows: 0,
-								cols: 0,
-							});
-						} else {
-							// Fallback if not decorated yet?
-							// We need to decorate. I'll make sure to add it.
-							logger.error("websocketData missing in context");
-							ws.close();
-						}
-					} catch (e) {
-						logger.info("Error starting stream:", e);
-						const message = e instanceof Error ? e.message : String(e);
-						ws.send(`Error starting stream: ${message}`);
-						ws.close();
-						return;
-					}
+					ws.close();
 				},
-				close: async (ws) => {
-					if (ws.data.websocketData) {
-						const data = ws.data.websocketData.get(ws.id) as
-							| WebSocketDataValue
-							| undefined;
-						if (data) {
-							await ws.data.agentManager.stopStream(data.streamId);
-							ws.data.websocketData.delete(ws.id);
-						}
-					}
+				beforeHandle: ({ status }) => {
+					return status(410, {
+						message:
+							"please using /api/ws/pod/logs/:clusterId/:podId instead of /api/ws/deployment/logs/:clusterId/:podId",
+						reason: "deprecated API",
+						error: true,
+						success: false,
+						timestamp: Date.now(),
+					});
 				},
 			})
 			.post(

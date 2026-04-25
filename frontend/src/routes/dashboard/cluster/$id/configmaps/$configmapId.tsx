@@ -68,6 +68,25 @@ function ManageConfigMapPage() {
 
 	const updateMutation = useMutation({
 		mutationFn: async () => {
+			for (const v of editDataVars) {
+				if (!v.name) {
+					toast.error("All data entries must have a key");
+					throw new Error("All data entries must have a key");
+				}
+			}
+			for (const v of editBinaryDataVars) {
+				if (!v.name) {
+					toast.error("All binary data entries must have a key");
+					throw new Error("All binary data entries must have a key");
+				}
+			}
+			for (const l of editLabels) {
+				if (!l.name) {
+					toast.error("All labels must have a key");
+					throw new Error("All labels must have a key");
+				}
+			}
+
 			const data: Record<string, string | null> = {};
 			// Only send changed or new data
 			editDataVars.forEach((v) => {

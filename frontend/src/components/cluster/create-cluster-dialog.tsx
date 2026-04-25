@@ -22,12 +22,18 @@ import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
 
 const clusterSchema = z.object({
-	name: z.string().min(3, "Name must be at least 3 characters"),
+	name: z
+		.string()
+		.trim()
+		.min(3, "Name must be at least 3 characters and not only whitespace"),
 	description: z.string().optional(),
-	clusterDomain: z.string().min(3, "Domain must be at least 3 characters"),
+	clusterDomain: z
+		.string()
+		.trim()
+		.min(3, "Domain must be at least 3 characters and not only whitespace"),
 	tags: z.string().optional(),
 	enableS3Service: z.boolean().default(false),
-	acmeEmail: z.string().email().optional(),
+	acmeEmail: z.string().email().optional().or(z.literal("")),
 });
 
 export function CreateClusterDialog() {

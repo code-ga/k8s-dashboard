@@ -245,13 +245,28 @@ export const secretRoute = new Elysia({
 					detail: { tags: ["Secrets"] },
 					roleAuth: "secret:create",
 					body: Type.Object({
-						name: Type.String({ minLength: 1 }),
-						namespace: Type.String({ minLength: 1 }),
-						type: Type.Optional(Type.String({ minLength: 1 })),
-						data: Type.Optional(Type.Record(Type.String({ minLength: 1 }), Type.String())),
-						labels: Type.Optional(Type.Record(Type.String({ minLength: 1 }), Type.String())),
+						name: Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
+						namespace: Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
+						type: Type.Optional(
+							Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
+						),
+						data: Type.Optional(
+							Type.Record(
+								Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
+								Type.String(),
+							),
+						),
+						labels: Type.Optional(
+							Type.Record(
+								Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
+								Type.String(),
+							),
+						),
 						annotations: Type.Optional(
-							Type.Record(Type.String({ minLength: 1 }), Type.String()),
+							Type.Record(
+								Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
+								Type.String(),
+							),
 						),
 					}),
 					response: {
@@ -431,22 +446,24 @@ export const secretRoute = new Elysia({
 					detail: { tags: ["Secrets"] },
 					roleAuth: "secret:update",
 					body: Type.Object({
-						type: Type.Optional(Type.String({ minLength: 1 })),
+						type: Type.Optional(
+							Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
+						),
 						data: Type.Optional(
 							Type.Record(
-								Type.String({ minLength: 1 }),
+								Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
 								Type.Union([Type.String(), Type.Null()]),
 							),
 						),
 						labels: Type.Optional(
 							Type.Record(
-								Type.String({ minLength: 1 }),
+								Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
 								Type.Union([Type.String(), Type.Null()]),
 							),
 						),
 						annotations: Type.Optional(
 							Type.Record(
-								Type.String({ minLength: 1 }),
+								Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
 								Type.Union([Type.String(), Type.Null()]),
 							),
 						),

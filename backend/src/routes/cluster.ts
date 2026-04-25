@@ -88,14 +88,16 @@ export const clusterRoute = new Elysia({ prefix: "/cluster" })
 							500: errorResponseSchema,
 						},
 						body: Type.Object({
-							name: dbSchemaTypes.k8sCluster.name,
-							description: dbSchemaTypes.k8sCluster.description,
-							tags: dbSchemaTypes.k8sCluster.tags,
-							clusterDomain: dbSchemaTypes.k8sCluster.clusterDomain,
-							enableS3Service: Type.Optional(
-								dbSchemaTypes.k8sCluster.enableS3Service,
+							name: Type.String({ minLength: 3, pattern: "^.*\\S.*$" }),
+							description: Type.Optional(
+								Type.Union([Type.String(), Type.Null()]),
 							),
-							acmeEmail: Type.Optional(dbSchemaTypes.k8sCluster.acmeEmail),
+							tags: Type.Optional(Type.Array(Type.String())),
+							clusterDomain: Type.String({ minLength: 3, pattern: "^.*\\S.*$" }),
+							enableS3Service: Type.Optional(Type.Boolean()),
+							acmeEmail: Type.Optional(
+								Type.Union([Type.String({ format: "email" }), Type.Null()]),
+							),
 						}),
 						roleAuth: "cluster:create",
 					},
@@ -163,12 +165,15 @@ export const clusterRoute = new Elysia({ prefix: "/cluster" })
 						},
 						body: Type.Partial(
 							Type.Object({
-								name: dbSchemaTypes.k8sCluster.name,
-								description: dbSchemaTypes.k8sCluster.description,
-								tags: dbSchemaTypes.k8sCluster.tags,
-								enableS3Service: dbSchemaTypes.k8sCluster.enableS3Service,
-								clusterDomain: dbSchemaTypes.k8sCluster.clusterDomain,
-								acmeEmail: dbSchemaTypes.k8sCluster.acmeEmail,
+								name: Type.String({ minLength: 3, pattern: "^.*\\S.*$" }),
+								description: Type.Union([Type.String(), Type.Null()]),
+								tags: Type.Array(Type.String()),
+								enableS3Service: Type.Boolean(),
+								clusterDomain: Type.String({
+									minLength: 3,
+									pattern: "^.*\\S.*$",
+								}),
+								acmeEmail: Type.Union([Type.String({ format: "email" }), Type.Null()]),
 							}),
 						),
 						roleAuth: "cluster:update",

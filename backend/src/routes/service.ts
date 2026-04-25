@@ -269,29 +269,44 @@ export const serviceRoute = new Elysia({
 					detail: { tags: ["Services"] },
 					roleAuth: "service:create",
 					body: Type.Object({
-						name: Type.String({ minLength: 1 }),
-						namespace: Type.String({ minLength: 1 }),
+						name: Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
+						namespace: Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
 						type: Type.Union([
 							Type.Literal("ClusterIP"),
 							Type.Literal("NodePort"),
 							Type.Literal("LoadBalancer"),
 						]),
-						selector: Type.Record(Type.String({ minLength: 1 }), Type.String({ minLength: 1 })),
+						selector: Type.Record(
+							Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
+							Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
+						),
 						ports: Type.Array(
 							Type.Object({
 								port: Type.Number({ minimum: 1, maximum: 65535 }),
 								targetPort: Type.Number({ minimum: 1, maximum: 65535 }),
-								nodePort: Type.Optional(Type.Number({ minimum: 30000, maximum: 32767 })),
+								nodePort: Type.Optional(
+									Type.Number({ minimum: 30000, maximum: 32767 }),
+								),
 								protocol: Type.Optional(
 									Type.Union([Type.Literal("TCP"), Type.Literal("UDP")]),
 								),
-								name: Type.Optional(Type.String({ minLength: 1 })),
+								name: Type.Optional(
+									Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
+								),
 							}),
-							{ minItems: 1 }
+							{ minItems: 1 },
 						),
-						labels: Type.Optional(Type.Record(Type.String({ minLength: 1 }), Type.String())),
+						labels: Type.Optional(
+							Type.Record(
+								Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
+								Type.String(),
+							),
+						),
 						annotations: Type.Optional(
-							Type.Record(Type.String({ minLength: 1 }), Type.String()),
+							Type.Record(
+								Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
+								Type.String(),
+							),
 						),
 					}),
 					response: {

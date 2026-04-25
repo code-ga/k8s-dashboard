@@ -72,6 +72,16 @@ function CreateStorageClass() {
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
+
+		if (!formData.name.trim()) {
+			toast.error("Name is required");
+			return;
+		}
+		if (!formData.provisioner.trim()) {
+			toast.error("Provisioner is required");
+			return;
+		}
+
 		setLoading(true);
 
 		try {

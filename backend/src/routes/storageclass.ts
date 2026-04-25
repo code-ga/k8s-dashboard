@@ -317,8 +317,8 @@ export const storageclassRoute = new Elysia({
 				{
 					roleAuth: "storageclass:create",
 					body: Type.Object({
-						name: Type.String({ minLength: 1 }),
-						provisioner: Type.String({ minLength: 1 }),
+						name: Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
+						provisioner: Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
 						reclaimPolicy: Type.Optional(
 							Type.Union([Type.Literal("Delete"), Type.Literal("Retain")]),
 						),
@@ -330,9 +330,17 @@ export const storageclassRoute = new Elysia({
 						),
 						allowVolumeExpansion: Type.Optional(Type.Boolean()),
 						annotations: Type.Optional(
-							Type.Record(Type.String({ minLength: 1 }), Type.String()),
+							Type.Record(
+								Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
+								Type.String(),
+							),
 						),
-						labels: Type.Optional(Type.Record(Type.String({ minLength: 1 }), Type.String())),
+						labels: Type.Optional(
+							Type.Record(
+								Type.String({ minLength: 1, pattern: "^.*\\S.*$" }),
+								Type.String(),
+							),
+						),
 						isDefault: Type.Optional(Type.Boolean()),
 					}),
 					response: {
