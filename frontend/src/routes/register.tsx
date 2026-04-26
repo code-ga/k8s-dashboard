@@ -161,6 +161,7 @@ function RegisterPage() {
 									login flow can work correctly so please using normal browser.
 									Any action to prevent cookies from cross-domain will lead to
 									this issues.
+                  Also the security setting in your browser that prevent cross-site tracking will also cause this issue so please make sure to disable that if you encounter any login issues.
 								</span>
 							</p>
 						</p>
