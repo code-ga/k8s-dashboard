@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as RegisterRouteImport } from './routes/register'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as DashboardLayoutRouteImport } from './routes/dashboard-layout'
@@ -46,6 +47,11 @@ import { Route as DashboardClusterIdDeploymentsDeploymentIdRouteImport } from '.
 import { Route as DashboardClusterIdConfigmapsCreateRouteImport } from './routes/dashboard/cluster/$id/configmaps/create'
 import { Route as DashboardClusterIdConfigmapsConfigmapIdRouteImport } from './routes/dashboard/cluster/$id/configmaps/$configmapId'
 
+const RegisterRoute = RegisterRouteImport.update({
+  id: '/register',
+  path: '/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const OnboardingRoute = OnboardingRouteImport.update({
   id: '/onboarding',
   path: '/onboarding',
@@ -256,6 +262,7 @@ export interface FileRoutesByFullPath {
   '/dashboard-layout': typeof DashboardLayoutRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
+  '/register': typeof RegisterRoute
   '/dashboard/roles': typeof DashboardRolesRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
   '/dashboard/users': typeof DashboardUsersRoute
@@ -294,6 +301,7 @@ export interface FileRoutesByTo {
   '/dashboard-layout': typeof DashboardLayoutRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
+  '/register': typeof RegisterRoute
   '/dashboard/roles': typeof DashboardRolesRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
   '/dashboard/users': typeof DashboardUsersRoute
@@ -333,6 +341,7 @@ export interface FileRoutesById {
   '/dashboard-layout': typeof DashboardLayoutRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
+  '/register': typeof RegisterRoute
   '/dashboard/roles': typeof DashboardRolesRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
   '/dashboard/users': typeof DashboardUsersRoute
@@ -373,6 +382,7 @@ export interface FileRouteTypes {
     | '/dashboard-layout'
     | '/login'
     | '/onboarding'
+    | '/register'
     | '/dashboard/roles'
     | '/dashboard/settings'
     | '/dashboard/users'
@@ -411,6 +421,7 @@ export interface FileRouteTypes {
     | '/dashboard-layout'
     | '/login'
     | '/onboarding'
+    | '/register'
     | '/dashboard/roles'
     | '/dashboard/settings'
     | '/dashboard/users'
@@ -449,6 +460,7 @@ export interface FileRouteTypes {
     | '/dashboard-layout'
     | '/login'
     | '/onboarding'
+    | '/register'
     | '/dashboard/roles'
     | '/dashboard/settings'
     | '/dashboard/users'
@@ -488,6 +500,7 @@ export interface RootRouteChildren {
   DashboardLayoutRoute: typeof DashboardLayoutRoute
   LoginRoute: typeof LoginRoute
   OnboardingRoute: typeof OnboardingRoute
+  RegisterRoute: typeof RegisterRoute
   DashboardRolesRoute: typeof DashboardRolesRoute
   DashboardSettingsRoute: typeof DashboardSettingsRoute
   DashboardUsersRoute: typeof DashboardUsersRoute
@@ -524,6 +537,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/register': {
+      id: '/register'
+      path: '/register'
+      fullPath: '/register'
+      preLoaderRoute: typeof RegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/onboarding': {
       id: '/onboarding'
       path: '/onboarding'
@@ -784,6 +804,7 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardLayoutRoute: DashboardLayoutRoute,
   LoginRoute: LoginRoute,
   OnboardingRoute: OnboardingRoute,
+  RegisterRoute: RegisterRoute,
   DashboardRolesRoute: DashboardRolesRoute,
   DashboardSettingsRoute: DashboardSettingsRoute,
   DashboardUsersRoute: DashboardUsersRoute,

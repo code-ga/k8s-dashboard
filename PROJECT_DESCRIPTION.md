@@ -270,6 +270,314 @@ accessModes: jsonb("access_modes").$type<{ data: string[] }>().default({ data: [
 ```
 ---
 
+## 🔗 Feature Flow: User Registration & Onboarding
+
+### Overview
+The registration system uses **Better-Auth** for authentication and a separate profile creation step. New users register via `/register`, create a profile via `/onboarding`, then gain access to the dashboard. The system supports email/password registration and social OAuth (Google, GitHub, Discord).
+
+### Files Created/Modified
+
+#### Frontend
+1. **`frontend/src/routes/register.tsx`** - Registration page component
+   - Email/password registration with client-side validation
+   - Social login buttons (Google, GitHub, Discord)
+   - Password requirements: min 8 chars, uppercase, lowercase, number
+   - Redirects to `/onboarding` on success
+   - Redirects authenticated users away to `/dashboard`
+
+2. **`frontend/src/routes/onboarding.tsx`** - Profile creation page
+   - Requires valid auth session
+   - Username input (min 3 chars, non-whitespace)
+   - Calls `POST /api/profile` to create profile
+   - Assigns initial roles based on `appState.createNewAdmin` flag
+   - Redirects to `/dashboard` on success
+
+3. **`frontend/src/routes/__root.tsx`** - Root route updated
+   - Checks for session and profile existence
+   - Redirects to `/onboarding` if session exists but no profile (404 on `/profile/me`)
+   - Excludes layout wrapper for `/login` and `/onboarding` pages
+
+4. **`frontend/src/lib/auth.ts`** - Better-Auth client configuration
+   - Uses `createAuthClient` from `better-auth/react`
+   - Points to backend auth endpoints
+
+5. **`frontend/src/lib/api.ts`** - Eden/treaty client for backend API
+   - Type-safe API client using `@elysiajs/eden`
+   - Used by onboarding page for profile creation
+
+#### Backend
+6. **`backend/src/libs/auths/auth.config.ts`** - Better-Auth configuration
+   - Drizzle adapter with Postgres (`user`, `session`, `account`, `verification` tables)
+   - Email/password enabled with auto sign-in
+   - Social providers: Google, GitHub, Discord
+   - OpenAPI plugin enabled
+   - Cookie settings with SameSite/secure based on environment
+   - Endpoints auto-mounted at `/api/auth/*`
+
+7. **`backend/src/database/schema/auth.ts`** - Auth-related tables
+   - `user` - Core user table (id, name, email, emailVerified, image)
+   - `session` - Session tokens with expiry
+   - `account` - OAuth provider accounts linked to user
+   - `verification` - Email verification tokens
+   - `role` - RBAC roles (admin, user, etc.) with permission arrays
+   - `profile` - User profile (username, rolesIDs, isSystemDefault)
+
+8. **`backend/src/middleware/auth.ts`** - Authentication middleware
+   - `userAuth` guard: validates session, optionally checks profile existence
+   - `roleAuth` guard: validates session + profile + permissions
+   - Uses Better-Auth's `auth.api.getSession()` to validate tokens
+
+9. **`backend/src/routes/profile.ts`** - Profile management endpoints
+   - `GET /profile/me` - Get current user's profile (requires auth, no profile required)
+   - `POST /profile/` - Create profile (requires auth, no profile required)
+   - `PUT /profile/` - Update profile username (requires auth, no profile required)
+   - `GET /profile/?userId=...` or `?profileId=...` - Fetch specific profile
+   - `GET /profile/list-user` - List all profiles (requires `user:read` permission)
+   - `GET /profile/search_user` - Search profiles by username or userId (requires `user:read`)
+   - POST assigns initial roles via `getInitialRoleIds(appState.createNewAdmin)`
+
+10. **`backend/src/routes/index.ts`** - API router includes profile router at `/api/profile`
+
+#### Frontend UI Components
+11. **`frontend/src/components/ui/`** - Uses existing Shadcn UI components (Button, Card, Input, Label, Separator)
+
+### Registration Flow
+
+```
+User Visit → /register
+    ↓
+[Optional: Already authenticated? → Redirect to /dashboard]
+    ↓
+Enter email + password OR click social provider
+    ↓
+Client-side validation (password strength, confirm password)
+    ↓
+authClient.signUp.email() OR authClient.signIn.social()
+    ↓
+Better-Auth Backend (`/api/auth/register` or `/api/auth/callback/:provider`)
+    ↓
+Creates: user record + session + (account for social)
+    ↓
+Redirect to callbackURL: `/onboarding`
+    ↓
+/onboarding page loads → authClient.useSession() validates token
+    ↓
+User enters unique username
+    ↓
+POST `/api/profile` with { username }
+    ↓
+Backend:
+  - Checks profile doesn't already exist for user
+  - Gets initial role IDs from AppState (first user gets admin role)
+  - Creates profile record linking userId → username + roles
+  - Sets `createNewAdmin = false` if first user was admin
+    ↓
+On success → navigate to `/dashboard`
+    ↓
+Dashboard loads with full authenticated session + profile
+```
+
+### Authentication & Profile Relationship
+
+**Separation of Concerns:**
+- **Auth (Better-Auth)** = Identity verification (who you are)
+- **Profile (App schema)** = User data & permissions (what you can access)
+
+**Database Tables:**
+```
+user (Better-Auth table)
+  ├─ id (UUID, primary key)
+  ├─ email (unique)
+  ├─ name
+  └─ emailVerified
+
+profile (App table)
+  ├─ id (UUID, primary key)
+  ├─ userId (FK → user.id, unique)
+  ├─ username (unique, used as display name)
+  ├─ rolesIDs[] (array of role UUIDs)
+  └─ isSystemDefault (first user flag)
+
+role (App table)
+  ├─ id (UUID)
+  ├─ name (e.g., "admin", "user")
+  ├─ permissions[] (array of action strings)
+  └─ adminRole (boolean flag)
+```
+
+**Access Flow:**
+1. User logs in → Better-Auth creates `session` record
+2. Frontend stores session cookie (httpOnly)
+3. Every API call: middleware reads session → gets `userId`
+4. Middleware queries `profile` table by `userId`
+5. If `profile` missing for protected routes → 401 redirect to `/onboarding`
+6. If `profile` exists → load `rolesIDs` → resolve permissions from `role` table
+7. Permissions available in route handlers and frontend via TanStack Query
+
+**Why Separate Profile from User?**
+- Better-Auth manages authentication primitives (user, session, account)
+- App manages user metadata (username, roles, preferences)
+- Clean separation allows Better-Auth upgrades without custom schema changes
+- Profile creation is a deliberate onboarding step, not forced at registration
+
+### Integration with Login & Root Routing
+
+#### Routing Structure
+```
+/               → Redirect to /dashboard (if logged in) or /login
+/login          → Login page (email + social)
+/register       → Registration page (email + social)
+/onboarding     → Profile creation (only accessible with valid session, no profile)
+/dashboard      → Main app (requires session + profile)
+```
+
+#### Root Route Logic (`__root.tsx`)
+```typescript
+if (isLoginPage || location.pathname === "/onboarding") {
+  // No sidebar/header layout for auth pages
+  return <Outlet /> with ThemeProvider only;
+}
+
+if (session && !isProfileLoading && profileError?.(status === 404)) {
+  // User has auth but no profile → force onboarding
+  navigate("/onboarding");
+  return null;
+}
+
+// Normal dashboard layout with sidebar + header
+return <DashboardLayout><Outlet /></DashboardLayout>;
+```
+
+#### Login ↔ Register Relationship
+- Login page (`/login`) shows "Don't have an account? Sign Up" → navigates to `/register`
+- Register page (`/register`) shows "Already have an account? Sign In" → navigates to `/login`
+- Both pages redirect away if already authenticated (to `/dashboard`)
+- Both support same OAuth providers (Google, GitHub, Discord)
+
+### Better-Auth Backend API
+
+Better-Auth automatically generates the following endpoints (mounted at `/api/auth/` by `baseURL`):
+
+**Email/Password:**
+- `POST /api/auth/register` - Register new user (email + password)
+- `POST /api/auth/login` - Login with email + password
+- `GET /api/auth/session` - Get current session
+- `POST /api/auth/logout` - Invalidate session
+- `POST /api/auth/forgot-password` - Request password reset
+- `POST /api/auth/reset-password` - Complete password reset
+
+**OAuth:**
+- `GET /api/auth/oauth/:provider` - Initiate OAuth flow (redirects to provider)
+- `GET /api/auth/callback/:provider` - OAuth callback handler
+- `GET /api/auth/list-providers` - List available social providers
+- `GET /api/auth/account` - Get linked accounts for current user
+
+**Verification:**
+- `GET /api/auth/verify-email` - Email verification endpoint
+
+**Session Management:**
+- `GET /api/auth/session` - Get current session
+- `POST /api/auth/refresh-session` - Refresh session token
+- `DELETE /api/auth/session` - Delete session
+
+### Future Updates Needed
+
+1. **Email Verification Flow**
+   - Currently `emailVerified` defaults to `false`
+   - Need to implement verification email sending
+   - Add verification page at `/verify-email`
+   - Consider requiring verification before onboarding
+
+2. **Password Reset**
+   - Forgot/Reset password pages not implemented
+   - Better-Auth provides endpoints but no frontend UI
+
+3. **Social Account Linking**
+   - Users cannot currently link additional OAuth providers after registration
+   - Need "Linked Accounts" section in user settings
+
+4. **Profile Editing**
+   - Onboarding sets username once; no edit page exists
+   - Need profile settings page (`/settings/profile`) with username change capability (PUT `/api/profile`)
+   - May need username uniqueness validation with availability check
+
+5. **Role Assignment Logic**
+   - Currently first user gets admin via `appState.createNewAdmin` flag
+   - Flag is global, not per-tenant; resets after first user
+   - For multi-tenant/multi-cluster, need more sophisticated role assignment (e.g., invite-based)
+   - Role assignment UI missing (assign roles to users)
+
+6. **Session Management UI**
+   - No "Manage Active Sessions" page
+   - Users cannot view/logout other devices
+
+7. **Account Deletion**
+   - Better-Auth supports `DELETE /api/auth/remove-account`
+   - No frontend "Delete Account" button implemented
+   - Cascade deletion of profile, sessions, and linked accounts?
+
+8. **Role & Permission UI**
+   - Admin-only pages to manage roles (`role:read`, `role:write`) exist?
+   - Need user management interface (`/admin/users`) to view profiles, assign roles
+
+9. **OAuth Scopes & Claims**
+   - Social provider configs have minimal scopes
+   - May need additional profile data (avatar, name) from OAuth providers
+   - Consider storing OAuth `accessToken` for API calls on user's behalf
+
+10. **Security Hardening**
+    - Add rate limiting on auth endpoints (prevent brute force)
+    - Implement account lockout after failed attempts
+    - Session IP/User-Agent binding (already stored but not validated)
+    - Add CAPTCHA for registration endpoint
+
+11. **Error Handling & UX**
+    - Registration errors: Better-Auth error messages surfaced but may be generic
+    - Social login failures: Redirect handling with error params?
+    - Better UX for session expiry (auto-redirect to login with message)
+
+12. **Multi-Factor Authentication (MFA)**
+    - Better-Auth supports 2FA via TOTP
+    - Need MFA setup/verification pages and QR code display
+    - Store `mfaEnabled` on user/ profile table?
+
+13. **Profile Uniqueness Constraints**
+    - Username uniqueness enforced at DB level (`unique` constraint on `profile.username`)
+    - Frontend should check availability before submitting (debounced API call)
+    - Reserved usernames (admin, root, system) should be blocked
+
+14. **Audit Logging**
+    - Log authentication events (login, logout, registration, password changes)
+    - Log profile creation/updates
+    - Admin audit trail for compliance
+
+15. **Session Persistence Settings**
+    - "Remember me" checkbox for longer session expiry
+    - Session duration configurable per user or globally
+
+16. **Terms of Service / Privacy Policy**
+    - Add checkbox to accept ToS during registration
+    - Link to policy documents
+    - Store acceptance timestamp in DB
+
+---
+
+*Last updated: 2026-04-26 (Registration & Onboarding documented)*
+
+## ⚠️ Drizzle ORM Type Notes
+
+When defining JSONB columns in Drizzle ORM, avoid using `.$type<T[]>()` with array types as it generates incorrect TypeBox definitions. Use the wrapper pattern instead:
+
+```typescript
+// ❌ Incorrect - causes TypeBox issues
+accessModes: jsonb("access_modes").$type<string[]>().default([]).notNull()
+
+// ✅ Correct - uses wrapper object
+accessModes: jsonb("access_modes").$type<{ data: string[] }>().default({ data: [] }).notNull()
+```
+
+---
+
 ## 🔗 Feature Flow: Delete Cluster
 
 ### Overview
