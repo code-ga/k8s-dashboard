@@ -6,8 +6,9 @@ import { db } from "../../database";
 import { account, session, user, verification } from "../../database/schema";
 
 const cookieOptions: CookieOptions = {
-	sameSite: process.env.NODE_ENV === "production" ? "None" : "lax",
+	sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
 	secure: process.env.NODE_ENV === "production",
+	partitioned: true,
 };
 
 export const auth = betterAuth({
@@ -54,5 +55,8 @@ export const auth = betterAuth({
 			},
 		},
 		defaultCookieAttributes: cookieOptions,
+		crossSubDomainCookies: {
+			enabled: true,
+		},
 	},
 });

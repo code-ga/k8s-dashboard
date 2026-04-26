@@ -104,7 +104,10 @@ function LoginPage() {
 					<div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3 animate-in slide-in-from-top-1 duration-300">
 						<div className="flex items-start gap-2.5">
 							<Info className="h-4 w-4 text-amber-600 dark:text-amber-500 mt-0.5 flex-shrink-0" />
-							<h1 className="text-xs text-amber-800 dark:text-amber-200 leading-relaxed font-semibold">This is the really important note please read all of this before perform any login action</h1>
+							<h1 className="text-xs text-amber-800 dark:text-amber-200 leading-relaxed font-semibold">
+								This is the really important note please read all of this before
+								perform any login action
+							</h1>
 							<p className="text-xs text-amber-800 dark:text-amber-200 leading-relaxed">
 								<span className="font-semibold">
 									Third-party cookies required.
@@ -112,12 +115,21 @@ function LoginPage() {
 								Some browsers block cookies from external login providers by
 								default. If your login fails, try allowing third-party cookies
 								in your browser settings, or use incognito/private mode.
-
 								{/* Make the text below as attract as posiable because this is the really important note */}
 								<p className="text-xs text-amber-800 dark:text-amber-200 leading-relaxed">
 									<span className="font-semibold">
-										The personal mode or guest mode in chrome also prevent the login flow can work correctly so please using normal browser.
-										Any action to prevent cookies from cross-domain will lead to this issues.
+										The personal mode or guest mode in chrome also prevent the
+										login flow can work correctly so please using normal
+										browser. Any action to prevent cookies from cross-domain
+										will lead to this issues.
+									</span>
+								</p>
+								<p className="text-xs text-amber-800 dark:text-amber-200 leading-relaxed">
+									<span className="font-semibold">
+										Make sure to allow third-party cookies in your browser
+										settings for the login to work correctly. Safari users may
+										need to enable "Prevent cross-site tracking" in their
+										browser settings. (or their will be blocked by ITP)
 									</span>
 								</p>
 							</p>

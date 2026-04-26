@@ -5,5 +5,6 @@ export const authClient = createAuthClient({
 	baseURL: `${BACKEND_URL}`,
 	fetchOptions: {
 		redirect: "follow",
+		credentials: "include",
 	},
 });
