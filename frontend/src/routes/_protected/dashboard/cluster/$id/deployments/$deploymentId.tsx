@@ -50,7 +50,6 @@ import {
 	getEdenErrorMessage,
 	type SchemaStatic,
 } from "@/lib/api";
-import { BACKEND_URL } from "../../../../../../constants";
 import { logger } from "../../../../../../lib/logger";
 
 export const Route = createFileRoute(
@@ -72,7 +71,7 @@ function ManageDeploymentPage() {
 		queryFn: async () => {
 			const res = await api.api
 				.deployments({ clusterId })({ id: deploymentId })
-				.get()
+				.get();
 			if (res.error) throw res.error;
 			if (!res.data.data)
 				throw new Error(res.data.message || "Failed to fetch deployment");
@@ -109,7 +108,7 @@ function ManageDeploymentPage() {
 
 		return Object.entries(selector).every(
 			([key, value]) => podLabels && podLabels[key] === value,
-		)
+		);
 	});
 
 	const [image, setImage] = useState("");
@@ -118,7 +117,7 @@ function ManageDeploymentPage() {
 	const [envVars, setEnvVars] = useState<EnvVar[]>([]);
 	const [configMapEnvRefs, setConfigMapEnvRefs] = useState<IConfigMapEnvRef[]>(
 		[],
-	)
+	);
 	const [configMapEnvFromRefs, setConfigMapEnvFromRefs] = useState<
 		IConfigMapEnvFromRef[]
 	>([]);
@@ -155,14 +154,14 @@ function ManageDeploymentPage() {
 								...v,
 								type: v.valueFrom?.fieldRef ? "fieldRef" : "text",
 							})),
-						)
+						);
 					} else {
 						// Backward compatibility
 						setEnvVars(
 							Object.entries(parsed as Record<string, string>).map(
 								([name, value]) => ({ name, value, type: "text" }),
 							),
-						)
+						);
 					}
 				} else {
 					setEnvVars([]);
@@ -175,7 +174,7 @@ function ManageDeploymentPage() {
 				Array.isArray(deployment.ports)
 					? deployment.ports
 					: (deployment.ports as any)?.data || [], // fallback for backward compatibility
-			)
+			);
 			setCpuRequest(`${deployment.cpuRequest}m`);
 			setCpuLimit(`${deployment.cpuLimit}m`);
 			setMemoryRequest(`${deployment.memoryRequest}Mi`);
@@ -188,9 +187,9 @@ function ManageDeploymentPage() {
 							name,
 							value: String(value),
 						})),
-					)
+					);
 				} else {
-					setLabels([])
+					setLabels([]);
 				}
 			} catch (_e) {
 				setLabels([]);
@@ -246,7 +245,7 @@ function ManageDeploymentPage() {
 						return { name: v.name, valueFrom: v.valueFrom };
 					}
 					return { name: v.name, value: v.value };
-				})
+				});
 
 			for (const v of envVars) {
 				if (!v.name && (v.value || v.valueFrom)) {
@@ -310,7 +309,7 @@ function ManageDeploymentPage() {
 					pvcVolumes: pvcVolumes.length > 0 ? pvcVolumes : undefined,
 					emptyDirVolumes:
 						emptyDirVolumes.length > 0 ? emptyDirVolumes : undefined,
-				})
+				});
 			if (res.error) {
 				const message = getEdenErrorMessage(res.error);
 				throw new Error(message);
@@ -322,7 +321,7 @@ function ManageDeploymentPage() {
 			queryClient.invalidateQueries({ queryKey: ["deployments", clusterId] });
 			queryClient.invalidateQueries({
 				queryKey: ["deployment", clusterId, deploymentId],
-			})
+			});
 		},
 		onError: (error: Error) => {
 			toast.error(error.message);
@@ -333,7 +332,7 @@ function ManageDeploymentPage() {
 		mutationFn: async () => {
 			const res = await api.api
 				.deployments({ clusterId })({ id: deploymentId.toString() })
-				.delete()
+				.delete();
 			if (res.error) {
 				const message = getEdenErrorMessage(res.error);
 				throw new Error(message);
@@ -346,7 +345,7 @@ function ManageDeploymentPage() {
 			navigate({
 				to: `/dashboard/cluster/$id/deployments`,
 				params: { id: clusterId },
-			})
+			});
 		},
 		onError: (error: Error) => {
 			toast.error(error.message);
@@ -368,7 +367,7 @@ function ManageDeploymentPage() {
 			toast.success("Deployment re-deployment triggered");
 			queryClient.invalidateQueries({
 				queryKey: ["deployment", clusterId, deploymentId],
-			})
+			});
 			queryClient.invalidateQueries({ queryKey: ["pods", clusterId] });
 		},
 		onError: (error: Error) => {
@@ -385,12 +384,12 @@ function ManageDeploymentPage() {
 				to be restarted.
 			</div>
 		</div>
-	)
+	);
 
 	if (isLoading)
 		return (
 			<div className="p-6 text-foreground">Loading deployment details...</div>
-		)
+		);
 	if (!deployment)
 		return <div className="p-6 text-foreground">Deployment not found</div>;
 
@@ -443,7 +442,7 @@ function ManageDeploymentPage() {
 										"Are you sure you want to trigger a rolling restart for this deployment?",
 									)
 								) {
-									redeployMutation.mutate()
+									redeployMutation.mutate();
 								}
 							}}
 							disabled={redeployMutation.isPending}
@@ -681,9 +680,9 @@ function ManageDeploymentPage() {
 													type="number"
 													value={p.containerPort}
 													onChange={(e) => {
-														const newPorts = [...ports]
+														const newPorts = [...ports];
 														newPorts[i].containerPort = Number(e.target.value);
-														setPorts(newPorts)
+														setPorts(newPorts);
 													}}
 												/>
 											</div>
@@ -694,9 +693,9 @@ function ManageDeploymentPage() {
 												<Input
 													value={p.name}
 													onChange={(e) => {
-														const newPorts = [...ports]
-														newPorts[i].name = e.target.value
-														setPorts(newPorts)
+														const newPorts = [...ports];
+														newPorts[i].name = e.target.value;
+														setPorts(newPorts);
 													}}
 												/>
 											</div>
@@ -1036,7 +1035,7 @@ function ManageDeploymentPage() {
 				</TabsContent>
 			</Tabs>
 		</div>
-	)
+	);
 }
 
 interface DeploymentLogsProps {
@@ -1059,35 +1058,34 @@ export function DeploymentLogs({
 		if (!isActive) {
 			wsRef.current?.close();
 			wsRef.current = null;
-			return
+			return;
 		}
 
 		const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-		const backendUrl = new URL(BACKEND_URL);
 		const ws = new WebSocket(
-			`${protocol}//${backendUrl.host}/api/deployments/${clusterId}/logs/${deployment.id}`,
-		)
+			`${protocol}//${window.location.host}/api/deployments/${clusterId}/logs/${deployment.id}`,
+		);
 		wsRef.current = ws;
 
 		ws.onmessage = (event) => {
 			if (event.data instanceof Blob) {
 				event.data.text().then((text) => {
 					setLogs((prev) => prev + text);
-				})
+				});
 			} else {
 				setLogs((prev) => prev + event.data);
 			}
-		}
+		};
 
 		ws.onerror = (error) => {
 			logger.error("WebSocket error:", error);
 			toast.error("Failed to connect to log stream");
-		}
+		};
 
 		return () => {
 			ws.close();
 			wsRef.current = null;
-		}
+		};
 	}, [isActive, deployment.id, clusterId]);
 
 	// biome-ignore lint/correctness/useExhaustiveDependencies: reason
@@ -1118,7 +1116,7 @@ export function DeploymentLogs({
 				{logs || "Waiting for logs..."}
 			</pre>
 		</div>
-	)
+	);
 }
 
 interface DeploymentEventsProps {
@@ -1151,7 +1149,7 @@ export function DeploymentEvents({
 					Fetching deployment events from agent...
 				</div>
 			</div>
-		)
+		);
 
 	if (error)
 		return (
@@ -1160,7 +1158,7 @@ export function DeploymentEvents({
 					Error: {(error as Error).message}
 				</div>
 			</div>
-		)
+		);
 
 	const events = (data?.events || []) as Array<{
 		lastSeen: string;
@@ -1232,5 +1230,5 @@ export function DeploymentEvents({
 				</Table>
 			</div>
 		</div>
-	)
+	);
 }

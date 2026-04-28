@@ -34,7 +34,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { usePermissions } from "@/hooks/use-permissions";
 import { api, getEdenErrorMessage } from "@/lib/api";
-import { BACKEND_URL } from "../../../../../constants";
 
 export const Route = createFileRoute("/_protected/dashboard/cluster/$id/")({
 	component: ClusterOverview,
@@ -78,7 +77,7 @@ function ClusterOverview() {
 		mutationFn: async () => {
 			const res = await api.api.cluster({ id }).patch({
 				acmeEmail,
-			})
+			});
 			if (res.error) {
 				const message = getEdenErrorMessage(res.error);
 				throw new Error(message);
@@ -124,7 +123,7 @@ function ClusterOverview() {
 					</p>
 				</div>
 			</div>
-		)
+		);
 	}
 
 	if (cluster && acmeEmail === "" && cluster.acmeEmail) {
@@ -417,28 +416,26 @@ function ClusterOverview() {
 								</Button>
 							</div>
 						</div>
-
 						<div className="bg-secondary/50 p-3 rounded-md space-y-2">
 							<p className="text-xs font-medium">Installation Command</p>
 							<code className="block bg-background px-3 py-2 rounded text-xs font-mono overflow-x-auto">
-								{`agent --addr ${BACKEND_URL} --token ${agentConfig.clusterToken}`}
+								{`agent --addr ${window.location.origin} --token ${agentConfig.clusterToken}`}
 							</code>
-						</div>
-
-						<div className="flex flex-col gap-2">
-							<a
-								href="https://github.com/code-ga/k8s-dashboard/releases/latest"
-								target="_blank"
-								rel="noopener noreferrer"
-							>
-								<Button variant="default" className="w-full" size="sm">
-									Download Agent
-								</Button>
-							</a>
-							<p className="text-xs text-muted-foreground">
-								Requires node master/root permissions
-							</p>
-						</div>
+							<div className="flex flex-col gap-2">
+								<a
+									href="https://github.com/code-ga/k8s-dashboard/releases/latest"
+									target="_blank"
+									rel="noopener noreferrer"
+								>
+									<Button variant="default" className="w-full" size="sm">
+										Download Agent
+									</Button>
+								</a>
+								<p className="text-xs text-muted-foreground">
+									Requires node master/root permissions
+								</p>
+							</div>{" "}
+						</div>{" "}
 					</CardContent>
 				</Card>
 			)}
@@ -491,5 +488,5 @@ function ClusterOverview() {
 				</DialogContent>
 			</Dialog>
 		</div>
-	)
+	);
 }
