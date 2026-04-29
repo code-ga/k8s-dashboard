@@ -21,6 +21,7 @@ export default defineEventHandler(async (event) => {
     method: event.method,
     headers: header,
     body:event.req.body,
+    ///@ts-ignore
     duplex: "half",
   });
   console.log("Received response from backend:", response.status, response.statusText);
