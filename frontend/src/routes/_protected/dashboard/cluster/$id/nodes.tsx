@@ -32,9 +32,11 @@ import {
 import { usePermissions } from "@/hooks/use-permissions";
 import { api } from "@/lib/api";
 
-export const Route = createFileRoute("/_protected/dashboard/cluster/$id/nodes")({
-	component: ClusterNodes,
-});
+export const Route = createFileRoute("/_protected/dashboard/cluster/$id/nodes")(
+	{
+		component: ClusterNodes,
+	},
+);
 
 function ClusterNodes() {
 	const { id } = useParams({ from: "/_protected/dashboard/cluster/$id/nodes" });
@@ -77,7 +79,7 @@ function ClusterNodes() {
 		mutationFn: async (nodeId: number) => {
 			const res = await api.api
 				.nodes({ clusterId: id })({ id: nodeId })
-				.delete()
+				.delete();
 			if (res.error) throw res.error;
 			if (!res.data.data)
 				throw new Error(res.data.message || "Failed to delete node");
@@ -96,7 +98,7 @@ function ClusterNodes() {
 	const copyToClipboard = (text: string) => {
 		navigator.clipboard.writeText(text);
 		toast.success("Command copied to clipboard");
-	}
+	};
 
 	if (!can("node:read") && !isLoadingPermissions) {
 		return (
@@ -110,7 +112,7 @@ function ClusterNodes() {
 					</p>
 				</div>
 			</div>
-		)
+		);
 	}
 
 	if (isLoading) return <div>Loading nodes...</div>;
@@ -221,7 +223,7 @@ function ClusterNodes() {
 															"Are you sure you want to delete this node?",
 														)
 													) {
-														deleteNodeMutation.mutate(node.id)
+														deleteNodeMutation.mutate(node.id);
 													}
 												}}
 											>
@@ -286,5 +288,5 @@ function ClusterNodes() {
 				</DialogContent>
 			</Dialog>
 		</div>
-	)
+	);
 }

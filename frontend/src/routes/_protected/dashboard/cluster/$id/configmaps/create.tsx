@@ -51,7 +51,7 @@ function CreateConfigMapPage() {
 			for (const v of dataVars) {
 				if (!v.name && v.value) {
 					toast.error("All data entries must have a key");
-					return
+					return;
 				}
 				if (v.name) data[v.name] = v.value || "";
 			}
@@ -62,7 +62,7 @@ function CreateConfigMapPage() {
 					namespace: values.namespace,
 					data,
 				}),
-			)
+			);
 
 			if (res.error) {
 				const message = getEdenErrorMessage(res.error);
@@ -76,7 +76,7 @@ function CreateConfigMapPage() {
 			navigate({
 				to: `/dashboard/cluster/$id/configmaps`,
 				params: { id: clusterId },
-			})
+			});
 		},
 		onError: (error) => {
 			toast.error(error.message);
@@ -124,9 +124,9 @@ function CreateConfigMapPage() {
 				<CardContent>
 					<form
 						onSubmit={(e) => {
-							e.preventDefault()
-							e.stopPropagation()
-							form.handleSubmit()
+							e.preventDefault();
+							e.stopPropagation();
+							form.handleSubmit();
 						}}
 						className="space-y-6"
 					>
@@ -190,5 +190,5 @@ function CreateConfigMapPage() {
 				</CardContent>
 			</Card>
 		</div>
-	)
+	);
 }

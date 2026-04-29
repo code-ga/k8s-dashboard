@@ -20,12 +20,16 @@ import { api } from "@/lib/api";
 import { toast } from "sonner";
 import { replaceEmptyStringsWithUndefined } from "@/lib/utils";
 
-export const Route = createFileRoute("/_protected/dashboard/cluster/$id/pvcs/create")({
+export const Route = createFileRoute(
+	"/_protected/dashboard/cluster/$id/pvcs/create",
+)({
 	component: CreatePVC,
 });
 
 function CreatePVC() {
-	const { id } = useParams({ from: "/_protected/dashboard/cluster/$id/pvcs/create" });
+	const { id } = useParams({
+		from: "/_protected/dashboard/cluster/$id/pvcs/create",
+	});
 	const navigate = useNavigate();
 	const [loading, setLoading] = useState(false);
 
@@ -42,15 +46,15 @@ function CreatePVC() {
 
 		if (!formData.name.trim()) {
 			toast.error("Name is required");
-			return
+			return;
 		}
 		if (!formData.namespace.trim()) {
 			toast.error("Namespace is required");
-			return
+			return;
 		}
 		if (formData.capacity < 1) {
 			toast.error("Capacity must be at least 1 MiB");
-			return
+			return;
 		}
 
 		setLoading(true);
@@ -71,7 +75,7 @@ function CreatePVC() {
 		} finally {
 			setLoading(false);
 		}
-	}
+	};
 
 	return (
 		<div className="max-w-2xl mx-auto space-y-6 py-6">
@@ -191,5 +195,5 @@ function CreatePVC() {
 				</Card>
 			</form>
 		</div>
-	)
+	);
 }

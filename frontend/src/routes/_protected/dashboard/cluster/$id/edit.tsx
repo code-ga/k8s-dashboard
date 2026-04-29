@@ -58,7 +58,7 @@ function EditCluster() {
 					.filter(Boolean),
 				enableS3Service: values.enableS3Service,
 				acmeEmail: values.acmeEmail || null,
-			})
+			});
 			if (res.error) {
 				throw new Error(getEdenErrorMessage(res.error));
 			}
@@ -67,7 +67,7 @@ function EditCluster() {
 		onSuccess: () => {
 			toast.success(
 				"Cluster updated successfully. Redeploy agent to apply changes.",
-			)
+			);
 			queryClient.invalidateQueries({ queryKey: ["cluster", id] });
 			navigate({ to: "/dashboard/cluster/$id", params: { id } });
 		},
@@ -116,7 +116,7 @@ function EditCluster() {
 					</p>
 				</div>
 			</div>
-		)
+		);
 	}
 
 	if (isLoading) return <div>Loading cluster...</div>;
@@ -318,5 +318,5 @@ function EditCluster() {
 				</Card>
 			</form>
 		</div>
-	)
+	);
 }

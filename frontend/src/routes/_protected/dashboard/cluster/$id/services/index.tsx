@@ -54,7 +54,9 @@ import { usePermissions } from "@/hooks/use-permissions";
 import type { databaseTypes, SchemaStatic } from "@/lib/api";
 import { api } from "@/lib/api";
 
-export const Route = createFileRoute("/_protected/dashboard/cluster/$id/services/")({
+export const Route = createFileRoute(
+	"/_protected/dashboard/cluster/$id/services/",
+)({
 	component: ClusterServices,
 });
 
@@ -95,7 +97,7 @@ function ExposureDialog({
 				internalPort: values.internalPort,
 				domain: values.protocol === "http" ? values.domain : undefined,
 				tls: values.protocol === "http" ? values.tls : undefined,
-			})
+			});
 			if (res.error) throw res.error;
 			return res.data;
 		},
@@ -114,14 +116,14 @@ function ExposureDialog({
 			// Find the ingress associated with this service and port
 			const ingress = service.ingresses?.find(
 				(i: any) => i.protocol === form.getValues().protocol,
-			)
+			);
 			if (!ingress) throw new Error("No matching ingress found to delete");
 
 			const res = await api.api
 				.ingresses({ clusterId })({
 					id: String(ingress.id),
 				})
-				.delete()
+				.delete();
 			if (res.error) throw res.error;
 			return res.data;
 		},
@@ -279,7 +281,7 @@ function ExposureDialog({
 				</Form>
 			</DialogContent>
 		</Dialog>
-	)
+	);
 }
 
 function ClusterServices() {
@@ -307,7 +309,7 @@ function ClusterServices() {
 		mutationFn: async (serviceId: number) => {
 			const res = await api.api
 				.services({ clusterId: id })({ id: String(serviceId) })
-				.delete()
+				.delete();
 			if (res.error) throw res.error;
 			return res.data;
 		},
@@ -332,7 +334,7 @@ function ClusterServices() {
 					</p>
 				</div>
 			</div>
-		)
+		);
 	}
 
 	if (isLoading) return <div>Loading services...</div>;
@@ -458,7 +460,7 @@ function ClusterServices() {
 																"Are you sure you want to delete this service? This will break any ingress routes pointing to it.",
 															)
 														) {
-															deleteMutation.mutate(svc.id)
+															deleteMutation.mutate(svc.id);
 														}
 													}}
 													disabled={deleteMutation.isPending}
@@ -482,5 +484,5 @@ function ClusterServices() {
 				</CardContent>
 			</Card>
 		</div>
-	)
+	);
 }

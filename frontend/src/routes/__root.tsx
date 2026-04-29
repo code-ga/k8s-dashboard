@@ -24,7 +24,8 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 	component: () => {
 		const location = useLocation();
 		const navigate = useNavigate();
-		const isLoginPage = location.pathname === "/login" || location.pathname === "/register";
+		const isLoginPage =
+			location.pathname === "/login" || location.pathname === "/register";
 
 		const { data: session } = authClient.useSession();
 		const {

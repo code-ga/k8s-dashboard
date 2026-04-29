@@ -39,7 +39,7 @@ function DashboardIndex() {
 					</p>
 				</div>
 			</div>
-		)
+		);
 	}
 
 	if (isLoading || isLoadingPermissions) return <div>Loading clusters...</div>;
@@ -102,5 +102,5 @@ function DashboardIndex() {
 				)}
 			</div>
 		</div>
-	)
+	);
 }

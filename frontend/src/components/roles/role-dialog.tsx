@@ -107,7 +107,7 @@ export function RoleDialog({ open, onOpenChange, role }: RoleDialogProps) {
 			toast.error(`Failed to create role: ${error.message}`);
 		},
 	});
-	
+
 	const updateMutation = useMutation({
 		mutationFn: async (values: RoleFormValues) => {
 			if (!role) throw new Error("No role to update");
@@ -225,12 +225,15 @@ export function RoleDialog({ open, onOpenChange, role }: RoleDialogProps) {
 																			checked={field.value?.includes(perm.id)}
 																			onCheckedChange={(checked) => {
 																				return checked
-																					? field.onChange([...field.value, perm.id])
+																					? field.onChange([
+																							...field.value,
+																							perm.id,
+																						])
 																					: field.onChange(
 																							field.value?.filter(
-																								(value) => value !== perm.id
-																							)
-																					  );
+																								(value) => value !== perm.id,
+																							),
+																						);
 																			}}
 																		/>
 																	</FormControl>
@@ -269,8 +272,8 @@ export function RoleDialog({ open, onOpenChange, role }: RoleDialogProps) {
 										? "Updating..."
 										: "Creating..."
 									: isEditing
-									? "Update Role"
-									: "Create Role"}
+										? "Update Role"
+										: "Create Role"}
 							</Button>
 						</DialogFooter>
 					</form>

@@ -49,7 +49,13 @@ export function RoleAssignments() {
 	});
 
 	const assignRoleMutation = useMutation({
-		mutationFn: async ({ userId, roleId }: { userId: string; roleId: string }) => {
+		mutationFn: async ({
+			userId,
+			roleId,
+		}: {
+			userId: string;
+			roleId: string;
+		}) => {
 			const res = await api.api.role["assign-to-user"].patch({
 				userId,
 				roleIds: [roleId],
@@ -67,7 +73,13 @@ export function RoleAssignments() {
 	});
 
 	const removeRoleMutation = useMutation({
-		mutationFn: async ({ userId, roleId }: { userId: string; roleId: string }) => {
+		mutationFn: async ({
+			userId,
+			roleId,
+		}: {
+			userId: string;
+			roleId: string;
+		}) => {
 			const res = await api.api.role["remove-from-user"].patch({
 				userId,
 				roleIds: [roleId],
@@ -84,7 +96,8 @@ export function RoleAssignments() {
 		},
 	});
 
-	if (isLoadingUsers || isLoadingRoles) return <div className="p-4">Loading assignments...</div>;
+	if (isLoadingUsers || isLoadingRoles)
+		return <div className="p-4">Loading assignments...</div>;
 
 	const canManage = can("user:manage");
 
@@ -109,12 +122,16 @@ export function RoleAssignments() {
 								</div>
 							</TableCell>
 							<TableCell>
-								<span className="text-xs text-muted-foreground uppercase">{user.userId}</span>
+								<span className="text-xs text-muted-foreground uppercase">
+									{user.userId}
+								</span>
 							</TableCell>
 							<TableCell>
 								<div className="flex flex-wrap gap-2">
 									{user.rolesIDs?.map((roleId: string) => {
-										const roleName = availableRoles?.find(r => r.id === roleId)?.name || roleId;
+										const roleName =
+											availableRoles?.find((r) => r.id === roleId)?.name ||
+											roleId;
 										return (
 											<Badge
 												key={roleId}
@@ -140,7 +157,9 @@ export function RoleAssignments() {
 										);
 									})}
 									{(!user.rolesIDs || user.rolesIDs.length === 0) && (
-										<span className="text-xs text-muted-foreground italic">No roles assigned</span>
+										<span className="text-xs text-muted-foreground italic">
+											No roles assigned
+										</span>
 									)}
 								</div>
 							</TableCell>

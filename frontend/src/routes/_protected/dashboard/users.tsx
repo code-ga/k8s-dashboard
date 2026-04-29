@@ -68,7 +68,7 @@ function UserManagement() {
 			const res = await api.api.role["assign-to-user"].patch({
 				userId,
 				roleIds: [roleId],
-			})
+			});
 			if (res.error) throw new Error(getEdenErrorMessage(res.error));
 			return res.data;
 		},
@@ -92,7 +92,7 @@ function UserManagement() {
 			const res = await api.api.role["remove-from-user"].patch({
 				userId,
 				roleIds: [roleId],
-			})
+			});
 			if (res.error) throw new Error(getEdenErrorMessage(res.error));
 			return res.data;
 		},
@@ -117,7 +117,7 @@ function UserManagement() {
 					</p>
 				</div>
 			</div>
-		)
+		);
 	}
 
 	if (isLoading) return <div>Loading users...</div>;
@@ -194,5 +194,5 @@ function UserManagement() {
 				))}
 			</div>
 		</div>
-	)
+	);
 }

@@ -35,7 +35,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { api, getEdenErrorMessage } from "@/lib/api";
 import { replaceEmptyStringsWithUndefined } from "@/lib/utils";
 
-export const Route = createFileRoute("/_protected/dashboard/cluster/$id/pods/create")({
+export const Route = createFileRoute(
+	"/_protected/dashboard/cluster/$id/pods/create",
+)({
 	component: CreatePodPage,
 });
 
@@ -70,7 +72,7 @@ function CreatePodPage() {
 	const [envVars, setEnvVars] = useState<EnvVar[]>([]);
 	const [configMapEnvRefs, setConfigMapEnvRefs] = useState<IConfigMapEnvRef[]>(
 		[],
-	)
+	);
 	const [configMapEnvFromRefs, setConfigMapEnvFromRefs] = useState<
 		IConfigMapEnvFromRef[]
 	>([]);
@@ -141,7 +143,7 @@ function CreatePodPage() {
 					emptyDirVolumes:
 						emptyDirVolumes.length > 0 ? emptyDirVolumes : undefined,
 				}),
-			)
+			);
 
 			if (res.error) {
 				throw new Error(getEdenErrorMessage(res.error));
@@ -154,7 +156,7 @@ function CreatePodPage() {
 			navigate({
 				to: `/dashboard/cluster/$id/pods`,
 				params: { id: clusterId },
-			})
+			});
 		},
 		onError: (error) => {
 			toast.error(error.message);
@@ -217,9 +219,9 @@ function CreatePodPage() {
 				<CardContent>
 					<form
 						onSubmit={(e) => {
-							e.preventDefault()
-							e.stopPropagation()
-							form.handleSubmit()
+							e.preventDefault();
+							e.stopPropagation();
+							form.handleSubmit();
 						}}
 						className="space-y-6"
 					>
@@ -501,5 +503,5 @@ function CreatePodPage() {
 				</CardContent>
 			</Card>
 		</div>
-	)
+	);
 }

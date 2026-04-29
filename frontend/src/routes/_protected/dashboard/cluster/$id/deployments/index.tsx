@@ -38,7 +38,9 @@ import { usePermissions } from "@/hooks/use-permissions";
 import type { databaseTypes, SchemaStatic } from "@/lib/api";
 import { api } from "@/lib/api";
 
-export const Route = createFileRoute("/_protected/dashboard/cluster/$id/deployments/")({
+export const Route = createFileRoute(
+	"/_protected/dashboard/cluster/$id/deployments/",
+)({
 	component: ClusterDeployments,
 });
 
@@ -135,7 +137,7 @@ function ScaleSettingsDialog({
 											checked={field.value}
 											disabled={isAlwaysRunning}
 											onCheckedChange={(val) => {
-												field.onChange(val)
+												field.onChange(val);
 												if (val) form.setValue("isAlwaysRunning", false);
 											}}
 										/>
@@ -160,7 +162,7 @@ function ScaleSettingsDialog({
 											checked={field.value}
 											disabled={isAutoScaling}
 											onCheckedChange={(val) => {
-												field.onChange(val)
+												field.onChange(val);
 												if (val) form.setValue("isAutoScaling", false);
 											}}
 										/>
@@ -201,7 +203,7 @@ function ScaleSettingsDialog({
 				</Form>
 			</DialogContent>
 		</Dialog>
-	)
+	);
 }
 
 import {
@@ -250,7 +252,7 @@ function ClusterDeployments() {
 					</p>
 				</div>
 			</div>
-		)
+		);
 	}
 
 	if (isLoading) return <div>Loading deployments...</div>;
@@ -359,5 +361,5 @@ function ClusterDeployments() {
 				</CardContent>
 			</Card>
 		</div>
-	)
+	);
 }

@@ -41,7 +41,13 @@ export function RolesList() {
 	});
 
 	const setDefaultMutation = useMutation({
-		mutationFn: async ({ id, isDefault }: { id: string; isDefault: boolean }) => {
+		mutationFn: async ({
+			id,
+			isDefault,
+		}: {
+			id: string;
+			isDefault: boolean;
+		}) => {
 			const res = await api.api.role({ id })["set-default"].patch({
 				isDefault,
 			});
@@ -133,7 +139,11 @@ export function RolesList() {
 									<TableCell>
 										<div className="flex flex-wrap gap-1">
 											{role.permissions.slice(0, 3).map((p) => (
-												<Badge key={p} variant="secondary" className="text-[10px]">
+												<Badge
+													key={p}
+													variant="secondary"
+													className="text-[10px]"
+												>
 													{p}
 												</Badge>
 											))}

@@ -47,14 +47,17 @@ export function DebugPodModal({
 	const mutation = useMutation({
 		mutationFn: async () => {
 			const res = await api.api
-				.pods({ clusterId })({ id: podId })["ephemeral-containers"].post({
+				.pods({ clusterId })({ id: podId })
+				["ephemeral-containers"].post({
 					image,
 					name: name || undefined,
 					targetContainer: targetContainer || undefined,
 				});
 
 			if (res.error) {
-				throw new Error(res.error.value?.message || "Failed to create debug container");
+				throw new Error(
+					res.error.value?.message || "Failed to create debug container",
+				);
 			}
 
 			return res.data;
@@ -81,10 +84,11 @@ export function DebugPodModal({
 				<DialogHeader>
 					<DialogTitle>Inject Debug Container</DialogTitle>
 					<DialogDescription>
-						Launch an ephemeral container directly into <strong>{podName}</strong> to troubleshoot issues.
+						Launch an ephemeral container directly into{" "}
+						<strong>{podName}</strong> to troubleshoot issues.
 					</DialogDescription>
 				</DialogHeader>
-				
+
 				<div className="space-y-4 py-4">
 					<div className="space-y-2">
 						<Label htmlFor="debug-image">Debug Image</Label>
@@ -95,25 +99,25 @@ export function DebugPodModal({
 							placeholder="e.g. nicolaka/netshoot"
 						/>
 						<div className="flex gap-2 mt-1">
-							<Button 
-								variant="ghost" 
-								size="icon-lg" 
+							<Button
+								variant="ghost"
+								size="icon-lg"
 								className="text-[10px] h-6"
 								onClick={() => setImage("nicolaka/netshoot")}
 							>
 								netshoot
 							</Button>
-							<Button 
-								variant="ghost" 
-								size="icon-lg" 
+							<Button
+								variant="ghost"
+								size="icon-lg"
 								className="text-[10px] h-6"
 								onClick={() => setImage("busybox")}
 							>
 								busybox
 							</Button>
-							<Button 
-								variant="ghost" 
-								size="icon-lg" 
+							<Button
+								variant="ghost"
+								size="icon-lg"
 								className="text-[10px] h-6"
 								onClick={() => setImage("curlimages/curl")}
 							>
@@ -123,7 +127,9 @@ export function DebugPodModal({
 					</div>
 
 					<div className="space-y-2">
-						<Label htmlFor="target-container">Target Container (Namespace Sharing)</Label>
+						<Label htmlFor="target-container">
+							Target Container (Namespace Sharing)
+						</Label>
 						<Select value={targetContainer} onValueChange={setTargetContainer}>
 							<SelectTrigger id="target-container">
 								<SelectValue placeholder="Select container" />
@@ -137,7 +143,8 @@ export function DebugPodModal({
 							</SelectContent>
 						</Select>
 						<p className="text-[11px] text-muted-foreground italic">
-							The debug container will share the process namespace of this container if supported.
+							The debug container will share the process namespace of this
+							container if supported.
 						</p>
 					</div>
 
@@ -153,8 +160,8 @@ export function DebugPodModal({
 				</div>
 
 				<DialogFooter>
-					<Button 
-						onClick={() => mutation.mutate()} 
+					<Button
+						onClick={() => mutation.mutate()}
 						disabled={mutation.isPending}
 					>
 						{mutation.isPending ? "Injecting..." : "Inject Container"}

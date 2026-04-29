@@ -95,12 +95,20 @@ function VolumeHelpDialog() {
 							Persistent Volume Claim (PVC)
 						</div>
 						<p className="text-xs text-muted-foreground leading-relaxed">
-							Mount an existing PVC into your container. This provides persistent storage that survives pod restarts.
+							Mount an existing PVC into your container. This provides
+							persistent storage that survives pod restarts.
 						</p>
 						<ul className="list-disc list-inside text-xs text-muted-foreground space-y-1 ml-1">
-							<li><b>Mount Path:</b> Where the volume appears inside the container</li>
-							<li><b>Sub Path:</b> Map a specific directory inside the PVC</li>
-							<li><b>Read Only:</b> Prevent the container from writing to the volume</li>
+							<li>
+								<b>Mount Path:</b> Where the volume appears inside the container
+							</li>
+							<li>
+								<b>Sub Path:</b> Map a specific directory inside the PVC
+							</li>
+							<li>
+								<b>Read Only:</b> Prevent the container from writing to the
+								volume
+							</li>
 						</ul>
 					</div>
 
@@ -112,11 +120,18 @@ function VolumeHelpDialog() {
 							EmptyDir (Temporary)
 						</div>
 						<p className="text-xs text-muted-foreground leading-relaxed">
-							Creates a temporary directory that exists as long as the pod is running. Useful for scratch space or shared cache between containers.
+							Creates a temporary directory that exists as long as the pod is
+							running. Useful for scratch space or shared cache between
+							containers.
 						</p>
 						<ul className="list-disc list-inside text-xs text-muted-foreground space-y-1 ml-1">
-							<li><b>Medium:</b> Use "Memory" for a RAM-backed temporary file system (tmpfs)</li>
-							<li><b>Size Limit:</b> Maximum capacity (e.g., 512Mi, 1Gi)</li>
+							<li>
+								<b>Medium:</b> Use "Memory" for a RAM-backed temporary file
+								system (tmpfs)
+							</li>
+							<li>
+								<b>Size Limit:</b> Maximum capacity (e.g., 512Mi, 1Gi)
+							</li>
 						</ul>
 					</div>
 				</div>
@@ -149,7 +164,8 @@ export default function VolumeMountEditor({
 	});
 
 	const [pvcList, setPvcList] = useState<IPvcVolumeMount[]>(pvcVolumes);
-	const [emptyDirList, setEmptyDirList] = useState<IEmptyDirVolumeMount[]>(emptyDirVolumes);
+	const [emptyDirList, setEmptyDirList] =
+		useState<IEmptyDirVolumeMount[]>(emptyDirVolumes);
 
 	// PVC Form state
 	const [pvcVolName, setPvcVolName] = useState("");
@@ -223,28 +239,52 @@ export default function VolumeMountEditor({
 				<TabsContent value="pvc" className="space-y-4 mt-3">
 					<Card>
 						<CardHeader className="px-4 py-3">
-							<CardTitle className="text-sm font-semibold">Mounted PVCs</CardTitle>
-							<CardDescription className="text-xs">Existing storage claims attached to this pod.</CardDescription>
+							<CardTitle className="text-sm font-semibold">
+								Mounted PVCs
+							</CardTitle>
+							<CardDescription className="text-xs">
+								Existing storage claims attached to this pod.
+							</CardDescription>
 						</CardHeader>
 						<CardContent className="px-4 pb-4 space-y-4">
 							{pvcList.length > 0 ? (
 								<div className="grid gap-2">
 									{pvcList.map((vol) => (
-										<div key={vol.name} className="flex items-center justify-between p-2 rounded-md border bg-muted/30">
+										<div
+											key={vol.name}
+											className="flex items-center justify-between p-2 rounded-md border bg-muted/30"
+										>
 											<div className="flex flex-col gap-0.5">
 												<div className="flex items-center gap-2">
-													<span className="font-mono text-xs font-semibold">{vol.name}</span>
-													<Badge variant="outline" className="text-[10px] py-0 h-4">{vol.pvcName}</Badge>
-													{vol.readOnly && <Badge variant="secondary" className="text-[10px] py-0 h-4">RO</Badge>}
+													<span className="font-mono text-xs font-semibold">
+														{vol.name}
+													</span>
+													<Badge
+														variant="outline"
+														className="text-[10px] py-0 h-4"
+													>
+														{vol.pvcName}
+													</Badge>
+													{vol.readOnly && (
+														<Badge
+															variant="secondary"
+															className="text-[10px] py-0 h-4"
+														>
+															RO
+														</Badge>
+													)}
 												</div>
 												<div className="text-[11px] text-muted-foreground font-mono">
-													{vol.mountPath}{vol.subPath ? ` (subPath: ${vol.subPath})` : ""}
+													{vol.mountPath}
+													{vol.subPath ? ` (subPath: ${vol.subPath})` : ""}
 												</div>
 											</div>
 											<Button
 												variant="ghost"
 												size="sm"
-												onClick={() => setPvcList(pvcList.filter((v) => v.name !== vol.name))}
+												onClick={() =>
+													setPvcList(pvcList.filter((v) => v.name !== vol.name))
+												}
 												className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
 											>
 												<Trash2 className="size-3.5" />
@@ -260,18 +300,25 @@ export default function VolumeMountEditor({
 
 							<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
 								<div className="space-y-1.5">
-									<Label className="text-xs leading-none">Internal Volume Name</Label>
+									<Label className="text-xs leading-none">
+										Internal Volume Name
+									</Label>
 									<Input
 										placeholder="data-vol"
 										className="h-8 text-xs"
 										value={pvcVolName}
 										onChange={(e) => setPvcVolName(e.target.value)}
 									/>
-									<span className="text-[10px] text-muted-foreground leading-none">Unique name for this mount</span>
+									<span className="text-[10px] text-muted-foreground leading-none">
+										Unique name for this mount
+									</span>
 								</div>
 								<div className="space-y-1.5">
 									<Label className="text-xs leading-none">Select PVC</Label>
-									<Select value={pvcTargetName} onValueChange={setPvcTargetName}>
+									<Select
+										value={pvcTargetName}
+										onValueChange={setPvcTargetName}
+									>
 										<SelectTrigger className="h-8 text-xs">
 											<SelectValue placeholder="Choose PVC" />
 										</SelectTrigger>
@@ -294,7 +341,9 @@ export default function VolumeMountEditor({
 									/>
 								</div>
 								<div className="space-y-1.5">
-									<Label className="text-xs leading-none">Sub Path (Optional)</Label>
+									<Label className="text-xs leading-none">
+										Sub Path (Optional)
+									</Label>
 									<Input
 										placeholder="mysubdir"
 										className="h-8 text-xs font-mono"
@@ -308,20 +357,28 @@ export default function VolumeMountEditor({
 										checked={pvcReadOnly}
 										onCheckedChange={setPvcReadOnly}
 									/>
-									<Label htmlFor="pvc-readonly" className="text-xs cursor-pointer">Read Only</Label>
+									<Label
+										htmlFor="pvc-readonly"
+										className="text-xs cursor-pointer"
+									>
+										Read Only
+									</Label>
 								</div>
 								<div className="flex items-end">
 									<Button
 										className="h-8 w-full gap-1.5 text-xs"
 										disabled={!pvcVolName || !pvcTargetName || !pvcMountPath}
 										onClick={() => {
-											setPvcList([...pvcList, {
-												name: pvcVolName,
-												pvcName: pvcTargetName,
-												mountPath: pvcMountPath,
-												readOnly: pvcReadOnly || undefined,
-												subPath: pvcSubPath || undefined,
-											}]);
+											setPvcList([
+												...pvcList,
+												{
+													name: pvcVolName,
+													pvcName: pvcTargetName,
+													mountPath: pvcMountPath,
+													readOnly: pvcReadOnly || undefined,
+													subPath: pvcSubPath || undefined,
+												},
+											]);
 											setPvcVolName("");
 											setPvcTargetName("");
 											setPvcMountPath("");
@@ -340,19 +397,42 @@ export default function VolumeMountEditor({
 				<TabsContent value="emptydir" className="space-y-4 mt-3">
 					<Card>
 						<CardHeader className="px-4 py-3">
-							<CardTitle className="text-sm font-semibold">Temporary Storage</CardTitle>
-							<CardDescription className="text-xs">Local scratch directories that persist for pod lifetime.</CardDescription>
+							<CardTitle className="text-sm font-semibold">
+								Temporary Storage
+							</CardTitle>
+							<CardDescription className="text-xs">
+								Local scratch directories that persist for pod lifetime.
+							</CardDescription>
 						</CardHeader>
 						<CardContent className="px-4 pb-4 space-y-4">
 							{emptyDirList.length > 0 ? (
 								<div className="grid gap-2">
 									{emptyDirList.map((vol) => (
-										<div key={vol.name} className="flex items-center justify-between p-2 rounded-md border bg-muted/30">
+										<div
+											key={vol.name}
+											className="flex items-center justify-between p-2 rounded-md border bg-muted/30"
+										>
 											<div className="flex flex-col gap-0.5">
 												<div className="flex items-center gap-2">
-													<span className="font-mono text-xs font-semibold">{vol.name}</span>
-													{vol.medium === "Memory" && <Badge variant="secondary" className="text-[10px] py-0 h-4">RAM Disk</Badge>}
-													{vol.sizeLimit && <Badge variant="outline" className="text-[10px] py-0 h-4">{vol.sizeLimit} max</Badge>}
+													<span className="font-mono text-xs font-semibold">
+														{vol.name}
+													</span>
+													{vol.medium === "Memory" && (
+														<Badge
+															variant="secondary"
+															className="text-[10px] py-0 h-4"
+														>
+															RAM Disk
+														</Badge>
+													)}
+													{vol.sizeLimit && (
+														<Badge
+															variant="outline"
+															className="text-[10px] py-0 h-4"
+														>
+															{vol.sizeLimit} max
+														</Badge>
+													)}
 												</div>
 												<div className="text-[11px] text-muted-foreground font-mono">
 													{vol.mountPath}
@@ -361,7 +441,11 @@ export default function VolumeMountEditor({
 											<Button
 												variant="ghost"
 												size="sm"
-												onClick={() => setEmptyDirList(emptyDirList.filter((v) => v.name !== vol.name))}
+												onClick={() =>
+													setEmptyDirList(
+														emptyDirList.filter((v) => v.name !== vol.name),
+													)
+												}
 												className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
 											>
 												<Trash2 className="size-3.5" />
@@ -377,7 +461,9 @@ export default function VolumeMountEditor({
 
 							<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
 								<div className="space-y-1.5 lg:col-span-1">
-									<Label className="text-xs leading-none">Internal Volume Name</Label>
+									<Label className="text-xs leading-none">
+										Internal Volume Name
+									</Label>
 									<Input
 										placeholder="cache-vol"
 										className="h-8 text-xs"
@@ -407,7 +493,9 @@ export default function VolumeMountEditor({
 									</Select>
 								</div>
 								<div className="space-y-1.5 lg:col-span-1">
-									<Label className="text-xs leading-none">Size Limit (Optional)</Label>
+									<Label className="text-xs leading-none">
+										Size Limit (Optional)
+									</Label>
 									<Input
 										placeholder="256Mi"
 										className="h-8 text-xs"
@@ -420,12 +508,15 @@ export default function VolumeMountEditor({
 										className="h-8 w-full gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
 										disabled={!edVolName || !edMountPath}
 										onClick={() => {
-											setEmptyDirList([...emptyDirList, {
-												name: edVolName,
-												mountPath: edMountPath,
-												medium: edMedium === "Memory" ? "Memory" : undefined,
-												sizeLimit: edSizeLimit || undefined,
-											}]);
+											setEmptyDirList([
+												...emptyDirList,
+												{
+													name: edVolName,
+													mountPath: edMountPath,
+													medium: edMedium === "Memory" ? "Memory" : undefined,
+													sizeLimit: edSizeLimit || undefined,
+												},
+											]);
 											setEdVolName("");
 											setEdMountPath("");
 											setEdMedium("Default");

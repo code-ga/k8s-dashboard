@@ -30,7 +30,7 @@ function RolesPage() {
 					</p>
 				</div>
 			</div>
-		)
+		);
 	}
 
 	return (
@@ -77,5 +77,5 @@ function RolesPage() {
 				</TabsContent>
 			</Tabs>
 		</div>
-	)
+	);
 }

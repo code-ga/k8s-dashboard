@@ -10,6 +10,6 @@ export const hasPermission = (
 	_resource: Resource,
 	_action: Action,
 ): boolean => {
-    // This is no longer used but kept for type compatibility during migration
-	return true; 
+	// This is no longer used but kept for type compatibility during migration
+	return true;
 };

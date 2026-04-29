@@ -15,9 +15,11 @@ import { usePermissions } from "@/hooks/use-permissions";
 import { api } from "@/lib/api";
 import { DebugPodModal } from "@/components/cluster/debug-pod-modal";
 
-export const Route = createFileRoute("/_protected/dashboard/cluster/$id/pods/")({
-	component: ClusterPods,
-});
+export const Route = createFileRoute("/_protected/dashboard/cluster/$id/pods/")(
+	{
+		component: ClusterPods,
+	},
+);
 
 function ClusterPods() {
 	const { id } = useParams({ from: "/_protected/dashboard/cluster/$id/pods/" });
@@ -49,7 +51,7 @@ function ClusterPods() {
 					</p>
 				</div>
 			</div>
-		)
+		);
 	}
 
 	if (isLoading) return <div>Loading pods...</div>;
@@ -144,5 +146,5 @@ function ClusterPods() {
 				</CardContent>
 			</Card>
 		</div>
-	)
+	);
 }

@@ -31,7 +31,9 @@ import {
 import { api, getEdenErrorMessage } from "@/lib/api";
 import { replaceEmptyStringsWithUndefined } from "@/lib/utils";
 
-export const Route = createFileRoute("/_protected/dashboard/cluster/$id/secrets/create")({
+export const Route = createFileRoute(
+	"/_protected/dashboard/cluster/$id/secrets/create",
+)({
 	component: CreateSecretPage,
 });
 
@@ -78,7 +80,7 @@ function CreateSecretPage() {
 			for (const v of dataVars) {
 				if (!v.name && v.value) {
 					toast.error("All data entries must have a key");
-					return
+					return;
 				}
 				if (v.name) data[v.name] = v.value || "";
 			}
@@ -90,7 +92,7 @@ function CreateSecretPage() {
 					type: values.type,
 					data,
 				}),
-			)
+			);
 
 			if (res.error) {
 				throw new Error(getEdenErrorMessage(res.error));
@@ -103,7 +105,7 @@ function CreateSecretPage() {
 			navigate({
 				to: `/dashboard/cluster/$id/secrets`,
 				params: { id: clusterId },
-			})
+			});
 		},
 		onError: (error) => {
 			toast.error(error.message);
@@ -147,9 +149,9 @@ function CreateSecretPage() {
 				<CardContent>
 					<form
 						onSubmit={(e) => {
-							e.preventDefault()
-							e.stopPropagation()
-							form.handleSubmit()
+							e.preventDefault();
+							e.stopPropagation();
+							form.handleSubmit();
 						}}
 						className="space-y-6"
 					>
@@ -248,5 +250,5 @@ function CreateSecretPage() {
 				</CardContent>
 			</Card>
 		</div>
-	)
+	);
 }

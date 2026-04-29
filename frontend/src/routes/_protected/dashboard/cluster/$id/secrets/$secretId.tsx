@@ -59,17 +59,17 @@ function ManageSecretPage() {
 		setEditDataVars([...dataVars]);
 		setEditLabels([...labels]);
 		setIsEditing(true);
-	}
+	};
 
 	const cancelEdit = () => {
 		setIsEditing(false);
 		setEditDataVars([]);
 		setEditLabels([]);
-	}
+	};
 
 	const saveEdit = () => {
 		updateMutation.mutate();
-	}
+	};
 
 	const updateMutation = useMutation({
 		mutationFn: async () => {
@@ -93,13 +93,13 @@ function ManageSecretPage() {
 				if (!original || original.value !== v.value) {
 					data[v.name] = v.value || "";
 				}
-			})
+			});
 			// Send null for deleted keys
 			dataVars.forEach((ov) => {
 				if (!editDataVars.find((v) => v.name === ov.name)) {
 					data[ov.name] = null;
 				}
-			})
+			});
 
 			const labelData: Record<string, string | null> = {};
 			// Only send changed or new labels
@@ -108,13 +108,13 @@ function ManageSecretPage() {
 				if (!original || original.value !== l.value) {
 					labelData[l.name] = l.value || "";
 				}
-			})
+			});
 			// Send null for deleted labels
 			labels.forEach((ol) => {
 				if (!editLabels.find((l) => l.name === ol.name)) {
 					labelData[ol.name] = null;
 				}
-			})
+			});
 
 			const res = await api.api
 				.secrets({ clusterId })({ id: secretId })
@@ -127,7 +127,7 @@ function ManageSecretPage() {
 						Object.keys(labelData).length > 0
 							? (labelData as Record<string, string | null>)
 							: undefined,
-				})
+				});
 			if (res.error) {
 				throw new Error(getEdenErrorMessage(res.error));
 			}
@@ -137,7 +137,7 @@ function ManageSecretPage() {
 			toast.success("Secret updated successfully");
 			queryClient.invalidateQueries({
 				queryKey: ["secret", clusterId, secretId],
-			})
+			});
 			setIsEditing(false);
 		},
 		onError: (error) => {
@@ -162,9 +162,9 @@ function ManageSecretPage() {
 						return {
 							name,
 							value: decoded,
-						}
+						};
 					}),
-				)
+				);
 			}
 			if (secret.labels) {
 				try {
@@ -174,9 +174,9 @@ function ManageSecretPage() {
 							name,
 							value: String(value),
 						})),
-					)
+					);
 				} catch {
-					setLabels([])
+					setLabels([]);
 				}
 			}
 		}
@@ -186,7 +186,7 @@ function ManageSecretPage() {
 		mutationFn: async () => {
 			const res = await api.api
 				.secrets({ clusterId })({ id: secretId })
-				.delete()
+				.delete();
 			if (res.error) {
 				throw new Error(getEdenErrorMessage(res.error));
 			}
@@ -198,7 +198,7 @@ function ManageSecretPage() {
 			navigate({
 				to: `/dashboard/cluster/$id/secrets`,
 				params: { id: clusterId },
-			})
+			});
 		},
 		onError: (error) => {
 			toast.error(error.message);
@@ -263,7 +263,7 @@ function ManageSecretPage() {
 							variant="destructive"
 							onClick={() => {
 								if (confirm("Are you sure you want to delete this Secret?")) {
-									deleteMutation.mutate()
+									deleteMutation.mutate();
 								}
 							}}
 							disabled={deleteMutation.isPending}
@@ -429,7 +429,7 @@ function ManageSecretPage() {
 				</TabsContent>
 			</Tabs>
 		</div>
-	)
+	);
 }
 
 function SecretValueRow({
@@ -472,5 +472,5 @@ function SecretValueRow({
 				{isRevealed ? decodedValue : "••••••••••••••••"}
 			</pre>
 		</div>
-	)
+	);
 }

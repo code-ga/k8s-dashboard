@@ -40,7 +40,7 @@ function DashboardSettings() {
 		mutationFn: async (newUsername: string) => {
 			const res = await api.api.profile.put({
 				username: newUsername,
-			})
+			});
 			if (res.error) throw res.error;
 			if (!res.data.data)
 				throw new Error(res.data.message || "Failed to update profile");
@@ -63,7 +63,7 @@ function DashboardSettings() {
 		if (newUsername) {
 			updateProfileMutation.mutate(newUsername);
 		}
-	}
+	};
 
 	if (isLoading) return <div>Loading...</div>;
 	if (!profile) return <div>No profile data</div>;
@@ -107,5 +107,5 @@ function DashboardSettings() {
 				</form>
 			</Card>
 		</div>
-	)
+	);
 }

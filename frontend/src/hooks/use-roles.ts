@@ -4,7 +4,8 @@ import { api } from "@/lib/api";
 export const fetchRole = async (id: string) => {
 	const res = await api.api.role({ id }).get();
 	if (res.error) throw res.error;
-	if (!res.data.data) throw new Error(res.data.message || "Failed to fetch role");
+	if (!res.data.data)
+		throw new Error(res.data.message || "Failed to fetch role");
 	return res.data.data;
 };
 
@@ -16,7 +17,8 @@ export const fetchRoles = async (ids: string[]) => {
 		},
 	});
 	if (res.error) throw res.error;
-	if (!res.data.data) throw new Error(res.data.message || "Failed to fetch roles");
+	if (!res.data.data)
+		throw new Error(res.data.message || "Failed to fetch roles");
 	return res.data.data;
 };
 

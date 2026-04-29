@@ -54,7 +54,9 @@ export function CreateClusterDialog() {
 			if (res.error) {
 				const errorValue = res.error.value;
 				const message =
-					typeof errorValue === "object" && errorValue !== null && "message" in errorValue
+					typeof errorValue === "object" &&
+					errorValue !== null &&
+					"message" in errorValue
 						? (errorValue as { message: string }).message
 						: String(errorValue);
 				throw new Error(message || "Failed to create cluster");

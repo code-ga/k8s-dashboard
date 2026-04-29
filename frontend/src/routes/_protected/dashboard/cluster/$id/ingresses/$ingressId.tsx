@@ -31,7 +31,7 @@ function IngressDetailPage() {
 				.ingresses({ clusterId: id })({
 					id: ingressId,
 				})
-				.get()
+				.get();
 			if (res.error) throw res.error;
 			if (!res.data.data)
 				throw new Error(res.data.message || "Failed to fetch ingress");
@@ -45,7 +45,7 @@ function IngressDetailPage() {
 				.ingresses({ clusterId: id })({
 					id: ingressId,
 				})
-				.delete()
+				.delete();
 			if (res.error) throw res.error;
 			return res.data;
 		},
@@ -185,5 +185,5 @@ function IngressDetailPage() {
 				</Card>
 			</div>
 		</div>
-	)
+	);
 }

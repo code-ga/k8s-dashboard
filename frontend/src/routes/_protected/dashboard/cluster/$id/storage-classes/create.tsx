@@ -75,11 +75,11 @@ function CreateStorageClass() {
 
 		if (!formData.name.trim()) {
 			toast.error("Name is required");
-			return
+			return;
 		}
 		if (!formData.provisioner.trim()) {
 			toast.error("Provisioner is required");
-			return
+			return;
 		}
 
 		setLoading(true);
@@ -97,29 +97,29 @@ function CreateStorageClass() {
 					? JSON.parse(formData.annotations)
 					: {},
 				labels: formData.labels ? JSON.parse(formData.labels) : {},
-			}
+			};
 
 			const res = await api.api.storageclasses({ clusterId: id }).post(payload);
 
 			if (res.error) {
 				toast.error(
 					res.error.value?.message || "Failed to create StorageClass",
-				)
+				);
 			} else {
 				toast.success("StorageClass creation initiated successfully");
 				navigate({
 					to: "/dashboard/cluster/$id/storage-classes",
 					params: { id },
-				})
+				});
 			}
 		} catch (error: any) {
 			toast.error(
 				error?.message || "Invalid JSON format in annotations/labels",
-			)
+			);
 		} finally {
 			setLoading(false);
 		}
-	}
+	};
 
 	return (
 		<div className="max-w-2xl mx-auto space-y-6 py-6">
@@ -290,5 +290,5 @@ function CreateStorageClass() {
 				</Card>
 			</form>
 		</div>
-	)
+	);
 }

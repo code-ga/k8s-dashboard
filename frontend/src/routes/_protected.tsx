@@ -3,7 +3,7 @@ import { authClient } from "@/lib/auth";
 
 export const Route = createFileRoute("/_protected")({
 	beforeLoad: async ({ location }) => {
-    const session = await authClient.getSession();
+		const session = await authClient.getSession();
 
 		if (!session.data) {
 			throw redirect({

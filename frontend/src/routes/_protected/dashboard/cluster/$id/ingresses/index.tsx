@@ -17,14 +17,18 @@ import { usePermissions } from "@/hooks/use-permissions";
 import type { databaseTypes, SchemaStatic } from "@/lib/api";
 import { api } from "@/lib/api";
 
-export const Route = createFileRoute("/_protected/dashboard/cluster/$id/ingresses/")({
+export const Route = createFileRoute(
+	"/_protected/dashboard/cluster/$id/ingresses/",
+)({
 	component: ClusterIngresses,
 });
 
 type Ingress = SchemaStatic<databaseTypes.databaseTypes["k8sIngresses"]>;
 
 function ClusterIngresses() {
-	const { id } = useParams({ from: "/_protected/dashboard/cluster/$id/ingresses/" });
+	const { id } = useParams({
+		from: "/_protected/dashboard/cluster/$id/ingresses/",
+	});
 	const { can, isLoading: isLoadingPermissions } = usePermissions();
 	const queryClient = useQueryClient();
 
@@ -48,7 +52,7 @@ function ClusterIngresses() {
 				.ingresses({ clusterId: id })({
 					id: String(ingressId),
 				})
-				.delete()
+				.delete();
 			if (res.error) throw res.error;
 			return res.data;
 		},
@@ -74,7 +78,7 @@ function ClusterIngresses() {
 					</p>
 				</div>
 			</div>
-		)
+		);
 	}
 
 	if (isLoading) return <div>Loading ingresses...</div>;
@@ -180,7 +184,7 @@ function ClusterIngresses() {
 																"Are you sure you want to delete this ingress?",
 															)
 														) {
-															deleteMutation.mutate(ing.id)
+															deleteMutation.mutate(ing.id);
 														}
 													}}
 													disabled={deleteMutation.isPending}
@@ -207,5 +211,5 @@ function ClusterIngresses() {
 				</CardContent>
 			</Card>
 		</div>
-	)
+	);
 }

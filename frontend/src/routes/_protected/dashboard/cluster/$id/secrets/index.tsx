@@ -14,12 +14,16 @@ import {
 import { usePermissions } from "@/hooks/use-permissions";
 import { api } from "@/lib/api";
 
-export const Route = createFileRoute("/_protected/dashboard/cluster/$id/secrets/")({
+export const Route = createFileRoute(
+	"/_protected/dashboard/cluster/$id/secrets/",
+)({
 	component: ClusterSecrets,
 });
 
 function ClusterSecrets() {
-	const { id } = useParams({ from: "/_protected/dashboard/cluster/$id/secrets/" });
+	const { id } = useParams({
+		from: "/_protected/dashboard/cluster/$id/secrets/",
+	});
 	const { can, isLoading: isLoadingPermissions } = usePermissions();
 
 	const { data: secrets, isLoading } = useQuery({
@@ -48,7 +52,7 @@ function ClusterSecrets() {
 					</p>
 				</div>
 			</div>
-		)
+		);
 	}
 
 	if (isLoading) return <div>Loading secrets...</div>;
@@ -124,5 +128,5 @@ function ClusterSecrets() {
 				</CardContent>
 			</Card>
 		</div>
-	)
+	);
 }

@@ -26,7 +26,8 @@ function OnboardingPage() {
 	const navigate = useNavigate();
 	const queryClient = useQueryClient();
 
-	const { data: session, isPending: isSessionLoading } = authClient.useSession();
+	const { data: session, isPending: isSessionLoading } =
+		authClient.useSession();
 
 	const createProfileMutation = useMutation({
 		mutationFn: async (username: string) => {
@@ -50,14 +51,14 @@ function OnboardingPage() {
 		e.preventDefault();
 		if (!username.trim()) return;
 		createProfileMutation.mutate(username);
-	}
+	};
 
 	if (isSessionLoading) {
 		return (
 			<div className="flex items-center justify-center min-h-screen">
 				<Loader2 className="h-8 w-8 animate-spin text-primary" />
 			</div>
-		)
+		);
 	}
 
 	if (!session) {
@@ -116,5 +117,5 @@ function OnboardingPage() {
 				</form>
 			</Card>
 		</div>
-	)
+	);
 }

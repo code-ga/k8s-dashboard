@@ -47,7 +47,7 @@ function ServiceDetailPage() {
 		queryFn: async () => {
 			const res = await api.api
 				.services({ clusterId: id })({ id: serviceId })
-				.get()
+				.get();
 			if (res.error) throw res.error;
 			if (!res.data.data)
 				throw new Error(res.data.message || "Failed to fetch service");
@@ -71,7 +71,7 @@ function ServiceDetailPage() {
 		mutationFn: async () => {
 			const res = await api.api
 				.services({ clusterId: id })({ id: serviceId })
-				.delete()
+				.delete();
 			if (res.error) {
 				throw new Error(getEdenErrorMessage(res.error));
 			}
@@ -83,7 +83,7 @@ function ServiceDetailPage() {
 			navigate({
 				to: `/dashboard/cluster/$id/services`,
 				params: { id },
-			})
+			});
 		},
 		onError: (error) => {
 			toast.error(error.message);
@@ -335,5 +335,5 @@ function ServiceDetailPage() {
 				</DialogContent>
 			</Dialog>
 		</div>
-	)
+	);
 }

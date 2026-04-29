@@ -15,7 +15,9 @@ import {
 import { api } from "@/lib/api";
 import { useState } from "react";
 
-export const Route = createFileRoute("/_protected/dashboard/cluster/$id/events/")({
+export const Route = createFileRoute(
+	"/_protected/dashboard/cluster/$id/events/",
+)({
 	component: ClusterEvents,
 });
 
@@ -45,7 +47,7 @@ function ClusterEvents() {
 					Loading cluster events...
 				</div>
 			</div>
-		)
+		);
 
 	if (error)
 		return (
@@ -54,7 +56,7 @@ function ClusterEvents() {
 					Error: {(error as Error).message}
 				</div>
 			</div>
-		)
+		);
 
 	const filteredEvents = (events || []).filter((e: any) => {
 		const searchLower = searchQuery.toLowerCase();
@@ -63,12 +65,12 @@ function ClusterEvents() {
 			e.reason.toLowerCase().includes(searchLower) ||
 			e.object.toLowerCase().includes(searchLower) ||
 			e.namespace.toLowerCase().includes(searchLower)
-		)
+		);
 	});
 
 	return (
-        <div className="p-6 space-y-6">
-            <div className="flex items-center justify-between">
+		<div className="p-6 space-y-6">
+			<div className="flex items-center justify-between">
 				<div className="flex items-center gap-4">
 					<Link to={`/dashboard/cluster/$id`} params={{ id: clusterId }}>
 						<Button variant="ghost" size="icon">
@@ -85,7 +87,7 @@ function ClusterEvents() {
 					</div>
 				</div>
 			</div>
-            <div className="flex items-center gap-4">
+			<div className="flex items-center gap-4">
 				<div className="relative flex-1 max-w-sm">
 					<Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
 					<Input
@@ -96,7 +98,7 @@ function ClusterEvents() {
 					/>
 				</div>
 			</div>
-            <Card>
+			<Card>
 				<CardContent className="p-0">
 					<div className="rounded-md border">
 						<Table>
@@ -125,20 +127,20 @@ function ClusterEvents() {
 								) : (
 									filteredEvents.map((e: any, i: number) => (
 										// biome-ignore lint/suspicious/noArrayIndexKey: <explanation>
-										(<TableRow
+										<TableRow
 											// biome-ignore lint/suspicious/noArrayIndexKey: <explanation>
 											key={i}
 											className="hover:bg-muted/30 transition-colors"
 										>
-                                            <TableCell className="text-[10px] font-mono whitespace-nowrap">
+											<TableCell className="text-[10px] font-mono whitespace-nowrap">
 												{new Date(e.lastSeen).toLocaleString()}
 											</TableCell>
-                                            <TableCell>
+											<TableCell>
 												<span className="text-[11px] font-medium bg-secondary/50 px-1.5 py-0.5 rounded">
 													{e.namespace}
 												</span>
 											</TableCell>
-                                            <TableCell>
+											<TableCell>
 												<span
 													className={`px-2 py-0.5 rounded-full text-[9px] uppercase font-bold tracking-tight ${
 														e.type === "Normal"
@@ -149,19 +151,19 @@ function ClusterEvents() {
 													{e.type}
 												</span>
 											</TableCell>
-                                            <TableCell className="font-medium text-xs text-foreground/80 lowercase italic">
+											<TableCell className="font-medium text-xs text-foreground/80 lowercase italic">
 												{e.reason}
 											</TableCell>
-                                            <TableCell
+											<TableCell
 												className="text-xs font-mono text-blue-500/80 truncate max-w-[200px]"
 												title={e.object}
 											>
 												{e.object}
 											</TableCell>
-                                            <TableCell className="text-xs text-muted-foreground max-w-md truncate hover:whitespace-normal cursor-help">
+											<TableCell className="text-xs text-muted-foreground max-w-md truncate hover:whitespace-normal cursor-help">
 												{e.message}
 											</TableCell>
-                                        </TableRow>)
+										</TableRow>
 									))
 								)}
 							</TableBody>
@@ -169,6 +171,6 @@ function ClusterEvents() {
 					</div>
 				</CardContent>
 			</Card>
-        </div>
-    )
+		</div>
+	);
 }

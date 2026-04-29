@@ -89,7 +89,11 @@ export function EnvEditor({ variables, onChange }: EnvEditorProps) {
 		onChange(variables.filter((_, i) => i !== index));
 	};
 
-	const updateVarAt = (index: number, field: keyof EnvVar | "fieldPath", value: any) => {
+	const updateVarAt = (
+		index: number,
+		field: keyof EnvVar | "fieldPath",
+		value: any,
+	) => {
 		const updated = [...variables];
 		if (field === "fieldPath") {
 			updated[index] = {
@@ -131,13 +135,15 @@ export function EnvEditor({ variables, onChange }: EnvEditorProps) {
 							<DialogHeader>
 								<DialogTitle>Paste .env content</DialogTitle>
 								<DialogDescription>
-									Paste your environment variables in KEY=VALUE format. 
-									Lines starting with # will be ignored.
+									Paste your environment variables in KEY=VALUE format. Lines
+									starting with # will be ignored.
 								</DialogDescription>
 							</DialogHeader>
 							<div className="py-4">
 								<Textarea
-									placeholder={"APP_NAME=my-app\nPORT=3000\nDATABASE_URL=postgres://..."}
+									placeholder={
+										"APP_NAME=my-app\nPORT=3000\nDATABASE_URL=postgres://..."
+									}
 									rows={10}
 									value={pasteValue}
 									onChange={(e) => setPasteValue(e.target.value)}
@@ -177,7 +183,9 @@ export function EnvEditor({ variables, onChange }: EnvEditorProps) {
 						>
 							<div className="w-32">
 								<Select
-									value={v.type || (v.valueFrom?.fieldRef ? "fieldRef" : "text")}
+									value={
+										v.type || (v.valueFrom?.fieldRef ? "fieldRef" : "text")
+									}
 									onValueChange={(val) => updateVarAt(index, "type", val)}
 								>
 									<SelectTrigger className="h-9 text-xs">
@@ -198,12 +206,14 @@ export function EnvEditor({ variables, onChange }: EnvEditorProps) {
 								/>
 							</div>
 							<div className="flex-1 space-y-1">
-								{(v.type === "fieldRef" || (!v.type && v.valueFrom?.fieldRef)) ? (
+								{v.type === "fieldRef" || (!v.type && v.valueFrom?.fieldRef) ? (
 									<div className="space-y-2">
 										<Input
 											placeholder="fieldPath (e.g. metadata.name)"
 											value={v.valueFrom?.fieldRef?.fieldPath || ""}
-											onChange={(e) => updateVarAt(index, "fieldPath", e.target.value)}
+											onChange={(e) =>
+												updateVarAt(index, "fieldPath", e.target.value)
+											}
 											className="h-9 font-mono text-xs"
 										/>
 										<div className="flex flex-wrap gap-1">
@@ -214,7 +224,7 @@ export function EnvEditor({ variables, onChange }: EnvEditorProps) {
 													onClick={() => updateVarAt(index, "fieldPath", path)}
 													className="text-[10px] px-1.5 py-0.5 rounded bg-secondary hover:bg-secondary/80 text-secondary-foreground transition-colors"
 												>
-													{path.split('.').pop()}
+													{path.split(".").pop()}
 												</button>
 											))}
 										</div>
@@ -223,7 +233,9 @@ export function EnvEditor({ variables, onChange }: EnvEditorProps) {
 									<Input
 										placeholder="value"
 										value={v.value || ""}
-										onChange={(e) => updateVarAt(index, "value", e.target.value)}
+										onChange={(e) =>
+											updateVarAt(index, "value", e.target.value)
+										}
 										className="h-9 font-mono text-xs"
 									/>
 								)}

@@ -1,13 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import {
-	Database,
-	HelpCircle,
-	Key,
-	Layers,
-	Plus,
-	Tag,
-	X,
-} from "lucide-react";
+import { Database, HelpCircle, Key, Layers, Plus, Tag, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -137,8 +129,9 @@ function HelpDialog() {
 								All Keys — <code className="text-blue-600">envFrom</code>
 							</div>
 							<p className="text-xs text-muted-foreground leading-relaxed">
-								Imports <b>all keys</b> from a ConfigMap as environment variables
-								at once. Optionally add a <b>prefix</b> to avoid name conflicts.
+								Imports <b>all keys</b> from a ConfigMap as environment
+								variables at once. Optionally add a <b>prefix</b> to avoid name
+								conflicts.
 							</p>
 							<div className="mt-1.5 rounded bg-background border px-2 py-1 font-mono text-xs text-muted-foreground">
 								my-configmap (prefix: APP_) → APP_KEY1, APP_KEY2, …
@@ -161,8 +154,8 @@ function HelpDialog() {
 								Single Key — <code className="text-amber-600">env</code>
 							</div>
 							<p className="text-xs text-muted-foreground leading-relaxed">
-								Same as ConfigMap env, but reads from a Kubernetes{" "}
-								<b>Secret</b>. Values are base64-decoded automatically.
+								Same as ConfigMap env, but reads from a Kubernetes <b>Secret</b>
+								. Values are base64-decoded automatically.
 							</p>
 							<div className="mt-1.5 rounded bg-background border px-2 py-1 font-mono text-xs text-muted-foreground">
 								DB_PASSWORD ← my-secret / password
@@ -350,7 +343,9 @@ export default function RefsEditor({
 											className="inline-flex items-center gap-1 rounded-md border bg-muted/60 px-2 py-0.5 text-xs"
 										>
 											<span className="font-mono font-medium">{r.name}</span>
-											<span className="text-muted-foreground text-[10px]">←</span>
+											<span className="text-muted-foreground text-[10px]">
+												←
+											</span>
 											<span className="font-mono text-blue-600 text-[11px]">
 												{r.configMapName}/{r.key}
 											</span>
@@ -569,7 +564,9 @@ export default function RefsEditor({
 											className="inline-flex items-center gap-1 rounded-md border bg-muted/60 px-2 py-0.5 text-xs"
 										>
 											<span className="font-mono font-medium">{r.name}</span>
-											<span className="text-muted-foreground text-[10px]">←</span>
+											<span className="text-muted-foreground text-[10px]">
+												←
+											</span>
 											<span className="font-mono text-amber-600 text-[11px]">
 												{r.secretName}/{r.key}
 											</span>

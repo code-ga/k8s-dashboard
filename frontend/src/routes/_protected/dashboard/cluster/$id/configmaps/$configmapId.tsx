@@ -36,7 +36,7 @@ function ManageConfigMapPage() {
 		queryFn: async () => {
 			const res = await api.api
 				.configmaps({ clusterId })({ id: configmapId })
-				.get()
+				.get();
 			if (res.error) throw res.error;
 			if (!res.data.data)
 				throw new Error(res.data.message || "Failed to fetch config map");
@@ -53,18 +53,18 @@ function ManageConfigMapPage() {
 		setEditBinaryDataVars([...binaryDataVars]);
 		setEditLabels([...labels]);
 		setIsEditing(true);
-	}
+	};
 
 	const cancelEdit = () => {
 		setIsEditing(false);
 		setEditDataVars([]);
 		setEditBinaryDataVars([]);
 		setEditLabels([]);
-	}
+	};
 
 	const saveEdit = () => {
 		updateMutation.mutate();
-	}
+	};
 
 	const updateMutation = useMutation({
 		mutationFn: async () => {
@@ -94,13 +94,13 @@ function ManageConfigMapPage() {
 				if (!original || original.value !== v.value) {
 					data[v.name] = v.value || "";
 				}
-			})
+			});
 			// Send null for deleted keys
 			dataVars.forEach((ov) => {
 				if (!editDataVars.find((v) => v.name === ov.name)) {
 					data[ov.name] = null;
 				}
-			})
+			});
 
 			const binaryData: Record<string, string | null> = {};
 			// Only send changed or new binary data
@@ -109,13 +109,13 @@ function ManageConfigMapPage() {
 				if (!original || original.value !== v.value) {
 					binaryData[v.name] = v.value || "";
 				}
-			})
+			});
 			// Send null for deleted binary keys
 			binaryDataVars.forEach((ov) => {
 				if (!editBinaryDataVars.find((v) => v.name === ov.name)) {
 					binaryData[ov.name] = null;
 				}
-			})
+			});
 
 			const labelData: Record<string, string | null> = {};
 			// Only send changed or new labels
@@ -124,21 +124,30 @@ function ManageConfigMapPage() {
 				if (!original || original.value !== l.value) {
 					labelData[l.name] = l.value || "";
 				}
-			})
+			});
 			// Send null for deleted labels
 			labels.forEach((ol) => {
 				if (!editLabels.find((l) => l.name === ol.name)) {
 					labelData[ol.name] = null;
 				}
-			})
+			});
 
 			const res = await api.api
 				.configmaps({ clusterId })({ id: configmapId })
 				.put({
-					data: Object.keys(data).length > 0 ? (data as Record<string, string | null>) : undefined,
-					binaryData: Object.keys(binaryData).length > 0 ? (binaryData as Record<string, string | null>) : undefined,
-					labels: Object.keys(labelData).length > 0 ? (labelData as Record<string, string | null>) : undefined,
-				})
+					data:
+						Object.keys(data).length > 0
+							? (data as Record<string, string | null>)
+							: undefined,
+					binaryData:
+						Object.keys(binaryData).length > 0
+							? (binaryData as Record<string, string | null>)
+							: undefined,
+					labels:
+						Object.keys(labelData).length > 0
+							? (labelData as Record<string, string | null>)
+							: undefined,
+				});
 			if (res.error) {
 				throw new Error(getEdenErrorMessage(res.error));
 			}
@@ -148,7 +157,7 @@ function ManageConfigMapPage() {
 			toast.success("ConfigMap updated successfully");
 			queryClient.invalidateQueries({
 				queryKey: ["configmap", clusterId, configmapId],
-			})
+			});
 			setIsEditing(false);
 		},
 		onError: (error) => {
@@ -164,7 +173,7 @@ function ManageConfigMapPage() {
 						name,
 						value: String(value),
 					})),
-				)
+				);
 			}
 			if (cm.binaryData) {
 				setBinaryDataVars(
@@ -172,7 +181,7 @@ function ManageConfigMapPage() {
 						name,
 						value: String(value),
 					})),
-				)
+				);
 			}
 			if (cm.labels) {
 				try {
@@ -182,9 +191,9 @@ function ManageConfigMapPage() {
 							name,
 							value: String(value),
 						})),
-					)
+					);
 				} catch {
-					setLabels([])
+					setLabels([]);
 				}
 			}
 		}
@@ -194,7 +203,7 @@ function ManageConfigMapPage() {
 		mutationFn: async () => {
 			const res = await api.api
 				.configmaps({ clusterId })({ id: configmapId })
-				.delete()
+				.delete();
 			if (res.error) {
 				throw new Error(getEdenErrorMessage(res.error));
 			}
@@ -206,7 +215,7 @@ function ManageConfigMapPage() {
 			navigate({
 				to: `/dashboard/cluster/$id/configmaps`,
 				params: { id: clusterId },
-			})
+			});
 		},
 		onError: (error) => {
 			toast.error(error.message);
@@ -273,7 +282,7 @@ function ManageConfigMapPage() {
 								if (
 									confirm("Are you sure you want to delete this ConfigMap?")
 								) {
-									deleteMutation.mutate()
+									deleteMutation.mutate();
 								}
 							}}
 							disabled={deleteMutation.isPending}
@@ -365,7 +374,10 @@ function ManageConfigMapPage() {
 						<h3 className="text-sm font-semibold mb-4">ConfigMap Data</h3>
 						<div className="space-y-4">
 							{isEditing ? (
-								<EnvEditor variables={editDataVars} onChange={setEditDataVars} />
+								<EnvEditor
+									variables={editDataVars}
+									onChange={setEditDataVars}
+								/>
 							) : dataVars.length > 0 ? (
 								dataVars.map((v: EnvVar) => (
 									<div key={v.name} className="space-y-2">
@@ -395,7 +407,10 @@ function ManageConfigMapPage() {
 						<h3 className="text-sm font-semibold mb-4">Binary Data (Base64)</h3>
 						<div className="space-y-4">
 							{isEditing ? (
-								<EnvEditor variables={editBinaryDataVars} onChange={setEditBinaryDataVars} />
+								<EnvEditor
+									variables={editBinaryDataVars}
+									onChange={setEditBinaryDataVars}
+								/>
 							) : binaryDataVars.length > 0 ? (
 								binaryDataVars.map((v: EnvVar) => (
 									<div key={v.name} className="space-y-2">
@@ -450,5 +465,5 @@ function ManageConfigMapPage() {
 				</TabsContent>
 			</Tabs>
 		</div>
-	)
+	);
 }

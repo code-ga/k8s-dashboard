@@ -70,7 +70,7 @@ const deploymentSchema = z.object({
 			return val.split(",").every((pair) => {
 				const [key, value] = pair.split("=").map((s) => s.trim());
 				return key && value;
-			})
+			});
 		}, "Labels must be in key=value format, comma separated"),
 	selector: z
 		.string()
@@ -80,7 +80,7 @@ const deploymentSchema = z.object({
 			return val.split(",").every((pair) => {
 				const [key, value] = pair.split("=").map((s) => s.trim());
 				return key && value;
-			})
+			});
 		}, "Selector must be in key=value format, comma separated"),
 	envVars: z.array(envVarSchema).optional(),
 });
@@ -93,7 +93,7 @@ function CreateDeploymentPage() {
 	const [envVars, setEnvVars] = useState<EnvVar[]>([]);
 	const [configMapEnvRefs, setConfigMapEnvRefs] = useState<IConfigMapEnvRef[]>(
 		[],
-	)
+	);
 	const [configMapEnvFromRefs, setConfigMapEnvFromRefs] = useState<
 		IConfigMapEnvFromRef[]
 	>([]);
@@ -114,9 +114,9 @@ function CreateDeploymentPage() {
 				str.split(",").forEach((pair) => {
 					const [key, value] = pair.split("=").map((s) => s.trim());
 					if (key && value) result[key] = value;
-				})
+				});
 				return Object.keys(result).length > 0 ? result : undefined;
-			}
+			};
 
 			const res = await api.api.deployments({ clusterId }).post(
 				replaceEmptyStringsWithUndefined({
@@ -177,7 +177,7 @@ function CreateDeploymentPage() {
 					emptyDirVolumes:
 						emptyDirVolumes.length > 0 ? emptyDirVolumes : undefined,
 				}),
-			)
+			);
 
 			if (res.error) {
 				throw new Error(getEdenErrorMessage(res.error));
@@ -190,7 +190,7 @@ function CreateDeploymentPage() {
 			navigate({
 				to: `/dashboard/cluster/$id/deployments`,
 				params: { id: clusterId },
-			})
+			});
 		},
 	});
 
@@ -258,9 +258,9 @@ function CreateDeploymentPage() {
 				<CardContent>
 					<form
 						onSubmit={(e) => {
-							e.preventDefault()
-							e.stopPropagation()
-							form.handleSubmit()
+							e.preventDefault();
+							e.stopPropagation();
+							form.handleSubmit();
 						}}
 						className="space-y-6"
 					>
@@ -610,5 +610,5 @@ function CreateDeploymentPage() {
 				</CardContent>
 			</Card>
 		</div>
-	)
+	);
 }

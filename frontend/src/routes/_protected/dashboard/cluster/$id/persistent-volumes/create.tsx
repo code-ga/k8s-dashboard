@@ -65,21 +65,21 @@ function CreatePersistentVolume() {
 
 		if (!formData.name.trim()) {
 			toast.error("Name is required");
-			return
+			return;
 		}
 		if (formData.capacity < 1) {
 			toast.error("Capacity must be at least 1 MiB");
-			return
+			return;
 		}
 		if (formData.sourceType === "nfs") {
 			if (!formData.nfsServer.trim() || !formData.nfsPath.trim()) {
 				toast.error("NFS Server and Export Path are required");
-				return
+				return;
 			}
 		} else if (formData.sourceType === "hostPath") {
 			if (!formData.hostPath.trim()) {
 				toast.error("HostPath is required");
-				return
+				return;
 			}
 		}
 
@@ -92,40 +92,42 @@ function CreatePersistentVolume() {
 				storageClass: formData.storageClass || undefined,
 				accessModes: formData.accessModes,
 				reclaimPolicy: formData.reclaimPolicy,
-			}
+			};
 
 			if (formData.sourceType === "nfs") {
 				payload.nfs = {
 					server: formData.nfsServer,
 					path: formData.nfsPath,
 					readOnly: formData.nfsReadOnly,
-				}
+				};
 			} else {
 				payload.hostPath = {
 					path: formData.hostPath,
 					type: formData.hostPathType,
-				}
+				};
 			}
 
-			const res = await api.api.pvs({ clusterId: id }).post(replaceEmptyStringsWithUndefined(payload));
+			const res = await api.api
+				.pvs({ clusterId: id })
+				.post(replaceEmptyStringsWithUndefined(payload));
 
 			if (res.error) {
 				toast.error(
 					res.error.value?.message || "Failed to create PersistentVolume",
-				)
+				);
 			} else {
 				toast.success("PersistentVolume creation initiated successfully");
 				navigate({
 					to: "/dashboard/cluster/$id/persistent-volumes",
 					params: { id },
-				})
+				});
 			}
 		} catch (error: any) {
 			toast.error(error?.message || "Invalid input format");
 		} finally {
 			setLoading(false);
 		}
-	}
+	};
 
 	const toggleAccessMode = (mode: string) => {
 		setFormData((prev) => ({
@@ -133,8 +135,8 @@ function CreatePersistentVolume() {
 			accessModes: prev.accessModes.includes(mode)
 				? prev.accessModes.filter((m) => m !== mode)
 				: [...prev.accessModes, mode],
-		}))
-	}
+		}));
+	};
 
 	return (
 		<div className="max-w-3xl mx-auto space-y-6 py-6">
@@ -409,5 +411,5 @@ function CreatePersistentVolume() {
 				</Card>
 			</form>
 		</div>
-	)
+	);
 }

@@ -129,8 +129,8 @@ function LoginPage() {
 										Make sure to allow third-party cookies in your browser
 										settings for the login to work correctly. Safari users may
 										need to enable "Prevent cross-site tracking" in their
-										browser settings. (or their will be blocked by ITP) . Also the
-										security setting in your browser that prevent cross-site
+										browser settings. (or their will be blocked by ITP) . Also
+										the security setting in your browser that prevent cross-site
 										tracking will also cause this issue so please make sure to
 										disable that if you encounter any login issues.
 									</span>

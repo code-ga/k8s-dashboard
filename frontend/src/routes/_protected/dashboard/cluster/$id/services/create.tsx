@@ -29,7 +29,9 @@ import {
 import { api } from "@/lib/api";
 import { replaceEmptyStringsWithUndefined } from "@/lib/utils";
 
-export const Route = createFileRoute("/_protected/dashboard/cluster/$id/services/create")({
+export const Route = createFileRoute(
+	"/_protected/dashboard/cluster/$id/services/create",
+)({
 	component: CreateServicePage,
 });
 
@@ -68,14 +70,14 @@ function CreateServicePage() {
 		mutationFn: async (values: z.infer<typeof serviceSchema>) => {
 			const selectorObj = Object.fromEntries(
 				values.selector.map((s) => [s.key, s.value]),
-			)
+			);
 
 			const portsFormatted = values.ports.map((p) => ({
 				name: p.name,
 				port: p.port,
 				targetPort: p.targetPort,
 				protocol: p.protocol,
-			}))
+			}));
 
 			const res = await api.api
 				.services({
@@ -89,7 +91,7 @@ function CreateServicePage() {
 						selector: selectorObj,
 						ports: portsFormatted,
 					}),
-				)
+				);
 
 			if (res.error) {
 				throw new Error(res.error.value?.message || "Failed to create service");
@@ -102,7 +104,7 @@ function CreateServicePage() {
 			navigate({
 				to: "/dashboard/cluster/$id/services",
 				params: { id: clusterId },
-			})
+			});
 		},
 		onError: (error) => {
 			toast.error(error.message);
@@ -157,9 +159,9 @@ function CreateServicePage() {
 				<CardContent>
 					<form
 						onSubmit={(e) => {
-							e.preventDefault()
-							e.stopPropagation()
-							form.handleSubmit()
+							e.preventDefault();
+							e.stopPropagation();
+							form.handleSubmit();
 						}}
 						className="space-y-6"
 					>
@@ -254,9 +256,9 @@ function CreateServicePage() {
 													placeholder="Key (e.g. app)"
 													value={item.key}
 													onChange={(e) => {
-														const newValue = [...field.state.value]
-														newValue[index].key = e.target.value
-														field.handleChange(newValue)
+														const newValue = [...field.state.value];
+														newValue[index].key = e.target.value;
+														field.handleChange(newValue);
 													}}
 													className="flex-1"
 												/>
@@ -265,9 +267,9 @@ function CreateServicePage() {
 													placeholder="Value (e.g. backend)"
 													value={item.value}
 													onChange={(e) => {
-														const newValue = [...field.state.value]
-														newValue[index].value = e.target.value
-														field.handleChange(newValue)
+														const newValue = [...field.state.value];
+														newValue[index].value = e.target.value;
+														field.handleChange(newValue);
 													}}
 													className="flex-1"
 												/>
@@ -277,9 +279,9 @@ function CreateServicePage() {
 													size="icon"
 													className="text-destructive hover:text-destructive shrink-0"
 													onClick={() => {
-														const newValue = [...field.state.value]
-														newValue.splice(index, 1)
-														field.handleChange(newValue)
+														const newValue = [...field.state.value];
+														newValue.splice(index, 1);
+														field.handleChange(newValue);
 													}}
 													disabled={
 														field.state.value.length <= 1 && index === 0
@@ -331,9 +333,9 @@ function CreateServicePage() {
 														placeholder="http"
 														value={item.name}
 														onChange={(e) => {
-															const newValue = [...field.state.value]
-															newValue[index].name = e.target.value
-															field.handleChange(newValue)
+															const newValue = [...field.state.value];
+															newValue[index].name = e.target.value;
+															field.handleChange(newValue);
 														}}
 													/>
 												</div>
@@ -344,9 +346,9 @@ function CreateServicePage() {
 														placeholder="80"
 														value={item.port}
 														onChange={(e) => {
-															const newValue = [...field.state.value]
+															const newValue = [...field.state.value];
 															newValue[index].port = Number(e.target.value);
-															field.handleChange(newValue)
+															field.handleChange(newValue);
 														}}
 													/>
 												</div>
@@ -357,11 +359,11 @@ function CreateServicePage() {
 														placeholder="80"
 														value={item.targetPort}
 														onChange={(e) => {
-															const newValue = [...field.state.value]
+															const newValue = [...field.state.value];
 															newValue[index].targetPort = Number(
 																e.target.value,
-															)
-															field.handleChange(newValue)
+															);
+															field.handleChange(newValue);
 														}}
 													/>
 												</div>
@@ -370,9 +372,9 @@ function CreateServicePage() {
 													<Select
 														value={item.protocol}
 														onValueChange={(value) => {
-															const newValue = [...field.state.value]
+															const newValue = [...field.state.value];
 															newValue[index].protocol = value as "TCP" | "UDP";
-															field.handleChange(newValue)
+															field.handleChange(newValue);
 														}}
 													>
 														<SelectTrigger>
@@ -390,9 +392,9 @@ function CreateServicePage() {
 													size="icon"
 													className="text-destructive hover:text-destructive mb-[2px]"
 													onClick={() => {
-														const newValue = [...field.state.value]
-														newValue.splice(index, 1)
-														field.handleChange(newValue)
+														const newValue = [...field.state.value];
+														newValue.splice(index, 1);
+														field.handleChange(newValue);
 													}}
 													disabled={field.state.value.length <= 1}
 												>
@@ -422,5 +424,5 @@ function CreateServicePage() {
 				</CardContent>
 			</Card>
 		</div>
-	)
+	);
 }
