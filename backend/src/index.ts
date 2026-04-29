@@ -11,6 +11,7 @@ import { apiRouter } from "./routes";
 import { scalingController } from "./services/scaling.controller";
 import { generateSeedRoles } from "./utils/role";
 import { auth } from "./libs/auths/auth.config";
+import { loggerMiddleware } from "./middleware/logger";
 
 scalingController.start();
 await generateSeedRoles();
@@ -36,6 +37,7 @@ export const app = new Elysia()
 			},
 		}),
 	)
+	.use(loggerMiddleware)
 	.use(apiRouter);
 
 app.get("/permissions", async (_) => {
