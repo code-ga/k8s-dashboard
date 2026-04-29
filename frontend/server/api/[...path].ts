@@ -1,7 +1,7 @@
 import {
   defineEventHandler,
   getRequestHeaders,
-  getRequestURL,
+  // getRequestURL,
   readRawBody,
   setResponseStatus,
 } from "h3";
