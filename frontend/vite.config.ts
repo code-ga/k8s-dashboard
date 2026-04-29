@@ -18,16 +18,16 @@ export default defineConfig({
 		viteReact(),
 		tailwindcss(),
 	],
-	server: {
-		proxy: {
-			"/api": {
-				target: process.env.VITE_BACKEND_URL || "http://localhost:3001",
-				changeOrigin: true,
-				secure: false,
-				ws: true,
-			},
-		},
-	},
+	// server: {
+	// 	proxy: {
+	// 		"/api": {
+	// 			target: process.env.VITE_BACKEND_URL || "http://localhost:3001",
+	// 			changeOrigin: true,
+	// 			secure: false,
+	// 			ws: true,
+	// 		},
+	// 	},
+	// },
 	resolve: {
 		alias: {
 			"@": fileURLToPath(new URL("./src", import.meta.url)),

@@ -47,6 +47,14 @@ app.get("/permissions", async (_) => {
 	};
 });
 
+app.get("/", async (_) => {
+	return {
+		success: true,
+		message: "Welcome to the Kubernetes Dashboard API",
+		timestamp: Date.now(),
+	};
+});
+
 app.get("/route-permissions", async (_ctx) => {
 	const permissions = (app as AnyElysia).routes.map((route) => {
 		// Extract roleAuth from hooks
