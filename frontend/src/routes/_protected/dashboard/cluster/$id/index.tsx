@@ -73,6 +73,18 @@ function ClusterOverview() {
 		enabled: can("cluster:read"),
 	});
 
+	const { data: serverUrlData } = useQuery({
+		queryKey: ["server-url"],
+		queryFn: async () => {
+			const res = await api.api["server-url"].get();
+			if (res.error) throw res.error;
+			if (!res.data.data)
+				throw new Error(res.data.message || "Failed to fetch server URL");
+			return res.data.data;
+		},
+		enabled: can("cluster:read"),
+	});
+
 	const updateAcmeEmailMutation = useMutation({
 		mutationFn: async () => {
 			const res = await api.api.cluster({ id }).patch({
@@ -382,7 +394,7 @@ function ClusterOverview() {
 			</Card>
 
 			{/* Agent Configuration */}
-			{agentConfig && (
+			{agentConfig && serverUrlData && (
 				<Card className="border-2 border-amber-500/30 bg-linear-to-br from-amber-50/50 to-transparent dark:from-amber-950/20">
 					<CardHeader>
 						<CardTitle className="flex items-center gap-2">
@@ -419,7 +431,7 @@ function ClusterOverview() {
 						<div className="bg-secondary/50 p-3 rounded-md space-y-2">
 							<p className="text-xs font-medium">Installation Command</p>
 							<code className="block bg-background px-3 py-2 rounded text-xs font-mono overflow-x-auto">
-								{`agent --addr ${window.location.origin} --token ${agentConfig.clusterToken}`}
+								{`agent --addr ${serverUrlData.url} --token ${agentConfig.clusterToken}`}
 							</code>
 							<div className="flex flex-col gap-2">
 								<a
