@@ -2,7 +2,7 @@ import "dotenv/config";
 import path from "node:path";
 import { defineConfig } from "drizzle-kit";
 
-export default defineConfig({
+const config = defineConfig({
 	out: "./drizzle",
 	schema: "./src/database/schema.ts",
 	dialect: "postgresql",
@@ -19,3 +19,6 @@ export default defineConfig({
 				driver: "pglite",
 			}),
 });
+
+console.log("Drizzle configuration:", config);
+export default config;
