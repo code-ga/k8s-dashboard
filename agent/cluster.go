@@ -38,7 +38,7 @@ func getClusterConfig() (*ClusterConfig, error) {
 		log.Fatalf("Error parsing backend address: %v", err)
 	}
 	u := url.URL{
-		Scheme: "https",
+		Scheme: backendAddr.Scheme,
 		Host:   backendAddr.Host,
 		Path:   "/api/agents/cluster-info",
 	}
@@ -85,8 +85,8 @@ func updateClusterS3Key(key string) error {
 
 	client := &http.Client{Timeout: 10 * time.Second}
 	u := url.URL{
-		Scheme: "https",
-		Host:   *addr,
+		Scheme: backendAddr.Scheme,
+		Host:   backendAddr.Host,
 		Path:   "/api/agents/cluster-config",
 	}
 
