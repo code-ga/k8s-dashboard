@@ -9,7 +9,7 @@ const cookieOptions: CookieOptions = {
 	sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
 	secure: process.env.NODE_ENV === "production",
 	partitioned: true,
-	domain: FRONTEND_URLs.map((url) => new URL(url).hostname)[0] || "localhost",
+	// domain: FRONTEND_URLs.map((url) => new URL(url).hostname)[0] || "localhost",
 };
 
 export const auth = betterAuth({
