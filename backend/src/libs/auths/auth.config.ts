@@ -54,7 +54,7 @@ export const auth = betterAuth({
 		// 		attributes: cookieOptions,
 		// 	},
 		// },
-		defaultCookieAttributes: cookieOptions,
+		// defaultCookieAttributes: cookieOptions,
 		crossSubDomainCookies: {
 			enabled: true,
 		},
