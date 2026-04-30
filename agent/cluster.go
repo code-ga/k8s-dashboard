@@ -84,6 +84,10 @@ func updateClusterS3Key(key string) error {
 	}
 
 	client := &http.Client{Timeout: 10 * time.Second}
+	backendAddr, err := url.Parse(*addr)
+	if err != nil {
+		return fmt.Errorf("parsing backend address: %w", err)
+	}
 	u := url.URL{
 		Scheme: backendAddr.Scheme,
 		Host:   backendAddr.Host,
