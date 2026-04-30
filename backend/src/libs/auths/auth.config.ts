@@ -46,14 +46,14 @@ export const auth = betterAuth({
 	secret: process.env.BETTER_AUTH_SECRET!,
 	plugins: [openAPI()],
 	advanced: {
-		cookies: {
-			session_token: {
-				attributes: cookieOptions,
-			},
-			state: {
-				attributes: cookieOptions,
-			},
-		},
+		// cookies: {
+		// 	session_token: {
+		// 		attributes: cookieOptions,
+		// 	},
+		// 	state: {
+		// 		attributes: cookieOptions,
+		// 	},
+		// },
 		defaultCookieAttributes: cookieOptions,
 		crossSubDomainCookies: {
 			enabled: true,
