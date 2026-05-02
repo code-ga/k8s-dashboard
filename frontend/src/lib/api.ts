@@ -3,7 +3,7 @@ import type { App, databaseTypes } from "@k8s-dashboard/backend";
 import type { Static, TSchema } from "@sinclair/typebox";
 import { BACKEND_URL } from "@/constants";
 
-export const api = treaty<App>(`${window.location.origin}${BACKEND_URL}`, {
+export const api = treaty<App>(BACKEND_URL, {
 	fetch: {
 		credentials: "include",
 		redirect: "follow",

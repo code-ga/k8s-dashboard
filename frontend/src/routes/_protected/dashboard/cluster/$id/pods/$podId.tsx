@@ -59,6 +59,7 @@ import {
 } from "@/lib/api";
 import "xterm/css/xterm.css";
 import { logger } from "../../../../../../lib/logger";
+import { BACKEND_URL } from "../../../../../../constants";
 
 export const Route = createFileRoute(
 	"/_protected/dashboard/cluster/$id/pods/$podId",
@@ -979,8 +980,9 @@ export function PodLogs({
 			if (isUnmounting) return;
 
 			const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+			const backendUrl = new URL(BACKEND_URL);
 			ws = new WebSocket(
-				`${protocol}//${window.location.host}/api/pods/${clusterId}/logs/${pod.id}?container=${selectedContainer}`,
+				`${protocol}//${backendUrl.host}/api/pods/${clusterId}/logs/${pod.id}?container=${selectedContainer}`,
 			);
 			wsRef.current = ws;
 
@@ -1154,8 +1156,9 @@ export function PodTerminal({
 
 			// Connect WebSocket
 			const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+			const backendUrl = new URL(BACKEND_URL);
 			ws = new WebSocket(
-				`${protocol}//${window.location.host}/api/pods/${clusterId}/exec/${pod.id}?container=${selectedContainer}`,
+				`${protocol}//${backendUrl.host}/api/pods/${clusterId}/exec/${pod.id}?container=${selectedContainer}`,
 			);
 			wsRef.current = ws;
 

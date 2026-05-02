@@ -51,6 +51,7 @@ import {
 	type SchemaStatic,
 } from "@/lib/api";
 import { logger } from "../../../../../../lib/logger";
+import { BACKEND_URL } from "../../../../../../constants";
 
 export const Route = createFileRoute(
 	"/_protected/dashboard/cluster/$id/deployments/$deploymentId",
@@ -1062,8 +1063,9 @@ export function DeploymentLogs({
 		}
 
 		const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+		const backendUrl = new URL(BACKEND_URL);
 		const ws = new WebSocket(
-			`${protocol}//${window.location.host}/api/deployments/${clusterId}/logs/${deployment.id}`,
+			`${protocol}//${backendUrl.host}/api/deployments/${clusterId}/logs/${deployment.id}`,
 		);
 		wsRef.current = ws;
 
