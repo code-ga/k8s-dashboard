@@ -414,7 +414,7 @@ function ClusterServices() {
 														<ShieldCheck className="h-3 w-3" />
 														{ing.protocol?.toUpperCase()}
 														{ing.port ? ":${ing.port}" : ""}
-														{ing.domain ? " (${ing.domain})" : ""}
+														{ing.domain ? ` (${ing.domain})` : ""}
 														{ing.tls && ing.protocol === "http" && (
 															<span className="inline-flex items-center px-1 py-0.5 rounded text-[10px] font-medium bg-green-100 text-green-800">
 																TLS
