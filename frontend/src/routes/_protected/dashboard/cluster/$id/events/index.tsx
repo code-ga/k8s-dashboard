@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute, Link, useParams } from "@tanstack/react-router";
-import { ArrowLeft, Search } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { createFileRoute, useParams } from "@tanstack/react-router";
+import { Search } from "lucide-react";
+import { useState } from "react";
+import { ResourcePageLayout } from "@/components/shared/resource-page-layout";
 import { Input } from "@/components/ui/input";
 import {
 	Table,
@@ -12,8 +12,7 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import { api } from "@/lib/api";
-import { useState } from "react";
+import { api, getEdenErrorMessage } from "@/lib/api";
 
 export const Route = createFileRoute(
 	"/_protected/dashboard/cluster/$id/events/",
@@ -42,18 +41,19 @@ function ClusterEvents() {
 
 	if (isLoading)
 		return (
-			<div className="p-6 flex items-center justify-center">
-				<div className="text-sm text-muted-foreground animate-pulse">
-					Loading cluster events...
-				</div>
+			<div className="p-8 text-center text-muted-foreground animate-pulse font-medium tracking-tight">
+				Loading cluster events...
 			</div>
 		);
 
 	if (error)
 		return (
-			<div className="p-6 flex items-center justify-center">
-				<div className="text-sm text-destructive font-semibold">
-					Error: {(error as Error).message}
+			<div className="p-12 flex flex-col items-center justify-center space-y-4">
+				<div className="text-destructive font-bold tracking-tight text-xl">
+					Failed to load events
+				</div>
+				<div className="text-sm text-muted-foreground bg-muted p-4 rounded-lg border">
+					{getEdenErrorMessage(error)}
 				</div>
 			</div>
 		);
@@ -69,108 +69,90 @@ function ClusterEvents() {
 	});
 
 	return (
-		<div className="p-6 space-y-6">
-			<div className="flex items-center justify-between">
-				<div className="flex items-center gap-4">
-					<Link to={`/dashboard/cluster/$id`} params={{ id: clusterId }}>
-						<Button variant="ghost" size="icon">
-							<ArrowLeft className="h-4 w-4" />
-						</Button>
-					</Link>
-					<div>
-						<h2 className="text-3xl font-bold tracking-tight">
-							Cluster Events
-						</h2>
-						<p className="text-muted-foreground">
-							Real-time audit of activities across all namespaces
-						</p>
-					</div>
-				</div>
-			</div>
-			<div className="flex items-center gap-4">
-				<div className="relative flex-1 max-w-sm">
-					<Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+		<ResourcePageLayout
+			title="Cluster Events"
+			subtitle="Real-time activity audit"
+			description="Events in Kubernetes are objects that provide insight into what is happening inside a cluster, such as what decisions the Scheduler made or why some Pods were evicted from a node."
+			helpLink="https://kubernetes.io/docs/reference/kubernetes-api/cluster-resources/event-v1/"
+		>
+			<div className="p-4 border-b bg-muted/20">
+				<div className="relative max-w-md">
+					<Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
 					<Input
 						placeholder="Search events (object, message, namespace...)"
-						className="pl-8"
+						className="pl-9 h-10 shadow-sm border-muted-foreground/20 focus-visible:ring-primary/20"
 						value={searchQuery}
 						onChange={(e) => setSearchQuery(e.target.value)}
 					/>
 				</div>
 			</div>
-			<Card>
-				<CardContent className="p-0">
-					<div className="rounded-md border">
-						<Table>
-							<TableHeader className="bg-muted/50">
-								<TableRow>
-									<TableHead className="w-[180px]">Last Seen</TableHead>
-									<TableHead className="w-[120px]">Namespace</TableHead>
-									<TableHead className="w-[100px]">Type</TableHead>
-									<TableHead className="w-[150px]">Reason</TableHead>
-									<TableHead className="w-[200px]">Involved Object</TableHead>
-									<TableHead>Message</TableHead>
-								</TableRow>
-							</TableHeader>
-							<TableBody>
-								{filteredEvents.length === 0 ? (
-									<TableRow>
-										<TableCell
-											colSpan={6}
-											className="text-center h-24 text-muted-foreground italic"
-										>
-											{searchQuery
-												? "No events match your search"
-												: "No recent events found"}
-										</TableCell>
-									</TableRow>
-								) : (
-									filteredEvents.map((e: any, i: number) => (
-										// biome-ignore lint/suspicious/noArrayIndexKey: <explanation>
-										<TableRow
-											// biome-ignore lint/suspicious/noArrayIndexKey: <explanation>
-											key={i}
-											className="hover:bg-muted/30 transition-colors"
-										>
-											<TableCell className="text-[10px] font-mono whitespace-nowrap">
-												{new Date(e.lastSeen).toLocaleString()}
-											</TableCell>
-											<TableCell>
-												<span className="text-[11px] font-medium bg-secondary/50 px-1.5 py-0.5 rounded">
-													{e.namespace}
-												</span>
-											</TableCell>
-											<TableCell>
-												<span
-													className={`px-2 py-0.5 rounded-full text-[9px] uppercase font-bold tracking-tight ${
-														e.type === "Normal"
-															? "bg-emerald-100/80 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
-															: "bg-amber-100/80 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
-													}`}
-												>
-													{e.type}
-												</span>
-											</TableCell>
-											<TableCell className="font-medium text-xs text-foreground/80 lowercase italic">
-												{e.reason}
-											</TableCell>
-											<TableCell
-												className="text-xs font-mono text-blue-500/80 truncate max-w-[200px]"
-												title={e.object}
-											>
-												{e.object}
-											</TableCell>
-											<TableCell className="text-xs text-muted-foreground max-w-md truncate hover:whitespace-normal cursor-help">
-												{e.message}
-											</TableCell>
-										</TableRow>
-									))
-								)}
-							</TableBody>
-						</Table>
-					</div>
-				</CardContent>
-			</Card>
-		</div>
+			<Table>
+				<TableHeader>
+					<TableRow>
+						<TableHead className="px-6 py-4 w-[180px]">Last Seen</TableHead>
+						<TableHead className="py-4 w-[120px]">Namespace</TableHead>
+						<TableHead className="py-4 w-[100px]">Type</TableHead>
+						<TableHead className="py-4 w-[150px]">Reason</TableHead>
+						<TableHead className="py-4 w-[200px]">Involved Object</TableHead>
+						<TableHead className="px-6 py-4">Message</TableHead>
+					</TableRow>
+				</TableHeader>
+				<TableBody>
+					{filteredEvents.length === 0 ? (
+						<TableRow>
+							<TableCell
+								colSpan={6}
+								className="text-center py-24 text-muted-foreground/50"
+							>
+								<div className="flex flex-col items-center justify-center space-y-4">
+									<Search className="h-12 w-12 opacity-20" />
+									<p className="text-xl font-semibold text-foreground/70">
+										{searchQuery
+											? "No events match your search"
+											: "No recent events found"}
+									</p>
+								</div>
+							</TableCell>
+						</TableRow>
+					) : (
+						filteredEvents.map((e: any, i: number) => (
+							<TableRow key={i} className="group hover:bg-muted/30">
+								<TableCell className="px-6 py-4 text-[10px] font-mono text-muted-foreground whitespace-nowrap">
+									{new Date(e.lastSeen).toLocaleString()}
+								</TableCell>
+								<TableCell>
+									<span className="text-[11px] font-bold bg-muted px-1.5 py-0.5 rounded text-muted-foreground border border-border/50">
+										{e.namespace}
+									</span>
+								</TableCell>
+								<TableCell>
+									<span
+										className={`px-2 py-0.5 rounded-full text-[9px] uppercase font-black tracking-tighter ring-1 ring-inset ${
+											e.type === "Normal"
+												? "bg-green-100 text-green-700 ring-green-600/20"
+												: "bg-amber-100 text-amber-700 ring-amber-600/20"
+										}`}
+									>
+										{e.type}
+									</span>
+								</TableCell>
+								<TableCell className="font-bold text-[11px] text-foreground/70 lowercase italic tracking-tight">
+									{e.reason}
+								</TableCell>
+								<TableCell
+									className="text-[11px] font-mono text-primary/80 truncate max-w-[200px] font-semibold"
+									title={e.object}
+								>
+									{e.object}
+								</TableCell>
+								<TableCell className="px-6 py-4 text-xs text-muted-foreground max-w-md truncate group-hover:whitespace-normal transition-all cursor-help leading-relaxed">
+									{e.message}
+								</TableCell>
+							</TableRow>
+						))
+					)}
+				</TableBody>
+			</Table>
+		</ResourcePageLayout>
 	);
 }

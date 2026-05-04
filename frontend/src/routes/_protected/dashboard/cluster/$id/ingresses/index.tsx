@@ -1,10 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
-import { ArrowLeft, Settings, ShieldCheck, Trash2 } from "lucide-react";
+import { Settings, ShieldCheck, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { CreateIngressDialog } from "@/components/ingress/create-dialog";
+import { ResourcePageLayout } from "@/components/shared/resource-page-layout";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import {
 	Table,
 	TableBody,
@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/table";
 import { usePermissions } from "@/hooks/use-permissions";
 import type { databaseTypes, SchemaStatic } from "@/lib/api";
-import { api } from "@/lib/api";
+import { api, getEdenErrorMessage } from "@/lib/api";
 
 export const Route = createFileRoute(
 	"/_protected/dashboard/cluster/$id/ingresses/",
@@ -62,7 +62,7 @@ function ClusterIngresses() {
 			queryClient.invalidateQueries({ queryKey: ["services", id] });
 		},
 		onError: (error: any) => {
-			toast.error(error.message || "Failed to delete ingress");
+			toast.error(getEdenErrorMessage(error));
 		},
 	});
 
@@ -81,135 +81,133 @@ function ClusterIngresses() {
 		);
 	}
 
-	if (isLoading) return <div>Loading ingresses...</div>;
+	if (isLoading)
+		return (
+			<div className="p-8 text-center text-muted-foreground animate-pulse font-medium tracking-tight">
+				Loading ingresses...
+			</div>
+		);
 
 	return (
-		<div className="space-y-6">
-			<div className="flex items-center gap-4">
-				<Link to={`/dashboard/cluster/$id`} params={{ id }}>
-					<Button variant="ghost" size="icon">
-						<ArrowLeft className="h-4 w-4" />
-					</Button>
-				</Link>
-				<div>
-					<h2 className="text-3xl font-bold tracking-tight">Ingresses</h2>
-					<p className="text-muted-foreground">
-						Manage external exposure for your services
-					</p>
-				</div>
-			</div>
-			<div className="flex justify-end">
+		<ResourcePageLayout
+			title="Ingresses"
+			subtitle="External access management"
+			description="An API object that manages external access to the services in a cluster, typically HTTP. Ingress may provide load balancing, SSL termination and name-based virtual hosting."
+			helpLink="https://kubernetes.io/docs/concepts/services-networking/ingress/"
+		>
+			<div className="p-4 border-b bg-muted/20 flex justify-end">
 				{can("ingress:create") && <CreateIngressDialog clusterId={id} />}
 			</div>
-
-			<Card>
-				<CardContent className="p-0">
-					<Table>
-						<TableHeader>
-							<TableRow>
-								<TableHead>Protocol</TableHead>
-								<TableHead>Domain / Port</TableHead>
-								<TableHead>Service</TableHead>
-								<TableHead>Namespace</TableHead>
-								<TableHead className="text-right">Actions</TableHead>
-							</TableRow>
-						</TableHeader>
-						<TableBody>
-							{ingresses?.map((ing) => (
-								<TableRow key={ing.id}>
-									<TableCell className="font-medium">
-										<div className="flex items-center gap-2">
-											<ShieldCheck className="h-4 w-4 text-green-500" />
-											<Link
-												to="/dashboard/cluster/$id/ingresses/$ingressId"
-												params={{ id, ingressId: ing.id.toString() }}
-												className="hover:underline"
-											>
-												{ing.protocol?.toUpperCase()}
-											</Link>
-											{ing.tls && (
-												<span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
-													TLS
-												</span>
-											)}
-										</div>
-									</TableCell>
-									<TableCell>
-										{ing.protocol === "http" ? (
-											<span className="font-mono text-xs">{ing.domain}</span>
-										) : (
-											<span className="font-mono text-xs">
-												Port: {ing.port}
-											</span>
-										)}
-									</TableCell>
-									<TableCell>
-										<Link
-											to="/dashboard/cluster/$id/services" // We don"t have direct service ID here on the ingress object easily unless we fetch it or it"s in the object. DB schema has serviceId.
-											// Ideally we link to service detail if we have serviceId.
-											// The ingress object has `serviceId`.
-											search={{}} // Clear search params if any?
-											params={{ id }}
-										>
-											<span className="hover:underline cursor-pointer">
-												{ing.serviceName}
-											</span>
-										</Link>
-									</TableCell>
-									<TableCell>{ing.namespace}</TableCell>
-									<TableCell className="text-right">
-										<div className="flex justify-end gap-2">
-											<Link
-												to="/dashboard/cluster/$id/ingresses/$ingressId"
-												params={{ id, ingressId: ing.id.toString() }}
-											>
-												<Button
-													variant="ghost"
-													size="icon"
-													disabled={
-														!can("ingress:read") && !can("ingress:manage")
-													}
-												>
-													<Settings className="h-4 w-4" />
-												</Button>
-											</Link>
-											{(can("ingress:delete") || can("ingress:manage")) && (
-												<Button
-													variant="ghost"
-													size="icon"
-													className="text-destructive hover:text-destructive hover:bg-destructive/10"
-													onClick={() => {
-														if (
-															confirm(
-																"Are you sure you want to delete this ingress?",
-															)
-														) {
-															deleteMutation.mutate(ing.id);
-														}
-													}}
-													disabled={deleteMutation.isPending}
-												>
-													<Trash2 className="h-4 w-4" />
-												</Button>
-											)}
-										</div>
-									</TableCell>
-								</TableRow>
-							))}
-							{(!ingresses || ingresses.length === 0) && (
-								<TableRow>
-									<TableCell
-										colSpan={5}
-										className="text-center py-4 text-muted-foreground"
+			<Table>
+				<TableHeader>
+					<TableRow>
+						<TableHead className="px-6 py-4">Protocol</TableHead>
+						<TableHead className="py-4">Domain / Port</TableHead>
+						<TableHead className="py-4">Service</TableHead>
+						<TableHead className="py-4">Namespace</TableHead>
+						<TableHead className="text-right px-6 py-4">Actions</TableHead>
+					</TableRow>
+				</TableHeader>
+				<TableBody>
+					{ingresses?.map((ing) => (
+						<TableRow key={ing.id} className="group">
+							<TableCell className="font-medium px-6 py-4">
+								<div className="flex items-center gap-2">
+									<ShieldCheck className="h-4 w-4 text-primary/70" />
+									<Link
+										to="/dashboard/cluster/$id/ingresses/$ingressId"
+										params={{ id, ingressId: ing.id.toString() }}
+										className="font-semibold hover:underline"
 									>
-										No service exposures found. Go to Services to expose one.
-									</TableCell>
-								</TableRow>
-							)}
-						</TableBody>
-					</Table>
-				</CardContent>
-			</Card>
-		</div>
+										{ing.protocol?.toUpperCase()}
+									</Link>
+									{ing.tls && (
+										<span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700">
+											TLS
+										</span>
+									)}
+								</div>
+							</TableCell>
+							<TableCell>
+								{ing.protocol === "http" ? (
+									<span className="font-mono text-xs">{ing.domain}</span>
+								) : (
+									<span className="font-mono text-xs text-muted-foreground">
+										Port: {ing.port}
+									</span>
+								)}
+							</TableCell>
+							<TableCell>
+								<Link
+									to="/dashboard/cluster/$id/services"
+									search={{}}
+									params={{ id }}
+									className="text-sm hover:underline"
+								>
+									{ing.serviceName}
+								</Link>
+							</TableCell>
+							<TableCell className="text-sm text-muted-foreground">
+								{ing.namespace}
+							</TableCell>
+							<TableCell className="text-right px-6">
+								<div className="flex justify-end gap-1">
+									<Link
+										to="/dashboard/cluster/$id/ingresses/$ingressId"
+										params={{ id, ingressId: ing.id.toString() }}
+									>
+										<Button
+											variant="ghost"
+											size="sm"
+											className="h-8 w-8"
+											disabled={!can("ingress:read") && !can("ingress:manage")}
+										>
+											<Settings className="h-4 w-4" />
+										</Button>
+									</Link>
+									{(can("ingress:delete") || can("ingress:manage")) && (
+										<Button
+											variant="ghost"
+											size="icon"
+											className="h-8 w-8 text-muted-foreground hover:text-destructive transition-colors"
+											onClick={() => {
+												if (
+													confirm("Are you sure you want to delete this ingress?")
+												) {
+													deleteMutation.mutate(ing.id);
+												}
+											}}
+											disabled={deleteMutation.isPending}
+										>
+											<Trash2 className="h-4 w-4" />
+										</Button>
+									)}
+								</div>
+							</TableCell>
+						</TableRow>
+					))}
+					{(!ingresses || ingresses.length === 0) && (
+						<TableRow>
+							<TableCell
+								colSpan={5}
+								className="text-center py-24 text-muted-foreground/50"
+							>
+								<div className="flex flex-col items-center justify-center space-y-4">
+									<ShieldCheck className="h-12 w-12 opacity-20" />
+									<div className="space-y-1">
+										<p className="text-xl font-semibold text-foreground/70">
+											No Ingresses Found
+										</p>
+										<p className="max-w-[250px] mx-auto text-sm opacity-60">
+											Go to Services to expose your application to the internet.
+										</p>
+									</div>
+								</div>
+							</TableCell>
+						</TableRow>
+					)}
+				</TableBody>
+			</Table>
+		</ResourcePageLayout>
 	);
 }

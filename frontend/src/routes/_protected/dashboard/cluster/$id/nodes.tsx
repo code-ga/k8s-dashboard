@@ -1,7 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, Link, useParams } from "@tanstack/react-router";
+import { createFileRoute, useParams } from "@tanstack/react-router";
 import {
-	ArrowLeft,
 	CheckCircle2,
 	Copy,
 	HardDrive,
@@ -11,9 +10,9 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { ResourcePageLayout } from "@/components/shared/resource-page-layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import {
 	Dialog,
 	DialogContent,
@@ -30,7 +29,7 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { usePermissions } from "@/hooks/use-permissions";
-import { api } from "@/lib/api";
+import { api, getEdenErrorMessage } from "@/lib/api";
 
 export const Route = createFileRoute("/_protected/dashboard/cluster/$id/nodes")(
 	{
@@ -70,8 +69,7 @@ function ClusterNodes() {
 			setIsJoinDialogOpen(true);
 		},
 		onError: (err) => {
-			console.error(err);
-			toast.error("Failed to fetch join token");
+			toast.error(getEdenErrorMessage(err));
 		},
 	});
 
@@ -90,8 +88,7 @@ function ClusterNodes() {
 			toast.success("Node deletion initiated");
 		},
 		onError: (err) => {
-			console.error(err);
-			toast.error("Failed to delete node");
+			toast.error(getEdenErrorMessage(err));
 		},
 	});
 
@@ -115,169 +112,196 @@ function ClusterNodes() {
 		);
 	}
 
-	if (isLoading) return <div>Loading nodes...</div>;
+	if (isLoading)
+		return (
+			<div className="p-8 text-center text-muted-foreground animate-pulse font-medium tracking-tight">
+				Loading nodes...
+			</div>
+		);
 
 	return (
-		<div className="space-y-6">
-			<div className="flex items-center gap-4">
-				<Link to={`/dashboard/cluster/$id`} params={{ id }}>
-					<Button variant="ghost" size="icon">
-						<ArrowLeft className="h-4 w-4" />
-					</Button>
-				</Link>
-				<div className="flex-1">
-					<h2 className="text-3xl font-bold tracking-tight">Nodes</h2>
-					<p className="text-muted-foreground">Manage cluster nodes</p>
-				</div>
-				{can("node:manage") && (
-					<Button onClick={() => fetchJoinToken()} disabled={isFetchingToken}>
+		<ResourcePageLayout
+			title="Nodes"
+			subtitle="Cluster infrastructure"
+			description="Kubernetes runs your workload by placing containers into Pods to run on Nodes. A node may be a virtual or physical machine, depending on the cluster."
+			helpLink="https://kubernetes.io/docs/concepts/architecture/nodes/"
+			extraActions={
+				can("node:manage") && (
+					<Button
+						onClick={() => fetchJoinToken()}
+						disabled={isFetchingToken}
+						className="shadow-md transition-all active:scale-95"
+					>
 						<Plus className="h-4 w-4 mr-2" />
 						Add Node
 					</Button>
-				)}
-			</div>
-
-			<Card>
-				<CardContent className="p-0">
-					<Table>
-						<TableHeader>
-							<TableRow>
-								<TableHead>Status</TableHead>
-								<TableHead>Name</TableHead>
-								<TableHead>Roles</TableHead>
-								<TableHead>Label</TableHead>
-								<TableHead>CPU Usage (mCore)</TableHead>
-								<TableHead>RAM Usage (MiB)</TableHead>
-								<TableHead className="text-right">Actions</TableHead>
-							</TableRow>
-						</TableHeader>
-						<TableBody>
-							{nodes?.map((node) => (
-								<TableRow key={node.id}>
-									<TableCell>
-										<Badge
-											variant={
-												node.status === "Ready" ? "default" : "destructive"
-											}
-											className="flex items-center gap-1 w-fit"
-										>
-											{node.status === "Ready" ? (
-												<CheckCircle2 className="h-3 w-3" />
-											) : (
-												<XCircle className="h-3 w-3" />
-											)}
-											{node.status}
-										</Badge>
-									</TableCell>
-									<TableCell className="font-medium flex items-center gap-2">
-										<HardDrive className="h-4 w-4 text-gray-500" />
-										{node.name}
-									</TableCell>
-									<TableCell>
-										<div className="flex flex-wrap gap-1">
-											{node.roles &&
-											Array.isArray(node.roles) &&
-											node.roles.length > 0 ? (
-												node.roles.map((role: string) => (
-													<Badge
-														key={role}
-														variant="outline"
-														className="text-[10px] uppercase"
-													>
-														{role}
-													</Badge>
-												))
-											) : (
-												<span className="text-xs text-muted-foreground italic">
-													worker
-												</span>
-											)}
-										</div>
-									</TableCell>
-									<TableCell>
-										<span className="bg-secondary px-2 py-1 rounded text-xs">
-											{Object.entries(JSON.parse(node.labels || "{}")).map(
-												([key, value]) => (
-													<span key={key} className="block">
-														{key}: {new String(value)}
-													</span>
-												),
-											)}
-										</span>
-									</TableCell>
-									<TableCell>
-										{node.cpuUsage} / {node.cpuCapacity}
-									</TableCell>
-									<TableCell>
-										{node.ramUsage} / {node.ramCapacity}
-									</TableCell>
-									<TableCell className="text-right">
-										{can("node:manage") && (
-											<Button
-												variant="ghost"
-												size="icon"
-												className="text-destructive hover:bg-destructive/10"
-												onClick={() => {
-													if (
-														confirm(
-															"Are you sure you want to delete this node?",
-														)
-													) {
-														deleteNodeMutation.mutate(node.id);
-													}
-												}}
+				)
+			}
+		>
+			<Table>
+				<TableHeader>
+					<TableRow>
+						<TableHead className="px-6 py-4">Status</TableHead>
+						<TableHead className="py-4">Name</TableHead>
+						<TableHead className="py-4">Roles</TableHead>
+						<TableHead className="py-4">Labels</TableHead>
+						<TableHead className="py-4">CPU Usage</TableHead>
+						<TableHead className="py-4">RAM Usage</TableHead>
+						<TableHead className="text-right px-6 py-4">Actions</TableHead>
+					</TableRow>
+				</TableHeader>
+				<TableBody>
+					{nodes?.map((node) => (
+						<TableRow key={node.id} className="group">
+							<TableCell className="px-6 py-4">
+								<Badge
+									variant={node.status === "Ready" ? "default" : "destructive"}
+									className={`flex items-center gap-1 w-fit text-[10px] font-bold uppercase ring-1 ring-inset ${
+										node.status === "Ready"
+											? "bg-green-100 text-green-700 hover:bg-green-100 ring-green-600/20"
+											: "bg-red-100 text-red-700 hover:bg-red-100 ring-red-600/20"
+									}`}
+								>
+									{node.status === "Ready" ? (
+										<CheckCircle2 className="h-3 w-3" />
+									) : (
+										<XCircle className="h-3 w-3" />
+									)}
+									{node.status}
+								</Badge>
+							</TableCell>
+							<TableCell className="font-medium">
+								<div className="flex items-center gap-2">
+									<HardDrive className="h-4 w-4 text-primary/70" />
+									<span className="font-semibold">{node.name}</span>
+								</div>
+							</TableCell>
+							<TableCell>
+								<div className="flex flex-wrap gap-1">
+									{node.roles &&
+									Array.isArray(node.roles) &&
+									node.roles.length > 0 ? (
+										node.roles.map((role: string) => (
+											<Badge
+												key={role}
+												variant="outline"
+												className="text-[10px] uppercase font-bold text-muted-foreground"
 											>
-												<Trash2 className="h-4 w-4" />
-											</Button>
-										)}
-									</TableCell>
-								</TableRow>
-							))}
-							{(!nodes || nodes.length === 0) && (
-								<TableRow>
-									<TableCell colSpan={7} className="text-center py-4">
-										No nodes connected.
-									</TableCell>
-								</TableRow>
-							)}
-						</TableBody>
-					</Table>
-				</CardContent>
-			</Card>
+												{role}
+											</Badge>
+										))
+									) : (
+										<span className="text-xs text-muted-foreground/60 italic font-medium tracking-tight">
+											worker
+										</span>
+									)}
+								</div>
+							</TableCell>
+							<TableCell>
+								<div className="flex flex-wrap gap-1 max-w-[200px]">
+									{Object.entries(JSON.parse(node.labels || "{}"))
+										.slice(0, 2)
+										.map(([key, value]) => (
+											<span
+												key={key}
+												className="text-[10px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground truncate"
+											>
+												{key.split("/").pop()}={new String(value)}
+											</span>
+										))}
+									{Object.keys(JSON.parse(node.labels || "{}")).length > 2 && (
+										<span className="text-[10px] text-muted-foreground/50">
+											+{Object.keys(JSON.parse(node.labels || "{}")).length - 2}{" "}
+											more
+										</span>
+									)}
+								</div>
+							</TableCell>
+							<TableCell className="font-mono text-xs font-bold text-foreground/80">
+								{node.cpuUsage} / {node.cpuCapacity}
+							</TableCell>
+							<TableCell className="font-mono text-xs font-bold text-foreground/80">
+								{node.ramUsage} / {node.ramCapacity}
+							</TableCell>
+							<TableCell className="text-right px-6">
+								<div className="flex justify-end gap-1">
+									{can("node:manage") && (
+										<Button
+											variant="ghost"
+											size="icon"
+											className="h-8 w-8 text-muted-foreground hover:text-destructive transition-colors"
+											onClick={() => {
+												if (
+													confirm("Are you sure you want to delete this node?")
+												) {
+													deleteNodeMutation.mutate(node.id);
+												}
+											}}
+										>
+											<Trash2 className="h-4 w-4" />
+										</Button>
+									)}
+								</div>
+							</TableCell>
+						</TableRow>
+					))}
+					{(!nodes || nodes.length === 0) && (
+						<TableRow>
+							<TableCell
+								colSpan={7}
+								className="text-center py-24 text-muted-foreground/50"
+							>
+								<div className="flex flex-col items-center justify-center space-y-4">
+									<HardDrive className="h-12 w-12 opacity-20" />
+									<p className="text-xl font-semibold text-foreground/70">
+										No nodes connected
+									</p>
+								</div>
+							</TableCell>
+						</TableRow>
+					)}
+				</TableBody>
+			</Table>
 
 			<Dialog open={isJoinDialogOpen} onOpenChange={setIsJoinDialogOpen}>
 				<DialogContent className="max-w-2xl">
 					<DialogHeader>
-						<DialogTitle>Join a New Node</DialogTitle>
-						<DialogDescription>
+						<DialogTitle className="text-2xl font-bold tracking-tight">
+							Join a New Node
+						</DialogTitle>
+						<DialogDescription className="text-base">
 							Run this command on your machine to join it to the cluster as a
 							worker node.
 						</DialogDescription>
 					</DialogHeader>
-					<div className="space-y-4">
+					<div className="space-y-6 pt-4">
 						<div className="relative group">
-							<div className="bg-zinc-950 text-zinc-100 p-4 rounded-lg font-mono text-xs break-all pr-12">
+							<div className="bg-zinc-950 text-zinc-100 p-6 rounded-xl font-mono text-xs break-all pr-14 border border-white/10 shadow-2xl">
 								{joinToken?.command}
 							</div>
 							<Button
 								size="icon"
 								variant="ghost"
-								className="absolute right-2 top-2 opacity-50 group-hover:opacity-100 transition-opacity text-white hover:text-white hover:bg-white/10"
+								className="absolute right-3 top-3 opacity-50 group-hover:opacity-100 transition-opacity text-white hover:text-white hover:bg-white/10"
 								onClick={() => copyToClipboard(joinToken?.command || "")}
 							>
 								<Copy className="h-4 w-4" />
 							</Button>
 						</div>
-						<div className="grid grid-cols-2 gap-4 text-xs">
-							<div className="space-y-1">
-								<p className="text-muted-foreground">Token</p>
-								<p className="font-mono bg-secondary px-2 py-1 rounded truncate">
+						<div className="grid grid-cols-2 gap-6 pt-2">
+							<div className="space-y-1.5 p-3 rounded-lg bg-muted/50 border border-border/50">
+								<p className="text-xs font-bold uppercase tracking-wider text-muted-foreground/70">
+									Token
+								</p>
+								<p className="font-mono text-xs font-semibold truncate">
 									{joinToken?.token}
 								</p>
 							</div>
-							<div className="space-y-1">
-								<p className="text-muted-foreground">Expiration</p>
-								<p className="bg-secondary px-2 py-1 rounded">
+							<div className="space-y-1.5 p-3 rounded-lg bg-muted/50 border border-border/50">
+								<p className="text-xs font-bold uppercase tracking-wider text-muted-foreground/70">
+									Expiration
+								</p>
+								<p className="text-xs font-semibold">
 									{joinToken?.expiration
 										? new Date(joinToken.expiration).toLocaleString()
 										: ""}
@@ -287,6 +311,6 @@ function ClusterNodes() {
 					</div>
 				</DialogContent>
 			</Dialog>
-		</div>
+		</ResourcePageLayout>
 	);
 }

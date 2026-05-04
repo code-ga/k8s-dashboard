@@ -6,6 +6,7 @@ import {
 	Outlet,
 	useLocation,
 	useNavigate,
+	useRouterState,
 } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import { Toaster } from "sonner";
@@ -24,6 +25,7 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 	component: () => {
 		const location = useLocation();
 		const navigate = useNavigate();
+		const { isLoading: isRouterLoading } = useRouterState();
 		const isLoginPage =
 			location.pathname === "/login" || location.pathname === "/register";
 
@@ -68,6 +70,13 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 		return (
 			<ThemeProvider defaultTheme="dark" storageKey="k8s-dashboard-theme">
 				<div className="flex min-h-screen overflow-hidden bg-background">
+					{/* Global Loading Bar */}
+					{isRouterLoading && (
+						<div className="fixed top-0 left-0 right-0 z-[100] h-1">
+							<div className="h-full bg-primary animate-progress-bar shadow-[0_0_10px_rgba(var(--primary),0.5)]" />
+						</div>
+					)}
+
 					{/* Persistent Sidebar on Desktop */}
 					<Sidebar role={role} className="hidden lg:flex" />
 

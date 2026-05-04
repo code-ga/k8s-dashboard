@@ -1,9 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, Link, useParams } from "@tanstack/react-router";
+import { createFileRoute, useParams } from "@tanstack/react-router";
 import {
-	ArrowLeft,
 	Layers,
-	Plus,
 	Settings,
 	Settings2,
 	ShieldCheck,
@@ -13,8 +11,8 @@ import {
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { ResourcePageLayout } from "@/components/shared/resource-page-layout";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import {
 	Form,
 	FormControl,
@@ -36,7 +34,17 @@ import {
 } from "@/components/ui/table";
 import { usePermissions } from "@/hooks/use-permissions";
 import type { databaseTypes, SchemaStatic } from "@/lib/api";
-import { api } from "@/lib/api";
+import { api, getEdenErrorMessage } from "@/lib/api";
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+	DialogTrigger,
+} from "@/components/ui/dialog";
+import { Link } from "@tanstack/react-router";
 
 export const Route = createFileRoute(
 	"/_protected/dashboard/cluster/$id/deployments/",
@@ -70,7 +78,6 @@ function ScaleSettingsDialog({
 			isAlwaysRunning?: boolean;
 			idleTimeoutSeconds?: number;
 		}) => {
-			// Updating deployment scale settings
 			const res = await api.api
 				.deployments({ clusterId })({ id: deployment.id })
 				.patch(values);
@@ -84,8 +91,8 @@ function ScaleSettingsDialog({
 			queryClient.invalidateQueries({ queryKey: ["deployments", clusterId] });
 			setOpen(false);
 		},
-		onError: (error: Error) => {
-			toast.error(error.message || "Failed to update settings");
+		onError: (error: any) => {
+			toast.error(getEdenErrorMessage(error));
 		},
 	});
 
@@ -101,7 +108,7 @@ function ScaleSettingsDialog({
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
 			<DialogTrigger asChild>
-				<Button variant="ghost" size="icon">
+				<Button variant="ghost" size="icon" className="h-8 w-8">
 					<Settings2 className="h-4 w-4" />
 				</Button>
 			</DialogTrigger>
@@ -206,16 +213,6 @@ function ScaleSettingsDialog({
 	);
 }
 
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-	DialogTrigger,
-} from "@/components/ui/dialog";
-
 function ClusterDeployments() {
 	const { id } = useParams({
 		from: "/_protected/dashboard/cluster/$id/deployments/",
@@ -258,108 +255,104 @@ function ClusterDeployments() {
 	if (isLoading) return <div>Loading deployments...</div>;
 
 	return (
-		<div className="space-y-6">
-			<div className="flex items-center justify-between">
-				<div className="flex items-center gap-4">
-					<Link to={`/dashboard/cluster/$id`} params={{ id }}>
-						<Button variant="ghost" size="icon">
-							<ArrowLeft className="h-4 w-4" />
-						</Button>
-					</Link>
-					<div>
-						<h2 className="text-3xl font-bold tracking-tight">Deployments</h2>
-						<p className="text-muted-foreground">
-							List of deployments in this cluster
-						</p>
-					</div>
-				</div>
-				{can("deployment:create") && (
-					<Link to="/dashboard/cluster/$id/deployments/create" params={{ id }}>
-						<Button>
-							<Plus className="mr-2 h-4 w-4" /> Create Deployment
-						</Button>
-					</Link>
-				)}
-			</div>
-
-			<Card>
-				<CardContent className="p-0">
-					<Table>
-						<TableHeader>
-							<TableRow>
-								<TableHead>Name</TableHead>
-								<TableHead>Namespace</TableHead>
-								<TableHead>Replicas</TableHead>
-								<TableHead>Auto-Scaling</TableHead>
-								<TableHead>Image</TableHead>
-								<TableHead className="text-right">Actions</TableHead>
-							</TableRow>
-						</TableHeader>
-						<TableBody>
-							{deployments?.map((dep) => (
-								<TableRow key={dep.id}>
-									<TableCell className="font-medium flex items-center gap-2">
-										<Layers className="h-4 w-4 text-blue-500" />
-										{dep.name}
-									</TableCell>
-									<TableCell>{dep.namespace}</TableCell>
-									<TableCell>
-										{dep.availableReplicas} / {dep.replicas}
-									</TableCell>
-									<TableCell>
-										{dep.isAlwaysRunning ? (
-											<div className="flex items-center gap-2 text-blue-600 font-medium whitespace-nowrap">
-												<ShieldCheck className="h-4 w-4" />
-												Always Running
-											</div>
-										) : dep.isAutoScaling ? (
-											<div className="flex items-center gap-2 text-green-600 font-medium whitespace-nowrap">
-												<Zap className="h-4 w-4" />
-												Active ({dep.idleTimeoutSeconds}s)
-											</div>
-										) : (
-											<div className="flex items-center gap-2 text-muted-foreground whitespace-nowrap">
-												<ZapOff className="h-4 w-4" />
-												Disabled
-											</div>
-										)}
-									</TableCell>
-									<TableCell
-										className="max-w-[200px] truncate"
-										title={dep.dockerImage || ""}
+		<ResourcePageLayout
+			title="Deployments"
+			subtitle="Manage your application workloads"
+			description="A Deployment provides declarative updates for Pods and ReplicaSets. You describe a desired state in a Deployment, and the Deployment Controller changes the actual state to the desired state at a controlled rate."
+			helpLink="https://kubernetes.io/docs/concepts/workloads/controllers/deployment/"
+			canCreate={can("deployment:create")}
+			createLink="/dashboard/cluster/$id/deployments/create"
+			createLabel="Create Deployment"
+		>
+			<Table>
+				<TableHeader>
+					<TableRow>
+						<TableHead className="px-6 py-4">Name</TableHead>
+						<TableHead className="py-4">Namespace</TableHead>
+						<TableHead className="py-4">Replicas</TableHead>
+						<TableHead className="py-4">Auto-Scaling</TableHead>
+						<TableHead className="py-4">Image</TableHead>
+						<TableHead className="text-right px-6 py-4">Actions</TableHead>
+					</TableRow>
+				</TableHeader>
+				<TableBody>
+					{deployments?.map((dep) => (
+						<TableRow key={dep.id} className="group">
+							<TableCell className="font-medium px-6 py-4">
+								<div className="flex items-center gap-2">
+									<Layers className="h-4 w-4 text-primary/70" />
+									<span className="font-semibold">{dep.name}</span>
+								</div>
+							</TableCell>
+							<TableCell>{dep.namespace}</TableCell>
+							<TableCell>
+								<span className="font-bold text-foreground/80">
+									{dep.availableReplicas} / {dep.replicas}
+								</span>
+							</TableCell>
+							<TableCell>
+								{dep.isAlwaysRunning ? (
+									<div className="flex items-center gap-2 text-blue-600 font-medium whitespace-nowrap">
+										<ShieldCheck className="h-4 w-4" />
+										Always Running
+									</div>
+								) : dep.isAutoScaling ? (
+									<div className="flex items-center gap-2 text-green-600 font-medium whitespace-nowrap">
+										<Zap className="h-4 w-4" />
+										Active ({dep.idleTimeoutSeconds}s)
+									</div>
+								) : (
+									<div className="flex items-center gap-2 text-muted-foreground whitespace-nowrap">
+										<ZapOff className="h-4 w-4" />
+										Disabled
+									</div>
+								)}
+							</TableCell>
+							<TableCell
+								className="max-w-[200px] truncate font-mono text-[11px] text-muted-foreground"
+								title={dep.dockerImage || ""}
+							>
+								{dep.dockerImage}
+							</TableCell>
+							<TableCell className="text-right px-6">
+								<div className="flex justify-end gap-1">
+									<Link
+										to="/dashboard/cluster/$id/deployments/$deploymentId"
+										params={{ id, deploymentId: dep.id.toString() }}
 									>
-										{dep.dockerImage}
-									</TableCell>
-									<TableCell className="text-right space-x-1">
-										<Link
-											to="/dashboard/cluster/$id/deployments/$deploymentId"
-											params={{ id, deploymentId: dep.id.toString() }}
+										<Button
+											variant="ghost"
+											size="sm"
+											className="h-8 w-8"
+											disabled={
+												!can("deployment:read") && !can("deployment:manage")
+											}
 										>
-											<Button
-												variant="ghost"
-												size="sm"
-												disabled={
-													!can("deployment:read") && !can("deployment:manage")
-												}
-											>
-												<Settings className="h-4 w-4" />
-											</Button>
-										</Link>
-										<ScaleSettingsDialog deployment={dep} clusterId={id} />
-									</TableCell>
-								</TableRow>
-							))}
-							{(!deployments || deployments.length === 0) && (
-								<TableRow>
-									<TableCell colSpan={6} className="text-center py-4">
+											<Settings className="h-4 w-4" />
+										</Button>
+									</Link>
+									<ScaleSettingsDialog deployment={dep} clusterId={id} />
+								</div>
+							</TableCell>
+						</TableRow>
+					))}
+					{(!deployments || deployments.length === 0) && (
+						<TableRow>
+							<TableCell
+								colSpan={6}
+								className="text-center py-24 text-muted-foreground/50"
+							>
+								<div className="flex flex-col items-center justify-center space-y-4">
+									<Layers className="h-12 w-12 opacity-20" />
+									<p className="text-xl font-semibold text-foreground/70">
 										No deployments found
-									</TableCell>
-								</TableRow>
-							)}
-						</TableBody>
-					</Table>
-				</CardContent>
-			</Card>
-		</div>
+									</p>
+								</div>
+							</TableCell>
+						</TableRow>
+					)}
+				</TableBody>
+			</Table>
+		</ResourcePageLayout>
 	);
 }

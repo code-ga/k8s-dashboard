@@ -636,3 +636,43 @@ We have aligned frontend validation with backend strictness to provide immediate
 4. **Refinement Logic**: Complex fields like Labels and Selectors use Zod `.refine()` to ensure they aren't just objects with empty keys, matching the backend's `minLength: 1` requirement for Map keys.
 5. **Data Grid Validation**: Shared editors like `EnvEditor` are validated in their parent pages to ensure every key-value pair has a non-empty name before submission.
 
+---
+
+## 🎨 Dashboard UI Refactoring & Performance (2026-05-04)
+
+### Overview
+The dashboard underwent a significant visual and technical refactor to improve consistency, performance, and usability across all resource management pages.
+
+### Key Enhancements
+1.  **Unified Design System**:
+    *   **Shared Component**: Introduced `ResourcePageLayout` (`frontend/src/components/shared/resource-page-layout.tsx`) to standardize the header, summary section, and content area across all resource pages.
+    *   **Visual Consistency**: Replaced inconsistent card designs and gradients with a clean, premium "glassmorphism-lite" aesthetic.
+    *   **Responsive Tables**: Standardized table layouts with improved spacing and hover states. Fixed text-wrapping issues in `TableCell` by removing restrictive `whitespace-nowrap`.
+
+2.  **Performance & Navigation**:
+    *   **Global Progress Bar**: Implemented a global loading indicator in `__root.tsx` that triggers on navigation transitions, solving the issue where pages felt slow or unresponsive during lazy loading.
+    *   **Pulse Loaders**: Added elegant pulse animations for data fetching states.
+
+3.  **Onboarding & Documentation**:
+    *   **Resource Summaries**: Every resource list page now features a concise summary explaining what the resource is (e.g., "What is a Pod?") with direct links to official Kubernetes documentation.
+    *   **Contextual Actions**: Standardized placement of "Create" buttons and action menus.
+
+4.  **Error Handling**:
+    *   **Eden Error Utility**: Integrated `getEdenErrorMessage` across all pages to ensure API errors are rendered as human-readable strings instead of the confusing `[object Object]` message.
+
+### Refactored Pages
+The following pages have been fully migrated to the new design system:
+-   **Workloads**: Deployments, Pods
+-   **Network**: Services, Ingresses
+-   **Config/Secrets**: ConfigMaps, Secrets
+-   **Storage**: PVCs, PersistentVolumes, StorageClasses
+-   **Cluster**: Nodes, Events
+
+### Summary of Changes (Walkthrough)
+- Implemented a global loading progress bar in `__root.tsx`.
+- Created `ResourcePageLayout` for standardized headers and help sections.
+- Updated `styles.css` with progress bar animations and premium UI tokens.
+- Fixed layout breakage in `components/ui/table.tsx` by allowing content wrapping.
+- Migrated all major resource index pages to use the new unified layout and improved error handling.
+- Added informative "About [Resource]" sections to every list page.
+- **Verified Type Integrity**: Fixed minor typing issues and unused imports; confirmed codebase stability with `bun run typecheck` (passing with exit code 0).

@@ -1,10 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import {
-	ArrowLeft,
 	Eye,
 	Network,
-	Plus,
 	ShieldAlert,
 	ShieldCheck,
 	Trash2,
@@ -13,8 +11,8 @@ import {
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { ResourcePageLayout } from "@/components/shared/resource-page-layout";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import {
 	Dialog,
 	DialogContent,
@@ -52,7 +50,7 @@ import {
 } from "@/components/ui/table";
 import { usePermissions } from "@/hooks/use-permissions";
 import type { databaseTypes, SchemaStatic } from "@/lib/api";
-import { api } from "@/lib/api";
+import { api, getEdenErrorMessage } from "@/lib/api";
 
 export const Route = createFileRoute(
 	"/_protected/dashboard/cluster/$id/services/",
@@ -107,13 +105,12 @@ function ExposureDialog({
 			setOpen(false);
 		},
 		onError: (error: any) => {
-			toast.error(error.message || "Failed to expose service");
+			toast.error(getEdenErrorMessage(error));
 		},
 	});
 
 	const deExposeMutation = useMutation({
 		mutationFn: async () => {
-			// Find the ingress associated with this service and port
 			const ingress = service.ingresses?.find(
 				(i: any) => i.protocol === form.getValues().protocol,
 			);
@@ -133,7 +130,7 @@ function ExposureDialog({
 			setOpen(false);
 		},
 		onError: (error: any) => {
-			toast.error(error.message || "Failed to de-expose service");
+			toast.error(getEdenErrorMessage(error));
 		},
 	});
 
@@ -145,7 +142,7 @@ function ExposureDialog({
 				<Button
 					variant={ingress ? "outline" : "default"}
 					size="sm"
-					className="gap-2"
+					className="h-8 gap-2"
 				>
 					{ingress ? (
 						<>
@@ -300,7 +297,7 @@ function ClusterServices() {
 			if (res.error) throw res.error;
 			if (!res.data.data)
 				throw new Error(res.data.message || "Failed to fetch services");
-			return res.data.data; // as Service[];
+			return res.data.data;
 		},
 		enabled: can("service:read") || can("service:manage"),
 	});
@@ -318,7 +315,7 @@ function ClusterServices() {
 			queryClient.invalidateQueries({ queryKey: ["services", id] });
 		},
 		onError: (error: any) => {
-			toast.error(error.message || "Failed to delete service");
+			toast.error(getEdenErrorMessage(error));
 		},
 	});
 
@@ -337,152 +334,143 @@ function ClusterServices() {
 		);
 	}
 
-	if (isLoading) return <div>Loading services...</div>;
+	if (isLoading)
+		return (
+			<div className="p-8 text-center text-muted-foreground animate-pulse font-medium tracking-tight">
+				Loading services...
+			</div>
+		);
 
 	return (
-		<div className="space-y-6">
-			<div className="flex items-center gap-4">
-				<Link to={`/dashboard/cluster/$id`} params={{ id }}>
-					<Button variant="ghost" size="icon">
-						<ArrowLeft className="h-4 w-4" />
-					</Button>
-				</Link>
-				<div>
-					<h2 className="text-3xl font-bold tracking-tight">Services</h2>
-					<p className="text-muted-foreground">
-						List of services in this cluster
-					</p>
-				</div>
-			</div>
-			<div className="flex justify-end">
-				{can("service:create") && (
-					<Link to="/dashboard/cluster/$id/services/create" params={{ id }}>
-						<Button>
-							<Plus className="mr-2 h-4 w-4" /> Create Service
-						</Button>
-					</Link>
-				)}
-			</div>
-
-			<Card>
-				<CardContent className="p-0">
-					<Table>
-						<TableHeader>
-							<TableRow>
-								<TableHead>Name</TableHead>
-								<TableHead>Namespace</TableHead>
-								<TableHead>Type</TableHead>
-								<TableHead>Ports</TableHead>
-								<TableHead>Exposure</TableHead>
-								<TableHead className="text-right">Actions</TableHead>
-							</TableRow>
-						</TableHeader>
-						<TableBody>
-							{services?.map((svc) => (
-								<TableRow key={svc.id}>
-									<TableCell className="font-medium">
-										<div className="flex items-center gap-2">
-											<Network className="h-4 w-4 text-green-500" />
-											<Link
-												to="/dashboard/cluster/$id/services/$serviceId"
-												params={{ id, serviceId: svc.id.toString() }}
-												className="hover:underline"
+		<ResourcePageLayout
+			title="Services"
+			subtitle="Abstract way to expose applications"
+			description="An abstract way to expose an application running on a set of Pods as a network service. With Kubernetes you don't need to modify your application to use an unfamiliar service discovery mechanism."
+			helpLink="https://kubernetes.io/docs/concepts/services-networking/service/"
+			canCreate={can("service:create")}
+			createLink="/dashboard/cluster/$id/services/create"
+			createLabel="Create Service"
+		>
+			<Table>
+				<TableHeader>
+					<TableRow>
+						<TableHead className="px-6 py-4">Name</TableHead>
+						<TableHead className="py-4">Namespace</TableHead>
+						<TableHead className="py-4">Type</TableHead>
+						<TableHead className="py-4">Ports</TableHead>
+						<TableHead className="py-4">Exposure</TableHead>
+						<TableHead className="text-right px-6 py-4">Actions</TableHead>
+					</TableRow>
+				</TableHeader>
+				<TableBody>
+					{services?.map((svc) => (
+						<TableRow key={svc.id} className="group">
+							<TableCell className="font-medium px-6 py-4">
+								<div className="flex items-center gap-2">
+									<Network className="h-4 w-4 text-primary/70" />
+									<Link
+										to="/dashboard/cluster/$id/services/$serviceId"
+										params={{ id, serviceId: svc.id.toString() }}
+										className="font-semibold hover:underline"
+									>
+										{svc.name}
+									</Link>
+								</div>
+							</TableCell>
+							<TableCell>{svc.namespace}</TableCell>
+							<TableCell>{svc.type || "ClusterIP"}</TableCell>
+							<TableCell>
+								<div className="flex flex-col gap-1">
+									{svc.ports?.data?.map((p) => (
+										<div key={p.port} className="text-xs text-muted-foreground">
+											{p.port} → {p.targetPort} ({p.protocol})
+										</div>
+									))}
+								</div>
+							</TableCell>
+							<TableCell>
+								{svc.ingresses && svc.ingresses.length > 0 ? (
+									<div className="flex flex-col gap-1">
+										{svc.ingresses.map((ing) => (
+											<div
+												key={ing.id}
+												className="flex items-center gap-2 text-xs text-green-600 font-medium whitespace-nowrap"
 											>
-												{svc.name}
-											</Link>
-										</div>
-									</TableCell>
-									<TableCell>{svc.namespace}</TableCell>
-									<TableCell>{svc.type || "ClusterIP"}</TableCell>
-									<TableCell>
-										<div className="flex flex-col gap-1">
-											{svc.ports?.data?.map((p) => (
-												<div key={p.port} className="text-xs">
-													{p.port} → {p.targetPort} ({p.protocol})
-												</div>
-											))}
-										</div>
-									</TableCell>
-									<TableCell>
-										{svc.ingresses && svc.ingresses.length > 0 ? (
-											<div className="flex flex-col gap-1">
-												{svc.ingresses.map((ing) => (
-													<div
-														key={ing.id}
-														className="flex items-center gap-2 text-xs text-green-600 font-medium whitespace-nowrap"
-													>
-														<ShieldCheck className="h-3 w-3" />
-														{ing.protocol?.toUpperCase()}
-														{ing.port ? `:${ing.port}` : ""}
-														{ing.domain ? ` (${ing.domain})` : ""}
-														{ing.tls && ing.protocol === "http" && (
-															<span className="inline-flex items-center px-1 py-0.5 rounded text-[10px] font-medium bg-green-100 text-green-800">
-																TLS
-															</span>
-														)}
-													</div>
-												))}
+												<ShieldCheck className="h-3 w-3" />
+												{ing.protocol?.toUpperCase()}
+												{ing.port ? `:${ing.port}` : ""}
+												{ing.domain ? ` (${ing.domain})` : ""}
+												{ing.tls && ing.protocol === "http" && (
+													<span className="inline-flex items-center px-1 py-0.5 rounded text-[10px] font-medium bg-green-100 text-green-800">
+														TLS
+													</span>
+												)}
 											</div>
-										) : (
-											<div className="flex items-center gap-2 text-xs text-muted-foreground whitespace-nowrap">
-												<ShieldAlert className="h-3 w-3" />
-												Internal Only
-											</div>
-										)}
-									</TableCell>
-									<TableCell className="text-right">
-										<div className="flex justify-end gap-2">
-											<ExposureDialog service={svc} clusterId={id} />
-											{/* Link to service details */}
-											<Link
-												to="/dashboard/cluster/$id/services/$serviceId"
-												params={{ id, serviceId: svc.id.toString() }}
-												className="text-blue-500 hover:underline"
-											>
-												<Button
-													variant="ghost"
-													size="icon"
-													disabled={
-														!can("service:read") && !can("service:manage")
-													}
-												>
-													<Eye className="h-4 w-4" />
-												</Button>
-											</Link>
-											{(can("service:delete") || can("service:manage")) && (
-												<Button
-													variant="ghost"
-													size="icon"
-													className="text-destructive hover:text-destructive hover:bg-destructive/10"
-													onClick={() => {
-														if (
-															confirm(
-																"Are you sure you want to delete this service? This will break any ingress routes pointing to it.",
-															)
-														) {
-															deleteMutation.mutate(svc.id);
-														}
-													}}
-													disabled={deleteMutation.isPending}
-												>
-													<Trash2 className="h-4 w-4" />
-												</Button>
-											)}
-										</div>
-									</TableCell>
-								</TableRow>
-							))}
-							{(!services || services.length === 0) && (
-								<TableRow>
-									<TableCell colSpan={6} className="text-center py-4">
+										))}
+									</div>
+								) : (
+									<div className="flex items-center gap-2 text-xs text-muted-foreground whitespace-nowrap">
+										<ShieldAlert className="h-3 w-3" />
+										Internal Only
+									</div>
+								)}
+							</TableCell>
+							<TableCell className="text-right px-6">
+								<div className="flex justify-end gap-1">
+									<ExposureDialog service={svc} clusterId={id} />
+									<Link
+										to="/dashboard/cluster/$id/services/$serviceId"
+										params={{ id, serviceId: svc.id.toString() }}
+									>
+										<Button
+											variant="ghost"
+											size="sm"
+											className="h-8 w-8"
+											disabled={!can("service:read") && !can("service:manage")}
+										>
+											<Eye className="h-4 w-4" />
+										</Button>
+									</Link>
+									{(can("service:delete") || can("service:manage")) && (
+										<Button
+											variant="ghost"
+											size="icon"
+											className="h-8 w-8 text-muted-foreground hover:text-destructive transition-colors"
+											onClick={() => {
+												if (
+													confirm(
+														"Are you sure you want to delete this service? This will break any ingress routes pointing to it.",
+													)
+												) {
+													deleteMutation.mutate(svc.id);
+												}
+											}}
+											disabled={deleteMutation.isPending}
+										>
+											<Trash2 className="h-4 w-4" />
+										</Button>
+									)}
+								</div>
+							</TableCell>
+						</TableRow>
+					))}
+					{(!services || services.length === 0) && (
+						<TableRow>
+							<TableCell
+								colSpan={6}
+								className="text-center py-24 text-muted-foreground/50"
+							>
+								<div className="flex flex-col items-center justify-center space-y-4">
+									<Network className="h-12 w-12 opacity-20" />
+									<p className="text-xl font-semibold text-foreground/70">
 										No services found
-									</TableCell>
-								</TableRow>
-							)}
-						</TableBody>
-					</Table>
-				</CardContent>
-			</Card>
-		</div>
+									</p>
+								</div>
+							</TableCell>
+						</TableRow>
+					)}
+				</TableBody>
+			</Table>
+		</ResourcePageLayout>
 	);
 }

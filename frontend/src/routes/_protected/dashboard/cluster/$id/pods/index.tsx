@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
-import { ArrowLeft, Box, Plus, Settings } from "lucide-react";
+import { Box, Settings } from "lucide-react";
+import { ResourcePageLayout } from "@/components/shared/resource-page-layout";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import {
 	Table,
 	TableBody,
@@ -54,97 +54,108 @@ function ClusterPods() {
 		);
 	}
 
-	if (isLoading) return <div>Loading pods...</div>;
+	if (isLoading)
+		return (
+			<div className="p-8 text-center text-muted-foreground animate-pulse font-medium tracking-tight">
+				Loading pods...
+			</div>
+		);
 
 	return (
-		<div className="space-y-6">
-			<div className="flex items-center justify-between">
-				<div className="flex items-center gap-4">
-					<Link to={`/dashboard/cluster/$id`} params={{ id }}>
-						<Button variant="ghost" size="icon">
-							<ArrowLeft className="h-4 w-4" />
-						</Button>
-					</Link>
-					<div>
-						<h2 className="text-3xl font-bold tracking-tight">Pods</h2>
-						<p className="text-muted-foreground">
-							List of pods in this cluster
-						</p>
-					</div>
-				</div>
-				{can("pod:create") && (
-					<Link to="/dashboard/cluster/$id/pods/create" params={{ id }}>
-						<Button>
-							<Plus className="mr-2 h-4 w-4" /> Create Pod
-						</Button>
-					</Link>
-				)}
-			</div>
-
-			<Card>
-				<CardContent className="p-0">
-					<Table>
-						<TableHeader>
-							<TableRow>
-								<TableHead>Name</TableHead>
-								<TableHead>Namespace</TableHead>
-								<TableHead>Status</TableHead>
-								<TableHead>Image</TableHead>
-								<TableHead>CPU / MEM</TableHead>
-								<TableHead className="text-right">Actions</TableHead>
-							</TableRow>
-						</TableHeader>
-						<TableBody>
-							{pods?.map((pod) => (
-								<TableRow key={pod.id}>
-									<TableCell className="font-medium flex items-center gap-2">
-										<Box className="h-4 w-4 text-blue-500" />
-										{pod.name}
-									</TableCell>
-									<TableCell>{pod.namespace}</TableCell>
-									<TableCell>{pod.status || "Running"}</TableCell>
-									<TableCell
-										className="max-w-[200px] truncate"
-										title={pod.dockerImage}
+		<ResourcePageLayout
+			title="Pods"
+			subtitle="The smallest deployable units of computing"
+			description="Pods are the smallest deployable units of computing that you can create and manage in Kubernetes. A Pod is a group of one or more containers, with shared storage and network resources, and a specification for how to run the containers."
+			helpLink="https://kubernetes.io/docs/concepts/workloads/pods/"
+			canCreate={can("pod:create")}
+			createLink="/dashboard/cluster/$id/pods/create"
+			createLabel="Create Pod"
+		>
+			<Table>
+				<TableHeader>
+					<TableRow>
+						<TableHead className="px-6 py-4">Name</TableHead>
+						<TableHead className="py-4">Namespace</TableHead>
+						<TableHead className="py-4">Status</TableHead>
+						<TableHead className="py-4">Image</TableHead>
+						<TableHead className="py-4 text-center">CPU / MEM</TableHead>
+						<TableHead className="text-right px-6 py-4">Actions</TableHead>
+					</TableRow>
+				</TableHeader>
+				<TableBody>
+					{pods?.map((pod) => (
+						<TableRow key={pod.id} className="group">
+							<TableCell className="font-medium px-6 py-4">
+								<div className="flex items-center gap-2">
+									<Box className="h-4 w-4 text-primary/70" />
+									<span className="font-semibold">{pod.name}</span>
+								</div>
+							</TableCell>
+							<TableCell>{pod.namespace}</TableCell>
+							<TableCell>
+								<span
+									className={`px-2.5 py-1 rounded-full text-[10px] font-bold ring-1 ring-inset ${
+										pod.status === "Running"
+											? "bg-green-100 text-green-700 ring-green-600/20"
+											: pod.status === "Pending"
+												? "bg-yellow-100 text-yellow-700 ring-yellow-600/20"
+												: "bg-red-100 text-red-700 ring-red-600/20"
+									}`}
+								>
+									{pod.status || "Running"}
+								</span>
+							</TableCell>
+							<TableCell
+								className="max-w-[200px] truncate font-mono text-[11px] text-muted-foreground"
+								title={pod.dockerImage}
+							>
+								{pod.dockerImage}
+							</TableCell>
+							<TableCell className="text-center font-bold text-foreground/80">
+								{pod.cpuRequest}m / {pod.memoryRequest}Mi
+							</TableCell>
+							<TableCell className="text-right px-6">
+								<div className="flex justify-end gap-1">
+									<DebugPodModal
+										clusterId={id}
+										podId={pod.id.toString()}
+										podName={pod.name}
+										containers={[pod.dockerImage.split(":")[0]]}
+									/>
+									<Link
+										to="/dashboard/cluster/$id/pods/$podId"
+										params={{ id, podId: pod.id.toString() }}
 									>
-										{pod.dockerImage}
-									</TableCell>
-									<TableCell>
-										{pod.cpuRequest}m / {pod.memoryRequest}Mi
-									</TableCell>
-									<TableCell className="text-right flex justify-end gap-2">
-										<DebugPodModal
-											clusterId={id}
-											podId={pod.id.toString()}
-											podName={pod.name}
-											containers={[pod.dockerImage.split(":")[0]]}
-										/>
-										<Link
-											to="/dashboard/cluster/$id/pods/$podId"
-											params={{ id, podId: pod.id.toString() }}
+										<Button
+											variant="ghost"
+											size="sm"
+											className="h-8 w-8"
+											disabled={!can("pod:read") && !can("pod:manage")}
 										>
-											<Button
-												variant="ghost"
-												size="sm"
-												disabled={!can("pod:read") && !can("pod:manage")}
-											>
-												<Settings className="h-4 w-4" />
-											</Button>
-										</Link>
-									</TableCell>
-								</TableRow>
-							))}
-							{(!pods || pods.length === 0) && (
-								<TableRow>
-									<TableCell colSpan={6} className="text-center py-4">
+											<Settings className="h-4 w-4" />
+										</Button>
+									</Link>
+								</div>
+							</TableCell>
+						</TableRow>
+					))}
+					{(!pods || pods.length === 0) && (
+						<TableRow>
+							<TableCell
+								colSpan={6}
+								className="text-center py-24 text-muted-foreground/50"
+							>
+								<div className="flex flex-col items-center justify-center space-y-4">
+									<Box className="h-12 w-12 opacity-20" />
+									<p className="text-xl font-semibold text-foreground/70">
 										No pods found
-									</TableCell>
-								</TableRow>
-							)}
-						</TableBody>
-					</Table>
-				</CardContent>
-			</Card>
-		</div>
+									</p>
+								</div>
+							</TableCell>
+						</TableRow>
+					)}
+				</TableBody>
+			</Table>
+		</ResourcePageLayout>
 	);
 }
